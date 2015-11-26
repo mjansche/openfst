@@ -256,17 +256,17 @@ template <class A> class FstInfo {
 
 template <class A>
 void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
-  ostream &os = pipe ? cerr : cout;
+  ostream& os = pipe ? std::cerr : std::cout;
 
   ios_base::fmtflags old = os.setf(ios::left);
   os.width(50);
-  os << "fst type" <<  fstinfo.FstType() << endl;
+  os << "fst type" << fstinfo.FstType() << std::endl;
   os.width(50);
-  os << "arc type" << fstinfo.ArcType() << endl;
+  os << "arc type" << fstinfo.ArcType() << std::endl;
   os.width(50);
-  os << "input symbol table" << fstinfo.InputSymbols() << endl;
+  os << "input symbol table" << fstinfo.InputSymbols() << std::endl;
   os.width(50);
-  os << "output symbol table" << fstinfo.OutputSymbols() << endl;
+  os << "output symbol table" << fstinfo.OutputSymbols() << std::endl;
 
   if (!fstinfo.LongInfo()) {
     os.setf(old);
@@ -274,23 +274,25 @@ void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
   }
 
   os.width(50);
-  os << "# of states" << fstinfo.NumStates() << endl;
+  os << "# of states" << fstinfo.NumStates() << std::endl;
   os.width(50);
-  os << "# of arcs" << fstinfo.NumArcs() << endl;
+  os << "# of arcs" << fstinfo.NumArcs() << std::endl;
   os.width(50);
-  os << "initial state" << fstinfo.Start() << endl;
+  os << "initial state" << fstinfo.Start() << std::endl;
   os.width(50);
-  os << "# of final states" << fstinfo.NumFinal() << endl;
+  os << "# of final states" << fstinfo.NumFinal() << std::endl;
   os.width(50);
-  os << "# of input/output epsilons" << fstinfo.NumEpsilons() << endl;
+  os << "# of input/output epsilons" << fstinfo.NumEpsilons() << std::endl;
   os.width(50);
-  os << "# of input epsilons" << fstinfo.NumInputEpsilons() << endl;
+  os << "# of input epsilons" << fstinfo.NumInputEpsilons() << std::endl;
   os.width(50);
-  os << "# of output epsilons" << fstinfo.NumOutputEpsilons() << endl;
+  os << "# of output epsilons" << fstinfo.NumOutputEpsilons() << std::endl;
   os.width(50);
-  os << "input label multiplicity" << fstinfo.InputLabelMultiplicity() << endl;
+  os << "input label multiplicity" << fstinfo.InputLabelMultiplicity()
+     << std::endl;
   os.width(50);
-  os << "output label multiplicity" << fstinfo.OutputLabelMultiplicity() << endl;
+  os << "output label multiplicity" << fstinfo.OutputLabelMultiplicity()
+     << std::endl;
   os.width(50);
 
   string arc_type = "";
@@ -303,34 +305,37 @@ void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
 
   string accessible_label = "# of " +  arc_type + "accessible states";
   os.width(50);
-  os << accessible_label << fstinfo.NumAccessible() << endl;
+  os << accessible_label << fstinfo.NumAccessible() << std::endl;
   string coaccessible_label = "# of " +  arc_type + "coaccessible states";
   os.width(50);
-  os << coaccessible_label << fstinfo.NumCoAccessible() << endl;
+  os << coaccessible_label << fstinfo.NumCoAccessible() << std::endl;
   string connected_label = "# of " +  arc_type + "connected states";
   os.width(50);
-  os << connected_label << fstinfo.NumConnected() << endl;
+  os << connected_label << fstinfo.NumConnected() << std::endl;
   string numcc_label = "# of " +  arc_type + "connected components";
   os.width(50);
-  os << numcc_label << fstinfo.NumCc() << endl;
+  os << numcc_label << fstinfo.NumCc() << std::endl;
   string numscc_label = "# of " +  arc_type + "strongly conn components";
   os.width(50);
-  os << numscc_label << fstinfo.NumScc() << endl;
+  os << numscc_label << fstinfo.NumScc() << std::endl;
 
   os.width(50);
   os << "input matcher"
-     << (fstinfo.InputMatchType() == MATCH_INPUT ? 'y' :
-         fstinfo.InputMatchType() == MATCH_NONE ? 'n' : '?') << endl;
+     << (fstinfo.InputMatchType() == MATCH_INPUT
+             ? 'y'
+             : fstinfo.InputMatchType() == MATCH_NONE ? 'n' : '?') << std::endl;
   os.width(50);
   os << "output matcher"
-     << (fstinfo.OutputMatchType() == MATCH_OUTPUT ? 'y' :
-         fstinfo.OutputMatchType() == MATCH_NONE ? 'n' : '?') << endl;
+     << (fstinfo.OutputMatchType() == MATCH_OUTPUT
+             ? 'y'
+             : fstinfo.OutputMatchType() == MATCH_NONE ? 'n' : '?')
+     << std::endl;
   os.width(50);
-  os << "input lookahead"
-     << (fstinfo.InputLookAhead() ? 'y' : 'n') << endl;
+  os << "input lookahead" << (fstinfo.InputLookAhead() ? 'y' : 'n')
+     << std::endl;
   os.width(50);
-  os << "output lookahead"
-     << (fstinfo.OutputLookAhead() ? 'y' : 'n') << endl;
+  os << "output lookahead" << (fstinfo.OutputLookAhead() ? 'y' : 'n')
+     << std::endl;
 
   uint64 prop = 1;
   for (int i = 0; i < 64; ++i, prop <<= 1) {
@@ -338,13 +343,13 @@ void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
       char value = 'n';
       if (fstinfo.Properties() & prop) value = 'y';
       os.width(50);
-      os << PropertyNames[i] << value << endl;
+      os << PropertyNames[i] << value << std::endl;
     } else if (prop & kPosTrinaryProperties) {
       char value = '?';
       if (fstinfo.Properties() & prop) value = 'y';
       else if (fstinfo.Properties() & prop << 1) value = 'n';
       os.width(50);
-      os << PropertyNames[i] << value << endl;
+      os << PropertyNames[i] << value << std::endl;
     }
   }
   os.setf(old);

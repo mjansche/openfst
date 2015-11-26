@@ -125,12 +125,12 @@ class GenericOperationRegister
   void RegisterOperation(const string &operation_name,
                          const string &arc_type,
                          OperationSignature op) {
-    this->SetEntry(make_pair(operation_name, arc_type), op);
+    this->SetEntry(std::make_pair(operation_name, arc_type), op);
   }
 
   OperationSignature GetOperation(
       const string &operation_name, const string &arc_type) {
-    return this->GetEntry(make_pair(operation_name, arc_type));
+    return this->GetEntry(std::make_pair(operation_name, arc_type));
   }
 
  protected:
@@ -168,10 +168,10 @@ struct Operation {
 
 // Macro for registering new types of operations.
 
-#define REGISTER_FST_OPERATION(Op, Arc, ArgPack)                               \
-  static fst::script::Operation<ArgPack>::Registerer                       \
-  arc_dispatched_operation_##ArgPack##Op##Arc##_registerer                     \
-       (make_pair(#Op, Arc::Type()), Op<Arc>)
+#define REGISTER_FST_OPERATION(Op, Arc, ArgPack)               \
+  static fst::script::Operation<ArgPack>::Registerer       \
+      arc_dispatched_operation_##ArgPack##Op##Arc##_registerer \
+      (std::make_pair(#Op, Arc::Type()), Op<Arc>)
 
 //
 // Template function to apply an operation by name

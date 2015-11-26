@@ -110,7 +110,7 @@ void Replace(const vector<pair<typename Arc::Label,
       if (ifst->Final(is) != Weight::Zero()) {
         if (label == root)
           ofst->SetFinal(os, ifst->Final(is));
-        fst_final[fst_id].push_back(make_pair(os, ifst->Final(is)));
+        fst_final[fst_id].push_back(std::make_pair(os, ifst->Final(is)));
       }
       for (ArcIterator< Fst<Arc> > aiter(*ifst, is);
            !aiter.Done(); aiter.Next()) {
@@ -143,7 +143,7 @@ void Replace(const vector<pair<typename Arc::Label,
   for (size_t paren_id = 0; paren_id < total_nparens; ++paren_id) {
     Label open_paren = max_label + paren_id + 1;
     Label close_paren = open_paren + total_nparens;
-    parens->push_back(make_pair(open_paren, close_paren));
+    parens->push_back(std::make_pair(open_paren, close_paren));
   }
 
   // Changes each non-terminal transition to an open parenthesis

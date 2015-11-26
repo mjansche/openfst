@@ -87,6 +87,7 @@ class WeightTester {
 
     // Checks that the operations commute.
     CHECK(ApproxEqual(Plus(w1, w2), Plus(w2, w1)));
+
     if (Weight::Properties() & kCommutative)
       CHECK(ApproxEqual(Times(w1, w2), Times(w2, w1)));
 
@@ -104,9 +105,10 @@ class WeightTester {
     CHECK(Power(w1, 3) == Times(w1, Times(w1, w1)));
 
     // Checks distributivity.
-    if (Weight::Properties() & kLeftSemiring)
+    if (Weight::Properties() & kLeftSemiring) {
       CHECK(ApproxEqual(Times(w1, Plus(w2, w3)),
                         Plus(Times(w1, w2), Times(w1, w3))));
+    }
     if (Weight::Properties() & kRightSemiring)
       CHECK(ApproxEqual(Times(Plus(w1, w2), w3),
                         Plus(Times(w1, w3), Times(w2, w3))));

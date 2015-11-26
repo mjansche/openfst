@@ -113,17 +113,20 @@ uint64 ConcatProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
 }
 
 // Properties for a determinized FST.
-uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label) {
+uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label,
+                             bool distinct_psubsequential_labels) {
   uint64 outprops = kAccessible;
-  if (((kAcceptor | kNoIEpsilons) & inprops) || has_subsequential_label)
+  if ((kAcceptor & inprops) ||
+      ((kNoIEpsilons & inprops) && distinct_psubsequential_labels) ||
+      (has_subsequential_label && distinct_psubsequential_labels)) {
     outprops |= kIDeterministic;
+  }
   outprops |= (kError | kAcceptor | kAcyclic |
                kInitialAcyclic | kCoAccessible | kString) & inprops;
-  if (inprops & kNoIEpsilons)
+  if ((inprops & kNoIEpsilons) && distinct_psubsequential_labels)
     outprops |= kNoEpsilons & inprops;
   if (inprops & kAccessible)
-     outprops |= (kNotAcceptor | kEpsilons | kIEpsilons | kOEpsilons |
-                  kCyclic) & inprops;
+    outprops |= (kIEpsilons | kOEpsilons | kCyclic) & inprops;
   if (inprops & kAcceptor)
     outprops |= (kNoIEpsilons | kNoOEpsilons) & inprops;
   if ((inprops & kNoIEpsilons) && has_subsequential_label)
@@ -364,8 +367,11 @@ uint64 RmEpsilonProperties(uint64 inprops, bool delayed) {
 // Properties for shortest path. This function computes how the properties
 // of the output of shortest path need to be updated, given that 'props' is
 // already known.
-uint64 ShortestPathProperties(uint64 props) {
-  return props | kAcyclic | kInitialAcyclic | kAccessible | kCoAccessible;
+uint64 ShortestPathProperties(uint64 props, bool tree) {
+  uint64 outprops = props | kAcyclic | kInitialAcyclic | kAccessible;
+  if (!tree)
+    outprops |= kCoAccessible;
+  return outprops;
 }
 
 // Properties for a synchronized FST.

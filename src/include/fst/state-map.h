@@ -467,7 +467,7 @@ class ArcSumMapper {
     // First sorts the exiting arcs by input label, output label
     // and destination state and then sums weights of arcs with
     // the same input label, output label, and destination state.
-    sort(arcs_.begin(), arcs_.end(), comp_);
+    std::sort(arcs_.begin(), arcs_.end(), comp_);
     size_t narcs = 0;
     for (size_t i = 0; i < arcs_.size(); ++i) {
       if (narcs > 0 && equal_(arcs_[i], arcs_[narcs - 1])) {
@@ -550,9 +550,9 @@ class ArcUniqueMapper {
 
     // First sorts the exiting arcs by input label, output label
     // and destination state and then uniques identical arcs
-    sort(arcs_.begin(), arcs_.end(), comp_);
+    std::sort(arcs_.begin(), arcs_.end(), comp_);
     typename vector<A>::iterator unique_end =
-        unique(arcs_.begin(), arcs_.end(), equal_);
+        std::unique(arcs_.begin(), arcs_.end(), equal_);
     arcs_.resize(unique_end - arcs_.begin());
   }
 

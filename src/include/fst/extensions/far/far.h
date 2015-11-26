@@ -125,7 +125,7 @@ class FarReader {
   // Sets current position to the beginning of the achive.
   static FarReader *Open(const vector<string> &filenames);
 
-  // Resets current posision to beginning of archive.
+  // Resets current position to beginning of archive.
   virtual void Reset() = 0;
 
   // Sets current position to first entry >= key.  Returns true if a match.
@@ -405,12 +405,12 @@ class FstFarReader : public FarReader<A> {
 
   FstFarReader(const vector<string> &filenames)
       : keys_(filenames), has_stdin_(false), pos_(0), fst_(0), error_(false) {
-    sort(keys_.begin(), keys_.end());
+    std::sort(keys_.begin(), keys_.end());
     streams_.resize(keys_.size(), 0);
     for (size_t i = 0; i < keys_.size(); ++i) {
       if (keys_[i].empty()) {
         if (!has_stdin_) {
-          streams_[i] = &cin;
+          streams_[i] = &std::cin;
           //sources_[i] = "stdin";
           has_stdin_ = true;
         } else {
@@ -421,7 +421,7 @@ class FstFarReader : public FarReader<A> {
         }
       } else {
         streams_[i] = new ifstream(
-            keys_[i].c_str(), ifstream::in | ifstream::binary);
+            keys_[i].c_str(), std::ios_base::in | std::ios_base::binary);
       }
     }
     if (pos_ >= keys_.size()) return;

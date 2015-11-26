@@ -59,7 +59,7 @@ class ArcSortMapper {
     arcs_.reserve(fst_.NumArcs(s));
     for (ArcIterator< Fst<Arc> > aiter(fst_, s); !aiter.Done(); aiter.Next())
       arcs_.push_back(aiter.Value());
-    sort(arcs_.begin(), arcs_.end(), comp_);
+    std::sort(arcs_.begin(), arcs_.end(), comp_);
   }
 
   bool Done() const { return i_ >= arcs_.size(); }

@@ -18,8 +18,8 @@
 // integers. Implemented using disjoint tree forests with rank
 // heuristics and path compression.
 
-#ifndef __fst_union_find_inl_h__
-#define __fst_union_find_inl_h__
+#ifndef FST_LIB_UNION_FIND_H_
+#define FST_LIB_UNION_FIND_H_
 
 #include <stack>
 #include <vector>
@@ -107,4 +107,4 @@ class UnionFind {
 
 }  // namespace fst
 
-#endif  // __fst_union_find_inl_h__
+#endif  // FST_LIB_UNION_FIND_H_

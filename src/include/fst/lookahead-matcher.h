@@ -208,6 +208,7 @@ class TrivialLookAheadMatcher
   bool Done() const { return matcher_.Done(); }
   const Arc& Value() const { return matcher_.Value(); }
   void Next() { matcher_.Next(); }
+  Weight Final(StateId s) const { return matcher_.Final(s); }
   ssize_t Priority(StateId s) { return matcher_.Priority(s); }
   virtual const FST &GetFst() const { return matcher_.GetFst(); }
   uint64 Properties(uint64 props) const { return matcher_.Properties(props); }
@@ -231,6 +232,7 @@ class TrivialLookAheadMatcher
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   bool LookAheadLabel_(Label l) const { return LookAheadLabel(l); }
@@ -294,6 +296,7 @@ class ArcLookAheadMatcher
   bool Done() const { return matcher_.Done(); }
   const Arc& Value() const { return matcher_.Value(); }
   void Next() { matcher_.Next(); }
+  Weight Final(StateId s) const { return matcher_.Final(s); }
   ssize_t Priority(StateId s) { return matcher_.Priority(s); }
   const FST &GetFst() const { return fst_; }
   uint64 Properties(uint64 props) const { return matcher_.Properties(props); }
@@ -325,6 +328,7 @@ class ArcLookAheadMatcher
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   bool LookAheadLabel_(Label l) const { return LookAheadLabel(l); }
@@ -503,6 +507,7 @@ class LabelLookAheadMatcher
   const Arc& Value() const { return matcher_.Value(); }
   void Next() { matcher_.Next(); }
   ssize_t Priority(StateId s) { return matcher_.Priority(s); }
+  Weight Final(StateId s) const { return matcher_.Final(s); }
   const FST &GetFst() const { return matcher_.GetFst(); }
 
   uint64 Properties(uint64 inprops) const {
@@ -573,6 +578,7 @@ class LabelLookAheadMatcher
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   bool LookAheadLabel_(Label l) const { return LookAheadLabel(l); }
@@ -749,6 +755,7 @@ class LookAheadMatcher {
   bool Done() const { return base_->Done(); }
   const Arc& Value() const { return base_->Value(); }
   void Next() { base_->Next(); }
+  Weight Final(StateId s) const { return base_->Final(s); }
   ssize_t Priority(StateId s) { return base_->Priority(s); }
   const F &GetFst() const { return static_cast<const F &>(base_->GetFst()); }
 

@@ -509,14 +509,15 @@ class LinearTaggerFst : public ImplToFst<LinearTaggerFstImpl<A> > {
 
   static LinearTaggerFst<A> *Read(const string &filename) {
     if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+      ifstream strm(filename.c_str(),
+                    std::ios_base::in | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "LinearTaggerFst::Read: Can't open file: " << filename;
         return 0;
       }
       return Read(strm, FstReadOptions(filename));
     } else {
-      return Read(cin, FstReadOptions("standard input"));
+      return Read(std::cin, FstReadOptions("standard input"));
     }
   }
 
@@ -528,14 +529,15 @@ class LinearTaggerFst : public ImplToFst<LinearTaggerFstImpl<A> > {
 
   virtual bool Write(const string &filename) const {
     if (!filename.empty()) {
-      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
+      ofstream strm(filename.c_str(),
+                    std::ios_base::out | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "LinearTaggerFst::Write: Can't open file: " << filename;
         return false;
       }
       return Write(strm, FstWriteOptions(filename));
     } else {
-      return Write(cout, FstWriteOptions("standard output"));
+      return Write(std::cout, FstWriteOptions("standard output"));
     }
   }
 
@@ -971,7 +973,8 @@ class LinearClassifierFst : public ImplToFst<LinearClassifierFstImpl<A> > {
 
   static LinearClassifierFst<A> *Read(const string &filename) {
     if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+      ifstream strm(filename.c_str(),
+                    std::ios_base::in | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "LinearClassifierFst::Read: Can't open file: "
                    << filename;
@@ -979,7 +982,7 @@ class LinearClassifierFst : public ImplToFst<LinearClassifierFstImpl<A> > {
       }
       return Read(strm, FstReadOptions(filename));
     } else {
-      return Read(cin, FstReadOptions("standard input"));
+      return Read(std::cin, FstReadOptions("standard input"));
     }
   }
 
@@ -992,14 +995,15 @@ class LinearClassifierFst : public ImplToFst<LinearClassifierFstImpl<A> > {
 
   virtual bool Write(const string &filename) const {
     if (!filename.empty()) {
-      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
+      ofstream strm(filename.c_str(),
+                    std::ios_base::out | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "ProdLmFst::Write: Can't open file: " << filename;
         return false;
       }
       return Write(strm, FstWriteOptions(filename));
     } else {
-      return Write(cout, FstWriteOptions("standard output"));
+      return Write(std::cout, FstWriteOptions("standard output"));
     }
   }
 

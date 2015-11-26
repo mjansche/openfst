@@ -25,6 +25,7 @@
 
 #include <fst/float-weight.h>
 #include <fst/pair-weight.h>
+#include <fst/product-weight.h>
 
 
 namespace fst {

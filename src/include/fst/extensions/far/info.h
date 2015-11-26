@@ -86,23 +86,25 @@ void FarInfo(const vector<string> &filenames, const string &begin_key,
   }
 
   if (!infos) {
-    cout << std::left << setw(50) << "far type"
-         << FarTypeToString(far_reader->Type()) << endl;
-    cout << std::left << setw(50) << "arc type" << Arc::Type() << endl;
-    cout << std::left << setw(50) << "fst type";
+    std::cout << std::left << std::setw(50) << "far type"
+              << FarTypeToString(far_reader->Type()) << std::endl;
+    std::cout << std::left << std::setw(50) << "arc type" << Arc::Type()
+              << std::endl;
+    std::cout << std::left << std::setw(50) << "fst type";
     for (set<string>::const_iterator iter = fst_types.begin();
          iter != fst_types.end();
          ++iter) {
-      if (iter != fst_types.begin())
-        cout << ",";
-      cout << *iter;
+      if (iter != fst_types.begin()) std::cout << ",";
+      std::cout << *iter;
     }
-    cout << endl;
-    cout << std::left << setw(50) << "# of FSTs" << nfst << endl;
-    cout << std::left << setw(50) << "total # of states" << nstate << endl;
-    cout << std::left << setw(50) << "total # of arcs" << narc << endl;
-    cout << std::left << setw(50) << "total # of final states" << nfinal
-         << endl;
+    std::cout << std::endl;
+    std::cout << std::left << std::setw(50) << "# of FSTs" << nfst << std::endl;
+    std::cout << std::left << std::setw(50) << "total # of states" << nstate
+              << std::endl;
+    std::cout << std::left << std::setw(50) << "total # of arcs" << narc
+              << std::endl;
+    std::cout << std::left << std::setw(50) << "total # of final states"
+              << nfinal << std::endl;
 
   } else  {
     int wkey = 10, wtype = 10, wnstate = 14, wnarc = 12, wnfinal = 20;
@@ -120,15 +122,17 @@ void FarInfo(const vector<string> &filenames, const string &begin_key,
         wnfinal = ceil(log10(info.nfinal)) + 2;
     }
 
-    cout << std::left << setw(wkey) << "key" << setw(wtype) << "type"
-         << std::right << setw(wnstate) << "# of states" << setw(wnarc)
-         << "# of arcs" << setw(wnfinal) << "# of final states" << endl;
+    std::cout << std::left << std::setw(wkey) << "key" << std::setw(wtype)
+              << "type" << std::right << std::setw(wnstate) << "# of states"
+              << std::setw(wnarc) << "# of arcs" << std::setw(wnfinal)
+              << "# of final states" << std::endl;
 
     for (size_t i = 0; i < infos->size(); ++i) {
       const KeyInfo &info = (*infos)[i];
-      cout << std::left << setw(wkey) << info.key << setw(wtype) << info.type
-           << std::right << setw(wnstate) << info.nstate
-           << setw(wnarc) << info.narc  << setw(wnfinal) << info.nfinal << endl;
+      std::cout << std::left << std::setw(wkey) << info.key << std::setw(wtype)
+                << info.type << std::right << std::setw(wnstate) << info.nstate
+                << std::setw(wnarc) << info.narc << std::setw(wnfinal)
+                << info.nfinal << std::endl;
     }
   }
 }

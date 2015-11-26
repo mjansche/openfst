@@ -18,8 +18,8 @@
 // \file
 // Class to add a matcher to an FST.
 
-#ifndef FST_LIB_MATCHER_FST_FST_H__
-#define FST_LIB_MATCHER_FST_FST_H__
+#ifndef FST_LIB_MATCHER_FST_H_
+#define FST_LIB_MATCHER_FST_H_
 
 #include <fst/add-on.h>
 #include <fst/const-fst.h>
@@ -356,4 +356,4 @@ typedef MatcherFst<ConstFst<LogArc>,
 
 }  // namespace fst
 
-#endif  // FST_LIB_MATCHER_FST_FST_H__
+#endif  // FST_LIB_MATCHER_FST_H_

@@ -49,8 +49,8 @@ namespace fst {
 bool IsFstHeader(istream &, const string &);
 
 class FstHeader;
-template <class A> class StateIteratorData;
-template <class A> class ArcIteratorData;
+template <class A> struct StateIteratorData;
+template <class A> struct ArcIteratorData;
 template <class A> class MatcherBase;
 
 struct FstReadOptions {
@@ -81,6 +81,9 @@ struct FstReadOptions {
 
   // Helper function to convert strings FileReadModes into their enum value.
   static FileReadMode ReadMode(const string &mode);
+
+  // Outputs a debug string for the FstReadOptions object.
+  string DebugString() const;
 };
 
 struct FstWriteOptions {
@@ -133,6 +136,9 @@ class FstHeader {
 
   bool Read(istream &strm, const string &source, bool rewind = false);
   bool Write(ostream &strm, const string &source) const;
+
+  // Outputs a debug string for the FstHeader object.
+  string DebugString() const;
 
  private:
 
@@ -232,14 +238,15 @@ class Fst {
   // Empty filename reads from standard input
   static Fst<A> *Read(const string &filename) {
     if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+      ifstream strm(filename.c_str(),
+                    std::ios_base::in | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "Fst::Read: Can't open file: " << filename;
         return 0;
       }
       return Read(strm, FstReadOptions(filename));
     } else {
-      return Read(cin, FstReadOptions("standard input"));
+      return Read(std::cin, FstReadOptions("standard input"));
     }
   }
 
@@ -286,7 +293,7 @@ class Fst {
       }
       return Write(strm, FstWriteOptions(filename));
     } else {
-      return Write(cout, FstWriteOptions("standard output"));
+      return Write(std::cout, FstWriteOptions("standard output"));
     }
   }
 };
@@ -781,7 +788,7 @@ template <class A> class FstImpl {
       LOG(ERROR) << "Fst::UpdateFstHeader: write failed: " << opts.source;
       return false;
     }
-    strm.seekp(0, ios_base::end);
+    strm.seekp(0, std::ios_base::end);
     if (!strm) {
       LOG(ERROR) << "Fst::UpdateFstHeader: write failed: " << opts.source;
       return false;

@@ -54,10 +54,14 @@ size_t BitmapIndex::Rank1(size_t end) const {
   CHECK_LE(end, Bits());
   const uint32 end_word = (end - 1) >> BitmapIndex::kStorageLogBitSize;
   const uint32 sum = get_index_ones_count(end_word);
-  const uint64 zero = 0;
-  const uint64 ones = ~zero;
-  return sum + __builtin_popcountll(bits_[end_word] &
-      (ones >> (kStorageBitSize - (end & kStorageBlockMask))));
+  const size_t masked = end & kStorageBlockMask;
+  if (masked == 0) {
+    return sum +  __builtin_popcountll(bits_[end_word]);
+  } else {
+    const uint64 zero = 0;
+    return sum +  __builtin_popcountll(
+      bits_[end_word] & (~zero >> (kStorageBitSize - masked)));
+  }
 }
 
 size_t BitmapIndex::Select1(size_t bit_index) const {
@@ -105,9 +109,9 @@ pair<size_t, size_t> BitmapIndex::Select0s(size_t bit_index) const {
   const uint64 zero = 0;
   const uint64 ones = ~zero;
   size_t zeros_count = Bits() - GetOnesCount();
-  if (bit_index >= zeros_count) return make_pair(Bits(), Bits());
+  if (bit_index >= zeros_count) return std::make_pair(Bits(), Bits());
   if (bit_index + 1 >= zeros_count) {
-    return make_pair(Select0(bit_index), Bits());
+    return std::make_pair(Select0(bit_index), Bits());
   }
   // search inverted primary index for relevant block
   uint32 remzeros = bit_index + 1;
@@ -156,7 +160,7 @@ pair<size_t, size_t> BitmapIndex::Select0s(size_t bit_index) const {
     // the next zero is in a different block, a full search is required.
     next_zero = Select0(bit_index + 1);
   }
-  return make_pair(current_zero, next_zero);
+  return std::make_pair(current_zero, next_zero);
 }
 
 size_t BitmapIndex::get_index_ones_count(size_t array_index) const {

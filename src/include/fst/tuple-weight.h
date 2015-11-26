@@ -28,14 +28,7 @@ using std::vector;
 #include <fst/weight.h>
 
 
-DECLARE_string(fst_weight_parentheses);
-DECLARE_string(fst_weight_separator);
-
 namespace fst {
-
-template<class W, unsigned int n> class TupleWeight;
-template <class W, unsigned int n>
-istream &operator>>(istream &strm, TupleWeight<W, n> &w);
 
 // n-tuple weight, element of the n-th catersian power of W
 template <class W, unsigned int n>
@@ -130,116 +123,8 @@ class TupleWeight {
 
   void SetValue(size_t i, const W &w) { values_[i] = w; }
 
- protected:
-  // Reads TupleWeight when there are no parentheses around tuple terms
-  inline static istream &ReadNoParen(istream &strm,
-                                     TupleWeight<W, n> &w,
-                                     char separator) {
-    int c;
-    do {
-      c = strm.get();
-    } while (isspace(c));
-
-    for (size_t i = 0; i < n - 1; ++i) {
-      string s;
-      if (i)
-        c = strm.get();
-      while (c != separator) {
-        if (c == EOF) {
-          strm.clear(std::ios::badbit);
-          return strm;
-        }
-        s += c;
-        c = strm.get();
-      }
-      // read (i+1)-th element
-      istringstream sstrm(s);
-      W r = W::Zero();
-      sstrm >> r;
-      w.SetValue(i, r);
-    }
-
-    // read n-th element
-    W r = W::Zero();
-    strm >> r;
-    w.SetValue(n - 1, r);
-
-    return strm;
-  }
-
-  // Reads TupleWeight when there are parentheses around tuple terms
-  inline static istream &ReadWithParen(istream &strm,
-                                       TupleWeight<W, n> &w,
-                                       char separator,
-                                       char open_paren,
-                                       char close_paren) {
-    int c;
-    do {
-      c = strm.get();
-    } while (isspace(c));
-
-    if (c != open_paren) {
-      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
-      strm.clear(std::ios::badbit);
-      return strm;
-    }
-
-    for (size_t i = 0; i < n - 1; ++i) {
-      // read (i+1)-th element
-      stack<int> parens;
-      string s;
-      c = strm.get();
-      while (c != separator || !parens.empty()) {
-        if (c == EOF) {
-          strm.clear(std::ios::badbit);
-          return strm;
-        }
-        s += c;
-        // if parens encountered before separator, they must be matched
-        if (c == open_paren) {
-          parens.push(1);
-        } else if (c == close_paren) {
-          // Fail for mismatched parens
-          if (parens.empty()) {
-            strm.clear(std::ios::failbit);
-            return strm;
-          }
-          parens.pop();
-        }
-        c = strm.get();
-      }
-      istringstream sstrm(s);
-      W r = W::Zero();
-      sstrm >> r;
-      w.SetValue(i, r);
-    }
-
-    // read n-th element
-    string s;
-    c = strm.get();
-    while (c != EOF) {
-      s += c;
-      c = strm.get();
-    }
-    if (s.empty() || *s.rbegin() != close_paren) {
-      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
-      strm.clear(std::ios::failbit);
-      return strm;
-    }
-    s.erase(s.size() - 1, 1);
-    istringstream sstrm(s);
-    W r = W::Zero();
-    sstrm >> r;
-    w.SetValue(n - 1, r);
-
-    return strm;
-  }
-
-
  private:
   W values_[n];
-
-  friend istream &operator>><W, n>(istream&, TupleWeight<W, n>&);
 };
 
 template <class W, unsigned int n>
@@ -273,56 +158,30 @@ inline bool ApproxEqual(const TupleWeight<W, n> &w1,
 
 template <class W, unsigned int n>
 inline ostream &operator<<(ostream &strm, const TupleWeight<W, n> &w) {
-  if(FLAGS_fst_weight_separator.size() != 1) {
-    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
-    strm.clear(std::ios::badbit);
-    return strm;
-  }
-  char separator = FLAGS_fst_weight_separator[0];
-  bool write_parens = false;
-  if (!FLAGS_fst_weight_parentheses.empty()) {
-    if (FLAGS_fst_weight_parentheses.size() != 2) {
-      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
-      strm.clear(std::ios::badbit);
-      return strm;
-    }
-    write_parens = true;
-  }
-
-  if (write_parens)
-    strm << FLAGS_fst_weight_parentheses[0];
-  for (size_t i  = 0; i < n; ++i) {
-    if(i)
-      strm << separator;
-    strm << w.Value(i);
-  }
-  if (write_parens)
-    strm << FLAGS_fst_weight_parentheses[1];
-
+  CompositeWeightWriter writer(strm);
+  writer.WriteBegin();
+  for (size_t i = 0; i < n; ++i)
+    writer.WriteElement(w.Value(i));
+  writer.WriteEnd();
   return strm;
 }
 
 template <class W, unsigned int n>
 inline istream &operator>>(istream &strm, TupleWeight<W, n> &w) {
-  if(FLAGS_fst_weight_separator.size() != 1) {
-    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
-    strm.clear(std::ios::badbit);
-    return strm;
+  CompositeWeightReader reader(strm);
+  reader.ReadBegin();
+  W v;
+  // Reads first n-1 elements
+  for (size_t i = 0; i < n - 1; ++i) {
+    reader.ReadElement(&v);
+    w.SetValue(i, v);
   }
-  char separator = FLAGS_fst_weight_separator[0];
+  // Reads  n-th element
+  reader.ReadElement(&v, true);
+  w.SetValue(n - 1 , v);
 
-  if (!FLAGS_fst_weight_parentheses.empty()) {
-    if (FLAGS_fst_weight_parentheses.size() != 2) {
-      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
-      strm.clear(std::ios::badbit);
-      return strm;
-    }
-    return TupleWeight<W, n>::ReadWithParen(
-        strm, w, separator, FLAGS_fst_weight_parentheses[0],
-        FLAGS_fst_weight_parentheses[1]);
-  } else {
-    return TupleWeight<W, n>::ReadNoParen(strm, w, separator);
-  }
+  reader.ReadEnd();
+  return strm;
 }
 
 

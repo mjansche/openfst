@@ -19,6 +19,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <algorithm>
+
+// This limit was put in place as a workaround for b/7948248, in which Placer
+// allocates at least one extra buffer for each read, and sometimes more than
+// one. For very large reads (~2GB), the memory spike was causing OOM failures
+// on startup.
+static const size_t kMaxReadChunk = 256 * 1024 * 1024;  // 256 MB
 
 namespace fst {
 
@@ -72,6 +79,9 @@ MappedFile* MappedFile::Borrow(void *data) {
 MappedFile* MappedFile::Map(istream* s, bool memorymap,
                             const string& source, size_t size) {
   std::streampos spos = s->tellg();
+  VLOG(1) << "memorymap: " << (memorymap ? "true" : "false")
+          << " source: \"" << source << "\""
+          << " size: " << size << " offset: " << spos;
   if (memorymap && spos >= 0 && spos % kArchAlignment == 0) {
     size_t pos = spos;
     int fd = open(source.c_str(), O_RDONLY);
@@ -105,10 +115,22 @@ MappedFile* MappedFile::Map(istream* s, bool memorymap,
     LOG(WARNING) << "File mapping at offset " << spos << " of file "
                  << source << " could not be honored, reading instead.";
   }
+
+  // Read the file into the buffer in chunks not larger than kMaxReadChunk.
   MappedFile* mf = Allocate(size);
-  if (!s->read(reinterpret_cast<char*>(mf->mutable_data()), size)) {
-    delete mf;
-    return NULL;
+  char* buffer = reinterpret_cast<char*>(mf->mutable_data());
+  while (size > 0) {
+    const size_t next_size = std::min(size, kMaxReadChunk);
+    std::streampos current_pos = s->tellg();
+    if (!s->read(buffer, next_size)) {
+      LOG(ERROR) << "Failed to read " << next_size << " bytes at offset "
+                 << current_pos << "from \"" << source << "\".";
+      delete mf;
+      return NULL;
+    }
+    size -= next_size;
+    buffer += next_size;
+    VLOG(2) << "Read " << next_size << " bytes. " << size << " remaining.";
   }
   return mf;
 }

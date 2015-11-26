@@ -18,6 +18,7 @@
 #define FST_LIB_GENERIC_REGISTER_H_
 
 #ifndef FST_NO_DYNAMIC_LINKING
+#include <dlfcn.h>
 #include <fst/compat.h>
 #endif
 #include <map>
@@ -56,7 +57,7 @@ class GenericRegister {
                 const EntryType &entry) {
     MutexLock l(register_lock_);
 
-    register_table_.insert(make_pair(key, entry));
+    register_table_.insert(std::make_pair(key, entry));
   }
 
   EntryType GetEntry(const KeyType &key) const {

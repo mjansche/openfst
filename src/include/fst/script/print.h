@@ -40,6 +40,7 @@ struct FstPrinterArgs {
   ostream *ostrm;
   const string &dest;
   const string &sep;  // NOLINT
+  const string &missing_symbol;
 
   FstPrinterArgs(const FstClass &fst,
                  const SymbolTable *isyms,
@@ -49,9 +50,11 @@ struct FstPrinterArgs {
                  bool show_weight_one,
                  ostream *ostrm,
                  const string &dest,
-                 const string &sep) :
+                 const string &sep,
+                 const string &missing_sym = "") :
       fst(fst), isyms(isyms), osyms(osyms), ssyms(ssyms), accept(accept),
-      show_weight_one(show_weight_one), ostrm(ostrm), dest(dest), sep(sep) { }
+      show_weight_one(show_weight_one), ostrm(ostrm), dest(dest), sep(sep),
+      missing_symbol(missing_sym) { }
 };
 
 template<class Arc>
@@ -61,7 +64,8 @@ void PrintFst(FstPrinterArgs *args) {
   fst::FstPrinter<Arc> fstprinter(fst, args->isyms, args->osyms,
                                       args->ssyms, args->accept,
                                       args->show_weight_one,
-                                      args->sep);
+                                      args->sep,
+                                      args->missing_symbol);
   fstprinter.Print(args->ostrm, args->dest);
 }
 
@@ -69,7 +73,8 @@ void PrintFst(const FstClass &fst, ostream &ostrm, const string &dest,
               const SymbolTable *isyms,
               const SymbolTable *osyms,
               const SymbolTable *ssyms,
-              bool accept, bool show_weight_one);
+              bool accept, bool show_weight_one,
+              const string &missing_sym = "");
 
 
 // Below are two printing methods with useful defaults for a few of

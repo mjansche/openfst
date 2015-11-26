@@ -319,8 +319,7 @@ template <typename I>
 bool ReadIntPairs(const string& filename,
                     vector<pair<I, I> >* pairs,
                     bool allow_negative = false) {
-  ifstream strm(filename.c_str());
-
+  ifstream strm(filename.c_str(), std::ios_base::in);
   if (!strm) {
     LOG(ERROR) << "ReadIntPairs: Can't open file: " << filename;
     return false;
@@ -349,7 +348,7 @@ bool ReadIntPairs(const string& filename,
     if (err) return false;
     I i2 = StrToInt64(col[1], filename, nline, allow_negative, &err);
     if (err) return false;
-    pairs->push_back(make_pair(i1, i2));
+    pairs->push_back(std::make_pair(i1, i2));
   }
   return true;
 }
@@ -358,7 +357,7 @@ bool ReadIntPairs(const string& filename,
 template <typename I>
 bool WriteIntPairs(const string& filename,
                    const vector<pair<I, I> >& pairs) {
-  ostream *strm = &cout;
+  ostream *strm = &std::cout;
   if (!filename.empty()) {
     strm = new ofstream(filename.c_str());
     if (!*strm) {
@@ -375,8 +374,7 @@ bool WriteIntPairs(const string& filename,
                << (filename.empty() ? "standard output" : filename);
     return false;
   }
-  if (strm != &cout)
-    delete strm;
+  if (strm != &std::cout) delete strm;
   return true;
 }
 

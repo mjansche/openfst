@@ -255,8 +255,7 @@ class PdtShortestPathData {
       state_data_ = &search_map_[s];
       if (!(state_data_->flags & kInited)) {
         ++nstates_;
-        if (gc_)
-          search_multimap_.insert(make_pair(s.start, s.state));
+        if (gc_) search_multimap_.insert(std::make_pair(s.start, s.state));
         state_data_->flags = kInited;
       }
       return state_data_;
@@ -514,7 +513,7 @@ void PdtShortestPath<Arc, Queue>::Init(MutableFst<Arc> *ofst) {
           balance_data_.OpenInsert(paren_id, arc.nextstate);
         } else {                                      // Close paren
           ParenState<Arc> paren_state(paren_id, s);
-          close_paren_multimap_.insert(make_pair(paren_state, arc));
+          close_paren_multimap_.insert(std::make_pair(paren_state, arc));
         }
       }
     }

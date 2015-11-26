@@ -210,7 +210,6 @@ class ComposeFstImplBase : public CacheBaseImpl<typename C::State, C> {
 
 
   void InitBase(const Fst<A> &fst1, const Fst<A> &fst2) {
-    VLOG(2) << "ComposeFst(" << this << "): Begin";
     SetType("compose");
 
     if (!CompatSymbols(fst2.InputSymbols(), fst1.OutputSymbols())) {
@@ -267,9 +266,6 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
         match_type_(impl.match_type_) {}
 
   ~ComposeFstImpl() {
-    VLOG(2) << "ComposeFst(" << this
-            << "): End: # of visited states: " << state_table_->Size();
-
     delete filter_;
     delete state_table_;
   }
@@ -335,7 +331,6 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
     if ((matcher1_->Type(false) == match_type) &&
         (matcher2_->Type(false) == match_type) &&
         (filter_->Properties(test_props) == test_props)) {
-      VLOG(1) << "Creating ComposeFstMatcher";
       return new ComposeFstMatcher<C, F, T>(fst, this, match_type);
     }
     return 0;
@@ -412,12 +407,12 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
   Weight ComputeFinal(StateId s) {
     const StateTuple &tuple = state_table_->Tuple(s);
     const StateId s1 = tuple.StateId1();
-    Weight final1 = internal::Final(fst1_, s1);
+    Weight final1 = matcher1_->Final(s1);
     if (final1 == Weight::Zero())
       return final1;
 
     const StateId s2 = tuple.StateId2();
-    Weight final2 = internal::Final(fst2_, s2);
+    Weight final2 = matcher2_->Final(s2);
     if (final2 == Weight::Zero())
       return final2;
 
@@ -485,11 +480,6 @@ ComposeFstImpl<C, F, T>::ComposeFstImpl(
   SetMatchType();
   if (match_type_ == MATCH_NONE)
     SetProperties(kError, kError);
-  VLOG(2) << "ComposeFst(" << this << "): Match type: "
-          << (match_type_ == MATCH_OUTPUT ? "output" :
-              (match_type_ == MATCH_INPUT ? "input" :
-               (match_type_ == MATCH_BOTH ? "both" :
-                (match_type_ == MATCH_NONE ? "none" : "unknown"))));
 
   uint64 fprops1 = fst1.Properties(kFstProperties, false);
   uint64 fprops2 = fst2.Properties(kFstProperties, false);
@@ -498,7 +488,6 @@ ComposeFstImpl<C, F, T>::ComposeFstImpl(
   uint64 cprops = ComposeProperties(mprops1, mprops2);
   SetProperties(filter_->Properties(cprops), kCopyProperties);
   if (state_table_->Error()) SetProperties(kError, kError);
-  VLOG(2) << "ComposeFst(" << this << "): Initialized";
 }
 
 template <class C, class F, class T>
@@ -672,19 +661,16 @@ class ComposeFst : public ImplToFst< ComposeFstImplBase<A, C> > {
     switch (LookAheadMatchType(fst1, fst2)) {  // Check for lookahead matchers
       default:
       case MATCH_NONE: {     // Default composition (no look-ahead)
-        VLOG(2) << "ComposeFst: Default composition (no look-ahead)";
         ComposeFstOptions<Arc> nopts(opts);
         return CreateBase1(fst1, fst2, nopts);
       }
       case MATCH_OUTPUT: {   // Lookahead on fst1
-        VLOG(2) << "ComposeFst: Lookahead on fst1";
         typedef typename DefaultLookAhead<Arc, MATCH_OUTPUT>::FstMatcher M;
         typedef typename DefaultLookAhead<Arc, MATCH_OUTPUT>::ComposeFilter F;
         ComposeFstOptions<Arc, M, F> nopts(opts);
         return CreateBase1(fst1, fst2, nopts);
       }
       case MATCH_INPUT: {    // Lookahead on fst2
-        VLOG(2) << "ComposeFst: Lookahead on fst2";
         typedef typename DefaultLookAhead<Arc, MATCH_INPUT>::FstMatcher M;
         typedef typename DefaultLookAhead<Arc, MATCH_INPUT>::ComposeFilter F;
         ComposeFstOptions<Arc, M, F> nopts(opts);

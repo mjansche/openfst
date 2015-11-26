@@ -23,9 +23,12 @@
 // Include these so they are registered
 #include <fst/compact-fst.h>
 #include <fst/const-fst.h>
-#include <fst/matcher-fst.h>
-#include <fst/vector-fst.h>
 #include <fst/edit-fst.h>
+#include <fst/matcher-fst.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <fst/vector-fst.h>
 
 // FST flag definitions
 
@@ -167,6 +170,16 @@ bool FstHeader::Write(ostream &strm, const string &source) const {
   return true;
 }
 
+string FstHeader::DebugString() const {
+  ostringstream ostrm;
+  ostrm << "fsttype: \"" << fsttype_ << "\" arctype: \"" << arctype_
+        << "\" version: \"" << version_ << "\" flags: \"" << flags_
+        << "\" properties: \"" << properties_ << "\" start: \"" << start_
+        << "\" numstates: \"" << numstates_ << "\" numarcs: \"" << numarcs_
+        << "\"";
+  return ostrm.str();
+}
+
 FstReadOptions::FstReadOptions(const string& src, const FstHeader *hdr,
                                const SymbolTable* isym, const SymbolTable* osym)
   : source(src), header(hdr), isymbols(isym), osymbols(osym),
@@ -190,6 +203,18 @@ FstReadOptions::FileReadMode FstReadOptions::ReadMode(const string &mode) {
   }
   LOG(ERROR) << "Unknown file read mode " << mode;
   return READ;
+}
+
+string FstReadOptions::DebugString() const {
+  ostringstream ostrm;
+  ostrm << "source: \"" << source << "\" mode: \""
+        << (mode == READ ? "READ" : "MAP") << "\" read_isymbols: \""
+        << (read_isymbols ? "true" : "false") << "\" read_osymbols: \""
+        << (read_osymbols ? "true" : "false") << "\" header: \""
+        << (header ? "set" : "null") << "\" isymbols: \""
+        << (isymbols ? "set" : "null") << "\" osymbols: \""
+        << (osymbols ? "set" : "null") << "\"";
+  return ostrm.str();
 }
 
 }  // namespace fst

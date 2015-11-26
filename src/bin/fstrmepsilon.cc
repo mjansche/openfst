@@ -80,10 +80,10 @@ int main(int argc, char **argv) {
   s::RmEpsilonOptions opts(qt, FLAGS_delta, FLAGS_connect,
                            weight_threshold, FLAGS_nstate);
 
-  MutableFstClass *ofst = new VectorFstClass(ifst->ArcType());
-  s::RmEpsilon(*ifst, ofst, FLAGS_reverse, opts);
+  VectorFstClass ofst(ifst->ArcType());
+  s::RmEpsilon(*ifst, &ofst, FLAGS_reverse, opts);
 
-  ofst->Write(out_fname);
+  ofst.Write(out_fname);
 
   return 0;
 }

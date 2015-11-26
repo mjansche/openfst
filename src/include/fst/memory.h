@@ -23,6 +23,8 @@
 
 #include <list>
 #include <memory>
+#include <utility>
+using std::pair; using std::make_pair;
 
 #include <fst/types.h>
 
@@ -294,8 +296,9 @@ class BlockAllocator {
 
   size_type max_size() const { return A().max_size(); }
 
-  void construct(pointer p, const value_type &val) {
-    A().construct(p, val);
+  template <class U, class... Args>
+  void construct(U* p, Args&&... args) {
+    A().construct(p, std::forward<Args>(args)...);
   }
 
   void destroy(pointer p) { A().destroy(p); }
@@ -380,8 +383,9 @@ class PoolAllocator {
 
   size_type max_size() const { return A().max_size(); }
 
-  void construct(pointer p, const value_type &val) {
-    A().construct(p, val);
+  template <class U, class... Args>
+  void construct(U* p, Args&&... args) {
+    A().construct(p, std::forward<Args>(args)...);
   }
 
   void destroy(pointer p) { A().destroy(p); }

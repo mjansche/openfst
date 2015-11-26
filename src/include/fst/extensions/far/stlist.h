@@ -58,9 +58,10 @@ class STListWriter {
   typedef W EntryWriter;
 
   explicit STListWriter(const string filename)
-      : stream_(
-          filename.empty() ? &cout :
-          new ofstream(filename.c_str(), ofstream::out | ofstream::binary)),
+      : stream_(filename.empty()
+                    ? &std::cout
+                    : new ofstream(filename.c_str(),
+                                   std::ios_base::out | std::ios_base::binary)),
         error_(false) {
     WriteType(*stream_, kSTListMagicNumber);
     WriteType(*stream_, kSTListFileVersion);
@@ -93,8 +94,7 @@ class STListWriter {
 
   ~STListWriter() {
     WriteType(*stream_, string());
-    if (stream_ != &cout)
-      delete stream_;
+    if (stream_ != &std::cout) delete stream_;
   }
 
  private:
@@ -128,7 +128,7 @@ class STListReader {
     for (size_t i = 0; i < filenames.size(); ++i) {
       if (filenames[i].empty()) {
         if (!has_stdin) {
-          streams_[i] = &cin;
+          streams_[i] = &std::cin;
           sources_[i] = "stdin";
           has_stdin = true;
         } else {
@@ -139,7 +139,7 @@ class STListReader {
         }
       } else {
         streams_[i] = new ifstream(
-            filenames[i].c_str(), ifstream::in | ifstream::binary);
+            filenames[i].c_str(), std::ios_base::in | std::ios_base::binary);
       }
       int32 magic_number = 0, file_version = 0;
       ReadType(*streams_[i], &magic_number);
@@ -158,8 +158,7 @@ class STListReader {
       }
       string key;
       ReadType(*streams_[i], &key);
-      if (!key.empty())
-        heap_.push(make_pair(key, i));
+      if (!key.empty()) heap_.push(std::make_pair(key, i));
       if (!*streams_[i]) {
         FSTERROR() << "STListReader: error reading file: " << sources_[i];
         error_ = true;
@@ -178,8 +177,7 @@ class STListReader {
 
   ~STListReader() {
     for (size_t i = 0; i < streams_.size(); ++i) {
-      if (streams_[i] != &cin)
-        delete streams_[i];
+      if (streams_[i] != &std::cin) delete streams_[i];
     }
     if (entry_)
       delete entry_;
@@ -224,8 +222,7 @@ class STListReader {
       error_ = true;
       return;
     }
-    if (!key.empty())
-      heap_.push(make_pair(key, current));
+    if (!key.empty()) heap_.push(std::make_pair(key, current));
 
     if(!heap_.empty()) {
       current = heap_.top().second;
@@ -276,7 +273,7 @@ bool ReadSTListHeader(const string &filename, H *header) {
     LOG(ERROR) << "ReadSTListHeader: reading header not supported on stdin";
     return false;
   }
-  ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+  ifstream strm(filename.c_str(), std::ios_base::in | std::ios_base::binary);
   int32 magic_number = 0, file_version = 0;
   ReadType(strm, &magic_number);
   ReadType(strm, &file_version);

@@ -58,10 +58,10 @@ void Relabel(RelabelArgs2 *args) {
   typedef typename Arc::Label Label;
 
   vector<pair<Label, Label> > converted_ipairs(args->arg2.size());
-  copy(args->arg2.begin(), args->arg2.end(), converted_ipairs.begin());
+  std::copy(args->arg2.begin(), args->arg2.end(), converted_ipairs.begin());
 
   vector<pair<Label, Label> > converted_opairs(args->arg3.size());
-  copy(args->arg3.begin(), args->arg3.end(), converted_opairs.begin());
+  std::copy(args->arg3.begin(), args->arg3.end(), converted_opairs.begin());
 
   Relabel(ofst, converted_ipairs, converted_opairs);
 }

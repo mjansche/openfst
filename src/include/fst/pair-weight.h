@@ -29,23 +29,15 @@
 #include <fst/weight.h>
 
 
-DECLARE_string(fst_weight_parentheses);
-DECLARE_string(fst_weight_separator);
-
 namespace fst {
-
-template<class W1, class W2> class PairWeight;
-template <class W1, class W2>
-istream &operator>>(istream &strm, PairWeight<W1, W2> &w);
 
 template<class W1, class W2>
 class PairWeight {
  public:
-  friend istream &operator>><W1, W2>(istream&, PairWeight<W1, W2>&);
-
-  typedef PairWeight<typename W1::ReverseWeight,
-                     typename W2::ReverseWeight>
-  ReverseWeight;
+  typedef W1 Weight1;
+  typedef W2 Weight2;
+  typedef PairWeight<typename W1::ReverseWeight, typename W2::ReverseWeight>
+      ReverseWeight;
 
   PairWeight() {}
 
@@ -107,101 +99,8 @@ class PairWeight {
 
   const W2& Value2() const { return value2_; }
 
- protected:
   void SetValue1(const W1 &w) { value1_ = w; }
   void SetValue2(const W2 &w) { value2_ = w; }
-
-  // Reads PairWeight when there are not parentheses around pair terms
-  inline static istream &ReadNoParen(
-      istream &strm, PairWeight<W1, W2>& w, char separator) {
-    int c;
-    do {
-      c = strm.get();
-    } while (isspace(c));
-
-    string s1;
-    while (c != separator) {
-      if (c == EOF) {
-        strm.clear(std::ios::badbit);
-        return strm;
-      }
-      s1 += c;
-      c = strm.get();
-    }
-    istringstream strm1(s1);
-    W1 w1 = W1::Zero();
-    strm1 >> w1;
-
-    // read second element
-    W2 w2 = W2::Zero();
-    strm >> w2;
-
-    w = PairWeight<W1, W2>(w1, w2);
-    return strm;
-  }
-
-  // Reads PairWeight when there are parentheses around pair terms
-  inline static istream &ReadWithParen(
-      istream &strm, PairWeight<W1, W2>& w,
-      char separator, char open_paren, char close_paren) {
-    int c;
-    do {
-      c = strm.get();
-    } while (isspace(c));
-    if (c != open_paren) {
-      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
-      strm.clear(std::ios::failbit);
-      return strm;
-    }
-    c = strm.get();
-
-    // read first element
-    stack<int> parens;
-    string s1;
-    while (c != separator || !parens.empty()) {
-      if (c == EOF) {
-        strm.clear(std::ios::badbit);
-        return strm;
-      }
-      s1 += c;
-      // if parens encountered before separator, they must be matched
-      if (c == open_paren) {
-        parens.push(1);
-      } else if (c == close_paren) {
-        // Fail for mismatched parens
-        if (parens.empty()) {
-          strm.clear(std::ios::failbit);
-          return strm;
-        }
-        parens.pop();
-      }
-      c = strm.get();
-    }
-    istringstream strm1(s1);
-    W1 w1 = W1::Zero();
-    strm1 >> w1;
-
-    // read second element
-    string s2;
-    c = strm.get();
-    while (c != EOF) {
-      s2 += c;
-      c = strm.get();
-    }
-    if (s2.empty() || (s2[s2.size() - 1] != close_paren)) {
-      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
-      strm.clear(std::ios::failbit);
-      return strm;
-    }
-
-    s2.erase(s2.size() - 1, 1);
-    istringstream strm2(s2);
-    W2 w2 = W2::Zero();
-    strm2 >> w2;
-
-    w = PairWeight<W1, W2>(w1, w2);
-    return strm;
-  }
 
  private:
   W1 value1_;
@@ -232,47 +131,28 @@ inline bool ApproxEqual(const PairWeight<W1, W2> &w1,
 
 template <class W1, class W2>
 inline ostream &operator<<(ostream &strm, const PairWeight<W1, W2> &w) {
-  if(FLAGS_fst_weight_separator.size() != 1) {
-    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
-    strm.clear(std::ios::badbit);
-    return strm;
-  }
-  char separator = FLAGS_fst_weight_separator[0];
-  if (FLAGS_fst_weight_parentheses.empty())
-    return strm << w.Value1() << separator << w.Value2();
-
-  if (FLAGS_fst_weight_parentheses.size() != 2) {
-    FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
-    strm.clear(std::ios::badbit);
-    return strm;
-  }
-  char open_paren = FLAGS_fst_weight_parentheses[0];
-  char close_paren = FLAGS_fst_weight_parentheses[1];
-  return strm << open_paren << w.Value1() << separator
-              << w.Value2() << close_paren ;
+  CompositeWeightWriter writer(strm);
+  writer.WriteBegin();
+  writer.WriteElement(w.Value1());
+  writer.WriteElement(w.Value2());
+  writer.WriteEnd();
+  return strm;
 }
 
 template <class W1, class W2>
 inline istream &operator>>(istream &strm, PairWeight<W1, W2> &w) {
-  if(FLAGS_fst_weight_separator.size() != 1) {
-    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
-    strm.clear(std::ios::badbit);
-    return strm;
-  }
-  char separator = FLAGS_fst_weight_separator[0];
-  bool read_parens = !FLAGS_fst_weight_parentheses.empty();
-  if (read_parens) {
-    if (FLAGS_fst_weight_parentheses.size() != 2) {
-      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
-      strm.clear(std::ios::badbit);
-      return strm;
-    }
-    return PairWeight<W1, W2>::ReadWithParen(
-        strm, w, separator, FLAGS_fst_weight_parentheses[0],
-        FLAGS_fst_weight_parentheses[1]);
-  } else {
-    return PairWeight<W1, W2>::ReadNoParen(strm, w, separator);
-  }
+  CompositeWeightReader reader(strm);
+  reader.ReadBegin();
+  W1 w1;
+  reader.ReadElement(&w1);
+  w.SetValue1(w1);
+
+  W2 w2;
+  reader.ReadElement(&w2, true);
+  w.SetValue2(w2);
+  reader.ReadEnd();
+
+  return strm;
 }
 
 }  // namespace fst

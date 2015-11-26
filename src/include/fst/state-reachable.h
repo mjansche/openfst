@@ -19,8 +19,8 @@
 // Class to determine whether a given (final) state can be reached from some
 // other given state.
 
-#ifndef FST_LIB_STATE_REACHABLE_H__
-#define FST_LIB_STATE_REACHABLE_H__
+#ifndef FST_LIB_STATE_REACHABLE_H_
+#define FST_LIB_STATE_REACHABLE_H_
 
 #include <vector>
 using std::vector;
@@ -244,4 +244,4 @@ class StateReachable {
 
 }  // namespace fst
 
-#endif  // FST_LIB_STATE_REACHABLE_H__
+#endif  // FST_LIB_STATE_REACHABLE_H_

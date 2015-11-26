@@ -42,27 +42,32 @@ enum EpsNormalizeType {EPS_NORM_INPUT, EPS_NORM_OUTPUT};
 // label follows all non-epsilon input labels. Output epsilon-normalized
 // is defined similarly.
 //
-// The input FST needs to be functional.
-//
 // References:
 // - Mehryar Mohri. "Generic epsilon-removal and input epsilon-normalization
 //   algorithms for weighted transducers", International Journal of Computer
 //   Science, 13(1): 129-143, 2002.
 template <class Arc>
 void EpsNormalize(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
-                      EpsNormalizeType type = EPS_NORM_INPUT) {
-  VectorFst< GallicArc<Arc, GALLIC_RIGHT_RESTRICT> > gfst;
+                  EpsNormalizeType type = EPS_NORM_INPUT) {
+  EpsNormalize<Arc, GALLIC>(ifst, ofst, type);
+}
+
+// Same as above, expect allows specifying explicitely the gallic weight type.
+template <class Arc, GallicType G>
+void EpsNormalize(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
+                  EpsNormalizeType type) {
+  VectorFst< GallicArc<Arc, G> > gfst;
   if (type == EPS_NORM_INPUT)
-    ArcMap(ifst, &gfst, ToGallicMapper<Arc, GALLIC_RIGHT_RESTRICT>());
-  else // type == EPS_NORM_OUTPUT
+    ArcMap(ifst, &gfst, ToGallicMapper<Arc, G>());
+  else  // type == EPS_NORM_OUTPUT
     ArcMap(InvertFst<Arc>(ifst), &gfst,
-           ToGallicMapper<Arc, GALLIC_RIGHT_RESTRICT>());
+           ToGallicMapper<Arc, G>());
   RmEpsilon(&gfst);
-  FactorWeightFst< GallicArc<Arc, GALLIC_RIGHT_RESTRICT>,
+  FactorWeightFst< GallicArc<Arc, G>,
     GallicFactor<typename Arc::Label,
-      typename Arc::Weight, GALLIC_RIGHT_RESTRICT> >
+      typename Arc::Weight, G> >
     fwfst(gfst);
-  ArcMap(fwfst, ofst, FromGallicMapper<Arc, GALLIC_RIGHT_RESTRICT>());
+  ArcMap(fwfst, ofst, FromGallicMapper<Arc, G>());
   ofst->SetOutputSymbols(ifst.OutputSymbols());
   if(type == EPS_NORM_OUTPUT)
     Invert(ofst);

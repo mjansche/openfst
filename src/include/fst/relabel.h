@@ -44,7 +44,7 @@ namespace fst {
 // Relabels either the input labels or output labels. The old to
 // new labels are specified using a vector of pair<Label,Label>.
 // Any label associations not specified are assumed to be identity
-// mapping.
+// mapping. The destination labels must be valid labels (e.g. no kNoLabel).
 //
 // \param fst input fst, must be mutable
 // \param ipairs vector of input label pairs indicating old to new mapping
@@ -118,18 +118,21 @@ void Relabel(
 // mapping.
 //
 // \param fst input fst, must be mutable
-// \param new_isymbols symbol set indicating new mapping of input symbols
+// \param new_isymbols symbol set indicating new mapping of input symbols.
+//        Must contain (at least) all input symbols in the fst.
 // \param new_osymbols symbol set indicating new mapping of output symbols
-//
+//        Must contain (at least) all output symbols in the fst.
 template<class A>
 void Relabel(MutableFst<A> *fst,
              const SymbolTable* new_isymbols,
              const SymbolTable* new_osymbols) {
   Relabel(fst,
-          fst->InputSymbols(), new_isymbols, true,
-          fst->OutputSymbols(), new_osymbols, true);
+          fst->InputSymbols(), new_isymbols, true,    // Attach new isymbols?
+          fst->OutputSymbols(), new_osymbols, true);  // Attach new osymbols?
 }
 
+// new_isymbols must contain (at least) all symbols in the fst.
+// new_osymbols must contain (at least) all symbols in the fst.
 template<class A>
 void Relabel(MutableFst<A> *fst,
              const SymbolTable* old_isymbols,
@@ -143,12 +146,22 @@ void Relabel(MutableFst<A> *fst,
 
   vector<pair<Label, Label> > ipairs;
   if (old_isymbols && new_isymbols) {
+    size_t num_missing_syms = 0;
     for (SymbolTableIterator syms_iter(*old_isymbols); !syms_iter.Done();
          syms_iter.Next()) {
-      string isymbol = syms_iter.Symbol();
-      int isymbol_val = syms_iter.Value();
-      int new_isymbol_val = new_isymbols->Find(isymbol);
-      ipairs.push_back(make_pair(isymbol_val, new_isymbol_val));
+      const string isymbol = syms_iter.Symbol();
+      const int isymbol_val = syms_iter.Value();
+      const int new_isymbol_val = new_isymbols->Find(isymbol);
+      if (new_isymbol_val == kNoLabel) {
+        VLOG(1) << "Input symbol id " << isymbol_val << " symbol '"
+                << isymbol << "' missing from target symbol table.";
+        ++num_missing_syms;
+      }
+      ipairs.push_back(std::make_pair(isymbol_val, new_isymbol_val));
+    }
+    if (num_missing_syms > 0) {
+      LOG(WARNING) << "Target symbol table missing: "
+                   << num_missing_syms << " input symbols.";
     }
     if (attach_new_isymbols)
       fst->SetInputSymbols(new_isymbols);
@@ -156,12 +169,22 @@ void Relabel(MutableFst<A> *fst,
 
   vector<pair<Label, Label> > opairs;
   if (old_osymbols && new_osymbols) {
+    size_t num_missing_syms = 0;
     for (SymbolTableIterator syms_iter(*old_osymbols); !syms_iter.Done();
          syms_iter.Next()) {
-      string osymbol = syms_iter.Symbol();
-      int osymbol_val = syms_iter.Value();
-      int new_osymbol_val = new_osymbols->Find(osymbol);
-      opairs.push_back(make_pair(osymbol_val, new_osymbol_val));
+      const string osymbol = syms_iter.Symbol();
+      const int osymbol_val = syms_iter.Value();
+      const int new_osymbol_val = new_osymbols->Find(osymbol);
+      if (new_osymbol_val == kNoLabel) {
+        VLOG(1) << "Output symbol id " << osymbol_val << " symbol '"
+                << osymbol << "' missing from target symbol table.";
+        ++num_missing_syms;
+      }
+      opairs.push_back(std::make_pair(osymbol_val, new_osymbol_val));
+    }
+    if (num_missing_syms > 0) {
+      LOG(WARNING) << "Target symbol table missing: "
+                   << num_missing_syms << " output symbols.";
     }
     if (attach_new_osymbols)
       fst->SetOutputSymbols(new_osymbols);

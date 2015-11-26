@@ -27,13 +27,6 @@ using std::vector;
 #include <fst/rmepsilon.h>
 #include <fst/queue.h>
 
-// the following is necessary, or SWIG complains mightily about
-// shortestdistanceoptions not being defined before being used as a base.
-#ifdef SWIG
-%include "nlp/fst/script/shortest-distance.h"
-#endif
-
-
 namespace fst {
 namespace script {
 
@@ -140,13 +133,15 @@ void RmEpsilon(RmEpsilonArgs1 *args) {
 
   if (reverse) {
     VectorFst<Arc> rfst;
-    Reverse(ifst, &rfst);
+    Reverse(ifst, &rfst, false);
     RmEpsilonHelper(&rfst, &distance, args->arg4);
-    Reverse(rfst, ofst);
+    Reverse(rfst, ofst, false);
+    if (rfst.NumStates() != ofst->NumStates())
+      RmEpsilonHelper(ofst, &distance, args->arg4);
   } else {
     *ofst = ifst;
+    RmEpsilonHelper(ofst, &distance, args->arg4);
   }
-  RmEpsilonHelper(ofst, &distance, args->arg4);
 }
 
 // 2

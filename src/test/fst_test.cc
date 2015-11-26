@@ -61,7 +61,7 @@ class CustomCompactor {
   typedef pair<Label, Weight> Element;
 
   Element Compact(StateId s, const A &arc) const {
-    return make_pair(arc.ilabel, arc.weight);
+    return std::make_pair(arc.ilabel, arc.weight);
   }
 
   Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
     std_edit_tester.TestMutable();
   }
 
-  cout << "PASS" << endl;
+  std::cout << "PASS" << std::endl;
 
   return 0;
 }

@@ -106,7 +106,7 @@ string LoadArcTypeFromFar(const string &far_fname) {
 
 string LoadArcTypeFromFst(const string &fst_fname) {
   FstHeader hdr;
-  ifstream in(fst_fname.c_str(), ifstream::in | ifstream::binary);
+  ifstream in(fst_fname.c_str(), std::ios_base::in | std::ios_base::binary);
   if (!hdr.Read(in, fst_fname)) {
     FSTERROR() << "Error reading FST: " << fst_fname;
     return "";

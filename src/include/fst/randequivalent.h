@@ -19,8 +19,8 @@
 // Tests if two FSTS are equivalent by checking if random
 // strings from one FST are transduced the same by both FSTs.
 
-#ifndef FST_RANDEQUIVALENT_H__
-#define FST_RANDEQUIVALENT_H__
+#ifndef FST_LIB_RANDEQUIVALENT_H_
+#define FST_LIB_RANDEQUIVALENT_H_
 
 #include <fst/arcsort.h>
 #include <fst/compose.h>
@@ -132,4 +132,4 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 
 }  // namespace fst
 
-#endif  // FST_LIB_RANDEQUIVALENT_H__
+#endif  // FST_LIB_RANDEQUIVALENT_H_

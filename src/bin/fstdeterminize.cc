@@ -28,8 +28,11 @@ DEFINE_string(weight, "", "Weight threshold");
 DEFINE_int64(subsequential_label, 0,
              "Input label of arc corresponding to residual final output when"
              " producing a subsequential transducer");
-DEFINE_bool(disambiguate_output, false,
-            "Keep only the min of ambiguous output");
+DEFINE_string(type, "functional", "Type of determinization: \"functional\", "
+              "\"nonfunctional\", \"disambiguate\"");
+DEFINE_bool(increment_subsequential_label, false,
+            "Increment subsequential_label to obtain distinct labels for "
+            " subsequential arcs at a given state");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -49,6 +52,18 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  fst::DeterminizeType type;
+  if (FLAGS_type.empty() || FLAGS_type[0] == 'f') {
+    type = fst::DETERMINIZE_FUNCTIONAL;
+  } else if (FLAGS_type[0] == 'n') {
+    type = fst::DETERMINIZE_NONFUNCTIONAL;
+  } else if (FLAGS_type[0] == 'd') {
+    type = fst::DETERMINIZE_DISAMBIGUATE;
+  } else {
+    LOG(ERROR) << "Unknown determinize type: " << FLAGS_type;
+    return 1;
+  }
+
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
@@ -60,7 +75,8 @@ int main(int argc, char **argv) {
   s::DeterminizeOptions opts(
       FLAGS_delta, FLAGS_weight.empty() ?
       WeightClass::Zero() : WeightClass(ifst->WeightType(), FLAGS_weight),
-      FLAGS_nstate, FLAGS_subsequential_label, FLAGS_disambiguate_output);
+      FLAGS_nstate, FLAGS_subsequential_label, type,
+      FLAGS_increment_subsequential_label);
 
   s::Determinize(*ifst, &ofst, opts);
 

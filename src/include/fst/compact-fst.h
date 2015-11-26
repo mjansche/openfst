@@ -288,7 +288,7 @@ DefaultCompactStore<E, U>::DefaultCompactStore(const Iterator &begin,
   typedef typename C::Arc Arc;
   typedef typename Arc::Weight Weight;
   if (compactor.Size() != -1) {
-    ncompacts_ = distance(begin, end);
+    ncompacts_ = std::distance(begin, end);
     if (compactor.Size() == 1) {
       // For strings, allow implicit final weight.
       // Empty input is the empty string.
@@ -323,8 +323,7 @@ DefaultCompactStore<E, U>::DefaultCompactStore(const Iterator &begin,
       compacts_[i] = compactor.Compact(i, Arc(kNoLabel, kNoLabel,
                                               Weight::One(), kNoStateId));
   } else {
-    if (distance(begin, end) == 0)
-      return;
+    if (std::distance(begin, end) == 0) return;
     // Count # of states, arcs and compacts.
     Iterator it = begin;
     for(size_t i = 0; it != end; ++it, ++i) {
@@ -716,9 +715,12 @@ class CompactFstImpl : public CacheImpl<A> {
 
   template <class Iterator>
   void SetCompactElements(const Iterator &b, const Iterator &e) {
+    SetProperties(kStaticProperties | compactor_->Properties());
     if (data_ && !data_->DecrRefCount())
       delete data_;
     data_ = new DataStorage(b, e, *compactor_);
+    if (data_->Error())
+      SetProperties(kError, kError);
   }
 
   C *GetCompactor() const { return compactor_; }
@@ -1293,7 +1295,7 @@ class WeightedStringCompactor {
   typedef pair<Label, Weight> Element;
 
   Element Compact(StateId s, const A &arc) const {
-    return make_pair(arc.ilabel, arc.weight);
+    return std::make_pair(arc.ilabel, arc.weight);
   }
 
   Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
@@ -1336,7 +1338,7 @@ class UnweightedAcceptorCompactor {
   typedef pair<Label, StateId> Element;
 
   Element Compact(StateId s, const A &arc) const {
-    return make_pair(arc.ilabel, arc.nextstate);
+    return std::make_pair(arc.ilabel, arc.nextstate);
   }
 
   Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
@@ -1378,7 +1380,8 @@ class AcceptorCompactor {
   typedef pair< pair<Label, Weight>, StateId > Element;
 
   Element Compact(StateId s, const A &arc) const {
-    return make_pair(make_pair(arc.ilabel, arc.weight), arc.nextstate);
+    return std::make_pair(std::make_pair(arc.ilabel, arc.weight),
+                          arc.nextstate);
   }
 
   Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
@@ -1420,7 +1423,8 @@ class UnweightedCompactor {
   typedef pair< pair<Label, Label>, StateId > Element;
 
   Element Compact(StateId s, const A &arc) const {
-    return make_pair(make_pair(arc.ilabel, arc.olabel), arc.nextstate);
+    return std::make_pair(std::make_pair(arc.ilabel, arc.olabel),
+                          arc.nextstate);
   }
 
   Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {

@@ -19,8 +19,8 @@
 // Classes and functions for registering and invoking Far main
 // functions that support multiple and extensible arc types.
 
-#ifndef FST_EXTENSIONS_FAR_MAIN_H__
-#define FST_EXTENSIONS_FAR_MAIN_H__
+#ifndef FST_EXTENSIONS_FAR_MAIN_H_
+#define FST_EXTENSIONS_FAR_MAIN_H_
 
 #include <fst/extensions/far/far.h>
 
@@ -40,4 +40,4 @@ string LoadArcTypeFromFst(const string& far_fname);
 
 }  // namespace fst
 
-#endif  // FST_EXTENSIONS_FAR_MAIN_H__
+#endif  // FST_EXTENSIONS_FAR_MAIN_H_

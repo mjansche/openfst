@@ -33,6 +33,8 @@ DEFINE_bool(show_weight_one, false,
             "Print/draw arc weights and final weights equal to Weight::One()");
 DEFINE_bool(allow_negative_labels, false,
             "Allow negative labels (not recommended; may cause conflicts)");
+DEFINE_string(missing_symbol, "",
+              "symbol to print when lookup fails (default raises error)");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -56,7 +58,7 @@ int main(int argc, char **argv) {
   s::FstClass *fst = s::FstClass::Read(in_name);
   if (!fst) return 1;
 
-  ostream *ostrm = &cout;
+  ostream *ostrm = &std::cout;
   string dest = "standard output";
   if (argc == 3) {
     dest = argv[2];
@@ -94,7 +96,7 @@ int main(int argc, char **argv) {
     osyms = fst->OutputSymbols();
 
   s::PrintFst(*fst, *ostrm, dest, isyms, osyms, ssyms,
-              FLAGS_acceptor, FLAGS_show_weight_one);
+              FLAGS_acceptor, FLAGS_show_weight_one, FLAGS_missing_symbol);
 
   if (isyms && !FLAGS_save_isymbols.empty())
     isyms->WriteText(FLAGS_save_isymbols);
@@ -102,7 +104,6 @@ int main(int argc, char **argv) {
   if (osyms && !FLAGS_save_osymbols.empty())
     osyms->WriteText(FLAGS_save_osymbols);
 
-  if (ostrm != &cout)
-    delete ostrm;
+  if (ostrm != &std::cout) delete ostrm;
   return 0;
 }

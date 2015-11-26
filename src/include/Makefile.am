@@ -1,11 +1,17 @@
+if HAVE_COMPRESS
+compress_include_headers = fst/extensions/compress/compress.h \
+fst/extensions/compress/compress-script.h fst/extensions/compress/fstgzfile.h \
+fst/extensions/compress/elias.h fst/extensions/compress/randmod.h
+endif
+
 if HAVE_FAR
 far_include_headers = fst/extensions/far/compile-strings.h \
 fst/extensions/far/create.h fst/extensions/far/equal.h \
 fst/extensions/far/extract.h fst/extensions/far/far.h \
 fst/extensions/far/farlib.h fst/extensions/far/farscript.h \
-fst/extensions/far/info.h fst/extensions/far/main.h \
-fst/extensions/far/print-strings.h fst/extensions/far/stlist.h \
-fst/extensions/far/sttable.h
+fst/extensions/far/info.h fst/extensions/far/isomorphic.h \
+fst/extensions/far/main.h fst/extensions/far/print-strings.h \
+fst/extensions/far/stlist.h fst/extensions/far/sttable.h
 endif
 
 if HAVE_LINEAR
@@ -15,6 +21,13 @@ fst/extensions/linear/linear-fst.h \
 fst/extensions/linear/linearscript.h \
 fst/extensions/linear/loglinear-apply.h \
 fst/extensions/linear/trie.h
+endif
+
+if HAVE_MPDT
+mpdt_include_headers = fst/extensions/mpdt/compose.h \
+fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
+fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtscript.h \
+fst/extensions/mpdt/read_write_utils.h fst/extensions/mpdt/reverse.h
 endif
 
 if HAVE_NGRAM
@@ -40,9 +53,9 @@ fst/script/difference.h fst/script/disambiguate.h  fst/script/draw-impl.h \
 fst/script/draw.h fst/script/encode.h fst/script/epsnormalize.h \
 fst/script/equal.h fst/script/equivalent.h fst/script/fst-class.h \
 fst/script/fstscript.h fst/script/info-impl.h fst/script/info.h \
-fst/script/intersect.h fst/script/invert.h fst/script/map.h \
-fst/script/minimize.h fst/script/print-impl.h fst/script/print.h \
-fst/script/project.h fst/script/prune.h fst/script/push.h \
+fst/script/intersect.h fst/script/invert.h fst/script/isomorphic.h \
+fst/script/map.h fst/script/minimize.h fst/script/print-impl.h \
+fst/script/print.h fst/script/project.h fst/script/prune.h fst/script/push.h \
 fst/script/randequivalent.h fst/script/randgen.h fst/script/register.h \
 fst/script/relabel.h fst/script/replace.h fst/script/reverse.h \
 fst/script/reweight.h fst/script/rmepsilon.h fst/script/script-impl.h \
@@ -77,9 +90,11 @@ fst/lookahead-filter.h fst/generic-register.h fst/edit-fst.h \
 fst/replace-util.h fst/icu.h fst/string.h fst/signed-log-weight.h \
 fst/sparse-tuple-weight.h fst/sparse-power-weight.h fst/expectation-weight.h \
 fst/symbol-table-ops.h fst/bi-table.h fst/mapped-file.h fst/memory.h \
-fst/filter-state.h fst/disambiguate.h \
+fst/filter-state.h fst/disambiguate.h fst/isomorphic.h fst/union-weight.h \
+$(compress_include_headers) \
 $(far_include_headers) \
 $(linear_include_headers) \
+$(mpdt_include_headers) \
 $(ngram_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)

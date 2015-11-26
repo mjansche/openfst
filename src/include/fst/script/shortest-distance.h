@@ -237,11 +237,6 @@ void ShortestDistance(const FstClass &fst, vector<WeightClass> *distance,
 void ShortestDistance(const FstClass &ifst, vector<WeightClass> *distance,
                       bool reverse = false, double delta = fst::kDelta);
 
-#ifndef SWIG
-// 3
-WeightClass ShortestDistance(const FstClass &ifst);
-#endif
-
 }  // namespace script
 }  // namespace fst
 

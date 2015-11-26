@@ -24,10 +24,10 @@ namespace script {
 // 1
 bool RandEquivalent(const FstClass &fst1, const FstClass &fst2,
                     int32 seed, ssize_t num_paths, float delta,
-                    int path_length) {
+                    int path_length, bool *error) {
   if (!ArcTypesMatch(fst1, fst2, "RandEquivalent")) return false;
   RandEquivalentInnerArgs1 args(fst1, fst2, seed, num_paths, delta,
-                                path_length);
+                                path_length, error);
   RandEquivalentArgs1 args_with_retval(args);
 
   Apply<Operation<RandEquivalentArgs1> >("RandEquivalent", fst1.ArcType(),
@@ -38,10 +38,11 @@ bool RandEquivalent(const FstClass &fst1, const FstClass &fst2,
 // 2
 bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, int32 seed,
                     ssize_t num_paths, float delta,
-                    const RandGenOptions<RandArcSelection> &opts) {
+                    const RandGenOptions<RandArcSelection> &opts, bool *error) {
   if (!ArcTypesMatch(fst1, fst2, "RandEquivalent")) return false;
 
-  RandEquivalentInnerArgs2 args(fst1, fst2, seed, num_paths, delta, opts);
+  RandEquivalentInnerArgs2 args(fst1, fst2, seed, num_paths, delta, opts,
+      error);
   RandEquivalentArgs2 args_with_retval(args);
 
   Apply<Operation<RandEquivalentArgs2> >(

@@ -337,7 +337,8 @@ uint64 ComplementProperties(uint64 inprops);
 uint64 ComposeProperties(uint64 inprops1, uint64 inprops2);
 uint64 ConcatProperties(uint64 inprops1, uint64 inprops2,
                         bool delayed = false);
-uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label);
+uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label,
+                             bool distinct_psubsequential_labels);
 uint64 FactorWeightProperties(uint64 inprops);
 uint64 InvertProperties(uint64 inprops);
 uint64 ProjectProperties(uint64 inprops, bool project_input);
@@ -352,7 +353,7 @@ uint64 ReplaceProperties(const vector<uint64>& inprops,
 uint64 ReverseProperties(uint64 inprops, bool has_superinitial);
 uint64 ReweightProperties(uint64 inprops);
 uint64 RmEpsilonProperties(uint64 inprops, bool delayed = false);
-uint64 ShortestPathProperties(uint64 props);
+uint64 ShortestPathProperties(uint64 props, bool tree = false);
 uint64 SynchronizeProperties(uint64 inprops);
 uint64 UnionProperties(uint64 inprops1, uint64 inprops2, bool delayed = false);
 

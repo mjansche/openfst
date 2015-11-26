@@ -96,17 +96,16 @@ void FarPrintStrings(
     string_printer(fst, &str);
 
     if (entry_type == FET_LINE) {
-      if (print_key)
-        cout << key << FLAGS_far_field_separator[0];
-      cout << str;
+      if (print_key) std::cout << key << FLAGS_far_field_separator[0];
+      std::cout << str;
       if (print_weight)
-        cout << FLAGS_far_field_separator[0] << ShortestDistance(fst);
-      cout << endl;
+        std::cout << FLAGS_far_field_separator[0] << ShortestDistance(fst);
+      std::cout << std::endl;
     } else if (entry_type == FET_FILE) {
       stringstream sstrm;
       if (generate_filenames) {
         sstrm.fill('0');
-        sstrm << std::right << setw(generate_filenames) << i;
+        sstrm << std::right << std::setw(generate_filenames) << i;
       } else {
         sstrm << key;
         if (nrep > 0)

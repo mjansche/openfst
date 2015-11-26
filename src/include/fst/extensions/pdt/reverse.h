@@ -47,8 +47,8 @@ void Reverse(const Fst<Arc> &ifst,
   // Exchanges open and close parenthesis pairs
   vector<pair<Label, Label> > relabel_pairs;
   for (size_t i = 0; i < parens.size(); ++i) {
-    relabel_pairs.push_back(make_pair(parens[i].first, parens[i].second));
-    relabel_pairs.push_back(make_pair(parens[i].second, parens[i].first));
+    relabel_pairs.push_back(std::make_pair(parens[i].first, parens[i].second));
+    relabel_pairs.push_back(std::make_pair(parens[i].second, parens[i].first));
   }
   Relabel(ofst, relabel_pairs, relabel_pairs);
 }

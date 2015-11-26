@@ -124,7 +124,7 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
 
 int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
   if (key == -1) return key;
-  const pair<int, bool>& insert_key = symbols_.InsertOrFind(symbol);
+  const pair<int64, bool>& insert_key = symbols_.InsertOrFind(symbol);
   if (!insert_key.second) {
     int64 key_already = GetNthKey(insert_key.first);
     if (key_already == key) return key;
@@ -265,14 +265,14 @@ pair<int64, bool> DenseSymbolMap::InsertOrFind(const string& key) {
   while (buckets_[idx] != empty_) {
     const int64 stored_value = buckets_[idx];
     if (!strcmp(symbols_[stored_value], key.c_str())) {
-      return make_pair(stored_value, false);
+      return std::make_pair(stored_value, false);
     }
     idx = (idx + 1) & hash_mask_;
   }
   int64 next = symbols_.size();
   buckets_[idx] = next;
   symbols_.push_back(NewSymbol(key));
-  return make_pair(next, true);
+  return std::make_pair(next, true);
 }
 
 int64 DenseSymbolMap::Find(const string& key) const {

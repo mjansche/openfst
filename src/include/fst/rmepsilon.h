@@ -295,8 +295,11 @@ void RmEpsilon(MutableFst<Arc> *fst,
   while (!states.empty()) {
     StateId state = states.back();
     states.pop_back();
-    if (!noneps_in[state])
+    if (!noneps_in[state] &&
+        (opts.connect || opts.weight_threshold != Weight::Zero() ||
+         opts.state_threshold != kNoStateId)) {
       continue;
+    }
     rmeps_state.Expand(state);
     fst->SetFinal(state, rmeps_state.Final());
     fst->DeleteArcs(state);
@@ -308,9 +311,12 @@ void RmEpsilon(MutableFst<Arc> *fst,
     }
   }
 
-  for (StateId s = 0; s < fst->NumStates(); ++s) {
-    if (!noneps_in[s])
-      fst->DeleteArcs(s);
+  if (opts.connect || opts.weight_threshold != Weight::Zero() ||
+      opts.state_threshold != kNoStateId) {
+    for (StateId s = 0; s < fst->NumStates(); ++s) {
+      if (!noneps_in[s])
+        fst->DeleteArcs(s);
+    }
   }
 
   if(rmeps_state.Error())
@@ -322,8 +328,8 @@ void RmEpsilon(MutableFst<Arc> *fst,
   if (opts.weight_threshold != Weight::Zero() ||
       opts.state_threshold != kNoStateId)
     Prune(fst, opts.weight_threshold, opts.state_threshold);
-  if (opts.connect && (opts.weight_threshold == Weight::Zero() ||
-                       opts.state_threshold != kNoStateId))
+  if (opts.connect && opts.weight_threshold == Weight::Zero() &&
+      opts.state_threshold == kNoStateId)
     Connect(fst);
 }
 

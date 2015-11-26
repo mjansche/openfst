@@ -52,12 +52,12 @@ struct DisambiguateOptions : public DeterminizeOptions<Arc> {
   typedef typename Arc::Label Label;
 
   explicit DisambiguateOptions(float d = kDelta, Weight w = Weight::Zero(),
-                              StateId n = kNoStateId, Label l = 0)
-      : DeterminizeOptions<Arc>(d, w, n, l) {}
+                               StateId n = kNoStateId, Label l = 0)
+      : DeterminizeOptions<Arc>(d, w, n, l, DETERMINIZE_FUNCTIONAL) {}
 };
 
 // A determinize filter based on a subset element relation.
-// The relation is assumed to be reflexive.
+// The relation is assumed to be reflexive and symmetric.
 template <class Arc, class R>
 class RelationDeterminizeFilter {
  public:
@@ -173,7 +173,7 @@ class RelationDeterminizeFilter {
   bool is_final_;                // Is the current head state final?
   vector<StateId> *head_;        // Head state for a given state.
 
-  DISALLOW_COPY_AND_ASSIGN(RelationDeterminizeFilter);
+  void operator=(const RelationDeterminizeFilter<Arc, R> &filt);  // disallow
 };
 
 template <class Arc, class R> bool
@@ -236,6 +236,7 @@ class Disambiguator {
                     const DisambiguateOptions<Arc> &opts =
                     DisambiguateOptions<Arc>()) {
     VectorFst<Arc> sfst(ifst);
+    Connect(&sfst);
     ArcSort(&sfst, ArcCompare());
     PreDisambiguate(sfst, ofst, opts);
     ArcSort(ofst, ArcCompare());
@@ -421,6 +422,7 @@ Disambiguator<Arc>::PreDisambiguate(const ExpandedFst<Arc> &ifst,
   nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
   if (opts.weight_threshold != Weight::Zero() ||
       opts.state_threshold != kNoStateId) {
+    /* TODO(riley): fails regression test; understand why
     if (ifst.Properties(kAcceptor, true)) {
       vector<Weight> idistance, odistance;
       ShortestDistance(ifst, &idistance, true);
@@ -430,7 +432,7 @@ Disambiguator<Arc>::PreDisambiguate(const ExpandedFst<Arc> &ifst,
                                                    AnyArcFilter<Arc>(),
                                                    &odistance);
       Prune(dfst, ofst, popts);
-    } else {
+      } else */ {
       *ofst = DeterminizeFst<Arc>(ifst, nopts);
       Prune(ofst, opts.weight_threshold, opts.state_threshold);
     }
@@ -483,18 +485,18 @@ void Disambiguator<Arc>::FindAmbiguousPairs(const ExpandedFst<Arc> &fst,
         if (s1 != s2 && arc1.nextstate == arc2.nextstate) {
           pair<ArcId, ArcId> apr;
           if (head_[s1] > head_[s2]) {
-            apr = make_pair(a1, a2);
+            apr = std::make_pair(a1, a2);
           } else {
-            apr = make_pair(a2, a1);
+            apr = std::make_pair(a2, a1);
           }
           candidates_->insert(apr);
         }
 
         pair<StateId, StateId> spr;
         if (arc1.nextstate <= arc2.nextstate) {
-          spr = make_pair(arc1.nextstate, arc2.nextstate);
+          spr = std::make_pair(arc1.nextstate, arc2.nextstate);
         } else {
-          spr = make_pair(arc2.nextstate, arc1.nextstate);
+          spr = std::make_pair(arc2.nextstate, arc1.nextstate);
         }
         // Not already marked as coreachable?
         if (coreachable_.find(spr) == coreachable_.end()) {
@@ -522,9 +524,9 @@ void Disambiguator<Arc>::FindAmbiguousPairs(const ExpandedFst<Arc> &fst,
     ArcId a2(s2, -1);
     pair<ArcId, ArcId> apr;
     if (head_[s1] > head_[s2]) {
-      apr = make_pair(a1, a2);
+      apr = std::make_pair(a1, a2);
     } else {
-      apr = make_pair(a2, a1);
+      apr = std::make_pair(a2, a1);
     }
     candidates_->insert(apr);
   }
@@ -622,8 +624,9 @@ void Disambiguator<Arc>::RemoveAmbiguities(MutableFst<Arc> *ofst) {
 // transducers that are unweighted or that are acyclic or that are unambiguous.
 //
 // References:
-// - Mehryar Mohri. "A Disambiguation Algorithm for Finite Automata and
-//   Functional Transducers". Proceedings CIAA 2012. Porto, Portugal, 2012.
+// - Mehryar Mohri and Michael Riley, "On the Disambiguation
+//   of Weighted Automata," ArXiv e-prints, cs-FL/1405.0500, 2014,
+//   http://arxiv.org/abs/1405.0500.
 template <class Arc>
 void Disambiguate(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
                   const DisambiguateOptions<Arc> &opts

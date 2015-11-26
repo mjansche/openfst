@@ -562,7 +562,7 @@ public:
       // Decompose into strongly-connected components.
       SccVisitor<Arc> scc_visitor(&scc_, 0, 0, &properties);
       DfsVisit(fst, &scc_visitor, filter);
-      StateId nscc = *max_element(scc_.begin(), scc_.end()) + 1;
+      StateId nscc = *std::max_element(scc_.begin(), scc_.end()) + 1;
       vector<QueueType> queue_types(nscc);
       NaturalLess<Weight> *less = 0;
       Compare *comp = 0;

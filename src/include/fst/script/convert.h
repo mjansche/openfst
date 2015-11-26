@@ -34,13 +34,10 @@ void Convert(ConvertArgs *args) {
   const string &new_type = args->args.arg2;
 
   Fst<Arc> *result = Convert(fst, new_type);
-  args->retval = new FstClass(*result);
+  args->retval = result ? new FstClass(*result) : nullptr;
   delete result;
 }
 
-#ifdef SWIG
-%newobject Convert;
-#endif
 FstClass *Convert(const FstClass& f, const string &new_type);
 
 }  // namespace script

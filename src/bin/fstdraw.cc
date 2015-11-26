@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   s::FstClass *fst = s::FstClass::Read(in_name);
   if (!fst) return 1;
 
-  ostream *ostrm = &cout;
+  ostream *ostrm = &std::cout;
   string dest = "stdout";
   if (argc == 3) {
     dest = argv[2];
@@ -107,7 +107,6 @@ int main(int argc, char **argv) {
              FLAGS_fontsize, FLAGS_precision,
              FLAGS_show_weight_one, ostrm, dest);
 
-  if (ostrm != &cout)
-    delete ostrm;
+  if (ostrm != &std::cout) delete ostrm;
   return 0;
 }

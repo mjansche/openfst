@@ -24,16 +24,12 @@
 namespace fst {
 namespace script {
 
-// The following confuses swig, because it has the same arguments
-// as the non-templated version
-#ifndef SWIG
 template<class Arc>
 void Invert(MutableFstClass *fst) {
   MutableFst<Arc> *typed_fst = fst->GetMutableFst<Arc>();
 
   Invert(typed_fst);
 }
-#endif
 
 void Invert(MutableFstClass *fst);
 

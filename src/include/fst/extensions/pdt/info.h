@@ -142,32 +142,33 @@ PdtInfo<A>::PdtInfo(const Fst<A> &fst,
 
 template <class A>
 void PrintPdtInfo(const PdtInfo<A> &pdtinfo) {
-  ios_base::fmtflags old = cout.setf(ios::left);
-  cout.width(50);
-  cout << "fst type" << pdtinfo.FstType().c_str() << endl;
-  cout.width(50);
-  cout << "arc type" << pdtinfo.ArcType().c_str() << endl;
-  cout.width(50);
-  cout << "# of states" << pdtinfo.NumStates() << endl;
-  cout.width(50);
-  cout << "# of arcs" << pdtinfo.NumArcs() << endl;
-  cout.width(50);
-  cout << "# of open parentheses" << pdtinfo.NumOpenParens() << endl;
-  cout.width(50);
-  cout << "# of close parentheses" << pdtinfo.NumCloseParens() << endl;
-  cout.width(50);
-  cout << "# of unique open parentheses"
-       << pdtinfo.NumUniqueOpenParens() << endl;
-  cout.width(50);
-  cout << "# of unique close parentheses"
-       << pdtinfo.NumUniqueCloseParens() << endl;
-  cout.width(50);
-  cout << "# of open parenthesis dest. states"
-       << pdtinfo.NumOpenParenStates() << endl;
-  cout.width(50);
-  cout << "# of close parenthesis source states"
-       << pdtinfo.NumCloseParenStates() << endl;
-  cout.setf(old);
+  ios_base::fmtflags old = std::cout.setf(ios::left);
+  std::cout.width(50);
+  std::cout << "fst type" << pdtinfo.FstType().c_str() << std::endl;
+  std::cout.width(50);
+  std::cout << "arc type" << pdtinfo.ArcType().c_str() << std::endl;
+  std::cout.width(50);
+  std::cout << "# of states" << pdtinfo.NumStates() << std::endl;
+  std::cout.width(50);
+  std::cout << "# of arcs" << pdtinfo.NumArcs() << std::endl;
+  std::cout.width(50);
+  std::cout << "# of open parentheses" << pdtinfo.NumOpenParens() << std::endl;
+  std::cout.width(50);
+  std::cout << "# of close parentheses" << pdtinfo.NumCloseParens()
+            << std::endl;
+  std::cout.width(50);
+  std::cout << "# of unique open parentheses" << pdtinfo.NumUniqueOpenParens()
+            << std::endl;
+  std::cout.width(50);
+  std::cout << "# of unique close parentheses" << pdtinfo.NumUniqueCloseParens()
+            << std::endl;
+  std::cout.width(50);
+  std::cout << "# of open parenthesis dest. states"
+            << pdtinfo.NumOpenParenStates() << std::endl;
+  std::cout.width(50);
+  std::cout << "# of close parenthesis source states"
+            << pdtinfo.NumCloseParenStates() << std::endl;
+  std::cout.setf(old);
 }
 
 }  // namespace fst

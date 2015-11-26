@@ -385,7 +385,7 @@ template <class A> class EncodeMapper {
 
   static EncodeMapper<A> *Read(const string& filename,
                                EncodeType type = ENCODE) {
-    ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+    ifstream strm(filename.c_str(), ios_base::in | ios_base::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
       return NULL;

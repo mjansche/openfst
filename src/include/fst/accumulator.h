@@ -18,8 +18,8 @@
 // \file
 // Classes to accumulate arc weights. Useful for weight lookahead.
 
-#ifndef FST_LIB_ACCUMULATOR_H__
-#define FST_LIB_ACCUMULATOR_H__
+#ifndef FST_LIB_ACCUMULATOR_H_
+#define FST_LIB_ACCUMULATOR_H_
 
 #include <algorithm>
 #include <functional>
@@ -228,8 +228,18 @@ class FastLogAccumulator {
     }
     // Computes sum between pre-stored weights
     if (stored_begin < stored_end) {
-      sum = LogPlus(sum, LogMinus(state_weights_[index_end],
-                                  state_weights_[index_begin]));
+      double f1 = state_weights_[index_end];
+      double f2 = state_weights_[index_begin];
+      if (f1 < f2)  {
+        sum = LogPlus(sum, LogMinus(f1, f2));
+      }
+      // commented out for efficiency; adds Zero()
+      /* else {
+        // explicitly computes if cumulative sum lacks precision
+        aiter->Seek(stored_begin);
+        for (ssize_t pos = stored_begin; pos < stored_end; aiter->Next(), ++pos)
+          sum = LogPlus(sum, aiter->Value().weight);
+      } */
     }
     // Computes sum after pre-stored weights
     if (stored_end < end) {
@@ -310,13 +320,8 @@ class FastLogAccumulator {
       return f1 - LogPosExp(f2 - f1);
   }
 
+  // Assumes f1 < f2
   Weight LogMinus(double f1, double f2) {
-    if (f1 >= f2) {
-      FSTERROR() << "FastLogAcumulator::LogMinus: f1 >= f2 with f1 = " << f1
-                 << " and f2 = " << f2;
-      error_ = true;
-      return Weight::NoWeight();
-    }
     if (f2 == FloatLimits<double>::PosInfinity())
       return to_weight_(f1);
     else
@@ -376,7 +381,7 @@ class CacheLogAccumulatorData {
   void AddWeights(StateId s, vector<double> *weights) {
     if (cache_gc_ && cache_size_ >= cache_limit_)
       GC(false);
-    cache_.insert(make_pair(s, CacheState(weights, true)));
+    cache_.insert(std::make_pair(s, CacheState(weights, true)));
     if (cache_gc_)
       cache_size_ += weights->capacity() * sizeof(double);
   }
@@ -518,18 +523,30 @@ class CacheLogAccumulator {
                                       aiter->Value().weight));
         }
       }
-      return LogPlus(w, LogMinus((*weights_)[end], (*weights_)[begin]));
+      double f1 = (*weights_)[end];
+      double f2 = (*weights_)[begin];
+      if (f1 < f2) {
+        return LogPlus(w, LogMinus(f1, f2));
+      } else {
+        Weight sum = w;
+        // commented out for efficiency; adds Zero()
+        /*
+        // explicitly computes if cumulative sum lacks precision
+        aiter->Seek(begin);
+        for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos)
+          sum = LogPlus(sum, aiter->Value().weight);
+        */
+        return sum;
+      }
     }
   }
 
   template <class Iterator>
   size_t LowerBound(double w, Iterator *aiter) {
     if (weights_ != 0) {
-      return lower_bound(weights_->begin() + 1,
-                         weights_->end(),
-                         w,
-                         std::greater<double>())
-          - weights_->begin() - 1;
+      return std::lower_bound(weights_->begin() + 1, weights_->end(), w,
+                              std::greater<double>()) -
+             weights_->begin() - 1;
     } else {
       size_t n = 0;
       double x =  FloatLimits<double>::PosInfinity();
@@ -573,13 +590,8 @@ class CacheLogAccumulator {
       return f1 - LogPosExp(f2 - f1);
   }
 
+  // Assumes f1 < f2
   Weight LogMinus(double f1, double f2) {
-    if (f1 >= f2) {
-      FSTERROR() << "CacheLogAcumulator::LogMinus: f1 >= f2 with f1 = " << f1
-                 << " and f2 = " << f2;
-      error_ = true;
-      return Weight::NoWeight();
-    }
     if (f2 == FloatLimits<double>::PosInfinity())
       return to_weight_(f1);
     else
@@ -776,4 +788,4 @@ class ReplaceAccumulator {
 
 }  // namespace fst
 
-#endif  // FST_LIB_ACCUMULATOR_H__
+#endif  // FST_LIB_ACCUMULATOR_H_
