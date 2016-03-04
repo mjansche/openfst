@@ -1,26 +1,14 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
-
-// Represents a generic weight in an FST -- that is, represents a specific
-// type of weight underneath while hiding that type from a client.
-
+// Represents a generic weight in an FST; that is, represents a specific type
+// of weight underneath while hiding that type from a client.
 
 #ifndef FST_SCRIPT_WEIGHT_CLASS_H_
 #define FST_SCRIPT_WEIGHT_CLASS_H_
 
+#include <memory>
+#include <ostream>
 #include <string>
 
 #include <fst/generic-register.h>
@@ -32,100 +20,84 @@ namespace script {
 class WeightImplBase {
  public:
   virtual WeightImplBase *Copy() const = 0;
-  virtual void Print(ostream *o) const = 0;
+  virtual void Print(std::ostream *o) const = 0;
   virtual const string &Type() const = 0;
-  virtual string to_string() const = 0;
-  virtual bool operator == (const WeightImplBase &other) const = 0;
-  virtual ~WeightImplBase() { }
+  virtual string ToString() const = 0;
+  virtual bool operator==(const WeightImplBase &other) const = 0;
+  virtual ~WeightImplBase() {}
 };
 
-template<class W>
+template <class W>
 struct WeightClassImpl : public WeightImplBase {
   W weight;
 
-  explicit WeightClassImpl(const W& weight) : weight(weight) { }
+  explicit WeightClassImpl(const W &weight) : weight(weight) {}
 
-  virtual WeightClassImpl<W> *Copy() const {
+  WeightClassImpl<W> *Copy() const override {
     return new WeightClassImpl<W>(weight);
   }
 
-  virtual const string &Type() const { return W::Type(); }
+  const string &Type() const override { return W::Type(); }
 
-  virtual void Print(ostream *o) const {
-    *o << weight;
-  }
+  void Print(std::ostream *o) const override { *o << weight; }
 
-  virtual string to_string() const {
+  string ToString() const override {
     string str;
     WeightToStr(weight, &str);
     return str;
   }
 
-  virtual bool operator == (const WeightImplBase &other) const {
+  bool operator==(const WeightImplBase &other) const override {
     if (Type() != other.Type()) {
       return false;
     } else {
       const WeightClassImpl<W> *typed_other =
           static_cast<const WeightClassImpl<W> *>(&other);
-
       return typed_other->weight == weight;
     }
   }
 };
 
-
 class WeightClass {
  public:
-  WeightClass() : element_type_(ZERO), impl_(0) { }
+  WeightClass() = default;
 
-  template<class W>
-  explicit WeightClass(const W& weight)
-  : element_type_(OTHER), impl_(new WeightClassImpl<W>(weight)) { }
+  template <class W>
+  explicit WeightClass(const W &weight)
+      : impl_(new WeightClassImpl<W>(weight)) {}
 
   WeightClass(const string &weight_type, const string &weight_str);
 
-  WeightClass(const WeightClass &other) :
-      element_type_(other.element_type_),
-      impl_(other.impl_ ? other.impl_->Copy() : 0) { }
+  WeightClass(const WeightClass &other)
+      : impl_(other.impl_ ? other.impl_->Copy() : nullptr) {}
 
-  WeightClass &operator = (const WeightClass &other) {
-    if (impl_) delete impl_;
-    impl_ = other.impl_ ? other.impl_->Copy() : 0;
-    element_type_ = other.element_type_;
+  WeightClass &operator=(const WeightClass &other) {
+    impl_.reset(other.impl_ ? other.impl_->Copy() : nullptr);
     return *this;
   }
 
-  template<class W>
-  const W* GetWeight() const;
+  // The statics are defined in the .cc.
 
-  string to_string() const {
-    switch (element_type_) {
-      case ZERO:
-        return "ZERO";
-      case ONE:
-        return "ONE";
-      default:
-      case OTHER:
-        return impl_->to_string();
-    }
-  }
+  static const char *__ZERO__;  // NOLINT
 
-  bool operator == (const WeightClass &other) const {
-    return element_type_ == other.element_type_ &&
-        ((impl_ && other.impl_ && (*impl_ == *other.impl_)) ||
-         (impl_ == 0 && other.impl_ == 0));
-  }
+  static const WeightClass Zero(const string &weight_type);
 
-  static const WeightClass &Zero() {
-    static WeightClass w(ZERO);
+  static const char *__ONE__;  // NOLINT
 
-    return w;
-  }
+  static const WeightClass One(const string &weight_type);
 
-  static const WeightClass &One() {
-    static WeightClass w(ONE);
+  static const char *__NOWEIGHT__;  // NOLINT
 
-    return w;
+  static const WeightClass NoWeight(const string &weight_type);
+
+  template <class W>
+  const W *GetWeight() const;
+
+  string ToString() const { return (impl_) ? impl_->ToString() : "none"; }
+
+  bool operator==(const WeightClass &other) const {
+    return ((impl_ && other.impl_ && (*impl_ == *other.impl_)) ||
+            (impl_ == nullptr && other.impl_ == nullptr));
   }
 
   const string &Type() const {
@@ -134,83 +106,63 @@ class WeightClass {
     return no_type;
   }
 
-
-  ~WeightClass() { if (impl_) delete impl_; }
  private:
-  enum ElementType { ZERO, ONE, OTHER };
-  ElementType element_type_;
+  std::unique_ptr<WeightImplBase> impl_;
 
-  WeightImplBase *impl_;
-
-  explicit WeightClass(ElementType et) : element_type_(et), impl_(0) { }
-
-  friend ostream &operator << (ostream &o, const WeightClass &c);
+  friend std::ostream &operator<<(std::ostream &o, const WeightClass &c);
 };
 
-template<class W>
-const W* WeightClass::GetWeight() const {
-  // We need to store zero and one as statics, because the weight type
-  // W might return them as temporaries. We're returning a pointer,
-  // and it won't do to get the address of a temporary.
-  static const W zero = W::Zero();
-  static const W one = W::One();
-
-  if (element_type_ == ZERO) {
-    return &zero;
-  } else if (element_type_ == ONE) {
-    return &one;
+template <class W>
+const W *WeightClass::GetWeight() const {
+  if (W::Type() != impl_->Type()) {
+     return nullptr;
   } else {
-    if (W::Type() != impl_->Type()) {
-      return NULL;
-    } else {
-      WeightClassImpl<W> *typed_impl =
-          static_cast<WeightClassImpl<W> *>(impl_);
-      return &typed_impl->weight;
-    }
+    auto *typed_impl = static_cast<WeightClassImpl<W> *>(impl_.get());
+    return &typed_impl->weight;
   }
 }
 
-//
 // Registration for generic weight types.
-//
 
-typedef WeightImplBase* (*StrToWeightImplBaseT)(const string &str,
+typedef WeightImplBase *(*StrToWeightImplBaseT)(const string &str,
                                                 const string &src,
                                                 size_t nline);
 
-template<class W>
-WeightImplBase* StrToWeightImplBase(const string &str,
-                                    const string &src, size_t nline) {
+template <class W>
+WeightImplBase *StrToWeightImplBase(const string &str, const string &src,
+                                    size_t nline) {
+  if (str == WeightClass::__ZERO__)
+    return new WeightClassImpl<W>(W::Zero());
+  else if (str == WeightClass::__ONE__)
+    return new WeightClassImpl<W>(W::One());
+  else if (str == WeightClass::__NOWEIGHT__)
+    return new WeightClassImpl<W>(W::NoWeight());
   return new WeightClassImpl<W>(StrToWeight<W>(str, src, nline));
 }
 
-ostream& operator << (ostream &o, const WeightClass &c);
+std::ostream &operator<<(std::ostream &o, const WeightClass &c);
 
-class WeightClassRegister : public GenericRegister<string,
-                                                   StrToWeightImplBaseT,
+class WeightClassRegister : public GenericRegister<string, StrToWeightImplBaseT,
                                                    WeightClassRegister> {
  protected:
-  virtual string ConvertKeyToSoFilename(const string &key) const {
+  string ConvertKeyToSoFilename(const string &key) const override {
     return key + ".so";
   }
 };
 
 typedef GenericRegisterer<WeightClassRegister> WeightClassRegisterer;
 
-// internal version, needs to be called by wrapper in order for
-// macro args to expand
-#define REGISTER_FST_WEIGHT__(Weight, line)                             \
-  static WeightClassRegisterer weight_registerer ## _ ## line(          \
-      Weight::Type(),                                                   \
-      StrToWeightImplBase<Weight>)
+// Internal version; needs to be called by wrapper in order for macro args to
+// expand.
+#define REGISTER_FST_WEIGHT__(Weight, line)                \
+  static WeightClassRegisterer weight_registerer##_##line( \
+      Weight::Type(), StrToWeightImplBase<Weight>)
 
-// This layer is where __FILE__ and __LINE__ are expanded
-#define REGISTER_FST_WEIGHT_EXPANDER(Weight, line)      \
+// This layer is where __FILE__ and __LINE__ are expanded.
+#define REGISTER_FST_WEIGHT_EXPANDER(Weight, line) \
   REGISTER_FST_WEIGHT__(Weight, line)
 
-//
 // Macro for registering new weight types. Clients call this.
-//
 #define REGISTER_FST_WEIGHT(Weight) \
   REGISTER_FST_WEIGHT_EXPANDER(Weight, __LINE__)
 

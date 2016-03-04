@@ -194,6 +194,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -311,6 +312,7 @@ top_srcdir = @top_srcdir@
 @HAVE_COMPRESS_TRUE@compressdir = compress
 @HAVE_CONST_TRUE@constdir = const
 @HAVE_FAR_TRUE@fardir = far
+@HAVE_PYTHON_TRUE@fardir = far
 @HAVE_LINEAR_TRUE@lineardir = linear
 @HAVE_LOOKAHEAD_TRUE@lookaheaddir = lookahead
 @HAVE_MPDT_TRUE@mpdtdir = mpdt
@@ -319,7 +321,7 @@ top_srcdir = @top_srcdir@
 @HAVE_PDT_TRUE@pdtdir = pdt
 SUBDIRS = $(compactdir) $(compressdir) $(constdir) $(fardir) \
           $(lineardir) $(lookaheaddir) $(mpdtdir) $(ngramdir) $(pdtdir) \
-				  $(pywrapfstdir)
+          $(pywrapfstdir)
 
 all: all-recursive
 

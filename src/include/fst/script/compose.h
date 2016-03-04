@@ -1,33 +1,20 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_SCRIPT_COMPOSE_H_
 #define FST_SCRIPT_COMPOSE_H_
 
+#include <fst/compose.h>
 #include <fst/script/arg-packs.h>
 #include <fst/script/fst-class.h>
-#include <fst/compose.h>
 
 namespace fst {
 namespace script {
 
-typedef args::Package<const FstClass&, const FstClass&,
-                      MutableFstClass*, ComposeFilter> ComposeArgs1;
+typedef args::Package<const FstClass &, const FstClass &, MutableFstClass *,
+                      ComposeFilter> ComposeArgs1;
 
-template<class Arc>
+template <class Arc>
 void Compose(ComposeArgs1 *args) {
   const Fst<Arc> &ifst1 = *(args->arg1.GetFst<Arc>());
   const Fst<Arc> &ifst2 = *(args->arg2.GetFst<Arc>());
@@ -38,10 +25,10 @@ void Compose(ComposeArgs1 *args) {
 
 typedef fst::ComposeOptions ComposeOptions;
 
-typedef args::Package<const FstClass&, const FstClass&,
-                      MutableFstClass*, const ComposeOptions &> ComposeArgs2;
+typedef args::Package<const FstClass &, const FstClass &, MutableFstClass *,
+                      const ComposeOptions &> ComposeArgs2;
 
-template<class Arc>
+template <class Arc>
 void Compose(ComposeArgs2 *args) {
   const Fst<Arc> &ifst1 = *(args->arg1.GetFst<Arc>());
   const Fst<Arc> &ifst2 = *(args->arg2.GetFst<Arc>());

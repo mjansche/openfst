@@ -1,38 +1,22 @@
-// partition.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: johans@google.com (Johan Schalkwyk)
-//
-// \file Functions and classes to create a partition of states
-//
+// Functions and classes to create a partition of states.
 
 #ifndef FST_LIB_PARTITION_H__
 #define FST_LIB_PARTITION_H__
 
-#include <vector>
-using std::vector;
 #include <algorithm>
+#include <vector>
 
 
 #include <fst/queue.h>
 
 
-
 namespace fst {
 
-template <typename T> class PartitionIterator;
+template <typename T>
+class PartitionIterator;
 
 // \class Partition
 // \brief Defines a partitioning of states. Typically used to represent
@@ -43,24 +27,21 @@ class Partition {
   friend class PartitionIterator<T>;
 
   struct Element {
-   Element() : value(0), next(0), prev(0) {}
-   Element(T v) : value(v), next(0), prev(0) {}
+    Element() : value(0), next(0), prev(0) {}
+    Element(T v) : value(v), next(0), prev(0) {}
 
-   T        value;
-   Element* next;
-   Element* prev;
+    T value;
+    Element* next;
+    Element* prev;
   };
 
  public:
   Partition() {}
 
-  Partition(T num_states) {
-    Initialize(num_states);
-  }
+  Partition(T num_states) { Initialize(num_states); }
 
   ~Partition() {
-    for (size_t i = 0; i < elements_.size(); ++i)
-      delete elements_[i];
+    for (size_t i = 0; i < elements_.size(); ++i) delete elements_[i];
   }
 
   // Create an empty partition for num_states. At initialization time
@@ -69,8 +50,7 @@ class Partition {
   // operations are then done by simply disconnecting the element from
   // it current class and placing it at the head of the next class.
   void Initialize(size_t num_states) {
-    for (size_t i = 0; i < elements_.size(); ++i)
-      delete elements_[i];
+    for (size_t i = 0; i < elements_.size(); ++i) delete elements_[i];
     elements_.clear();
     classes_.clear();
     class_index_.clear();
@@ -78,8 +58,7 @@ class Partition {
     elements_.resize(num_states);
     class_index_.resize(num_states, -1);
     class_size_.reserve(num_states);
-    for (size_t i = 0; i < num_states; ++i)
-      elements_[i] = new Element(i);
+    for (size_t i = 0; i < num_states; ++i) elements_[i] = new Element(i);
     num_states_ = num_states;
   }
 
@@ -107,8 +86,7 @@ class Partition {
   void Add(T element_id, T class_id) {
     Element* element = elements_[element_id];
 
-    if (classes_[class_id])
-      classes_[class_id]->prev = element;
+    if (classes_[class_id]) classes_[class_id]->prev = element;
     element->next = classes_[class_id];
     element->prev = 0;
     classes_[class_id] = element;
@@ -124,8 +102,10 @@ class Partition {
 
     Element* element = elements_[element_id];
     if (element->next) element->next->prev = element->prev;
-    if (element->prev) element->prev->next = element->next;
-    else               classes_[old_class_id] = element->next;
+    if (element->prev)
+      element->prev->next = element->next;
+    else
+      classes_[old_class_id] = element->next;
 
     Add(element_id, class_id);
     class_size_[old_class_id]--;
@@ -137,8 +117,7 @@ class Partition {
     if (class_size_[class_id] == 1) return;
 
     // first time class is split
-    if (split_size_[class_id] == 0)
-      visited_classes_.push_back(class_id);
+    if (split_size_[class_id] == 0) visited_classes_.push_back(class_id);
 
     // increment size of split (set of element at head of chain)
     split_size_[class_id]++;
@@ -163,18 +142,17 @@ class Partition {
       split_size_[class_id] = 0;
       return -1;
     } else {
-
       T new_class = AddClass();
       size_t remainder = class_size_[class_id] - split_size_[class_id];
       if (remainder < split_size_[class_id]) {  // add smaller
-        Element* split_el   = class_split_[class_id];
+        Element* split_el = class_split_[class_id];
         classes_[new_class] = split_el;
         class_size_[class_id] = split_size_[class_id];
         class_size_[new_class] = remainder;
         split_el->prev->next = 0;
         split_el->prev = 0;
       } else {
-        Element* split_el   = class_split_[class_id];
+        Element* split_el = class_split_[class_id];
         classes_[new_class] = classes_[class_id];
         class_size_[class_id] = remainder;
         class_size_[new_class] = split_size_[class_id];
@@ -202,81 +180,60 @@ class Partition {
   void FinalizeSplit(Queue* L) {
     for (size_t i = 0; i < visited_classes_.size(); ++i) {
       T new_class = SplitRefine(visited_classes_[i]);
-      if (new_class != -1 && L)
-        L->Enqueue(new_class);
+      if (new_class != -1 && L) L->Enqueue(new_class);
     }
     visited_classes_.clear();
   }
 
+  const T class_id(T element_id) const { return class_index_[element_id]; }
 
-  const T class_id(T element_id) const {
-    return class_index_[element_id];
-  }
+  const std::vector<T>& class_sizes() const { return class_size_; }
 
-  const vector<T>& class_sizes() const {
-    return class_size_;
-  }
+  size_t class_size(T class_id) const { return class_size_[class_id]; }
 
-  size_t class_size(T class_id) const {
-    return class_size_[class_id];
-  }
-
-  const T num_classes() const {
-    return classes_.size();
-  }
-
+  const T num_classes() const { return classes_.size(); }
 
  private:
   int num_states_;
 
   // container of all elements (owner of ptrs)
-  vector<Element*> elements_;
+  std::vector<Element*> elements_;
 
   // linked list of elements belonging to class
-  vector<Element*> classes_;
+  std::vector<Element*> classes_;
 
   // pointer to split point for each class
-  vector<Element*> class_split_;
+  std::vector<Element*> class_split_;
 
   // class index of element
-  vector<T> class_index_;
+  std::vector<T> class_index_;
 
   // class sizes
-  vector<T> class_size_;
+  std::vector<T> class_size_;
 
   // size of split for each class
-  vector<T> split_size_;
+  std::vector<T> split_size_;
 
   // set of visited classes to be used in split refine
-  vector<T> visited_classes_;
+  std::vector<T> visited_classes_;
 };
-
 
 // iterate over members of a class in a partition
 template <typename T>
 class PartitionIterator {
   typedef typename Partition<T>::Element Element;
+
  public:
   PartitionIterator(const Partition<T>& partition, T class_id)
-      : p_(partition),
-        element_(p_.classes_[class_id]),
-        class_id_(class_id) {}
+      : p_(partition), element_(p_.classes_[class_id]), class_id_(class_id) {}
 
-  bool Done() {
-    return (element_ == 0);
-  }
+  bool Done() { return (element_ == 0); }
 
-  const T Value() {
-    return (element_->value);
-  }
+  const T Value() { return (element_->value); }
 
-  void Next() {
-    element_ = element_->next;
-  }
+  void Next() { element_ = element_->next; }
 
-  void Reset() {
-    element_ = p_.classes_[class_id_];
-  }
+  void Reset() { element_ = p_.classes_[class_id_]; }
 
  private:
   const Partition<T>& p_;

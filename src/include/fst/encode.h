@@ -1,33 +1,18 @@
-// encode.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: johans@google.com (Johan Schalkwyk)
-//
-// \file
-// Class to encode and decoder an fst.
+// Class to encode and decode an FST.
 
 #ifndef FST_LIB_ENCODE_H__
 #define FST_LIB_ENCODE_H__
 
 #include <climits>
-#include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
+#include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
-using std::vector;
+
+#include <fstream>
 
 #include <fst/arc-map.h>
 #include <fst/rmfinalepsilon.h>
@@ -35,9 +20,9 @@ using std::vector;
 
 namespace fst {
 
-static const uint32 kEncodeLabels      = 0x0001;
-static const uint32 kEncodeWeights     = 0x0002;
-static const uint32 kEncodeFlags       = 0x0003;  // All non-internal flags
+static const uint32 kEncodeLabels = 0x0001;
+static const uint32 kEncodeWeights = 0x0002;
+static const uint32 kEncodeFlags = 0x0003;  // All non-internal flags
 
 static const uint32 kEncodeHasISymbols = 0x0004;  // For internal use
 static const uint32 kEncodeHasOSymbols = 0x0008;  // For internal use
@@ -47,13 +32,13 @@ enum EncodeType { ENCODE = 1, DECODE = 2 };
 // Identifies stream data as an encode table (and its endianity)
 static const int32 kEncodeMagicNumber = 2129983209;
 
-
 // The following class encapsulates implementation details for the
 // encoding and decoding of label/weight tuples used for encoding
 // and decoding of Fsts. The EncodeTable is bidirectional. I.E it
 // stores both the Tuple of encode labels and weights to a unique
 // label, and the reverse.
-template <class A>  class EncodeTable {
+template <class A>
+class EncodeTable {
  public:
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
@@ -63,7 +48,7 @@ template <class A>  class EncodeTable {
     Tuple() {}
     Tuple(Label ilabel_, Label olabel_, Weight weight_)
         : ilabel(ilabel_), olabel(olabel_), weight(weight_) {}
-    Tuple(const Tuple& tuple)
+    Tuple(const Tuple &tuple)
         : ilabel(tuple.ilabel), olabel(tuple.olabel), weight(tuple.weight) {}
 
     Label ilabel;
@@ -74,9 +59,8 @@ template <class A>  class EncodeTable {
   // Comparison object for hashing EncodeTable Tuple(s).
   class TupleEqual {
    public:
-    bool operator()(const Tuple* x, const Tuple* y) const {
-      return (x->ilabel == y->ilabel &&
-              x->olabel == y->olabel &&
+    bool operator()(const Tuple *x, const Tuple *y) const {
+      return (x->ilabel == y->ilabel && x->olabel == y->olabel &&
               x->weight == y->weight);
     }
   };
@@ -85,16 +69,13 @@ template <class A>  class EncodeTable {
   // we either hash the labels, weights or combination of them.
   class TupleKey {
    public:
-    TupleKey()
-        : encode_flags_(kEncodeLabels | kEncodeWeights) {}
+    TupleKey() : encode_flags_(kEncodeLabels | kEncodeWeights) {}
 
-    TupleKey(const TupleKey& key)
-        : encode_flags_(key.encode_flags_) {}
+    TupleKey(const TupleKey &key) : encode_flags_(key.encode_flags_) {}
 
-    explicit TupleKey(uint32 encode_flags)
-        : encode_flags_(encode_flags) {}
+    explicit TupleKey(uint32 encode_flags) : encode_flags_(encode_flags) {}
 
-    size_t operator()(const Tuple* x) const {
+    size_t operator()(const Tuple *x) const {
       size_t hash = x->ilabel;
       const int lshift = 5;
       const int rshift = CHAR_BIT * sizeof(size_t) - 5;
@@ -109,15 +90,14 @@ template <class A>  class EncodeTable {
     int32 encode_flags_;
   };
 
-  typedef unordered_map<const Tuple*,
-                   Label,
-                   TupleKey,
-                   TupleEqual> EncodeHash;
+  typedef std::unordered_map<const Tuple *, Label, TupleKey, TupleEqual>
+      EncodeHash;
 
   explicit EncodeTable(uint32 encode_flags)
       : flags_(encode_flags),
         encode_hash_(1024, TupleKey(encode_flags)),
-        isymbols_(0), osymbols_(0) {}
+        isymbols_(0),
+        osymbols_(0) {}
 
   ~EncodeTable() {
     for (size_t i = 0; i < encode_tuples_.size(); ++i) {
@@ -129,8 +109,7 @@ template <class A>  class EncodeTable {
 
   // Given an arc encode either input/ouptut labels or input/costs or both
   Label Encode(const A &arc) {
-    const Tuple tuple(arc.ilabel,
-                      flags_ & kEncodeLabels ? arc.olabel : 0,
+    const Tuple tuple(arc.ilabel, flags_ & kEncodeLabels ? arc.olabel : 0,
                       flags_ & kEncodeWeights ? arc.weight : Weight::One());
     typename EncodeHash::const_iterator it = encode_hash_.find(&tuple);
     if (it == encode_hash_.end()) {
@@ -144,8 +123,7 @@ template <class A>  class EncodeTable {
 
   // Given an arc, look up its encoded label. Returns kNoLabel if not found.
   Label GetLabel(const A &arc) const {
-    const Tuple tuple(arc.ilabel,
-                      flags_ & kEncodeLabels ? arc.olabel : 0,
+    const Tuple tuple(arc.ilabel, flags_ & kEncodeLabels ? arc.olabel : 0,
                       flags_ & kEncodeWeights ? arc.weight : Weight::One());
     typename EncodeHash::const_iterator it = encode_hash_.find(&tuple);
     if (it == encode_hash_.end()) {
@@ -156,32 +134,27 @@ template <class A>  class EncodeTable {
   }
 
   // Given an encode arc Label decode back to input/output labels and costs
-  const Tuple* Decode(Label key) const {
+  const Tuple *Decode(Label key) const {
     if (key < 1 || key > encode_tuples_.size()) {
-      LOG(ERROR) << "EncodeTable::Decode: unknown decode key: " << key;
-      return 0;
+      LOG(ERROR) << "EncodeTable::Decode: Unknown decode key: " << key;
+      return nullptr;
     }
     return encode_tuples_[key - 1];
   }
 
   size_t Size() const { return encode_tuples_.size(); }
 
-  bool Write(ostream &strm, const string &source) const;
+  bool Write(std::ostream &strm, const string &source) const;
 
-  static EncodeTable<A> *Read(istream &strm, const string &source);
+  static EncodeTable<A> *Read(std::istream &strm, const string &source);
 
-  uint32 flags() const { return flags_ & kEncodeFlags; }
+  uint32 Flags() const { return flags_ & kEncodeFlags; }
 
-  int RefCount() const { return ref_count_.count(); }
-  int IncrRefCount() { return ref_count_.Incr(); }
-  int DecrRefCount() { return ref_count_.Decr(); }
+  const SymbolTable *InputSymbols() const { return isymbols_; }
 
+  const SymbolTable *OutputSymbols() const { return osymbols_; }
 
-  SymbolTable *InputSymbols() const { return isymbols_; }
-
-  SymbolTable *OutputSymbols() const { return osymbols_; }
-
-  void SetInputSymbols(const SymbolTable* syms) {
+  void SetInputSymbols(const SymbolTable *syms) {
     if (isymbols_) delete isymbols_;
     if (syms) {
       isymbols_ = syms->Copy();
@@ -192,7 +165,7 @@ template <class A>  class EncodeTable {
     }
   }
 
-  void SetOutputSymbols(const SymbolTable* syms) {
+  void SetOutputSymbols(const SymbolTable *syms) {
     if (osymbols_) delete osymbols_;
     if (syms) {
       osymbols_ = syms->Copy();
@@ -205,49 +178,48 @@ template <class A>  class EncodeTable {
 
  private:
   uint32 flags_;
-  vector<Tuple*> encode_tuples_;
+  std::vector<Tuple *> encode_tuples_;
   EncodeHash encode_hash_;
-  RefCounter ref_count_;
-  SymbolTable *isymbols_;       // Pre-encoded ilabel symbol table
-  SymbolTable *osymbols_;       // Pre-encoded olabel symbol table
+  SymbolTable *isymbols_;  // Pre-encoded ilabel symbol table
+  SymbolTable *osymbols_;  // Pre-encoded olabel symbol table
 
   DISALLOW_COPY_AND_ASSIGN(EncodeTable);
 };
 
-template <class A> inline
-bool EncodeTable<A>::Write(ostream &strm, const string &source) const {
+template <class A>
+inline bool EncodeTable<A>::Write(std::ostream &strm,
+                                  const string &source) const {
   WriteType(strm, kEncodeMagicNumber);
   WriteType(strm, flags_);
   int64 size = encode_tuples_.size();
   WriteType(strm, size);
-  for (size_t i = 0;  i < size; ++i) {
-    const Tuple* tuple = encode_tuples_[i];
+  for (size_t i = 0; i < size; ++i) {
+    const Tuple *tuple = encode_tuples_[i];
     WriteType(strm, tuple->ilabel);
     WriteType(strm, tuple->olabel);
     tuple->weight.Write(strm);
   }
 
-  if (flags_ & kEncodeHasISymbols)
-    isymbols_->Write(strm);
+  if (flags_ & kEncodeHasISymbols) isymbols_->Write(strm);
 
-  if (flags_ & kEncodeHasOSymbols)
-    osymbols_->Write(strm);
+  if (flags_ & kEncodeHasOSymbols) osymbols_->Write(strm);
 
   strm.flush();
   if (!strm) {
-    LOG(ERROR) << "EncodeTable::Write: write failed: " << source;
+    LOG(ERROR) << "EncodeTable::Write: Write failed: " << source;
     return false;
   }
   return true;
 }
 
-template <class A> inline
-EncodeTable<A> *EncodeTable<A>::Read(istream &strm, const string &source) {
+template <class A>
+inline EncodeTable<A> *EncodeTable<A>::Read(std::istream &strm,
+                                            const string &source) {
   int32 magic_number = 0;
   ReadType(strm, &magic_number);
   if (magic_number != kEncodeMagicNumber) {
     LOG(ERROR) << "EncodeTable::Read: Bad encode table header: " << source;
-    return 0;
+    return nullptr;
   }
   uint32 flags;
   ReadType(strm, &flags);
@@ -256,18 +228,18 @@ EncodeTable<A> *EncodeTable<A>::Read(istream &strm, const string &source) {
   int64 size;
   ReadType(strm, &size);
   if (!strm) {
-    LOG(ERROR) << "EncodeTable::Read: read failed: " << source;
-    return 0;
+    LOG(ERROR) << "EncodeTable::Read: Read failed: " << source;
+    return nullptr;
   }
 
   for (size_t i = 0; i < size; ++i) {
-    Tuple* tuple = new Tuple();
+    Tuple *tuple = new Tuple();
     ReadType(strm, &tuple->ilabel);
     ReadType(strm, &tuple->olabel);
     tuple->weight.Read(strm);
     if (!strm) {
-      LOG(ERROR) << "EncodeTable::Read: read failed: " << source;
-      return 0;
+      LOG(ERROR) << "EncodeTable::Read: Read failed: " << source;
+      return nullptr;
     }
     table->encode_tuples_.push_back(tuple);
     table->encode_hash_[table->encode_tuples_.back()] =
@@ -282,7 +254,6 @@ EncodeTable<A> *EncodeTable<A>::Read(istream &strm, const string &source) {
 
   return table;
 }
-
 
 // A mapper to encode/decode weighted transducers. Encoding of an
 // Fst is useful for performing classical determinization or minimization
@@ -302,47 +273,42 @@ EncodeTable<A> *EncodeTable<A>::Read(istream &strm, const string &source) {
 // we will use the encoding table generated during the encode step in the
 // decode, even though the encoding is not complete.
 //
-template <class A> class EncodeMapper {
+template <class A>
+class EncodeMapper {
   typedef typename A::Weight Weight;
-  typedef typename A::Label  Label;
+  typedef typename A::Label Label;
+
  public:
   EncodeMapper(uint32 flags, EncodeType type)
-    : flags_(flags),
-      type_(type),
-      table_(new EncodeTable<A>(flags)),
-      error_(false) {}
+      : flags_(flags),
+        type_(type),
+        table_(std::make_shared<EncodeTable<A>>(flags)),
+        error_(false) {}
 
-  EncodeMapper(const EncodeMapper& mapper)
+  EncodeMapper(const EncodeMapper &mapper)
       : flags_(mapper.flags_),
         type_(mapper.type_),
         table_(mapper.table_),
-        error_(false) {
-    table_->IncrRefCount();
-  }
+        error_(false) {}
 
   // Copy constructor but setting the type, typically to DECODE
-  EncodeMapper(const EncodeMapper& mapper, EncodeType type)
+  EncodeMapper(const EncodeMapper &mapper, EncodeType type)
       : flags_(mapper.flags_),
         type_(type),
         table_(mapper.table_),
-        error_(mapper.error_) {
-    table_->IncrRefCount();
-  }
-
-  ~EncodeMapper() {
-    if (!table_->DecrRefCount()) delete table_;
-  }
+        error_(mapper.error_) {}
 
   A operator()(const A &arc);
 
   MapFinalAction FinalAction() const {
-    return (type_ == ENCODE && (flags_ & kEncodeWeights)) ?
-                   MAP_REQUIRE_SUPERFINAL : MAP_NO_SUPERFINAL;
+    return (type_ == ENCODE && (flags_ & kEncodeWeights))
+               ? MAP_REQUIRE_SUPERFINAL
+               : MAP_NO_SUPERFINAL;
   }
 
   MapSymbolsAction InputSymbolsAction() const { return MAP_CLEAR_SYMBOLS; }
 
-  MapSymbolsAction OutputSymbolsAction() const { return MAP_CLEAR_SYMBOLS;}
+  MapSymbolsAction OutputSymbolsAction() const { return MAP_CLEAR_SYMBOLS; }
 
   uint64 Properties(uint64 inprops) {
     uint64 outprops = inprops;
@@ -353,22 +319,23 @@ template <class A> class EncodeMapper {
       mask &= kILabelInvariantProperties & kOLabelInvariantProperties;
     if (flags_ & kEncodeWeights)
       mask &= kILabelInvariantProperties & kWeightInvariantProperties &
-          (type_ == ENCODE ? kAddSuperFinalProperties :
-           kRmSuperFinalProperties);
+              (type_ == ENCODE ? kAddSuperFinalProperties
+                               : kRmSuperFinalProperties);
 
     return outprops & mask;
   }
 
-  uint32 flags() const { return flags_; }
-  EncodeType type() const { return type_; }
+  uint32 Flags() const { return flags_; }
+  EncodeType Type() const { return type_; }
   const EncodeTable<A> &table() const { return *table_; }
 
-  bool Write(ostream &strm, const string& source) {
+  bool Write(std::ostream &strm, const string &source) const {
     return table_->Write(strm, source);
   }
 
-  bool Write(const string& filename) {
-    ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
+  bool Write(const string &filename) const {
+    std::ofstream strm(filename.c_str(),
+                             std::ios_base::out | std::ios_base::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
       return false;
@@ -376,16 +343,16 @@ template <class A> class EncodeMapper {
     return Write(strm, filename);
   }
 
-  static EncodeMapper<A> *Read(istream &strm,
-                               const string& source,
+  static EncodeMapper<A> *Read(std::istream &strm, const string &source,
                                EncodeType type = ENCODE) {
     EncodeTable<A> *table = EncodeTable<A>::Read(strm, source);
-    return table ? new EncodeMapper(table->flags(), type, table) : 0;
+    return table ? new EncodeMapper(table->Flags(), type, table) : 0;
   }
 
-  static EncodeMapper<A> *Read(const string& filename,
+  static EncodeMapper<A> *Read(const string &filename,
                                EncodeType type = ENCODE) {
-    ifstream strm(filename.c_str(), ios_base::in | ios_base::binary);
+    std::ifstream strm(filename.c_str(),
+                            std::ios_base::in | std::ios_base::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
       return NULL;
@@ -393,22 +360,22 @@ template <class A> class EncodeMapper {
     return Read(strm, filename, type);
   }
 
-  SymbolTable *InputSymbols() const { return table_->InputSymbols(); }
+  const SymbolTable *InputSymbols() const { return table_->InputSymbols(); }
 
-  SymbolTable *OutputSymbols() const { return table_->OutputSymbols(); }
+  const SymbolTable *OutputSymbols() const { return table_->OutputSymbols(); }
 
-  void SetInputSymbols(const SymbolTable* syms) {
+  void SetInputSymbols(const SymbolTable *syms) {
     table_->SetInputSymbols(syms);
   }
 
-  void SetOutputSymbols(const SymbolTable* syms) {
+  void SetOutputSymbols(const SymbolTable *syms) {
     table_->SetOutputSymbols(syms);
   }
 
  private:
   uint32 flags_;
   EncodeType type_;
-  EncodeTable<A>* table_;
+  std::shared_ptr<EncodeTable<A>> table_;
   bool error_;
 
   explicit EncodeMapper(uint32 flags, EncodeType type, EncodeTable<A> *table)
@@ -416,8 +383,8 @@ template <class A> class EncodeMapper {
   void operator=(const EncodeMapper &);  // Disallow.
 };
 
-template <class A> inline
-A EncodeMapper<A>::operator()(const A &arc) {
+template <class A>
+inline A EncodeMapper<A>::operator()(const A &arc) {
   if (type_ == ENCODE) {  // labels and/or weights to single label
     if ((arc.nextstate == kNoStateId && !(flags_ & kEncodeWeights)) ||
         (arc.nextstate == kNoStateId && (flags_ & kEncodeWeights) &&
@@ -425,8 +392,7 @@ A EncodeMapper<A>::operator()(const A &arc) {
       return arc;
     } else {
       Label label = table_->Encode(arc);
-      return A(label,
-               flags_ & kEncodeLabels ? label : arc.olabel,
+      return A(label, flags_ & kEncodeLabels ? label : arc.olabel,
                flags_ & kEncodeWeights ? Weight::One() : arc.weight,
                arc.nextstate);
     }
@@ -437,17 +403,16 @@ A EncodeMapper<A>::operator()(const A &arc) {
       if (arc.ilabel == 0) return arc;
       if (flags_ & kEncodeLabels && arc.ilabel != arc.olabel) {
         FSTERROR() << "EncodeMapper: Label-encoded arc has different "
-            "input and output labels";
+                      "input and output labels";
         error_ = true;
       }
       if (flags_ & kEncodeWeights && arc.weight != Weight::One()) {
-        FSTERROR() <<
-            "EncodeMapper: Weight-encoded arc has non-trivial weight";
+        FSTERROR() << "EncodeMapper: Weight-encoded arc has non-trivial weight";
         error_ = true;
       }
-      const typename EncodeTable<A>::Tuple* tuple = table_->Decode(arc.ilabel);
+      const typename EncodeTable<A>::Tuple *tuple = table_->Decode(arc.ilabel);
       if (!tuple) {
-        FSTERROR() << "EncodeMapper: decode failed";
+        FSTERROR() << "EncodeMapper: Decode failed";
         error_ = true;
         return A(kNoLabel, kNoLabel, Weight::NoWeight(), arc.nextstate);
       } else {
@@ -460,23 +425,21 @@ A EncodeMapper<A>::operator()(const A &arc) {
   }
 }
 
-
 // Complexity: O(nstates + narcs)
-template<class A> inline
-void Encode(MutableFst<A> *fst, EncodeMapper<A>* mapper) {
+template <class A>
+inline void Encode(MutableFst<A> *fst, EncodeMapper<A> *mapper) {
   mapper->SetInputSymbols(fst->InputSymbols());
   mapper->SetOutputSymbols(fst->OutputSymbols());
   ArcMap(fst, mapper);
 }
 
-template<class A> inline
-void Decode(MutableFst<A>* fst, const EncodeMapper<A>& mapper) {
+template <class A>
+inline void Decode(MutableFst<A> *fst, const EncodeMapper<A> &mapper) {
   ArcMap(fst, EncodeMapper<A>(mapper, DECODE));
   RmFinalEpsilon(fst);
   fst->SetInputSymbols(mapper.InputSymbols());
   fst->SetOutputSymbols(mapper.OutputSymbols());
 }
-
 
 // On the fly label and/or weight encoding of input Fst
 //
@@ -485,20 +448,19 @@ void Decode(MutableFst<A>* fst, const EncodeMapper<A>& mapper) {
 // - Traversal: O(nstates_visited + narcs_visited), assuming constant
 //   time to visit an input state or arc.
 template <class A>
-class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
+class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A>> {
  public:
   typedef A Arc;
   typedef EncodeMapper<A> C;
-  typedef ArcMapFstImpl< A, A, EncodeMapper<A> > Impl;
-  using ImplToFst<Impl>::GetImpl;
+  typedef ArcMapFstImpl<A, A, EncodeMapper<A>> Impl;
 
-  EncodeFst(const Fst<A> &fst, EncodeMapper<A>* encoder)
+  EncodeFst(const Fst<A> &fst, EncodeMapper<A> *encoder)
       : ArcMapFst<A, A, C>(fst, encoder, ArcMapFstOptions()) {
     encoder->SetInputSymbols(fst.InputSymbols());
     encoder->SetOutputSymbols(fst.OutputSymbols());
   }
 
-  EncodeFst(const Fst<A> &fst, const EncodeMapper<A>& encoder)
+  EncodeFst(const Fst<A> &fst, const EncodeMapper<A> &encoder)
       : ArcMapFst<A, A, C>(fst, encoder, ArcMapFstOptions()) {}
 
   // See Fst<>::Copy() for doc.
@@ -506,15 +468,18 @@ class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
       : ArcMapFst<A, A, C>(fst, copy) {}
 
   // Get a copy of this EncodeFst. See Fst<>::Copy() for further doc.
-  virtual EncodeFst<A> *Copy(bool safe = false) const {
+  EncodeFst<A> *Copy(bool safe = false) const override {
     if (safe) {
-      FSTERROR() << "EncodeFst::Copy(true): not allowed.";
+      FSTERROR() << "EncodeFst::Copy(true): Not allowed";
       GetImpl()->SetProperties(kError, kError);
     }
     return new EncodeFst(*this);
   }
-};
 
+ private:
+  using ImplToFst<Impl>::GetImpl;
+  using ImplToFst<Impl>::GetMutableImpl;
+};
 
 // On the fly label and/or weight encoding of input Fst
 //
@@ -523,19 +488,18 @@ class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
 // - Traversal: O(nstates_visited + narcs_visited), assuming constant
 //   time to visit an input state or arc.
 template <class A>
-class DecodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
+class DecodeFst : public ArcMapFst<A, A, EncodeMapper<A>> {
  public:
   typedef A Arc;
   typedef EncodeMapper<A> C;
-  typedef ArcMapFstImpl< A, A, EncodeMapper<A> > Impl;
+  typedef ArcMapFstImpl<A, A, EncodeMapper<A>> Impl;
   using ImplToFst<Impl>::GetImpl;
 
-  DecodeFst(const Fst<A> &fst, const EncodeMapper<A>& encoder)
-      : ArcMapFst<A, A, C>(fst,
-                            EncodeMapper<A>(encoder, DECODE),
-                            ArcMapFstOptions()) {
-    GetImpl()->SetInputSymbols(encoder.InputSymbols());
-    GetImpl()->SetOutputSymbols(encoder.OutputSymbols());
+  DecodeFst(const Fst<A> &fst, const EncodeMapper<A> &encoder)
+      : ArcMapFst<A, A, C>(fst, EncodeMapper<A>(encoder, DECODE),
+                           ArcMapFstOptions()) {
+    GetMutableImpl()->SetInputSymbols(encoder.InputSymbols());
+    GetMutableImpl()->SetOutputSymbols(encoder.OutputSymbols());
   }
 
   // See Fst<>::Copy() for doc.
@@ -543,51 +507,49 @@ class DecodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
       : ArcMapFst<A, A, C>(fst, safe) {}
 
   // Get a copy of this DecodeFst. See Fst<>::Copy() for further doc.
-  virtual DecodeFst<A> *Copy(bool safe = false) const {
+  DecodeFst<A> *Copy(bool safe = false) const override {
     return new DecodeFst(*this, safe);
   }
-};
 
+ private:
+  using ImplToFst<Impl>::GetMutableImpl;
+};
 
 // Specialization for EncodeFst.
 template <class A>
-class StateIterator< EncodeFst<A> >
-    : public StateIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
+class StateIterator<EncodeFst<A>>
+    : public StateIterator<ArcMapFst<A, A, EncodeMapper<A>> > {
  public:
   explicit StateIterator(const EncodeFst<A> &fst)
-      : StateIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst) {}
+      : StateIterator<ArcMapFst<A, A, EncodeMapper<A>> >(fst) {}
 };
-
 
 // Specialization for EncodeFst.
 template <class A>
-class ArcIterator< EncodeFst<A> >
-    : public ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
+class ArcIterator<EncodeFst<A>>
+    : public ArcIterator<ArcMapFst<A, A, EncodeMapper<A>> > {
  public:
   ArcIterator(const EncodeFst<A> &fst, typename A::StateId s)
-      : ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst, s) {}
+      : ArcIterator<ArcMapFst<A, A, EncodeMapper<A>> >(fst, s) {}
 };
-
 
 // Specialization for DecodeFst.
 template <class A>
-class StateIterator< DecodeFst<A> >
-    : public StateIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
+class StateIterator<DecodeFst<A>>
+    : public StateIterator<ArcMapFst<A, A, EncodeMapper<A>> > {
  public:
   explicit StateIterator(const DecodeFst<A> &fst)
-      : StateIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst) {}
+      : StateIterator<ArcMapFst<A, A, EncodeMapper<A>> >(fst) {}
 };
-
 
 // Specialization for DecodeFst.
 template <class A>
-class ArcIterator< DecodeFst<A> >
-    : public ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
+class ArcIterator<DecodeFst<A>>
+    : public ArcIterator<ArcMapFst<A, A, EncodeMapper<A>> > {
  public:
   ArcIterator(const DecodeFst<A> &fst, typename A::StateId s)
-      : ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst, s) {}
+      : ArcIterator<ArcMapFst<A, A, EncodeMapper<A>> >(fst, s) {}
 };
-
 
 // Useful aliases when using StdArc.
 typedef EncodeFst<StdArc> StdEncodeFst;

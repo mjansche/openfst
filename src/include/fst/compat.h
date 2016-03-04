@@ -39,17 +39,11 @@
 #include <fst/log.h>
 #include <fst/icu.h>
 
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 using std::string;
 
 void FailedNewHandler();
 
 namespace fst {
-
-using namespace std;
 
 // Downcasting
 template<typename To, typename From>

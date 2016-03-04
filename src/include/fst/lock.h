@@ -72,21 +72,6 @@ class ReaderMutexLock {
   DISALLOW_COPY_AND_ASSIGN(ReaderMutexLock);
 };
 
-// Reference counting - single-thread implementation
-class RefCounter {
- public:
-  RefCounter() : count_(1) {}
-
-  int count() const { return count_; }
-  int Incr() const { return ++count_; }
-  int Decr() const {  return --count_; }
-
- private:
-  mutable int count_;
-
-  DISALLOW_COPY_AND_ASSIGN(RefCounter);
-};
-
 }  // namespace fst
 
 #endif  // FST_LIB_LOCK_H__

@@ -1,55 +1,40 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
-
 // These classes are only recommended for use in high-level scripting
 // applications. Most users should use the lower-level templated versions
 // corresponding to these classes.
 
+#include <istream>
+
+#include <fst/equal.h>
+#include <fst/fst-decl.h>
+#include <fst/reverse.h>
+#include <fst/union.h>
 #include <fst/script/fst-class.h>
 #include <fst/script/register.h>
-#include <fst/fst-decl.h>
-#include <fst/union.h>
-#include <fst/reverse.h>
-#include <fst/equal.h>
 
 namespace fst {
 namespace script {
 
-//
-//  REGISTRATION
-//
+// REGISTRATION
 
 REGISTER_FST_CLASSES(StdArc);
 REGISTER_FST_CLASSES(LogArc);
 REGISTER_FST_CLASSES(Log64Arc);
 
-//
-//  FST CLASS METHODS
-//
+// FST CLASS METHODS
 
-template<class FstT>
-FstT *ReadFst(istream &in, const string &fname) {
+template <class FstT>
+FstT *ReadFst(std::istream &in, const string &fname) {
   if (!in) {
     LOG(ERROR) << "ReadFst: Can't open file: " << fname;
-    return 0;
+    return nullptr;
   }
 
   FstHeader hdr;
   if (!hdr.Read(in, fname)) {
-    return 0;
+    return nullptr;
   }
 
   FstReadOptions read_options(fname, &hdr);
@@ -61,9 +46,8 @@ FstT *ReadFst(istream &in, const string &fname) {
       reg->GetReader(hdr.ArcType());
 
   if (!reader) {
-    LOG(ERROR) << "ReadFst : unknown arc type \""
-               << hdr.ArcType() << "\" : " << read_options.source;
-    return 0;
+    LOG(ERROR) << "ReadFst: Unknown arc type: " << hdr.ArcType();
+    return nullptr;
   }
 
   return reader(in, read_options);
@@ -71,32 +55,42 @@ FstT *ReadFst(istream &in, const string &fname) {
 
 FstClass *FstClass::Read(const string &fname) {
   if (!fname.empty()) {
-    ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
+    std::ifstream in(fname.c_str(),
+                          std::ios_base::in | std::ios_base::binary);
     return ReadFst<FstClass>(in, fname);
   } else {
     return ReadFst<FstClass>(std::cin, "standard input");
   }
 }
 
-FstClass *FstClass::Read(istream &istr, const string &source) {
+FstClass *FstClass::Read(std::istream &istr, const string &source) {
   return ReadFst<FstClass>(istr, source);
 }
 
-//
-//  MUTABLE FST CLASS METHODS
-//
+bool FstClass::WeightTypesMatch(const WeightClass &w,
+                                const string &op_name) const {
+  if (WeightType() != w.Type()) {
+    FSTERROR() << "FST and weight with non-matching weight types passed to "
+               << op_name << ": " << WeightType() << " and " << w.Type();
+    return false;
+  }
+  return true;
+}
+
+// MUTABLE FST CLASS METHODS
 
 MutableFstClass *MutableFstClass::Read(const string &fname, bool convert) {
   if (convert == false) {
     if (!fname.empty()) {
-      ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
+      std::ifstream in(fname.c_str(),
+                            std::ios_base::in | std::ios_base::binary);
       return ReadFst<MutableFstClass>(in, fname);
     } else {
       return ReadFst<MutableFstClass>(std::cin, "standard input");
     }
   } else {  // Converts to VectorFstClass if not mutable.
     FstClass *ifst = FstClass::Read(fname);
-    if (!ifst) return 0;
+    if (!ifst) return nullptr;
     if (ifst->Properties(fst::kMutable, false)) {
       return static_cast<MutableFstClass *>(ifst);
     } else {
@@ -107,39 +101,34 @@ MutableFstClass *MutableFstClass::Read(const string &fname, bool convert) {
   }
 }
 
-//
 // VECTOR FST CLASS METHODS
-//
+
+VectorFstClass *VectorFstClass::Read(const string &fname) {
+  if (!fname.empty()) {
+    std::ifstream in(fname.c_str(),
+                          std::ios_base::in | std::ios_base::binary);
+    return ReadFst<VectorFstClass>(in, fname);
+  } else {
+    return ReadFst<VectorFstClass>(std::cin, "standard input");
+  }
+}
 
 IORegistration<VectorFstClass>::Entry GetVFSTRegisterEntry(
     const string &arc_type) {
   IORegistration<VectorFstClass>::Register *reg =
       IORegistration<VectorFstClass>::Register::GetRegister();
   const IORegistration<VectorFstClass>::Entry &entry = reg->GetEntry(arc_type);
-
-  if (entry.converter == 0) {
-    LOG(ERROR) << "Unknown arc type " << arc_type;
-    return entry;
-  }
-
   return entry;
 }
 
-VectorFstClass::VectorFstClass(const FstClass &other)
-    : MutableFstClass(GetVFSTRegisterEntry(other.ArcType()).converter(other)) {
-}
-
 VectorFstClass::VectorFstClass(const string &arc_type)
-    : MutableFstClass(GetVFSTRegisterEntry(arc_type).creator()) { }
-
-VectorFstClass *VectorFstClass::Read(const string &fname) {
-  if (!fname.empty()) {
-    ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
-    return ReadFst<VectorFstClass>(in, fname);
-  } else {
-    return ReadFst<VectorFstClass>(std::cin, "standard input");
-  }
+    : MutableFstClass(GetVFSTRegisterEntry(arc_type).creator()) {
+  if (Properties(kError, true) & kError)
+    FSTERROR() << "VectorFstClass: Unknown arc type: " << arc_type;
 }
+
+VectorFstClass::VectorFstClass(const FstClass &other)
+    : MutableFstClass(GetVFSTRegisterEntry(other.ArcType()).converter(other)) {}
 
 }  // namespace script
 }  // namespace fst

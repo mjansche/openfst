@@ -1,38 +1,43 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #include <fst/script/fst-class.h>
-#include <fst/script/script-impl.h>
 #include <fst/script/determinize.h>
+#include <fst/script/script-impl.h>
 
 namespace fst {
 namespace script {
 
-void Determinize(const FstClass &ifst,
-                 MutableFstClass *ofst,
-                 const DeterminizeOptions& opts) {
-  if (!ArcTypesMatch(ifst, *ofst, "Determinize")) return;
-
-  DeterminizeArgs args(ifst, ofst, opts);
-  Apply<Operation<DeterminizeArgs> >("Determinize", ifst.ArcType(), &args);
+// 1: Full signature with DeterminizeOptions.
+void Determinize(const FstClass &ifst, MutableFstClass *ofst,
+                 const DeterminizeOptions &opts) {
+  if (!ArcTypesMatch(ifst, *ofst, "Determinize") ||
+      !ofst->WeightTypesMatch(opts.weight_threshold, "Determinize")) {
+    ofst->SetProperties(kError, kError);
+    return;
+  }
+  DeterminizeArgs1 args(ifst, ofst, opts);
+  Apply<Operation<DeterminizeArgs1>>("Determinize", ifst.ArcType(), &args);
 }
 
-REGISTER_FST_OPERATION(Determinize, StdArc, DeterminizeArgs);
-REGISTER_FST_OPERATION(Determinize, LogArc, DeterminizeArgs);
-REGISTER_FST_OPERATION(Determinize, Log64Arc, DeterminizeArgs);
+// 2: Signature with default WeightClass argument.
+void Determinize(const FstClass &ifst, MutableFstClass *ofst, float d,
+                 int64 n, int64 l, DeterminizeType t, bool i) {
+  if (!ArcTypesMatch(ifst, *ofst, "Determinize")) {
+    ofst->SetProperties(kError, kError);
+    return;
+  }
+  DeterminizeArgs2 args(ifst, ofst, d, n, l, t, i);
+  Apply<Operation<DeterminizeArgs2>>("Determinize", ifst.ArcType(), &args);
+}
+
+REGISTER_FST_OPERATION(Determinize, StdArc, DeterminizeArgs1);
+REGISTER_FST_OPERATION(Determinize, LogArc, DeterminizeArgs1);
+REGISTER_FST_OPERATION(Determinize, Log64Arc, DeterminizeArgs1);
+
+REGISTER_FST_OPERATION(Determinize, StdArc, DeterminizeArgs2);
+REGISTER_FST_OPERATION(Determinize, LogArc, DeterminizeArgs2);
+REGISTER_FST_OPERATION(Determinize, Log64Arc, DeterminizeArgs2);
 
 }  // namespace script
 }  // namespace fst

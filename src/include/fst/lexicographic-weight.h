@@ -1,21 +1,6 @@
-// lexicographic-weight.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
 // Lexicographic weight set and associated semiring operation definitions.
 //
 // A lexicographic weight is a sequence of weights, each of which must have the
@@ -36,7 +21,7 @@
 
 namespace fst {
 
-template<class W1, class W2>
+template <class W1, class W2>
 class LexicographicWeight : public PairWeight<W1, W2> {
  public:
   using PairWeight<W1, W2>::Value1;
@@ -50,13 +35,11 @@ class LexicographicWeight : public PairWeight<W1, W2> {
   using PairWeight<W1, W2>::Reverse;
 
   typedef LexicographicWeight<typename W1::ReverseWeight,
-                              typename W2::ReverseWeight>
-  ReverseWeight;
+                              typename W2::ReverseWeight> ReverseWeight;
 
   LexicographicWeight() {}
 
-  LexicographicWeight(const PairWeight<W1, W2>& w)
-      : PairWeight<W1, W2>(w) {}
+  LexicographicWeight(const PairWeight<W1, W2> &w) : PairWeight<W1, W2>(w) {}
 
   LexicographicWeight(W1 w1, W2 w2) : PairWeight<W1, W2>(w1, w2) {
     uint64 props = kPath;
@@ -105,9 +88,7 @@ class LexicographicWeight : public PairWeight<W1, W2> {
     return PairWeight<W1, W2>::Quantize();
   }
 
-  ReverseWeight Reverse() const {
-    return PairWeight<W1, W2>::Reverse();
-  }
+  ReverseWeight Reverse() const { return PairWeight<W1, W2>::Reverse(); }
 
   static uint64 Properties() {
     uint64 props1 = W1::Properties();

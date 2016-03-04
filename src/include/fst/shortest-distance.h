@@ -1,30 +1,13 @@
-// shortest-distance.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-//
-// \file
 // Functions and classes to find shortest distance in an FST.
 
 #ifndef FST_LIB_SHORTEST_DISTANCE_H__
 #define FST_LIB_SHORTEST_DISTANCE_H__
 
 #include <deque>
-using std::deque;
 #include <vector>
-using std::vector;
 
 #include <fst/arcfilter.h>
 #include <fst/cache.h>
@@ -55,10 +38,12 @@ struct ShortestDistanceOptions {
 
   ShortestDistanceOptions(Queue *q, ArcFilter filt, StateId src = kNoStateId,
                           float d = kDelta)
-      : state_queue(q), arc_filter(filt), source(src), delta(d),
+      : state_queue(q),
+        arc_filter(filt),
+        source(src),
+        delta(d),
         first_path(false) {}
 };
-
 
 // Computation state of the shortest-distance algorithm. Reusable
 // information is maintained across calls to member function
@@ -68,20 +53,23 @@ struct ShortestDistanceOptions {
 // may not be freed before this class. Vector 'distance' should not be
 // modified by the user between these calls.
 // The Error() method returns true if an error was encountered.
-template<class Arc, class Queue, class ArcFilter>
+template <class Arc, class Queue, class ArcFilter>
 class ShortestDistanceState {
  public:
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
   ShortestDistanceState(
-      const Fst<Arc> &fst,
-      vector<Weight> *distance,
-      const ShortestDistanceOptions<Arc, Queue, ArcFilter> &opts,
-      bool retain)
-      : fst_(fst), distance_(distance), state_queue_(opts.state_queue),
-        arc_filter_(opts.arc_filter), delta_(opts.delta),
-        first_path_(opts.first_path), retain_(retain), source_id_(0),
+      const Fst<Arc> &fst, std::vector<Weight> *distance,
+      const ShortestDistanceOptions<Arc, Queue, ArcFilter> &opts, bool retain)
+      : fst_(fst),
+        distance_(distance),
+        state_queue_(opts.state_queue),
+        arc_filter_(opts.arc_filter),
+        delta_(opts.delta),
+        first_path_(opts.first_path),
+        retain_(retain),
+        source_id_(0),
         error_(false) {
     distance_->clear();
   }
@@ -94,17 +82,17 @@ class ShortestDistanceState {
 
  private:
   const Fst<Arc> &fst_;
-  vector<Weight> *distance_;
+  std::vector<Weight> *distance_;
   Queue *state_queue_;
   ArcFilter arc_filter_;
   float delta_;
   bool first_path_;
-  bool retain_;               // Retain and reuse information across calls
+  bool retain_;  // Retain and reuse information across calls
 
-  vector<Weight> rdistance_;  // Relaxation distance.
-  vector<bool> enqueued_;     // Is state enqueued?
-  vector<StateId> sources_;   // Source ID for ith state in 'distance_',
-                              //  'rdistance_', and 'enqueued_' if retained.
+  std::vector<Weight> rdistance_;  // Relaxation distance.
+  std::vector<bool> enqueued_;     // Is state enqueued?
+  std::vector<StateId> sources_;   // Source ID for ith state in 'distance_',
+  //  'rdistance_', and 'enqueued_' if retained.
   StateId source_id_;         // Unique ID characterizing each call to SD
 
   bool error_;
@@ -128,9 +116,8 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
   }
 
   if (first_path_ && !(Weight::Properties() & kPath)) {
-    FSTERROR() << "ShortestDistance: first_path option disallowed when "
-               << "Weight does not have the path property: "
-               << Weight::Type();
+    FSTERROR() << "ShortestDistance: The first_path option is disallowed when "
+               << "Weight does not have the path property: " << Weight::Type();
     error_ = true;
     return;
   }
@@ -143,8 +130,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     enqueued_.clear();
   }
 
-  if (source == kNoStateId)
-    source = fst_.Start();
+  if (source == kNoStateId) source = fst_.Start();
 
   while (distance_->size() <= source) {
     distance_->push_back(Weight::Zero());
@@ -152,8 +138,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     enqueued_.push_back(false);
   }
   if (retain_) {
-    while (sources_.size() <= source)
-      sources_.push_back(kNoStateId);
+    while (sources_.size() <= source) sources_.push_back(kNoStateId);
     sources_[source] = source_id_;
   }
   (*distance_)[source] = Weight::One();
@@ -170,25 +155,20 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
       rdistance_.push_back(Weight::Zero());
       enqueued_.push_back(false);
     }
-    if (first_path_ && (fst_.Final(s) != Weight::Zero()))
-      break;
+    if (first_path_ && (fst_.Final(s) != Weight::Zero())) break;
     enqueued_[s] = false;
     Weight r = rdistance_[s];
     rdistance_[s] = Weight::Zero();
-    for (ArcIterator< Fst<Arc> > aiter(fst_, s);
-         !aiter.Done();
-         aiter.Next()) {
+    for (ArcIterator<Fst<Arc>> aiter(fst_, s); !aiter.Done(); aiter.Next()) {
       const Arc &arc = aiter.Value();
-      if (!arc_filter_(arc))
-        continue;
+      if (!arc_filter_(arc)) continue;
       while (distance_->size() <= arc.nextstate) {
         distance_->push_back(Weight::Zero());
         rdistance_.push_back(Weight::Zero());
         enqueued_.push_back(false);
       }
       if (retain_) {
-        while (sources_.size() <= arc.nextstate)
-          sources_.push_back(kNoStateId);
+        while (sources_.size() <= arc.nextstate) sources_.push_back(kNoStateId);
         if (sources_[arc.nextstate] != source_id_) {
           (*distance_)[arc.nextstate] = Weight::Zero();
           rdistance_[arc.nextstate] = Weight::Zero();
@@ -219,7 +199,6 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
   if (fst_.Properties(kError, false)) error_ = true;
 }
 
-
 // Shortest-distance algorithm: this version allows fine control
 // via the options argument. See below for a simpler interface.
 //
@@ -240,14 +219,12 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
 // Combinatorics 7(3):321-350, 2002. The complexity of algorithm
 // depends on the properties of the semiring and the queue discipline
 // used. Refer to the paper for more details.
-template<class Arc, class Queue, class ArcFilter>
+template <class Arc, class Queue, class ArcFilter>
 void ShortestDistance(
-    const Fst<Arc> &fst,
-    vector<typename Arc::Weight> *distance,
+    const Fst<Arc> &fst, std::vector<typename Arc::Weight> *distance,
     const ShortestDistanceOptions<Arc, Queue, ArcFilter> &opts) {
-
-  ShortestDistanceState<Arc, Queue, ArcFilter>
-    sd_state(fst, distance, opts, false);
+  ShortestDistanceState<Arc, Queue, ArcFilter> sd_state(fst, distance, opts,
+                                                        false);
   sd_state.ShortestDistance(opts.source);
   if (sd_state.Error()) {
     distance->clear();
@@ -281,19 +258,18 @@ void ShortestDistance(
 // Combinatorics 7(3):321-350, 2002. The complexity of algorithm
 // depends on the properties of the semiring and the queue discipline
 // used. Refer to the paper for more details.
-template<class Arc>
+template <class Arc>
 void ShortestDistance(const Fst<Arc> &fst,
-                      vector<typename Arc::Weight> *distance,
-                      bool reverse = false,
-                      float delta = kDelta) {
+                      std::vector<typename Arc::Weight> *distance,
+                      bool reverse = false, float delta = kDelta) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
   if (!reverse) {
     AnyArcFilter<Arc> arc_filter;
     AutoQueue<StateId> state_queue(fst, distance, arc_filter);
-    ShortestDistanceOptions< Arc, AutoQueue<StateId>, AnyArcFilter<Arc> >
-      opts(&state_queue, arc_filter);
+    ShortestDistanceOptions<Arc, AutoQueue<StateId>, AnyArcFilter<Arc>> opts(
+        &state_queue, arc_filter);
     opts.delta = delta;
     ShortestDistance(fst, distance, opts);
   } else {
@@ -302,11 +278,11 @@ void ShortestDistance(const Fst<Arc> &fst,
     AnyArcFilter<ReverseArc> rarc_filter;
     VectorFst<ReverseArc> rfst;
     Reverse(fst, &rfst);
-    vector<ReverseWeight> rdistance;
+    std::vector<ReverseWeight> rdistance;
     AutoQueue<StateId> state_queue(rfst, &rdistance, rarc_filter);
-    ShortestDistanceOptions< ReverseArc, AutoQueue<StateId>,
-      AnyArcFilter<ReverseArc> >
-      ropts(&state_queue, rarc_filter);
+    ShortestDistanceOptions<ReverseArc, AutoQueue<StateId>,
+                            AnyArcFilter<ReverseArc>> ropts(&state_queue,
+                                                             rarc_filter);
     ropts.delta = delta;
     ShortestDistance(rfst, &rdistance, ropts);
     distance->clear();
@@ -319,15 +295,15 @@ void ShortestDistance(const Fst<Arc> &fst,
   }
 }
 
-
 // Return the sum of the weight of all successful paths in an FST, i.e.,
 // the shortest-distance from the initial state to the final states.
 // Returns a weight such that Member() is false if an error was encountered.
 template <class Arc>
-typename Arc::Weight ShortestDistance(const Fst<Arc> &fst, float delta = kDelta) {
+typename Arc::Weight ShortestDistance(const Fst<Arc> &fst,
+                                      float delta = kDelta) {
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
-  vector<Weight> distance;
+  std::vector<Weight> distance;
   if (Weight::Properties() & kRightSemiring) {
     ShortestDistance(fst, &distance, false, delta);
     if (distance.size() == 1 && !distance[0].Member())
@@ -341,11 +317,10 @@ typename Arc::Weight ShortestDistance(const Fst<Arc> &fst, float delta = kDelta)
     StateId s = fst.Start();
     if (distance.size() == 1 && !distance[0].Member())
       return Arc::Weight::NoWeight();
-    return s != kNoStateId && s < distance.size() ?
-        distance[s] : Weight::Zero();
+    return s != kNoStateId && s < distance.size() ? distance[s]
+                                                  : Weight::Zero();
   }
 }
-
 
 }  // namespace fst
 

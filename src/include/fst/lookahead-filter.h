@@ -1,21 +1,6 @@
-// lookahead-filter.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Composition filters to support lookahead matchers, useful for improving
 // composition efficiency with certain inputs.
 
@@ -23,7 +8,6 @@
 #define FST_LIB_LOOKAHEAD_FILTER_H__
 
 #include <vector>
-using std::vector;
 
 #include <fst/filter-state.h>
 #include <fst/fst.h>
@@ -39,17 +23,14 @@ template <class M1, class M2>
 MatchType LookAheadMatchType(const M1 &m1, const M2 &m2) {
   MatchType type1 = m1.Type(false);
   MatchType type2 = m2.Type(false);
-  if (type1 == MATCH_OUTPUT &&
-      m1.Flags() & kOutputLookAheadMatcher)
+  if (type1 == MATCH_OUTPUT && m1.Flags() & kOutputLookAheadMatcher)
     return MATCH_OUTPUT;
-  else if (type2 == MATCH_INPUT &&
-           m2.Flags() & kInputLookAheadMatcher)
+  else if (type2 == MATCH_INPUT && m2.Flags() & kInputLookAheadMatcher)
     return MATCH_INPUT;
   else if (m1.Flags() & kOutputLookAheadMatcher &&
            m1.Type(true) == MATCH_OUTPUT)
     return MATCH_OUTPUT;
-  else if (m2.Flags() & kInputLookAheadMatcher &&
-           m2.Type(true) == MATCH_INPUT)
+  else if (m2.Flags() & kInputLookAheadMatcher && m2.Type(true) == MATCH_INPUT)
     return MATCH_INPUT;
   else
     return MATCH_NONE;
@@ -60,8 +41,8 @@ MatchType LookAheadMatchType(const M1 &m1, const M2 &m2) {
 // Fst's default matchers.
 template <class Arc>
 MatchType LookAheadMatchType(const Fst<Arc> &fst1, const Fst<Arc> &fst2) {
-  LookAheadMatcher< Fst <Arc> > matcher1(fst1, MATCH_OUTPUT);
-  LookAheadMatcher< Fst <Arc> > matcher2(fst2, MATCH_INPUT);
+  LookAheadMatcher<Fst<Arc>> matcher1(fst1, MATCH_OUTPUT);
+  LookAheadMatcher<Fst<Arc>> matcher2(fst2, MATCH_INPUT);
   return LookAheadMatchType(matcher1, matcher2);
 }
 
@@ -75,8 +56,7 @@ MatchType LookAheadMatchType(const Fst<Arc> &fst1, const Fst<Arc> &fst2) {
 // It is templated on the matcher types.  General case has no methods
 // since not currently supported.
 template <class M1, class M2, MatchType MT>
-class LookAheadSelector {
-};
+class LookAheadSelector {};
 
 // Stores and returns the appropriate FST and matcher for lookahead.
 // Specialized for two matchers of same type with the (match) 'type'
@@ -103,8 +83,7 @@ class LookAheadSelector<M, M, MT> {
   }
 
   const F &GetFst() const {
-    return type_ == MATCH_OUTPUT ? lmatcher2_->GetFst() :
-        lmatcher1_->GetFst();
+    return type_ == MATCH_OUTPUT ? lmatcher2_->GetFst() : lmatcher1_->GetFst();
   }
 
   M *GetMatcher() const {
@@ -127,12 +106,10 @@ class LookAheadSelector<M1, M2, MATCH_INPUT> {
   typedef typename M1::FST F1;
 
   LookAheadSelector(M1 *lmatcher1, M2 *lmatcher2, MatchType)
-      : fst_(lmatcher1->GetFst().Copy()),
-        lmatcher_(lmatcher2->Copy()) {}
+      : fst_(lmatcher1->GetFst().Copy()), lmatcher_(lmatcher2->Copy()) {}
 
   LookAheadSelector(const LookAheadSelector<M1, M2, MATCH_INPUT> &selector)
-      : fst_(selector.fst_->Copy()),
-        lmatcher_(selector.lmatcher_->Copy()) {}
+      : fst_(selector.fst_->Copy()), lmatcher_(selector.lmatcher_->Copy()) {}
 
   ~LookAheadSelector() {
     delete lmatcher_;
@@ -150,7 +127,6 @@ class LookAheadSelector<M1, M2, MATCH_INPUT> {
   void operator=(const LookAheadSelector<M1, M2, MATCH_INPUT> &);  // disallow
 };
 
-
 // Stores and returns the appropriate FST and matcher for lookahead.
 // Specialized for lookahead on output labels.
 template <class M1, class M2>
@@ -159,12 +135,10 @@ class LookAheadSelector<M1, M2, MATCH_OUTPUT> {
   typedef typename M2::FST F2;
 
   LookAheadSelector(M1 *lmatcher1, M2 *lmatcher2, MatchType)
-      : fst_(lmatcher2->GetFst().Copy()),
-        lmatcher_(lmatcher1->Copy()) {}
+      : fst_(lmatcher2->GetFst().Copy()), lmatcher_(lmatcher1->Copy()) {}
 
   LookAheadSelector(const LookAheadSelector<M1, M2, MATCH_OUTPUT> &selector)
-      : fst_(selector.fst_->Copy()),
-        lmatcher_(selector.lmatcher_->Copy()) {}
+      : fst_(selector.fst_->Copy()), lmatcher_(selector.lmatcher_->Copy()) {}
 
   ~LookAheadSelector() {
     delete lmatcher_;
@@ -191,9 +165,7 @@ class LookAheadSelector<M1, M2, MATCH_OUTPUT> {
 // MATCH_BOTH. In that case, both matcher arguments must be lookahead
 // matchers of the same type and one will be selected by
 // LookAheadMatchType() based on their capability.
-template <class F,
-          class M1 = LookAheadMatcher<typename F::FST1>,
-          class M2 = M1,
+template <class F, class M1 = LookAheadMatcher<typename F::FST1>, class M2 = M1,
           MatchType MT = MATCH_BOTH>
 class LookAheadComposeFilter {
  public:
@@ -209,17 +181,18 @@ class LookAheadComposeFilter {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  LookAheadComposeFilter(const FST1 &fst1, const FST2 &fst2,
-                         M1 *matcher1,  M2 *matcher2)
+  LookAheadComposeFilter(const FST1 &fst1, const FST2 &fst2, M1 *matcher1,
+                         M2 *matcher2)
       : filter_(fst1, fst2, matcher1, matcher2),
-        lookahead_type_(MT == MATCH_BOTH ?
-                        LookAheadMatchType(*filter_.GetMatcher1(),
-                                           *filter_.GetMatcher2()) : MT),
+        lookahead_type_(MT == MATCH_BOTH
+                            ? LookAheadMatchType(*filter_.GetMatcher1(),
+                                                 *filter_.GetMatcher2())
+                            : MT),
         selector_(filter_.GetMatcher1(), filter_.GetMatcher2(),
                   lookahead_type_),
-        flags_(lookahead_type_ == MATCH_OUTPUT ?
-               filter_.GetMatcher1()->Flags() :
-               filter_.GetMatcher2()->Flags()) {
+        flags_(lookahead_type_ == MATCH_OUTPUT
+                   ? filter_.GetMatcher1()->Flags()
+                   : filter_.GetMatcher2()->Flags()) {
     if (lookahead_type_ == MATCH_NONE) {
       FSTERROR() << "LookAheadComposeFilter: 1st argument cannot "
                  << "match/look-ahead on output labels and 2nd argument "
@@ -238,9 +211,7 @@ class LookAheadComposeFilter {
     selector_.GetMatcher()->InitLookAheadFst(selector_.GetFst(), true);
   }
 
-  FilterState Start() const {
-    return filter_.Start();
-  }
+  FilterState Start() const { return filter_.Start(); }
 
   void SetState(StateId s1, StateId s2, const FilterState &f) {
     filter_.SetState(s1, s2, f);
@@ -250,11 +221,10 @@ class LookAheadComposeFilter {
     lookahead_arc_ = false;
 
     const FilterState &f = filter_.FilterArc(arc1, arc2);
-    if (f == FilterState::NoState())
-      return FilterState::NoState();
+    if (f == FilterState::NoState()) return FilterState::NoState();
 
-    return LookAheadOutput() ? LookAheadFilterArc(arc1, arc2, f) :
-        LookAheadFilterArc(arc2, arc1, f);
+    return LookAheadOutput() ? LookAheadFilterArc(arc1, arc2, f)
+                             : LookAheadFilterArc(arc2, arc1, f);
   }
 
   void FilterFinal(Weight *weight1, Weight *weight2) const {
@@ -271,8 +241,7 @@ class LookAheadComposeFilter {
 
   uint64 Properties(uint64 inprops) const {
     uint64 outprops = filter_.Properties(inprops);
-    if (lookahead_type_ == MATCH_NONE)
-      outprops |= kError;
+    if (lookahead_type_ == MATCH_NONE) outprops |= kError;
     return outprops;
   }
 
@@ -296,21 +265,20 @@ class LookAheadComposeFilter {
                                  const FilterState &f) const {
     Label &labela = LookAheadOutput() ? arca->olabel : arca->ilabel;
 
-    if (labela != 0 && !(flags_ & kLookAheadNonEpsilons))
-      return f;
-    if (labela == 0 && !(flags_ & kLookAheadEpsilons))
-      return f;
+    if (labela != 0 && !(flags_ & kLookAheadNonEpsilons)) return f;
+    if (labela == 0 && !(flags_ & kLookAheadEpsilons)) return f;
 
     lookahead_arc_ = true;
     selector_.GetMatcher()->SetState(arca->nextstate);
 
     return selector_.GetMatcher()->LookAheadFst(selector_.GetFst(),
-                                                arcb->nextstate) ? f :
-                                                FilterState::NoState();
+                                                arcb->nextstate)
+               ? f
+               : FilterState::NoState();
   }
 
-  F filter_;                    // Underlying filter
-  MatchType lookahead_type_;    // Lookahead match type
+  F filter_;                  // Underlying filter
+  MatchType lookahead_type_;  // Lookahead match type
   LookAheadSelector<Matcher1, Matcher2, MT> selector_;
   uint32 flags_;                // Lookahead flags
   mutable bool lookahead_arc_;  // Look-ahead performed at last FilterArc()?
@@ -318,15 +286,12 @@ class LookAheadComposeFilter {
   void operator=(const LookAheadComposeFilter<F, M1, M2> &);  // disallow
 };
 
-
 // This filter adds weight-pushing to a lookahead composition filter
 // using the LookAheadWeight() method of matcher argument. It is
 // templated on an underlying lookahead filter, typically the basic
 // lookahead filter. Weight-pushing in composition brings weights
 // forward as much as possible based on the lookahead information.
-template <class F,
-          class M1 = LookAheadMatcher<typename F::FST1>,
-          class M2 = M1,
+template <class F, class M1 = LookAheadMatcher<typename F::FST1>, class M2 = M1,
           MatchType MT = MATCH_BOTH>
 class PushWeightsComposeFilter {
  public:
@@ -343,16 +308,13 @@ class PushWeightsComposeFilter {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  PushWeightsComposeFilter(const FST1 &fst1, const FST2 &fst2,
-                         M1 *matcher1,  M2 *matcher2)
-      : filter_(fst1, fst2, matcher1, matcher2),
-        f_(FilterState::NoState()) {}
+  PushWeightsComposeFilter(const FST1 &fst1, const FST2 &fst2, M1 *matcher1,
+                           M2 *matcher2)
+      : filter_(fst1, fst2, matcher1, matcher2), f_(FilterState::NoState()) {}
 
-  PushWeightsComposeFilter(const PushWeightsComposeFilter<F, M1, M2, MT>
-                           &filter,
-                           bool safe = false)
-      : filter_(filter.filter_, safe),
-        f_(FilterState::NoState()) {}
+  PushWeightsComposeFilter(
+      const PushWeightsComposeFilter<F, M1, M2, MT> &filter, bool safe = false)
+      : filter_(filter.filter_, safe), f_(FilterState::NoState()) {}
 
   FilterState Start() const {
     return FilterState(filter_.Start(), FilterState2(Weight::One()));
@@ -365,14 +327,14 @@ class PushWeightsComposeFilter {
 
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
     const FilterState1 &f1 = filter_.FilterArc(arc1, arc2);
-    if (f1 == FilterState1::NoState())
-      return FilterState::NoState();
+    if (f1 == FilterState1::NoState()) return FilterState::NoState();
 
     if (!(LookAheadFlags() & kLookAheadWeight))
       return FilterState(f1, FilterState2(Weight::One()));
 
-    const Weight &lweight = filter_.LookAheadArc() ?
-        Selector().GetMatcher()->LookAheadWeight() : Weight::One();
+    const Weight &lweight = filter_.LookAheadArc()
+                                ? Selector().GetMatcher()->LookAheadWeight()
+                                : Weight::One();
     const FilterState2 &f2 = f_.GetState2();
     const Weight &fweight = f2.GetWeight();
 
@@ -409,8 +371,8 @@ class PushWeightsComposeFilter {
   }
 
  private:
-  F filter_;                       // Underlying filter
-  FilterState f_;                  // Current filter state
+  F filter_;       // Underlying filter
+  FilterState f_;  // Current filter state
 
   void operator=(const PushWeightsComposeFilter<F, M1, M2, MT> &);  // disallow
 };
@@ -421,9 +383,7 @@ class PushWeightsComposeFilter {
 // or weight-pushing lookahead filter. Label-pushing in composition
 // matches labels as early as possible based on the lookahead
 // information.
-template <class F,
-          class M1 = LookAheadMatcher<typename F::FST1>,
-          class M2 = M1,
+template <class F, class M1 = LookAheadMatcher<typename F::FST1>, class M2 = M1,
           MatchType MT = MATCH_BOTH>
 class PushLabelsComposeFilter {
  public:
@@ -440,20 +400,18 @@ class PushLabelsComposeFilter {
   typedef IntegerFilterState<typename Arc::Label> FilterState2;
   typedef PairFilterState<FilterState1, FilterState2> FilterState;
 
-  PushLabelsComposeFilter(const FST1 &fst1, const FST2 &fst2,
-                         M1 *matcher1,  M2 *matcher2)
+  PushLabelsComposeFilter(const FST1 &fst1, const FST2 &fst2, M1 *matcher1,
+                          M2 *matcher2)
       : filter_(fst1, fst2, matcher1, matcher2),
         f_(FilterState::NoState()),
         fst1_(filter_.GetMatcher1()->GetFst()),
         fst2_(filter_.GetMatcher2()->GetFst()),
         matcher1_(fst1_, MATCH_OUTPUT,
                   filter_.LookAheadOutput() ? kMultiEpsList : kMultiEpsLoop,
-                  filter_.GetMatcher1(),
-                  false),
+                  filter_.GetMatcher1(), false),
         matcher2_(fst2_, MATCH_INPUT,
                   filter_.LookAheadOutput() ? kMultiEpsLoop : kMultiEpsList,
-                  filter_.GetMatcher2(),
-                  false) {}
+                  filter_.GetMatcher2(), false) {}
 
   PushLabelsComposeFilter(const PushLabelsComposeFilter<F, M1, M2, MT> &filter,
                           bool safe = false)
@@ -461,15 +419,12 @@ class PushLabelsComposeFilter {
         f_(FilterState::NoState()),
         fst1_(filter_.GetMatcher1()->GetFst()),
         fst2_(filter_.GetMatcher2()->GetFst()),
-        matcher1_(fst1_,  MATCH_OUTPUT,
+        matcher1_(fst1_, MATCH_OUTPUT,
                   filter_.LookAheadOutput() ? kMultiEpsList : kMultiEpsLoop,
-                  filter_.GetMatcher1(),
-                  false),
+                  filter_.GetMatcher1(), false),
         matcher2_(fst2_, MATCH_INPUT,
                   filter_.LookAheadOutput() ? kMultiEpsLoop : kMultiEpsList,
-                  filter_.GetMatcher2(),
-                  false) {
-  }
+                  filter_.GetMatcher2(), false) {}
 
   FilterState Start() const {
     return FilterState(filter_.Start(), FilterState2(kNoLabel));
@@ -478,11 +433,10 @@ class PushLabelsComposeFilter {
   void SetState(StateId s1, StateId s2, const FilterState &f) {
     f_ = f;
     filter_.SetState(s1, s2, f.GetState1());
-    if (!(LookAheadFlags() & kLookAheadPrefix))
-      return;
+    if (!(LookAheadFlags() & kLookAheadPrefix)) return;
 
     narcsa_ = LookAheadOutput() ? internal::NumArcs(fst1_, s1)
-        : internal::NumArcs(fst2_, s2);
+                                : internal::NumArcs(fst2_, s2);
 
     const FilterState2 &f2 = f_.GetState2();
     const Label &flabel = f2.GetState();
@@ -497,36 +451,31 @@ class PushLabelsComposeFilter {
 
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
     if (!(LookAheadFlags() & kLookAheadPrefix))
-      return FilterState(filter_.FilterArc(arc1, arc2),
-                         FilterState2(kNoLabel));
+      return FilterState(filter_.FilterArc(arc1, arc2), FilterState2(kNoLabel));
 
     const FilterState2 &f2 = f_.GetState2();
     const Label &flabel = f2.GetState();
-    if (flabel != kNoLabel)             // Have a lookahead label?
-      return LookAheadOutput() ? PushedLabelFilterArc(arc1, arc2, flabel) :
-          PushedLabelFilterArc(arc2, arc1, flabel);
+    if (flabel != kNoLabel)  // Have a lookahead label?
+      return LookAheadOutput() ? PushedLabelFilterArc(arc1, arc2, flabel)
+                               : PushedLabelFilterArc(arc2, arc1, flabel);
 
     const FilterState1 &f1 = filter_.FilterArc(arc1, arc2);
-    if (f1 == FilterState1::NoState())
-      return FilterState::NoState();
+    if (f1 == FilterState1::NoState()) return FilterState::NoState();
 
-    if (!filter_.LookAheadArc())
-      return FilterState(f1, FilterState2(kNoLabel));
+    if (!filter_.LookAheadArc()) return FilterState(f1, FilterState2(kNoLabel));
 
-    return LookAheadOutput() ? PushLabelFilterArc(arc1, arc2, f1) :
-        PushLabelFilterArc(arc2, arc1, f1);
+    return LookAheadOutput() ? PushLabelFilterArc(arc1, arc2, f1)
+                             : PushLabelFilterArc(arc2, arc1, f1);
   }
 
   void FilterFinal(Weight *weight1, Weight *weight2) const {
     filter_.FilterFinal(weight1, weight2);
-    if (!(LookAheadFlags() & kLookAheadPrefix) ||
-        *weight1 == Weight::Zero())
+    if (!(LookAheadFlags() & kLookAheadPrefix) || *weight1 == Weight::Zero())
       return;
 
     const FilterState2 &f2 = f_.GetState2();
     const Label &flabel = f2.GetState();
-    if (flabel != kNoLabel)
-      *weight1 = Weight::Zero();
+    if (flabel != kNoLabel) *weight1 = Weight::Zero();
   }
 
   // Return resp matchers. Ownership states with filter.
@@ -543,31 +492,29 @@ class PushLabelsComposeFilter {
 
  private:
   const LookAheadSelector<typename F::Matcher1, typename F::Matcher2, MT>
-  &Selector() const {
+      &Selector() const {
     return filter_.Selector();
   }
 
   // Consumes an already pushed label.
-  FilterState PushedLabelFilterArc(Arc *arca, Arc *arcb,
-                                   Label flabel) const {
+  FilterState PushedLabelFilterArc(Arc *arca, Arc *arcb, Label flabel) const {
     Label &labela = LookAheadOutput() ? arca->olabel : arca->ilabel;
     const Label &labelb = LookAheadOutput() ? arcb->ilabel : arcb->olabel;
 
     if (labelb != kNoLabel) {
-      return FilterState::NoState();    // Block non- (multi-) epsilon label
+      return FilterState::NoState();  // Block non- (multi-) epsilon label
     } else if (labela == flabel) {
-      labela = 0;                       // Convert match to multi-eps to eps
+      labela = 0;  // Convert match to multi-eps to eps
       return Start();
     } else if (labela == 0) {
-      if (narcsa_ == 1)
-        return f_;                      // Take eps; keep state w/ label
+      if (narcsa_ == 1) return f_;  // Take eps; keep state w/ label
       Selector().GetMatcher()->SetState(arca->nextstate);
       if (Selector().GetMatcher()->LookAheadLabel(flabel))
-        return f_;                      // Take eps; keep state w/ label
+        return f_;  // Take eps; keep state w/ label
       else
         return FilterState::NoState();  // Block non-coaccessible path
     } else {
-      return FilterState::NoState();    // Block mismatch to multi-eps label
+      return FilterState::NoState();  // Block mismatch to multi-eps label
     }
   }
 
@@ -577,9 +524,9 @@ class PushLabelsComposeFilter {
     Label &labela = LookAheadOutput() ? arca->olabel : arca->ilabel;
     const Label &labelb = LookAheadOutput() ? arcb->olabel : arcb->ilabel;
 
-    if (labelb != 0)                   // No place to push.
+    if (labelb != 0)  // No place to push.
       return FilterState(f1, FilterState2(kNoLabel));
-    if (labela != 0 &&                 // Wrong lookahead prefix type?
+    if (labela != 0 &&  // Wrong lookahead prefix type?
         LookAheadFlags() & kLookAheadNonEpsilonPrefix)
       return FilterState(f1, FilterState2(kNoLabel));
 
@@ -587,8 +534,8 @@ class PushLabelsComposeFilter {
 
     if (Selector().GetMatcher()->LookAheadPrefix(&larc)) {  // Have prefix arc?
       labela = LookAheadOutput() ? larc.ilabel : larc.olabel;
-      arcb->ilabel = larc.ilabel;      // Yes, go forward on that arc,
-      arcb->olabel = larc.olabel;      // thus pushing the label.
+      arcb->ilabel = larc.ilabel;  // Yes, go forward on that arc,
+      arcb->olabel = larc.olabel;  // thus pushing the label.
       arcb->weight = Times(arcb->weight, larc.weight);
       arcb->nextstate = larc.nextstate;
       return FilterState(f1, FilterState2(labela));
@@ -601,13 +548,13 @@ class PushLabelsComposeFilter {
   bool LookAheadArc() const { return filter_.LookAheadArc(); }
   bool LookAheadOutput() const { return filter_.LookAheadOutput(); }
 
-  F filter_;                  // Underlying filter
-  FilterState f_ ;            // Current filter state
+  F filter_;       // Underlying filter
+  FilterState f_;  // Current filter state
   const FST1 &fst1_;
   const FST2 &fst2_;
-  Matcher1 matcher1_;         // Multi-epsilon matcher for fst1
-  Matcher2 matcher2_;         // Multi-epsilon matcher for fst2
-  ssize_t narcsa_;            // Number of arcs leaving look-ahead match FST
+  Matcher1 matcher1_;  // Multi-epsilon matcher for fst1
+  Matcher2 matcher2_;  // Multi-epsilon matcher for fst2
+  ssize_t narcsa_;     // Number of arcs leaving look-ahead match FST
 
   void operator=(const PushLabelsComposeFilter<F, M1, M2, MT> &);  // disallow
 };
@@ -620,7 +567,7 @@ class PushLabelsComposeFilter {
 template <class A, MatchType type>  // MATCH_NONE
 class DefaultLookAhead {
  public:
-  typedef Matcher< Fst<A> > M;
+  typedef Matcher<Fst<A>> M;
   typedef SequenceComposeFilter<M> ComposeFilter;
   typedef M FstMatcher;
 };
@@ -629,7 +576,7 @@ class DefaultLookAhead {
 template <class A>
 class DefaultLookAhead<A, MATCH_INPUT> {
  public:
-  typedef LookAheadMatcher< Fst<A> > M;
+  typedef LookAheadMatcher<Fst<A>> M;
   typedef SequenceComposeFilter<M> SF;
   typedef LookAheadComposeFilter<SF, M> ComposeFilter;
   typedef M FstMatcher;
@@ -639,7 +586,7 @@ class DefaultLookAhead<A, MATCH_INPUT> {
 template <class A>
 class DefaultLookAhead<A, MATCH_OUTPUT> {
  public:
-  typedef LookAheadMatcher< Fst<A> > M;
+  typedef LookAheadMatcher<Fst<A>> M;
   typedef AltSequenceComposeFilter<M> SF;
   typedef LookAheadComposeFilter<SF, M> ComposeFilter;
   typedef M FstMatcher;
@@ -650,7 +597,7 @@ template <>
 class DefaultLookAhead<StdArc, MATCH_INPUT> {
  public:
   typedef StdArc A;
-  typedef LookAheadMatcher< Fst<A> > M;
+  typedef LookAheadMatcher<Fst<A>> M;
   typedef SequenceComposeFilter<M> SF;
   typedef LookAheadComposeFilter<SF, M> LF;
   typedef PushWeightsComposeFilter<LF, M> WF;
@@ -663,9 +610,9 @@ template <>
 class DefaultLookAhead<StdArc, MATCH_OUTPUT> {
  public:
   typedef StdArc A;
-  typedef LookAheadMatcher< Fst<A> > M;
+  typedef LookAheadMatcher<Fst<A>> M;
   typedef AltSequenceComposeFilter<M> SF;
-  typedef LookAheadComposeFilter<SF, M>  LF;
+  typedef LookAheadComposeFilter<SF, M> LF;
   typedef PushWeightsComposeFilter<LF, M> WF;
   typedef PushLabelsComposeFilter<WF, M> ComposeFilter;
   typedef M FstMatcher;
@@ -676,7 +623,7 @@ template <>
 class DefaultLookAhead<LogArc, MATCH_INPUT> {
  public:
   typedef LogArc A;
-  typedef LookAheadMatcher< Fst<A> > M;
+  typedef LookAheadMatcher<Fst<A>> M;
   typedef SequenceComposeFilter<M> SF;
   typedef LookAheadComposeFilter<SF, M> LF;
   typedef PushWeightsComposeFilter<LF, M> WF;
@@ -689,7 +636,7 @@ template <>
 class DefaultLookAhead<LogArc, MATCH_OUTPUT> {
  public:
   typedef LogArc A;
-  typedef LookAheadMatcher< Fst<A> > M;
+  typedef LookAheadMatcher<Fst<A>> M;
   typedef AltSequenceComposeFilter<M> SF;
   typedef LookAheadComposeFilter<SF, M> LF;
   typedef PushWeightsComposeFilter<LF, M> WF;

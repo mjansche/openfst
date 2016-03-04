@@ -1,23 +1,7 @@
-// minimize.h
-// minimize.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: johans@google.com (Johan Schalkwyk)
-//
-// \file Functions and classes to minimize a finite state acceptor
-//
+// Functions and classes to minimize an FST.
 
 #ifndef FST_LIB_MINIMIZE_H__
 #define FST_LIB_MINIMIZE_H__
@@ -28,7 +12,6 @@
 #include <map>
 #include <queue>
 #include <vector>
-using std::vector;
 
 #include <fst/arcsort.h>
 #include <fst/connect.h>
@@ -57,10 +40,10 @@ class StateComparator {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  static const uint32 kCompareFinal     = 0x00000001;
+  static const uint32 kCompareFinal = 0x00000001;
   static const uint32 kCompareOutDegree = 0x00000002;
-  static const uint32 kCompareArcs      = 0x00000004;
-  static const uint32 kCompareAll       = 0x00000007;
+  static const uint32 kCompareArcs = 0x00000004;
+  static const uint32 kCompareAll = 0x00000007;
 
   StateComparator(const Fst<A>& fst,
                   const Partition<typename A::StateId>& partition,
@@ -73,8 +56,10 @@ class StateComparator {
     if (flags_ & kCompareFinal) {
       const size_t xfinal = fst_.Final(x).Hash();
       const size_t yfinal = fst_.Final(y).Hash();
-      if      (xfinal < yfinal) return true;
-      else if (xfinal > yfinal) return false;
+      if (xfinal < yfinal)
+        return true;
+      else if (xfinal > yfinal)
+        return false;
     }
 
     if (flags_ & kCompareOutDegree) {
@@ -84,7 +69,7 @@ class StateComparator {
 
       if (flags_ & kCompareArcs) {
         // # arcs are equal, check for arc match
-        for (ArcIterator<Fst<A> > aiter1(fst_, x), aiter2(fst_, y);
+        for (ArcIterator<Fst<A>> aiter1(fst_, x), aiter2(fst_, y);
              !aiter1.Done() && !aiter2.Done(); aiter1.Next(), aiter2.Next()) {
           const A& arc1 = aiter1.Value();
           const A& arc2 = aiter2.Value();
@@ -92,9 +77,11 @@ class StateComparator {
           if (arc1.ilabel > arc2.ilabel) return false;
 
           if (partition_.class_id(arc1.nextstate) <
-              partition_.class_id(arc2.nextstate)) return true;
+              partition_.class_id(arc2.nextstate))
+            return true;
           if (partition_.class_id(arc1.nextstate) >
-              partition_.class_id(arc2.nextstate)) return false;
+              partition_.class_id(arc2.nextstate))
+            return false;
         }
       }
     }
@@ -108,11 +95,14 @@ class StateComparator {
   const uint32 flags_;
 };
 
-template <class A> const uint32 StateComparator<A>::kCompareFinal;
-template <class A> const uint32 StateComparator<A>::kCompareOutDegree;
-template <class A> const uint32 StateComparator<A>::kCompareArcs;
-template <class A> const uint32 StateComparator<A>::kCompareAll;
-
+template <class A>
+const uint32 StateComparator<A>::kCompareFinal;
+template <class A>
+const uint32 StateComparator<A>::kCompareOutDegree;
+template <class A>
+const uint32 StateComparator<A>::kCompareArcs;
+template <class A>
+const uint32 StateComparator<A>::kCompareAll;
 
 // Computes equivalence classes for cyclic Fsts. For cyclic minimization
 // we use the classic HopCroft minimization algorithm, which is of
@@ -139,24 +129,19 @@ class CyclicMinimizer {
     Compute(fst);
   }
 
-  ~CyclicMinimizer() {
-    delete aiter_queue_;
-  }
+  ~CyclicMinimizer() { delete aiter_queue_; }
 
-  const Partition<StateId>& partition() const {
-    return P_;
-  }
+  const Partition<StateId>& partition() const { return P_; }
 
   // helper classes
  private:
-  typedef ArcIterator<Fst<RevA> > ArcIter;
+  typedef ArcIterator<Fst<RevA>> ArcIter;
   class ArcIterCompare {
    public:
     ArcIterCompare(const Partition<StateId>& partition)
         : partition_(partition) {}
 
-    ArcIterCompare(const ArcIterCompare& comp)
-        : partition_(comp.partition_) {}
+    ArcIterCompare(const ArcIterCompare& comp) : partition_(comp.partition_) {}
 
     // compare two iterators based on there input labels, and proto state
     // (partition class Ids)
@@ -170,8 +155,8 @@ class CyclicMinimizer {
     const Partition<StateId>& partition_;
   };
 
-  typedef priority_queue<ArcIter*, vector<ArcIter*>, ArcIterCompare>
-  ArcIterQueue;
+  typedef priority_queue<ArcIter*, std::vector<ArcIter*>, ArcIterCompare>
+      ArcIterQueue;
 
   // helper methods
  private:
@@ -182,17 +167,17 @@ class CyclicMinimizer {
   void PrePartition(const Fst<A>& fst) {
     VLOG(5) << "PrePartition";
 
-    typedef map<StateId, StateId, StateComparator<A> > EquivalenceMap;
+    typedef std::map<StateId, StateId, StateComparator<A>> EquivalenceMap;
     StateComparator<A> comp(fst, P_, StateComparator<A>::kCompareFinal);
     EquivalenceMap equiv_map(comp);
 
-    StateIterator<Fst<A> > siter(fst);
+    StateIterator<Fst<A>> siter(fst);
     StateId class_id = P_.AddClass();
     P_.Add(siter.Value(), class_id);
     equiv_map[siter.Value()] = class_id;
     L_.Enqueue(class_id);
     for (siter.Next(); !siter.Done(); siter.Next()) {
-      StateId  s = siter.Value();
+      StateId s = siter.Value();
       typename EquivalenceMap::const_iterator it = equiv_map.find(s);
       if (it == equiv_map.end()) {
         class_id = P_.AddClass();
@@ -232,33 +217,30 @@ class CyclicMinimizer {
   void Split(ClassId C) {
     // Prep priority queue. Open arc iterator for each state in C, and
     // insert into priority queue.
-    for (PartitionIterator<StateId> siter(P_, C);
-         !siter.Done(); siter.Next()) {
+    for (PartitionIterator<StateId> siter(P_, C); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
       if (Tr_.NumArcs(s + 1))
-        aiter_queue_->push(new ArcIterator<Fst<RevA> >(Tr_, s + 1));
+        aiter_queue_->push(new ArcIterator<Fst<RevA>>(Tr_, s + 1));
     }
 
     // Now pop arc iterator from queue, split entering equivalence class
     // re-insert updated iterator into queue.
     Label prev_label = -1;
     while (!aiter_queue_->empty()) {
-      ArcIterator<Fst<RevA> >* aiter = aiter_queue_->top();
+      ArcIterator<Fst<RevA>>* aiter = aiter_queue_->top();
       aiter_queue_->pop();
       if (aiter->Done()) {
         delete aiter;
         continue;
-     }
+      }
 
       const RevA& arc = aiter->Value();
       StateId from_state = aiter->Value().nextstate - 1;
-      Label   from_label = arc.ilabel;
-      if (prev_label != from_label)
-        P_.FinalizeSplit(&L_);
+      Label from_label = arc.ilabel;
+      if (prev_label != from_label) P_.FinalizeSplit(&L_);
 
       StateId from_class = P_.class_id(from_state);
-      if (P_.class_size(from_class) > 1)
-        P_.SplitOn(from_state);
+      if (P_.class_size(from_class) > 1) P_.SplitOn(from_state);
 
       prev_label = from_label;
       aiter->Next();
@@ -298,7 +280,6 @@ class CyclicMinimizer {
   ArcIterQueue* aiter_queue_;
 };
 
-
 // Computes equivalence classes for acyclic Fsts. The implementation details
 // for this algorithms is documented by the following paper.
 //
@@ -320,16 +301,14 @@ class AcyclicMinimizer {
     Refine(fst);
   }
 
-  const Partition<StateId>& partition() {
-    return partition_;
-  }
+  const Partition<StateId>& partition() { return partition_; }
 
   // helper classes
  private:
   // DFS visitor to compute the height (distance) to final state.
   class HeightVisitor {
    public:
-    HeightVisitor() : max_height_(0), num_states_(0) { }
+    HeightVisitor() : max_height_(0), num_states_(0) {}
 
     // invoked before dfs visit
     void InitVisit(const Fst<A>& fst) {}
@@ -337,22 +316,17 @@ class AcyclicMinimizer {
     // invoked when state is discovered (2nd arg is DFS tree root)
     bool InitState(StateId s, StateId root) {
       // extend height array and initialize height (distance) to 0
-      for (size_t i = height_.size(); i <= s; ++i)
-        height_.push_back(-1);
+      for (size_t i = height_.size(); i <= s; ++i) height_.push_back(-1);
 
       if (s >= num_states_) num_states_ = s + 1;
       return true;
     }
 
     // invoked when tree arc examined (to undiscoverted state)
-    bool TreeArc(StateId s, const A& arc) {
-      return true;
-    }
+    bool TreeArc(StateId s, const A& arc) { return true; }
 
     // invoked when back arc examined (to unfinished state)
-    bool BackArc(StateId s, const A& arc) {
-      return true;
-    }
+    bool BackArc(StateId s, const A& arc) { return true; }
 
     // invoked when forward or cross arc examined (to finished state)
     bool ForwardOrCrossArc(StateId s, const A& arc) {
@@ -364,10 +338,10 @@ class AcyclicMinimizer {
     // invoked when state finished (parent is kNoStateId for tree root)
     void FinishState(StateId s, StateId parent, const A* parent_arc) {
       if (height_[s] == -1) height_[s] = 0;
-      StateId h = height_[s] +  1;
+      StateId h = height_[s] + 1;
       if (parent >= 0) {
         if (h > height_[parent]) height_[parent] = h;
-        if (h > max_height_)     max_height_ = h;
+        if (h > max_height_) max_height_ = h;
       }
     }
 
@@ -376,12 +350,12 @@ class AcyclicMinimizer {
 
     size_t max_height() const { return max_height_; }
 
-    const vector<StateId>& height() const { return height_; }
+    const std::vector<StateId>& height() const { return height_; }
 
     size_t num_states() const { return num_states_; }
 
    private:
-    vector<StateId> height_;
+    std::vector<StateId> height_;
     size_t max_height_;
     size_t num_states_;
   };
@@ -397,14 +371,13 @@ class AcyclicMinimizer {
     // create initial partition based on height
     partition_.Initialize(hvisitor.num_states());
     partition_.AllocateClasses(hvisitor.max_height() + 1);
-    const vector<StateId>& hstates = hvisitor.height();
-    for (size_t s = 0; s < hstates.size(); ++s)
-      partition_.Add(s, hstates[s]);
+    const std::vector<StateId>& hstates = hvisitor.height();
+    for (size_t s = 0; s < hstates.size(); ++s) partition_.Add(s, hstates[s]);
   }
 
   // refine states based on arc sort (out degree, arc equivalence)
   void Refine(const Fst<A>& fst) {
-    typedef map<StateId, StateId, StateComparator<A> > EquivalenceMap;
+    typedef std::map<StateId, StateId, StateComparator<A>> EquivalenceMap;
     StateComparator<A> comp(fst, partition_);
 
     // start with tail (height = 0)
@@ -434,8 +407,7 @@ class AcyclicMinimizer {
         // we first update the iterator to the next element
         // before we move the current element out of the list
         siter.Next();
-        if (old_class != new_class)
-          partition_.Move(s, new_class);
+        if (old_class != new_class) partition_.Move(s, new_class);
       }
     }
   }
@@ -444,18 +416,17 @@ class AcyclicMinimizer {
   Partition<StateId> partition_;
 };
 
-
 // Given a partition and a mutable fst, merge states of Fst inplace
 // (i.e. destructively). Merging works by taking the first state in
 // a class of the partition to be the representative state for the class.
 // Each arc is then reconnected to this state. All states in the class
 // are merged by adding there arcs to the representative state.
 template <class A>
-void MergeStates(
-    const Partition<typename A::StateId>& partition, MutableFst<A>* fst) {
+void MergeStates(const Partition<typename A::StateId>& partition,
+                 MutableFst<A>* fst) {
   typedef typename A::StateId StateId;
 
-  vector<StateId> state_map(partition.num_classes());
+  std::vector<StateId> state_map(partition.num_classes());
   for (size_t i = 0; i < partition.num_classes(); ++i) {
     PartitionIterator<StateId> siter(partition, i);
     state_map[i] = siter.Value();  // first state in partition;
@@ -463,11 +434,11 @@ void MergeStates(
 
   // relabel destination states
   for (size_t c = 0; c < partition.num_classes(); ++c) {
-    for (PartitionIterator<StateId> siter(partition, c);
-         !siter.Done(); siter.Next()) {
+    for (PartitionIterator<StateId> siter(partition, c); !siter.Done();
+         siter.Next()) {
       StateId s = siter.Value();
-      for (MutableArcIterator<MutableFst<A> > aiter(fst, s);
-           !aiter.Done(); aiter.Next()) {
+      for (MutableArcIterator<MutableFst<A>> aiter(fst, s); !aiter.Done();
+           aiter.Next()) {
         A arc = aiter.Value();
         arc.nextstate = state_map[partition.class_id(arc.nextstate)];
 
@@ -487,7 +458,7 @@ template <class A>
 void AcceptorMinimize(MutableFst<A>* fst) {
   typedef typename A::StateId StateId;
   if (!(fst->Properties(kAcceptor | kUnweighted, true))) {
-    FSTERROR() << "FST is not an unweighted acceptor";
+    FSTERROR() << "Fst is not an unweighted acceptor";
     fst->SetProperties(kError, kError);
     return;
   }
@@ -506,7 +477,7 @@ void AcceptorMinimize(MutableFst<A>* fst) {
   } else {
     // Cyclic minimizaton (hopcroft)
     VLOG(2) << "Cyclic Minimization";
-    CyclicMinimizer<A, LifoQueue<StateId> > minimizer(*fst);
+    CyclicMinimizer<A, LifoQueue<StateId>> minimizer(*fst);
     MergeStates(minimizer.partition(), fst);
   }
 
@@ -514,7 +485,6 @@ void AcceptorMinimize(MutableFst<A>* fst) {
   ArcUniqueMapper<A> mapper(*fst);
   StateMap(fst, mapper);
 }
-
 
 // In place minimization of deterministic weighted automata and transducers.
 // For transducers, then the 'sfst' argument is not null, the algorithm
@@ -528,36 +498,35 @@ void AcceptorMinimize(MutableFst<A>* fst) {
 //  Complexity = O(|E|log(|N|)
 //
 template <class A>
-void Minimize(MutableFst<A>* fst,
-              MutableFst<A>* sfst = 0,
+void Minimize(MutableFst<A>* fst, MutableFst<A>* sfst = 0,
               float delta = kDelta) {
-  uint64 props = fst->Properties(kAcceptor | kIDeterministic|
-                                 kWeighted | kUnweighted, true);
+  uint64 props = fst->Properties(
+      kAcceptor | kIDeterministic | kWeighted | kUnweighted, true);
   if (!(props & kIDeterministic)) {
-    FSTERROR() << "FST is not deterministic";
+    FSTERROR() << "Fst is not deterministic";
     fst->SetProperties(kError, kError);
     return;
   }
 
   if (!(props & kAcceptor)) {  // weighted transducer
-    VectorFst< GallicArc<A, GALLIC_LEFT> > gfst;
+    VectorFst<GallicArc<A, GALLIC_LEFT>> gfst;
     ArcMap(*fst, &gfst, ToGallicMapper<A, GALLIC_LEFT>());
     fst->DeleteStates();
     gfst.SetProperties(kAcceptor, kAcceptor);
     Push(&gfst, REWEIGHT_TO_INITIAL, delta);
-    ArcMap(&gfst, QuantizeMapper< GallicArc<A, GALLIC_LEFT> >(delta));
-    EncodeMapper< GallicArc<A, GALLIC_LEFT> >
-      encoder(kEncodeLabels | kEncodeWeights, ENCODE);
+    ArcMap(&gfst, QuantizeMapper<GallicArc<A, GALLIC_LEFT>>(delta));
+    EncodeMapper<GallicArc<A, GALLIC_LEFT>> encoder(
+        kEncodeLabels | kEncodeWeights, ENCODE);
     Encode(&gfst, &encoder);
     AcceptorMinimize(&gfst);
     Decode(&gfst, encoder);
 
     if (sfst == 0) {
-      FactorWeightFst< GallicArc<A, GALLIC_LEFT>,
-        GallicFactor<typename A::Label,
-        typename A::Weight, GALLIC_LEFT> > fwfst(gfst);
-      SymbolTable *osyms = fst->OutputSymbols() ?
-          fst->OutputSymbols()->Copy() : 0;
+      FactorWeightFst<GallicArc<A, GALLIC_LEFT>,
+                      GallicFactor<typename A::Label, typename A::Weight,
+                                   GALLIC_LEFT>> fwfst(gfst);
+      SymbolTable* osyms =
+          fst->OutputSymbols() ? fst->OutputSymbols()->Copy() : 0;
       ArcMap(fwfst, fst, FromGallicMapper<A, GALLIC_LEFT>());
       fst->SetOutputSymbols(osyms);
       delete osyms;

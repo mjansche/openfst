@@ -1,32 +1,15 @@
-// filter-state.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Classes for storing filter state in various algorithms like composition.
-//
 
 #ifndef FST_LIB_FILTER_STATE_H_
 #define FST_LIB_FILTER_STATE_H_
 
 #include <forward_list>
-using std::forward_list;
 
-#include <fst/fst.h>
 #include <fst/fst-decl.h>  // For optional argument declarations
+#include <fst/fst.h>
 #include <fst/matcher.h>
 
 
@@ -75,14 +58,13 @@ class IntegerFilterState {
 
   void SetState(T state) { state_ = state; }
 
-private:
+ private:
   T state_;
 };
 
 typedef IntegerFilterState<signed char> CharFilterState;
 typedef IntegerFilterState<short> ShortFilterState;
 typedef IntegerFilterState<int> IntFilterState;
-
 
 // Filter state that is a weight (class).
 template <class W>
@@ -107,10 +89,9 @@ class WeightFilterState {
 
   void SetWeight(W w) { weight_ = w; }
 
-private:
+ private:
   W weight_;
 };
-
 
 // Filter state is a list of signed integer types T. Order matters
 // for equality.
@@ -127,18 +108,14 @@ class ListFilterState {
     size_t h = 0;
     for (typename std::forward_list<T>::const_iterator iter = list_.begin();
          iter != list_.end(); ++iter) {
-      h ^= h << 1  ^ *iter;
+      h ^= h << 1 ^ *iter;
     }
     return h;
   }
 
-  bool operator==(const ListFilterState &f) const {
-    return list_ == f.list_;
-  }
+  bool operator==(const ListFilterState &f) const { return list_ == f.list_; }
 
-  bool operator!=(const ListFilterState &f) const {
-    return list_ != f.list_;
-  }
+  bool operator!=(const ListFilterState &f) const { return list_ != f.list_; }
 
   const std::forward_list<T> &GetState() const { return list_; }
 
@@ -149,7 +126,6 @@ class ListFilterState {
  private:
   std::forward_list<T> list_;
 };
-
 
 // Filter state that is the combination of two filter states.
 template <class F1, class F2>
@@ -185,9 +161,29 @@ class PairFilterState {
     f2_ = f2;
   }
 
-private:
+ private:
   F1 f1_;
   F2 f2_;
+};
+
+// Single non-blocking filter state.
+class TrivialFilterState {
+ public:
+  TrivialFilterState() : state_(false) {}
+  explicit TrivialFilterState(bool s) : state_(s) {}
+
+  static const TrivialFilterState NoState() { return TrivialFilterState(); }
+
+  size_t Hash() const { return 0; }
+
+  bool operator==(const TrivialFilterState &f) const {
+    return state_ == f.state_; }
+
+  bool operator!=(const TrivialFilterState &f) const {
+    return state_ != f.state_; }
+
+ private:
+  bool state_;
 };
 
 }  // namespace fst

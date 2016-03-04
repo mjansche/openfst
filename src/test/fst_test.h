@@ -1,27 +1,13 @@
-// fst_test.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Regression test for FST classes.
 
 #ifndef FST_TEST_FST_TEST_H_
 #define FST_TEST_FST_TEST_H_
 
 #include <fst/equal.h>
+#include <fstream>
 #include <fst/matcher.h>
 #include <fst/vector-fst.h>
 #include <fst/verify.h>
@@ -51,11 +37,9 @@ class FstTester {
     testfst_ = new F(vfst);
   }
 
-  explicit FstTester(F *testfst) : testfst_(testfst) { }
+  explicit FstTester(F *testfst) : testfst_(testfst) {}
 
-  ~FstTester() {
-    delete testfst_;
-  }
+  ~FstTester() { delete testfst_; }
 
   // This verifies the contents described in InitFst() using
   // methods defined in a generic Fst.
@@ -67,14 +51,16 @@ class FstTester {
     StateIterator<G> siter(fst);
     Matcher<G> matcher(fst, MATCH_INPUT);
     MatchType match_type = matcher.Type(true);
-    for (; !siter.Done(); siter.Next()) {}
+    for (; !siter.Done(); siter.Next()) {
+    }
     for (siter.Reset(); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
       matcher.SetState(s);
       CHECK_EQ(fst.Final(s), NthWeight(s));
       size_t na = 0;
       ArcIterator<G> aiter(fst, s);
-      for (; !aiter.Done(); aiter.Next()) {}
+      for (; !aiter.Done(); aiter.Next()) {
+      }
       for (aiter.Reset(); !aiter.Done(); aiter.Next()) {
         ++na;
         const Arc &arc = aiter.Value();
@@ -90,10 +76,10 @@ class FstTester {
       CHECK_EQ(na, s);
       CHECK_EQ(na, aiter.Position());
       CHECK_EQ(fst.NumArcs(s), s);
-      CHECK_EQ(fst.NumInputEpsilons(s),  0);
+      CHECK_EQ(fst.NumInputEpsilons(s), 0);
       CHECK_EQ(fst.NumOutputEpsilons(s), s);
-      CHECK(!matcher.Find(s + 1));                 // out-of-range
-      CHECK(!matcher.Find(kNoLabel));              // no explicit epsilons
+      CHECK(!matcher.Find(s + 1));     // out-of-range
+      CHECK(!matcher.Find(kNoLabel));  // no explicit epsilons
       CHECK(matcher.Find(0));
       CHECK_EQ(matcher.Value().ilabel, kNoLabel);  // implicit epsilon loop
       ++ns;
@@ -102,17 +88,13 @@ class FstTester {
     CHECK(fst.Properties(kOEpsilons, true));
   }
 
-  void TestBase() const {
-    TestBase(*testfst_);
-  }
+  void TestBase() const { TestBase(*testfst_); }
 
   // This verifies methods specfic to an ExpandedFst.
   template <class G>
   void TestExpanded(const G &fst) const {
     StateId ns = 0;
-    for (StateIterator<G> siter(fst);
-         !siter.Done();
-         siter.Next()) {
+    for (StateIterator<G> siter(fst); !siter.Done(); siter.Next()) {
       ++ns;
     }
     CHECK_EQ(fst.NumStates(), ns);
@@ -124,14 +106,13 @@ class FstTester {
   // This verifies methods specific to a MutableFst.
   template <class G>
   void TestMutable(G *fst) const {
-    for (StateIterator<G> siter(*fst);
-         !siter.Done();
-         siter.Next()) {
+    for (StateIterator<G> siter(*fst); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
       size_t na = 0;
       size_t ni = fst->NumInputEpsilons(s);
       MutableArcIterator<G> aiter(fst, s);
-      for (; !aiter.Done(); aiter.Next()) {}
+      for (; !aiter.Done(); aiter.Next()) {
+      }
       for (aiter.Reset(); !aiter.Done(); aiter.Next()) {
         ++na;
         Arc arc = aiter.Value();
@@ -152,9 +133,7 @@ class FstTester {
     delete cfst1;
 
     G *cfst2 = fst->Copy();
-    for (StateIterator<G> siter(*cfst2);
-         !siter.Done();
-         siter.Next()) {
+    for (StateIterator<G> siter(*cfst2); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
       cfst2->DeleteArcs(s);
       CHECK_EQ(cfst2->NumArcs(s), 0);
@@ -238,13 +217,13 @@ class FstTester {
     {
       // check mmaping by first writing the file with the aligned attribute set
       {
-        ofstream ostr(aligned.c_str());
+        std::ofstream ostr(aligned.c_str());
         FstWriteOptions opts;
         opts.source = aligned;
         opts.align = true;
         CHECK(fst.Write(ostr, opts));
       }
-      ifstream istr(aligned.c_str());
+      std::ifstream istr(aligned.c_str());
       FstReadOptions opts;
       opts.mode = FstReadOptions::ReadMode("map");
       opts.source = aligned;
@@ -257,13 +236,13 @@ class FstTester {
     // check mmaping of unaligned files to make sure it does not fail.
     {
       {
-        ofstream ostr(aligned.c_str());
+        std::ofstream ostr(aligned.c_str());
         FstWriteOptions opts;
         opts.source = aligned;
         opts.align = false;
         CHECK(fst.Write(ostr, opts));
       }
-      ifstream istr(aligned.c_str());
+      std::ifstream istr(aligned.c_str());
       FstReadOptions opts;
       opts.mode = FstReadOptions::ReadMode("map");
       opts.source = aligned;
@@ -327,12 +306,11 @@ class FstTester {
   // Generates One() + ... + One() (n times)
   Weight NthWeight(int n) const {
     Weight w = Weight::Zero();
-    for (int i = 0; i < n; ++i)
-      w = Plus(w, Weight::One());
+    for (int i = 0; i < n; ++i) w = Plus(w, Weight::One());
     return w;
   }
 
-  F *testfst_;   // what we're testing
+  F *testfst_;  // what we're testing
 };
 
 }  // namespace fst

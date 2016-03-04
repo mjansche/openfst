@@ -1,19 +1,22 @@
-// Compresses/decompresses an FST.
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
+// Compresses/decompresses an FST.
 
 #include <string>
 
 #include <fst/extensions/compress/compress-script.h>
 
-#include <fst/script/fst-class.h>
 #include <fst/util.h>
+#include <fst/script/fst-class.h>
 
 DEFINE_string(arc_type, "standard", "Output arc type");
 DEFINE_bool(decode, false, "Decode");
-DEFINE_bool(gzip, false, "Applies gzip compression after LZA compression and "
-                         "gzip decompression before LZA decompression "
-                         "(recommended)"
-                         ); // NOLINT
+DEFINE_bool(gzip, false,
+            "Applies gzip compression after LZA compression and "
+            "gzip decompression before LZA decompression "
+            "(recommended)"
+            "");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -40,7 +43,7 @@ int main(int argc, char **argv) {
     FstClass *ifst = FstClass::Read(in_name);
     if (!ifst) return 1;
     s::Compress(*ifst, out_name, FLAGS_gzip);
-  } else  {
+  } else {
     VectorFstClass ofst(FLAGS_arc_type);
     s::Decompress(in_name, &ofst, FLAGS_gzip);
     ofst.Write(out_name);

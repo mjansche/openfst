@@ -215,6 +215,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -329,11 +330,12 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
+LDADD = $(DL_LIBS)
 lib_LTLIBRARIES = libfst.la
 libfst_la_SOURCES = compat.cc flags.cc fst.cc properties.cc \
 symbol-table.cc util.cc symbol-table-ops.cc mapped-file.cc
 
-libfst_la_LDFLAGS = -version-info 1:5:0
+libfst_la_LDFLAGS = -version-info 2:5:0
 all: all-am
 
 .SUFFIXES:

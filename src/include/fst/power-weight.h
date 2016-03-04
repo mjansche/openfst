@@ -1,21 +1,6 @@
-// power-weight.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-//
-// \file
 // Cartesian power weight semiring operation definitions.
 
 #ifndef FST_LIB_POWER_WEIGHT_H__
@@ -80,27 +65,23 @@ class PowerWeight : public TupleWeight<W, n> {
 
   static uint64 Properties() {
     uint64 props = W::Properties();
-    return props & (kLeftSemiring | kRightSemiring |
-                    kCommutative | kIdempotent);
+    return props &
+           (kLeftSemiring | kRightSemiring | kCommutative | kIdempotent);
   }
 
   PowerWeight<W, n> Quantize(float delta = kDelta) const {
     return TupleWeight<W, n>::Quantize(delta);
   }
 
-  ReverseWeight Reverse() const {
-    return TupleWeight<W, n>::Reverse();
-  }
+  ReverseWeight Reverse() const { return TupleWeight<W, n>::Reverse(); }
 };
-
 
 // Semiring plus operation
 template <class W, unsigned int n>
 inline PowerWeight<W, n> Plus(const PowerWeight<W, n> &w1,
                               const PowerWeight<W, n> &w2) {
   PowerWeight<W, n> w;
-  for (size_t i = 0; i < n; ++i)
-    w.SetValue(i, Plus(w1.Value(i), w2.Value(i)));
+  for (size_t i = 0; i < n; ++i) w.SetValue(i, Plus(w1.Value(i), w2.Value(i)));
   return w;
 }
 
@@ -109,8 +90,7 @@ template <class W, unsigned int n>
 inline PowerWeight<W, n> Times(const PowerWeight<W, n> &w1,
                                const PowerWeight<W, n> &w2) {
   PowerWeight<W, n> w;
-  for (size_t i = 0; i < n; ++i)
-    w.SetValue(i, Times(w1.Value(i), w2.Value(i)));
+  for (size_t i = 0; i < n; ++i) w.SetValue(i, Times(w1.Value(i), w2.Value(i)));
   return w;
 }
 
@@ -129,8 +109,7 @@ inline PowerWeight<W, n> Divide(const PowerWeight<W, n> &w1,
 template <class W, unsigned int n>
 inline PowerWeight<W, n> Times(const W &s, const PowerWeight<W, n> &w) {
   PowerWeight<W, n> sw;
-  for (size_t i = 0; i < n; ++i)
-    sw.SetValue(i, Times(s, w.Value(i)));
+  for (size_t i = 0; i < n; ++i) sw.SetValue(i, Times(s, w.Value(i)));
   return sw;
 }
 
@@ -138,21 +117,17 @@ inline PowerWeight<W, n> Times(const W &s, const PowerWeight<W, n> &w) {
 template <class W, unsigned int n>
 inline PowerWeight<W, n> Times(const PowerWeight<W, n> &w, const W &s) {
   PowerWeight<W, n> ws;
-  for (size_t i = 0; i < n; ++i)
-    ws.SetValue(i, Times(w.Value(i), s));
+  for (size_t i = 0; i < n; ++i) ws.SetValue(i, Times(w.Value(i), s));
   return ws;
 }
 
 // Semimodule dot product
 template <class W, unsigned int n>
-inline W DotProduct(const PowerWeight<W, n> &w1,
-                    const PowerWeight<W, n> &w2) {
+inline W DotProduct(const PowerWeight<W, n> &w1, const PowerWeight<W, n> &w2) {
   W w = W::Zero();
-  for (size_t i = 0; i < n; ++i)
-    w = Plus(w, Times(w1.Value(i), w2.Value(i)));
+  for (size_t i = 0; i < n; ++i) w = Plus(w, Times(w1.Value(i), w2.Value(i)));
   return w;
 }
-
 
 }  // namespace fst
 

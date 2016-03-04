@@ -1,56 +1,35 @@
-// info.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
 // Prints information about an MPDT.
 
 #ifndef FST_EXTENSIONS_MPDT_INFO_H__
 #define FST_EXTENSIONS_MPDT_INFO_H__
 
 #include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
-#include <unordered_set>
-using std::unordered_set;
-using std::unordered_multiset;
 #include <vector>
-using std::vector;
 
-#include <fst/fst.h>
 #include <fst/extensions/mpdt/mpdt.h>
+#include <fst/fst.h>
 
 namespace fst {
 
 // Compute various information about MPDTs, helper class for mpdtinfo.cc.
-template <class A, int nlevels = 2> class MPdtInfo {
-public:
+template <class A, int nlevels = 2>
+class MPdtInfo {
+ public:
   typedef A Arc;
   typedef typename A::StateId StateId;
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
 
   MPdtInfo(const Fst<A> &fst,
-           const vector<pair<typename A::Label,
-                             typename A::Label> > &parens,
-           const vector<typename A::Label> &assignments);
+           const std::vector<std::pair<typename A::Label, typename A::Label>>
+               &parens,
+           const std::vector<typename A::Label> &assignments);
 
-  const string& FstType() const { return fst_type_; }
-  const string& ArcType() const { return A::Type(); }
+  const string &FstType() const { return fst_type_; }
+  const string &ArcType() const { return A::Type(); }
 
   int64 NumStates() const { return nstates_; }
   int64 NumArcs() const { return narcs_; }
@@ -80,22 +59,19 @@ public:
 };
 
 template <class A, int nlevels>
-MPdtInfo<A, nlevels>::MPdtInfo(const Fst<A> &fst,
-                               const vector<pair<typename A::Label,
-                                                 typename A::Label> > &parens,
-                               const vector<typename A::Label> &assignments)
-    : fst_type_(fst.Type()),
-      nstates_(0),
-      narcs_(0),
-      error_(false) {
-  unordered_map<Label, size_t> paren_map;
-  unordered_set<Label> paren_set;
-  unordered_map<Label, int> paren_levels;
-  unordered_set<StateId> open_paren_state_set;
-  unordered_set<StateId> close_paren_state_set;
+MPdtInfo<A, nlevels>::MPdtInfo(
+    const Fst<A> &fst,
+    const std::vector<std::pair<typename A::Label, typename A::Label>> &parens,
+    const std::vector<typename A::Label> &assignments)
+    : fst_type_(fst.Type()), nstates_(0), narcs_(0), error_(false) {
+  std::unordered_map<Label, size_t> paren_map;
+  std::unordered_set<Label> paren_set;
+  std::unordered_map<Label, int> paren_levels;
+  std::unordered_set<StateId> open_paren_state_set;
+  std::unordered_set<StateId> close_paren_state_set;
 
   if (parens.size() != assignments.size()) {
-    FSTERROR() << "MPdtInfo: parens of different size from assignments";
+    FSTERROR() << "MPdtInfo: Parens of different size from assignments";
     error_ = true;
     return;
   }
@@ -104,11 +80,11 @@ MPdtInfo<A, nlevels>::MPdtInfo(const Fst<A> &fst,
     // them starting at 1, we should subtract 1 here
     int lev = assignments[i] - 1;
     if (lev < 0 || lev >= nlevels) {
-      FSTERROR() << "MPdtInfo: specified level " << lev << " out of bounds";
+      FSTERROR() << "MPdtInfo: Specified level " << lev << " out of bounds";
       error_ = true;
       return;
     }
-    const pair<Label, Label> &p = parens[i];
+    const std::pair<Label, Label> &p = parens[i];
     paren_levels[p.first] = lev;
     paren_levels[p.second] = lev;
     paren_map[p.first] = i;
@@ -124,21 +100,17 @@ MPdtInfo<A, nlevels>::MPdtInfo(const Fst<A> &fst,
     nclose_paren_states_[i] = 0;
   }
 
-  for (StateIterator< Fst<A> > siter(fst);
-       !siter.Done();
-       siter.Next()) {
+  for (StateIterator<Fst<A>> siter(fst); !siter.Done(); siter.Next()) {
     ++nstates_;
     StateId s = siter.Value();
-    for (ArcIterator< Fst<A> > aiter(fst, s);
-         !aiter.Done();
-         aiter.Next()) {
+    for (ArcIterator<Fst<A>> aiter(fst, s); !aiter.Done(); aiter.Next()) {
       const A &arc = aiter.Value();
       ++narcs_;
-      typename unordered_map<Label, size_t>::const_iterator pit
-        = paren_map.find(arc.ilabel);
+      typename std::unordered_map<Label, size_t>::const_iterator pit =
+          paren_map.find(arc.ilabel);
       if (pit != paren_map.end()) {
-        Label open_paren =  parens[pit->second].first;
-        Label close_paren =  parens[pit->second].second;
+        Label open_paren = parens[pit->second].first;
+        Label close_paren = parens[pit->second].second;
         int lev = paren_levels[arc.ilabel];
         if (arc.ilabel == open_paren) {
           ++nopen_parens_[lev];
@@ -165,7 +137,6 @@ MPdtInfo<A, nlevels>::MPdtInfo(const Fst<A> &fst,
     }
   }
 }
-
 
 template <class A, int nlevels>
 void MPdtInfo<A, nlevels>::Print() {

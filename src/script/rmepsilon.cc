@@ -1,48 +1,61 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #include <fst/script/fst-class.h>
-#include <fst/script/script-impl.h>
 #include <fst/script/rmepsilon.h>
+#include <fst/script/script-impl.h>
 
 namespace fst {
 namespace script {
 
-void RmEpsilon(const FstClass &ifst, MutableFstClass *ofst,
-               bool reverse, const RmEpsilonOptions &opts) {
-  if (!ArcTypesMatch(ifst, *ofst, "RmEpsilon")) return;
-
-  RmEpsilonArgs1 args(ifst, ofst, reverse, opts);
-
-  Apply<Operation<RmEpsilonArgs1> >("RmEpsilon", ifst.ArcType(), &args);
-}
-
-void RmEpsilon(MutableFstClass *fst, bool connect,
-               const WeightClass &weight_threshold,
-               int64 state_threshold, float delta) {
-  RmEpsilonArgs2 args(fst, connect, weight_threshold, state_threshold, delta);
-
-  Apply<Operation<RmEpsilonArgs2> >("RmEpsilon", fst->ArcType(), &args);
-}
-
-void RmEpsilon(MutableFstClass *fst, vector<WeightClass> *distance,
+// 1: Full signature with RmEpsilonOptions.
+void RmEpsilon(const FstClass &ifst, MutableFstClass *ofst, bool reverse,
                const RmEpsilonOptions &opts) {
-  RmEpsilonArgs3 args(fst, distance, opts);
+  if (!ArcTypesMatch(ifst, *ofst, "RmEpsilon") ||
+      !ofst->WeightTypesMatch(opts.weight_threshold, "RmEpsilon")) {
+    ofst->SetProperties(kError, kError);
+    return;
+  }
+  RmEpsilonArgs1 args(ifst, ofst, reverse, opts);
+  Apply<Operation<RmEpsilonArgs1>>("RmEpsilon", ifst.ArcType(), &args);
+}
 
-  Apply<Operation<RmEpsilonArgs3> >("RmEpsilon", fst->ArcType(), &args);
+// 2: Full signature with flat arguments.
+void RmEpsilon(MutableFstClass *fst, bool connect,
+               const WeightClass &weight_threshold, int64 state_threshold,
+               float delta) {
+  if (!fst->WeightTypesMatch(weight_threshold, "RmEpsilon")) {
+    fst->SetProperties(kError, kError);
+    return;
+  }
+  RmEpsilonArgs2 args(fst, connect, weight_threshold, state_threshold, delta);
+  Apply<Operation<RmEpsilonArgs2>>("RmEpsilon", fst->ArcType(), &args);
+}
+
+// #2 signature with default WeightClass argument.
+void RmEpsilon(MutableFstClass *fst, bool connect, int64 state_threshold,
+               float delta) {
+  const WeightClass weight_threshold = WeightClass::Zero(fst->WeightType());
+  RmEpsilon(fst, connect, weight_threshold, state_threshold, delta);
+}
+
+// 3: Full signature with RmEpsilonOptions and weight vector.
+void RmEpsilon(MutableFstClass *fst, std::vector<WeightClass> *distance,
+               const RmEpsilonOptions &opts) {
+  if (distance) {
+    for (auto it = distance->begin(); it != distance->end(); ++it) {
+      if (!fst->WeightTypesMatch(*it, "RmEpsilon")) {
+        fst->SetProperties(kError, kError);
+        return;
+      }
+    }
+  }
+  if (!fst->WeightTypesMatch(opts.weight_threshold, "RmEpsilon")) {
+    fst->SetProperties(kError, kError);
+    return;
+  }
+  RmEpsilonArgs3 args(fst, distance, opts);
+  Apply<Operation<RmEpsilonArgs3>>("RmEpsilon", fst->ArcType(), &args);
 }
 
 REGISTER_FST_OPERATION(RmEpsilon, StdArc, RmEpsilonArgs1);

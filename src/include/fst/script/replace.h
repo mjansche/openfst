@@ -1,74 +1,66 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_SCRIPT_REPLACE_H_
 #define FST_SCRIPT_REPLACE_H_
 
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 
+#include <fst/replace.h>
 #include <fst/script/arg-packs.h>
 #include <fst/script/fst-class.h>
-#include <fst/replace.h>
 
 namespace fst {
 namespace script {
 
 struct ReplaceOptions {
-  int64 root;    // root rule for expansion
-  fst::ReplaceLabelType call_label_type;  // how to label call arc
-  fst::ReplaceLabelType return_label_type;  // how to label return arc
-  int64 return_label;  // specifies label to put on return arc
+  int64 root;                                   // Root rule for expansion.
+  fst::ReplaceLabelType call_label_type;    // How to label call arc.
+  fst::ReplaceLabelType return_label_type;  // How to label return arc.
+  int64 return_label;                           // Specifies return arc label.
 
-  ReplaceOptions(int64 r, fst::ReplaceLabelType c =
-                 fst::REPLACE_LABEL_INPUT,
-                 fst::ReplaceLabelType t =
-                 fst::REPLACE_LABEL_NEITHER, int64 l = 0)
+  explicit ReplaceOptions(int64 r,
+      fst::ReplaceLabelType c = fst::REPLACE_LABEL_INPUT,
+      fst::ReplaceLabelType t = fst::REPLACE_LABEL_NEITHER,
+      int64 l = 0)
       : root(r), call_label_type(c), return_label_type(t), return_label(l) {}
 };
 
-typedef args::Package<const vector<pair<int64, const FstClass *> > &,
+using LabelFstClassPair = std::pair<int64, const FstClass *>;
+
+typedef args::Package<const std::vector<LabelFstClassPair> &,
                       MutableFstClass *, const ReplaceOptions &> ReplaceArgs;
 
-template<class Arc>
+template <class Arc>
 void Replace(ReplaceArgs *args) {
+  using LabelFstPair = std::pair<typename Arc::Label, const Fst<Arc> *>;
   // Now that we know the arc type, we construct a vector of
-  // pair<real label, real fst> that the real Replace will use
-  const vector<pair<int64, const FstClass *> >& untyped_tuples =
-      args->arg1;
-
-  vector<pair<typename Arc::Label, const Fst<Arc> *> > fst_tuples(
-      untyped_tuples.size());
-
-  for (unsigned i = 0; i < untyped_tuples.size(); ++i) {
-    fst_tuples[i].first = untyped_tuples[i].first;  // convert label
-    fst_tuples[i].second = untyped_tuples[i].second->GetFst<Arc>();
+  // std::pair<real label, real fst> that the real Replace will use.
+  const std::vector<LabelFstClassPair> &untyped_pairs = args->arg1;
+  auto size = untyped_pairs.size();
+  std::vector<LabelFstPair> typed_pairs(size);
+  for (auto i = 0; i < size; ++i) {
+    typed_pairs[i].first = untyped_pairs[i].first;  // Converts label.
+    typed_pairs[i].second = untyped_pairs[i].second->GetFst<Arc>();
   }
-
   MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
   const ReplaceOptions &opts = args->arg3;
-  fst::ReplaceFstOptions<Arc> repargs(opts.root, opts.call_label_type,
-                                          opts.return_label_type,
-                                          opts.return_label);
-  Replace(fst_tuples, ofst, repargs);
+  ReplaceFstOptions<Arc> typed_opts(opts.root, opts.call_label_type,
+                                    opts.return_label_type, opts.return_label);
+  ReplaceFst<Arc> rfst(typed_pairs, typed_opts);
+  // Checks for cyclic dependencies before attempting expansino.
+  if (rfst.CyclicDependencies()) {
+    FSTERROR() << "Replace: Cyclic dependencies detected; cannot expand";
+    ofst->SetProperties(kError, kError);
+    return;
+  }
+  typed_opts.gc = true;     // Caching options to speed up batch copy.
+  typed_opts.gc_limit = 0;
+  *ofst = rfst;
 }
 
-void Replace(const vector<pair<int64, const FstClass *> > &tuples,
+void Replace(const std::vector<LabelFstClassPair> &pairs,
              MutableFstClass *ofst, const ReplaceOptions &opts);
 
 }  // namespace script

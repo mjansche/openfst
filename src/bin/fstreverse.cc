@@ -1,39 +1,17 @@
-// fstreverse.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) Changed to use FstClass
-//
-// \file
 // Reverses the paths in an FST.
-//
 
-#include <string>
-
-#include <fst/script/reverse.h>
 #include <fst/script/fst-class.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include <fst/script/reverse.h>
 
 DEFINE_bool(require_superinitial, true, "Always create a superinitial state");
 
 int main(int argc, char **argv) {
+  namespace s =  fst::script;
   using fst::script::FstClass;
   using fst::script::VectorFstClass;
-  using fst::script::Reverse;
 
   string usage = "Reverses the paths in an FST.\n\n  Usage: ";
   usage += argv[0];
@@ -54,7 +32,7 @@ int main(int argc, char **argv) {
 
   VectorFstClass out(ifst->ArcType());
 
-  Reverse(*ifst, &out, FLAGS_require_superinitial);
+  s::Reverse(*ifst, &out, FLAGS_require_superinitial);
 
   out.Write(out_name);
 

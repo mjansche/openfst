@@ -1,45 +1,29 @@
-// fstshortestpath.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
 // Find shortest path(s) in an FST.
 
 #include <fst/script/shortest-path.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
-DEFINE_int64(nshortest, 1, "Return N-shortest paths");
+DEFINE_int32(nshortest, 1, "Return N-shortest paths");
 DEFINE_bool(unique, false, "Return unique strings");
 DEFINE_string(weight, "", "Weight threshold");
 DEFINE_int64(nstate, fst::kNoStateId, "State number threshold");
-DEFINE_string(queue_type, "auto", "Queue type: one of \"auto\", "
+DEFINE_string(queue_type, "auto",
+              "Queue type: one of \"auto\", "
               "\"fifo\", \"lifo\", \"shortest\', \"state\", \"top\"");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
   using fst::script::FstClass;
   using fst::script::MutableFstClass;
-  using fst::script::VectorFstClass;
   using fst::script::WeightClass;
+  using fst::script::VectorFstClass;
 
   string usage = "Finds shortest path(s) in an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-
 
   std::set_new_handler(FailedNewHandler);
   SET_FLAGS(usage.c_str(), &argc, &argv, true);
@@ -54,12 +38,12 @@ int main(int argc, char **argv) {
   FstClass *ifst = FstClass::Read(in_fname);
   if (!ifst) return 1;
 
-  WeightClass weight_threshold = FLAGS_weight.empty() ?
-      WeightClass::Zero() :
-      WeightClass(ifst->WeightType(), FLAGS_weight);
+  WeightClass weight_threshold =
+      FLAGS_weight.empty() ? WeightClass::Zero(ifst->WeightType())
+                           : WeightClass(ifst->WeightType(), FLAGS_weight);
 
   VectorFstClass ofst(ifst->ArcType());
-  vector<WeightClass> distance;
+  std::vector<WeightClass> distance;
 
   fst::QueueType qt;
 
@@ -80,9 +64,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  s::ShortestPathOptions opts(
-      qt, FLAGS_nshortest, FLAGS_unique, false, FLAGS_delta,
-      false, weight_threshold, FLAGS_nstate);
+  s::ShortestPathOptions opts(qt, FLAGS_nshortest, FLAGS_unique, false,
+                              FLAGS_delta, false, weight_threshold,
+                              FLAGS_nstate);
 
   s::ShortestPath(*ifst, &ofst, &distance, opts);
 

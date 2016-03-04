@@ -1,30 +1,14 @@
-// dfs-visit.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Depth-first search visitation. See visit.h for more general
-// search queue disciplines.
+// Depth-first search visitation. See visit.h for more general search queue
+// disciplines.
 
 #ifndef FST_LIB_DFS_VISIT_H__
 #define FST_LIB_DFS_VISIT_H__
 
 #include <stack>
 #include <vector>
-using std::vector;
 
 #include <fst/arcfilter.h>
 #include <fst/fst.h>
@@ -65,31 +49,31 @@ namespace fst {
 // };
 
 // An Fst state's DFS status
-const int kDfsWhite = 0;   // Undiscovered
-const int kDfsGrey =  1;   // Discovered & unfinished
-const int kDfsBlack = 2;   // Finished
+const int kDfsWhite = 0;  // Undiscovered
+const int kDfsGrey = 1;   // Discovered & unfinished
+const int kDfsBlack = 2;  // Finished
 
 // An Fst state's DFS stack state
 template <class Arc>
 struct DfsState {
   typedef typename Arc::StateId StateId;
 
-  DfsState(const Fst<Arc> &fst, StateId s): state_id(s), arc_iter(fst, s) {}
+  DfsState(const Fst<Arc> &fst, StateId s) : state_id(s), arc_iter(fst, s) {}
 
-  void *operator new(size_t size, MemoryPool< DfsState<Arc> > *pool) {
+  void *operator new(size_t size, MemoryPool<DfsState<Arc>> *pool) {
     return pool->Allocate();
   }
 
   static void Destroy(DfsState<Arc> *dfs_state,
-                      MemoryPool< DfsState<Arc> > *pool) {
+                      MemoryPool<DfsState<Arc>> *pool) {
     if (dfs_state) {
       dfs_state->~DfsState<Arc>();
       pool->Free(dfs_state);
     }
   }
 
-  StateId state_id;       // Fst state ...
-  ArcIterator< Fst<Arc> > arc_iter;  // and its corresponding arcs
+  StateId state_id;                 // Fst state ...
+  ArcIterator<Fst<Arc>> arc_iter;  // and its corresponding arcs
 };
 
 // Performs depth-first visitation. Visitor class argument determines
@@ -113,11 +97,11 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
     return;
   }
 
-  vector<char> state_color;                // Fst state DFS status
-  stack<DfsState<Arc> *> state_stack;      // DFS execution stack
-  MemoryPool< DfsState<Arc> > state_pool;  // Pool for DFSStates
+  std::vector<char> state_color;            // Fst state DFS status
+  std::stack<DfsState<Arc> *> state_stack;  // DFS execution stack
+  MemoryPool<DfsState<Arc>> state_pool;  // Pool for DFSStates
 
-  StateId nstates = start + 1;             // # of known states in general case
+  StateId nstates = start + 1;  // # of known states in general case
   bool expanded = false;
   if (fst.Properties(kExpanded, false)) {  // tests if expanded case, then
     nstates = CountStates(fst);            // uses ExpandedFst::NumStates().
@@ -125,7 +109,7 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
   }
 
   state_color.resize(nstates, kDfsWhite);
-  StateIterator< Fst<Arc> > siter(fst);
+  StateIterator<Fst<Arc>> siter(fst);
 
   // Continue DFS while true
   bool dfs = true;
@@ -133,7 +117,7 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
   // Iterate over trees in DFS forest.
   for (StateId root = start; dfs && root < nstates;) {
     state_color[root] = kDfsGrey;
-    state_stack.push(new(&state_pool) DfsState<Arc>(fst, root));
+    state_stack.push(new (&state_pool) DfsState<Arc>(fst, root));
     dfs = visitor->InitState(root, root);
     while (!state_stack.empty()) {
       DfsState<Arc> *dfs_state = state_stack.top();
@@ -142,15 +126,15 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
         nstates = s + 1;
         state_color.resize(nstates, kDfsWhite);
       }
-      ArcIterator< Fst<Arc> > &aiter = dfs_state->arc_iter;
+      ArcIterator<Fst<Arc>> &aiter = dfs_state->arc_iter;
       if (!dfs || aiter.Done()) {
         state_color[s] = kDfsBlack;
-        DfsState<Arc>::Destroy(dfs_state,  &state_pool);
+        DfsState<Arc>::Destroy(dfs_state, &state_pool);
         state_stack.pop();
         if (!state_stack.empty()) {
           DfsState<Arc> *parent_state = state_stack.top();
           StateId p = parent_state->state_id;
-          ArcIterator< Fst<Arc> > &piter = parent_state->arc_iter;
+          ArcIterator<Fst<Arc>> &piter = parent_state->arc_iter;
           visitor->FinishState(s, p, &piter.Value());
           piter.Next();
         } else {
@@ -174,7 +158,7 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
           dfs = visitor->TreeArc(s, arc);
           if (!dfs) break;
           state_color[arc.nextstate] = kDfsGrey;
-          state_stack.push(new(&state_pool) DfsState<Arc>(fst, arc.nextstate));
+          state_stack.push(new (&state_pool) DfsState<Arc>(fst, arc.nextstate));
           dfs = visitor->InitState(arc.nextstate, root);
           break;
         case kDfsGrey:
@@ -188,13 +172,11 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
       }
     }
 
-    if (access_only)
-      break;
+    if (access_only) break;
 
     // Find next tree root
     for (root = root == start ? 0 : root + 1;
-         root < nstates && state_color[root] != kDfsWhite;
-         ++root) {
+         root < nstates && state_color[root] != kDfsWhite; ++root) {
     }
 
     // Check for a state beyond the largest known state
@@ -210,7 +192,6 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
   }
   visitor->FinishVisit();
 }
-
 
 template <class Arc, class V>
 void DfsVisit(const Fst<Arc> &fst, V *visitor) {

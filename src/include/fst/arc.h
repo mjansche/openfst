@@ -1,23 +1,7 @@
-// arc.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-//
-// Commonly used Fst arc types.
+// Commonly used FST arc types.
 
 #ifndef FST_LIB_ARC_H__
 #define FST_LIB_ARC_H__
@@ -32,9 +16,6 @@
 #include <fst/product-weight.h>
 #include <fst/signed-log-weight.h>
 #include <fst/sparse-power-weight.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <fst/string-weight.h>
 
 
@@ -47,7 +28,7 @@ class ArcTpl {
   typedef int Label;
   typedef int StateId;
 
-  ArcTpl(Label i, Label o, const Weight& w, StateId s)
+  ArcTpl(Label i, Label o, const Weight &w, StateId s)
       : ilabel(i), olabel(o), weight(w), nextstate(s) {}
 
   ArcTpl() {}
@@ -71,7 +52,6 @@ typedef ArcTpl<SignedLogWeight> SignedLogArc;
 typedef ArcTpl<SignedLog64Weight> SignedLog64Arc;
 typedef ArcTpl<MinMaxWeight> MinMaxArc;
 
-
 // Arc with integer labels and state Ids and string weights.
 template <StringType S = STRING_LEFT>
 class StringArc {
@@ -87,9 +67,9 @@ class StringArc {
 
   static const string &Type() {  // Arc type name
     static const string type =
-        S == STRING_LEFT ? "left_standard_string" :
-        (S == STRING_RIGHT ? "right_standard_string" :
-         "restricted_standard_string");
+        S == STRING_LEFT ? "left_standard_string"
+                         : (S == STRING_RIGHT ? "right_standard_string"
+                                              : "restricted_standard_string");
     return type;
   }
 
@@ -98,7 +78,6 @@ class StringArc {
   Weight weight;      // Transition weight
   StateId nextstate;  // Transition destination state
 };
-
 
 // Arc with label and state Id type the same as template arg and with
 // weights over the Gallic semiring w.r.t the output labels and weights of A.
@@ -115,16 +94,21 @@ struct GallicArc {
       : ilabel(i), olabel(o), weight(w), nextstate(s) {}
 
   GallicArc(const A &arc)
-      : ilabel(arc.ilabel), olabel(arc.ilabel),
-        weight(arc.olabel, arc.weight), nextstate(arc.nextstate) {}
+      : ilabel(arc.ilabel),
+        olabel(arc.ilabel),
+        weight(arc.olabel, arc.weight),
+        nextstate(arc.nextstate) {}
 
   static const string &Type() {  // Arc type name
     static const string type =
-        (G == GALLIC_LEFT ? "left_gallic_" :
-         (G == GALLIC_RIGHT ? "right_gallic_" :
-          (G == GALLIC_RESTRICT ? "restricted_gallic_" :
-           (G == GALLIC_MIN ? "min_gallic_" :
-            "gallic_")))) + A::Type();
+        (G == GALLIC_LEFT
+             ? "left_gallic_"
+             : (G == GALLIC_RIGHT
+                    ? "right_gallic_"
+                    : (G == GALLIC_RESTRICT
+                           ? "restricted_gallic_"
+                           : (G == GALLIC_MIN ? "min_gallic_" : "gallic_")))) +
+        A::Type();
     return type;
   }
 
@@ -134,9 +118,9 @@ struct GallicArc {
   StateId nextstate;  // Transition destination state
 };
 
-
 // Arc with the reverse of the weight found in its template arg.
-template <class A> struct ReverseArc {
+template <class A>
+struct ReverseArc {
   typedef A Arc;
   typedef typename A::Label Label;
   typedef typename A::Weight AWeight;
@@ -159,9 +143,8 @@ template <class A> struct ReverseArc {
   StateId nextstate;  // Transition destination state
 };
 
-
 // Arc with integer labels and state Ids and lexicographic weights.
-template<class W1, class W2>
+template <class W1, class W2>
 struct LexicographicArc {
   typedef int Label;
   typedef LexicographicWeight<W1, W2> Weight;
@@ -183,9 +166,8 @@ struct LexicographicArc {
   StateId nextstate;  // Transition destination state
 };
 
-
 // Arc with integer labels and state Ids and product weights.
-template<class W1, class W2>
+template <class W1, class W2>
 struct ProductArc {
   typedef int Label;
   typedef ProductWeight<W1, W2> Weight;
@@ -206,7 +188,6 @@ struct ProductArc {
   Weight weight;      // Transition weight
   StateId nextstate;  // Transition destination state
 };
-
 
 // Arc with label and state Id type the same as first template arg and with
 // weights over the n-th cartesian power of the weight type of the
@@ -239,7 +220,6 @@ struct PowerArc {
   StateId nextstate;  // Transition destination state
 };
 
-
 // Arc with label and state Id type the same as first template arg and with
 // weights over the arbitrary cartesian power of the weight type.
 template <class A, class K = int>
@@ -256,8 +236,10 @@ struct SparsePowerArc {
 
   static const string &Type() {  // Arc type name
     static string type;
-    if (type.empty()) { type = A::Type() + "_^n"; }
-    if(sizeof(K) != sizeof(uint32)) {
+    if (type.empty()) {
+      type = A::Type() + "_^n";
+    }
+    if (sizeof(K) != sizeof(uint32)) {
       string size;
       Int64ToStr(8 * sizeof(K), &size);
       type += "_" + size;
@@ -270,7 +252,6 @@ struct SparsePowerArc {
   Weight weight;      // Transition weight
   StateId nextstate;  // Transition destination state
 };
-
 
 // Arc with label and state Id type the same as first template arg and with
 // expectation weight over the first template arg weight type and the

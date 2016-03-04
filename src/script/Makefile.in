@@ -122,31 +122,34 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libfstscript_la_LIBADD =
-am__libfstscript_la_SOURCES_DIST = arcsort.cc closure.cc compile.cc \
-	compose.cc concat.cc connect.cc convert.cc decode.cc \
-	determinize.cc difference.cc disambiguate.cc draw.cc encode.cc \
+@HAVE_SCRIPT_TRUE@libfstscript_la_DEPENDENCIES = ../lib/libfst.la
+am__libfstscript_la_SOURCES_DIST = arciterator-class.cc arcsort.cc \
+	closure.cc compile.cc compose.cc concat.cc connect.cc \
+	convert.cc decode.cc determinize.cc difference.cc \
+	disambiguate.cc draw.cc encode.cc encodemapper-class.cc \
 	epsnormalize.cc equal.cc equivalent.cc fst-class.cc info.cc \
 	intersect.cc invert.cc isomorphic.cc map.cc minimize.cc \
 	print.cc project.cc prune.cc push.cc randequivalent.cc \
 	randgen.cc relabel.cc replace.cc reverse.cc reweight.cc \
 	rmepsilon.cc script-impl.cc shortest-distance.cc \
-	shortest-path.cc synchronize.cc text-io.cc topsort.cc union.cc \
-	weight-class.cc verify.cc
-@HAVE_SCRIPT_TRUE@am_libfstscript_la_OBJECTS = arcsort.lo closure.lo \
-@HAVE_SCRIPT_TRUE@	compile.lo compose.lo concat.lo connect.lo \
-@HAVE_SCRIPT_TRUE@	convert.lo decode.lo determinize.lo \
-@HAVE_SCRIPT_TRUE@	difference.lo disambiguate.lo draw.lo \
-@HAVE_SCRIPT_TRUE@	encode.lo epsnormalize.lo equal.lo \
-@HAVE_SCRIPT_TRUE@	equivalent.lo fst-class.lo info.lo \
-@HAVE_SCRIPT_TRUE@	intersect.lo invert.lo isomorphic.lo map.lo \
-@HAVE_SCRIPT_TRUE@	minimize.lo print.lo project.lo prune.lo \
-@HAVE_SCRIPT_TRUE@	push.lo randequivalent.lo randgen.lo \
-@HAVE_SCRIPT_TRUE@	relabel.lo replace.lo reverse.lo reweight.lo \
+	shortest-path.cc stateiterator-class.cc synchronize.cc \
+	text-io.cc topsort.cc union.cc weight-class.cc verify.cc
+@HAVE_SCRIPT_TRUE@am_libfstscript_la_OBJECTS = arciterator-class.lo \
+@HAVE_SCRIPT_TRUE@	arcsort.lo closure.lo compile.lo compose.lo \
+@HAVE_SCRIPT_TRUE@	concat.lo connect.lo convert.lo decode.lo \
+@HAVE_SCRIPT_TRUE@	determinize.lo difference.lo disambiguate.lo \
+@HAVE_SCRIPT_TRUE@	draw.lo encode.lo encodemapper-class.lo \
+@HAVE_SCRIPT_TRUE@	epsnormalize.lo equal.lo equivalent.lo \
+@HAVE_SCRIPT_TRUE@	fst-class.lo info.lo intersect.lo invert.lo \
+@HAVE_SCRIPT_TRUE@	isomorphic.lo map.lo minimize.lo print.lo \
+@HAVE_SCRIPT_TRUE@	project.lo prune.lo push.lo \
+@HAVE_SCRIPT_TRUE@	randequivalent.lo randgen.lo relabel.lo \
+@HAVE_SCRIPT_TRUE@	replace.lo reverse.lo reweight.lo \
 @HAVE_SCRIPT_TRUE@	rmepsilon.lo script-impl.lo \
 @HAVE_SCRIPT_TRUE@	shortest-distance.lo shortest-path.lo \
-@HAVE_SCRIPT_TRUE@	synchronize.lo text-io.lo topsort.lo \
-@HAVE_SCRIPT_TRUE@	union.lo weight-class.lo verify.lo
+@HAVE_SCRIPT_TRUE@	stateiterator-class.lo synchronize.lo \
+@HAVE_SCRIPT_TRUE@	text-io.lo topsort.lo union.lo \
+@HAVE_SCRIPT_TRUE@	weight-class.lo verify.lo
 libfstscript_la_OBJECTS = $(am_libfstscript_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -239,6 +242,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -353,17 +357,20 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
+LDADD = $(DL_LIBS)
 @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstscript.la
-@HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arcsort.cc closure.cc compile.cc compose.cc \
-@HAVE_SCRIPT_TRUE@concat.cc connect.cc convert.cc decode.cc determinize.cc difference.cc \
-@HAVE_SCRIPT_TRUE@disambiguate.cc draw.cc encode.cc epsnormalize.cc equal.cc equivalent.cc \
-@HAVE_SCRIPT_TRUE@fst-class.cc info.cc intersect.cc invert.cc isomorphic.cc map.cc minimize.cc \
-@HAVE_SCRIPT_TRUE@print.cc project.cc prune.cc push.cc randequivalent.cc randgen.cc relabel.cc \
-@HAVE_SCRIPT_TRUE@replace.cc reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
-@HAVE_SCRIPT_TRUE@shortest-distance.cc shortest-path.cc synchronize.cc text-io.cc topsort.cc \
-@HAVE_SCRIPT_TRUE@union.cc weight-class.cc verify.cc
+@HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arciterator-class.cc arcsort.cc closure.cc \
+@HAVE_SCRIPT_TRUE@compile.cc compose.cc concat.cc connect.cc convert.cc decode.cc determinize.cc \
+@HAVE_SCRIPT_TRUE@difference.cc disambiguate.cc draw.cc encode.cc encodemapper-class.cc \
+@HAVE_SCRIPT_TRUE@epsnormalize.cc equal.cc \
+@HAVE_SCRIPT_TRUE@equivalent.cc fst-class.cc info.cc intersect.cc invert.cc isomorphic.cc map.cc \
+@HAVE_SCRIPT_TRUE@minimize.cc print.cc project.cc prune.cc push.cc randequivalent.cc randgen.cc \
+@HAVE_SCRIPT_TRUE@relabel.cc replace.cc reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
+@HAVE_SCRIPT_TRUE@shortest-distance.cc shortest-path.cc stateiterator-class.cc synchronize.cc \
+@HAVE_SCRIPT_TRUE@text-io.cc topsort.cc union.cc weight-class.cc verify.cc
 
-@HAVE_SCRIPT_TRUE@libfstscript_la_LDFLAGS = -version-info 1:5:0
+@HAVE_SCRIPT_TRUE@libfstscript_la_LIBADD = ../lib/libfst.la
+@HAVE_SCRIPT_TRUE@libfstscript_la_LDFLAGS = -version-info 2:5:0
 all: all-am
 
 .SUFFIXES:
@@ -443,6 +450,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arciterator-class.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arcsort.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/closure.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/compile.Plo@am__quote@
@@ -456,6 +464,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/disambiguate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/draw.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encode.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encodemapper-class.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/epsnormalize.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/equal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/equivalent.Plo@am__quote@
@@ -480,6 +489,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/script-impl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shortest-distance.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shortest-path.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stateiterator-class.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synchronize.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text-io.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/topsort.Plo@am__quote@

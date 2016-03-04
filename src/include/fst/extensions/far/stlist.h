@@ -1,42 +1,24 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-//
-// \file
 // A generic (string,type) list file format.
 //
-// This is a stripped-down version of STTable that does
-// not support the Find() operation but that does support
-// reading/writting from standard in/out.
+// This is a stripped-down version of STTable that does not support the Find()
+// operation but that does support reading/writting from standard in/out.
 
 #ifndef FST_EXTENSIONS_FAR_STLIST_H_
 #define FST_EXTENSIONS_FAR_STLIST_H_
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <fst/util.h>
-
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <queue>
 #include <string>
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
+
+#include <fstream>
+#include <fst/util.h>
 
 namespace fst {
 
@@ -48,7 +30,7 @@ static const int32 kSTListFileVersion = 1;
 // following interface:
 //
 //   struct Writer {
-//     void operator()(ostream &, const T &) const;
+//     void operator()(std::ostream &, const T &) const;
 //   };
 //
 template <class T, class W>
@@ -58,15 +40,15 @@ class STListWriter {
   typedef W EntryWriter;
 
   explicit STListWriter(const string filename)
-      : stream_(filename.empty()
-                    ? &std::cout
-                    : new ofstream(filename.c_str(),
-                                   std::ios_base::out | std::ios_base::binary)),
+      : stream_(filename.empty() ? &std::cout : new std::ofstream(
+                                                    filename.c_str(),
+                                                    std::ios_base::out |
+                                                        std::ios_base::binary)),
         error_(false) {
     WriteType(*stream_, kSTListMagicNumber);
     WriteType(*stream_, kSTListFileVersion);
     if (!stream_) {
-      FSTERROR() << "STListWriter::STListWriter: error writing to file: "
+      FSTERROR() << "STListWriter::STListWriter: Error writing to file: "
                  << filename;
       error_ = true;
     }
@@ -78,10 +60,10 @@ class STListWriter {
 
   void Add(const string &key, const T &t) {
     if (key == "") {
-      FSTERROR() << "STListWriter::Add: key empty: " << key;
+      FSTERROR() << "STListWriter::Add: Key empty: " << key;
       error_ = true;
     } else if (key < last_key_) {
-      FSTERROR() << "STListWriter::Add: key disorder: " << key;
+      FSTERROR() << "STListWriter::Add: Key out of order: " << key;
       error_ = true;
     }
     if (error_) return;
@@ -99,20 +81,19 @@ class STListWriter {
 
  private:
   EntryWriter entry_writer_;  // Write functor for 'EntryType'
-  ostream *stream_;           // Output stream
+  std::ostream *stream_;      // Output stream
   string last_key_;           // Last key
   bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STListWriter);
 };
 
-
 // String-type list reading class for object of type 'T' using functor 'R'
 // to read an object of type 'T' form a stream. 'R' must conform to the
 // following interface:
 //
 //   struct Reader {
-//     T *operator()(istream &) const;
+//     T *operator()(std::istream &) const;
 //   };
 //
 template <class T, class R>
@@ -121,8 +102,8 @@ class STListReader {
   typedef T EntryType;
   typedef R EntryReader;
 
-  explicit STListReader(const vector<string> &filenames)
-      : sources_(filenames), entry_(0), error_(false) {
+  explicit STListReader(const std::vector<string> &filenames)
+      : sources_(filenames), entry_(nullptr), error_(false) {
     streams_.resize(filenames.size(), 0);
     bool has_stdin = false;
     for (size_t i = 0; i < filenames.size(); ++i) {
@@ -138,20 +119,20 @@ class STListReader {
           return;
         }
       } else {
-        streams_[i] = new ifstream(
+        streams_[i] = new std::ifstream(
             filenames[i].c_str(), std::ios_base::in | std::ios_base::binary);
       }
       int32 magic_number = 0, file_version = 0;
       ReadType(*streams_[i], &magic_number);
       ReadType(*streams_[i], &file_version);
       if (magic_number != kSTListMagicNumber) {
-        FSTERROR() << "STListReader::STListReader: wrong file type: "
+        FSTERROR() << "STListReader::STListReader: Wrong file type: "
                    << filenames[i];
         error_ = true;
         return;
       }
       if (file_version != kSTListFileVersion) {
-        FSTERROR() << "STListReader::STListReader: wrong file version: "
+        FSTERROR() << "STListReader::STListReader: Wrong file version: "
                    << filenames[i];
         error_ = true;
         return;
@@ -160,7 +141,7 @@ class STListReader {
       ReadType(*streams_[i], &key);
       if (!key.empty()) heap_.push(std::make_pair(key, i));
       if (!*streams_[i]) {
-        FSTERROR() << "STListReader: error reading file: " << sources_[i];
+        FSTERROR() << "STListReader: Error reading file: " << sources_[i];
         error_ = true;
         return;
       }
@@ -169,7 +150,7 @@ class STListReader {
     size_t current = heap_.top().second;
     entry_ = entry_reader_(*streams_[current]);
     if (!entry_ || !*streams_[current]) {
-      FSTERROR() << "STListReader: error reading entry for key: "
+      FSTERROR() << "STListReader: Error reading entry for key: "
                  << heap_.top().first << ", file: " << sources_[current];
       error_ = true;
     }
@@ -179,17 +160,16 @@ class STListReader {
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != &std::cin) delete streams_[i];
     }
-    if (entry_)
-      delete entry_;
+    if (entry_) delete entry_;
   }
 
   static STListReader<T, R> *Open(const string &filename) {
-    vector<string> filenames;
+    std::vector<string> filenames;
     filenames.push_back(filename);
     return new STListReader<T, R>(filenames);
   }
 
-  static STListReader<T, R> *Open(const vector<string> &filenames) {
+  static STListReader<T, R> *Open(const std::vector<string> &filenames) {
     return new STListReader<T, R>(filenames);
   }
 
@@ -200,15 +180,12 @@ class STListReader {
   }
 
   bool Find(const string &key) {
-    FSTERROR()
-        << "STListReader::Find: stlist does not support find operation";
+    FSTERROR() << "STListReader::Find: stlist does not support find operation";
     error_ = true;
     return false;
   }
 
-  bool Done() const {
-    return error_ || heap_.empty();
-  }
+  bool Done() const { return error_ || heap_.empty(); }
 
   void Next() {
     if (error_) return;
@@ -217,79 +194,74 @@ class STListReader {
     heap_.pop();
     ReadType(*(streams_[current]), &key);
     if (!*streams_[current]) {
-      FSTERROR() << "STListReader: error reading file: "
-                 << sources_[current];
+      FSTERROR() << "STListReader: Error reading file: " << sources_[current];
       error_ = true;
       return;
     }
     if (!key.empty()) heap_.push(std::make_pair(key, current));
 
-    if(!heap_.empty()) {
+    if (!heap_.empty()) {
       current = heap_.top().second;
-      if (entry_)
-        delete entry_;
+      if (entry_) delete entry_;
       entry_ = entry_reader_(*streams_[current]);
       if (!entry_ || !*streams_[current]) {
-        FSTERROR() << "STListReader: error reading entry for key: "
+        FSTERROR() << "STListReader: Error reading entry for key: "
                    << heap_.top().first << ", file: " << sources_[current];
         error_ = true;
       }
     }
   }
 
-  const string &GetKey() const {
-    return heap_.top().first;
-  }
+  const string &GetKey() const { return heap_.top().first; }
 
-  const EntryType &GetEntry() const {
-    return *entry_;
-  }
+  const EntryType &GetEntry() const { return *entry_; }
 
   bool Error() const { return error_; }
 
  private:
-  EntryReader entry_reader_;   // Read functor for 'EntryType'
-  vector<istream*> streams_;   // Input streams
-  vector<string> sources_;     // and corresponding file names
+  EntryReader entry_reader_;        // Read functor for 'EntryType'
+  std::vector<std::istream *> streams_;  // Input streams
+  std::vector<string> sources_;          // and corresponding file names
   priority_queue<
-    pair<string, size_t>, vector<pair<string, size_t> >,
-    greater<pair<string, size_t> > > heap_;  // (Key, stream id) heap
-  mutable EntryType *entry_;   // Pointer to the currently read entry
+      std::pair<string, size_t>, std::vector<std::pair<string, size_t>>,
+      std::greater<std::pair<string, size_t>>> heap_;  // (Key, stream id) heap
+  mutable EntryType *entry_;  // Pointer to the currently read entry
   bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STListReader);
 };
 
-
 // String-type list header reading function template on the entry header
 // type 'H' having a member function:
-//   Read(istream &strm, const string &filename);
+//   Read(std::istream &strm, const string &filename);
 // Checks that 'filename' is an STList and call the H::Read() on the last
 // entry in the STList.
 // Does not support reading from stdin.
 template <class H>
 bool ReadSTListHeader(const string &filename, H *header) {
   if (filename.empty()) {
-    LOG(ERROR) << "ReadSTListHeader: reading header not supported on stdin";
+    LOG(ERROR) << "ReadSTListHeader: Reading header not supported on stdin";
     return false;
   }
-  ifstream strm(filename.c_str(), std::ios_base::in | std::ios_base::binary);
-  int32 magic_number = 0, file_version = 0;
+  std::ifstream strm(filename.c_str(),
+                          std::ios_base::in | std::ios_base::binary);
+  int32 magic_number = 0;
+  int32 file_version = 0;
   ReadType(strm, &magic_number);
   ReadType(strm, &file_version);
   if (magic_number != kSTListMagicNumber) {
-    LOG(ERROR) << "ReadSTListHeader: wrong file type: " << filename;
+    LOG(ERROR) << "ReadSTListHeader: Wrong file type: " << filename;
     return false;
   }
   if (file_version != kSTListFileVersion) {
-    LOG(ERROR) << "ReadSTListHeader: wrong file version: " << filename;
+    LOG(ERROR) << "ReadSTListHeader: Wrong file version: " << filename;
     return false;
   }
   string key;
   ReadType(strm, &key);
   header->Read(strm, filename + ":" + key);
   if (!strm) {
-    LOG(ERROR) << "ReadSTListHeader: error reading file: " << filename;
+    LOG(ERROR) << "ReadSTListHeader: Error reading file: " << filename;
     return false;
   }
   return true;

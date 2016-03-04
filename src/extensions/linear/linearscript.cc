@@ -1,26 +1,14 @@
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: wuke
-
-#include <cstdio>
 #include <cctype>
+#include <cstdio>
 #include <set>
 
 #include <fst/compat.h>
 #include <fst/extensions/linear/linearscript.h>
 #include <fst/arc.h>
+#include <fstream>
 #include <fst/script/script-impl.h>
 
 DEFINE_string(delimiter, "|",
@@ -61,16 +49,16 @@ void LinearCompile(const string &arc_type, const string &epsilon_symbol,
   LinearCompileArgs args(epsilon_symbol, unknown_symbol, vocab, models,
                          models_len, out, save_isymbols, save_fsymbols,
                          save_osymbols);
-  Apply<Operation<LinearCompileArgs> >("LinearCompileTpl", arc_type, &args);
+  Apply<Operation<LinearCompileArgs>>("LinearCompileTpl", arc_type, &args);
 }
 
 // Instantiate templates for common arc types
 REGISTER_FST_LINEAR_OPERATIONS(StdArc);
 REGISTER_FST_LINEAR_OPERATIONS(LogArc);
 
-void SplitByWhitespace(const string &str, vector<string> *out) {
+void SplitByWhitespace(const string &str, std::vector<string> *out) {
   out->clear();
-  istringstream strm(str);
+  std::istringstream strm(str);
   string buf;
   while (strm >> buf) out->push_back(buf);
 }
@@ -78,7 +66,7 @@ void SplitByWhitespace(const string &str, vector<string> *out) {
 int ScanNumClasses(char **models, int models_len) {
   std::set<string> preds;
   for (int i = 0; i < models_len; ++i) {
-    ifstream in(models[i]);
+    std::ifstream in(models[i]);
     if (!in) LOG(FATAL) << "Failed to open " << models[i];
 
     string line;
@@ -87,7 +75,7 @@ int ScanNumClasses(char **models, int models_len) {
     size_t num_line = 1;
     while (std::getline(in, line)) {
       ++num_line;
-      vector<string> fields;
+      std::vector<string> fields;
       SplitByWhitespace(line, &fields);
       if (fields.size() != 3)
         LOG(FATAL) << "Wrong number of fields in source " << models[i]

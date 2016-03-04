@@ -1,4 +1,4 @@
-AC_INIT([OpenFst], [1.5.0], [help@www.openfst.org])
+AC_INIT([OpenFst], [1.5.1], [help@www.openfst.org])
 
 AM_INIT_AUTOMAKE([foreign nostdinc -Wall -Werror])
 AM_PROG_AR
@@ -93,9 +93,9 @@ AC_ARG_ENABLE(
 	[enable_lookahead_fsts=no])
 AM_CONDITIONAL([HAVE_LOOKAHEAD], [test "x$enable_lookahead_fsts" != xno])
 
-AC_ARG_ENABLE([mpdt], 
+AC_ARG_ENABLE([mpdt],
               [AS_HELP_STRING(
-                [--enable-mpdt], 
+                [--enable-mpdt],
                 [enable MPDT extensions])],
               [],
               [enable_mpdt=no])
@@ -110,15 +110,15 @@ AC_ARG_ENABLE(
 	[enable_ngram_fsts=no])
 AM_CONDITIONAL([HAVE_NGRAM], [test "x$enable_ngram_fsts" != xno])
 
-AC_ARG_ENABLE([pdt], 
-              [AS_HELP_STRING([--enable-pdt], 
+AC_ARG_ENABLE([pdt],
+              [AS_HELP_STRING([--enable-pdt],
               [enable PDT extensions])],
               [],
               [enable_pdt=no])
 AM_CONDITIONAL([HAVE_PDT], [test "x$enable_pdt" != xno])
 
-AC_ARG_ENABLE([python], 
-              [AS_HELP_STRING([--enable-python], 
+AC_ARG_ENABLE([python],
+              [AS_HELP_STRING([--enable-python],
               [enable Python extensions])],
               [],
               [enable_python=no])
@@ -128,6 +128,13 @@ if test "x$enable_python" != xno; then
   AC_PYTHON_DEVEL([>= '2.7'])
 fi
 
-AC_SUBST([libfstdir], [${libdir}/fst])
+AC_ARG_WITH([libfstdir],
+[--with-libfstdir[=DIR] fst dynamic extensions [[LIBDIR/fst]]],
+[], [with_libfstdir=[${libdir}/fst]])
+
+AC_SUBST([libfstdir], $with_libfstdir)
+
+AC_CHECK_LIB([dl], dlopen, [DL_LIBS=-ldl])
+AC_SUBST([DL_LIBS])
 
 AC_OUTPUT

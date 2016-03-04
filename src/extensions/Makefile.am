@@ -31,6 +31,7 @@ ngramdir = ngram
 endif
 
 if HAVE_PYTHON
+fardir = far
 pywrapfstdir = python
 endif
 
@@ -40,4 +41,4 @@ endif
 
 SUBDIRS = $(compactdir) $(compressdir) $(constdir) $(fardir) \
           $(lineardir) $(lookaheaddir) $(mpdtdir) $(ngramdir) $(pdtdir) \
-				  $(pywrapfstdir)
+          $(pywrapfstdir)

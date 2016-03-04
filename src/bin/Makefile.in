@@ -118,7 +118,9 @@ am__fstarcsort_SOURCES_DIST = fstarcsort.cc
 @HAVE_BIN_TRUE@am_fstarcsort_OBJECTS = fstarcsort.$(OBJEXT)
 fstarcsort_OBJECTS = $(am_fstarcsort_OBJECTS)
 fstarcsort_LDADD = $(LDADD)
-fstarcsort_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+am__DEPENDENCIES_1 =
+fstarcsort_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -127,192 +129,219 @@ am__fstclosure_SOURCES_DIST = fstclosure.cc
 @HAVE_BIN_TRUE@am_fstclosure_OBJECTS = fstclosure.$(OBJEXT)
 fstclosure_OBJECTS = $(am_fstclosure_OBJECTS)
 fstclosure_LDADD = $(LDADD)
-fstclosure_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstclosure_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstcompile_SOURCES_DIST = fstcompile.cc
 @HAVE_BIN_TRUE@am_fstcompile_OBJECTS = fstcompile.$(OBJEXT)
 fstcompile_OBJECTS = $(am_fstcompile_OBJECTS)
 fstcompile_LDADD = $(LDADD)
-fstcompile_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstcompile_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstcompose_SOURCES_DIST = fstcompose.cc
 @HAVE_BIN_TRUE@am_fstcompose_OBJECTS = fstcompose.$(OBJEXT)
 fstcompose_OBJECTS = $(am_fstcompose_OBJECTS)
 fstcompose_LDADD = $(LDADD)
-fstcompose_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstcompose_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstconcat_SOURCES_DIST = fstconcat.cc
 @HAVE_BIN_TRUE@am_fstconcat_OBJECTS = fstconcat.$(OBJEXT)
 fstconcat_OBJECTS = $(am_fstconcat_OBJECTS)
 fstconcat_LDADD = $(LDADD)
-fstconcat_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstconcat_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstconnect_SOURCES_DIST = fstconnect.cc
 @HAVE_BIN_TRUE@am_fstconnect_OBJECTS = fstconnect.$(OBJEXT)
 fstconnect_OBJECTS = $(am_fstconnect_OBJECTS)
 fstconnect_LDADD = $(LDADD)
-fstconnect_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstconnect_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstconvert_SOURCES_DIST = fstconvert.cc
 @HAVE_BIN_TRUE@am_fstconvert_OBJECTS = fstconvert.$(OBJEXT)
 fstconvert_OBJECTS = $(am_fstconvert_OBJECTS)
 fstconvert_LDADD = $(LDADD)
-fstconvert_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstconvert_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstdeterminize_SOURCES_DIST = fstdeterminize.cc
 @HAVE_BIN_TRUE@am_fstdeterminize_OBJECTS = fstdeterminize.$(OBJEXT)
 fstdeterminize_OBJECTS = $(am_fstdeterminize_OBJECTS)
 fstdeterminize_LDADD = $(LDADD)
 fstdeterminize_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstdifference_SOURCES_DIST = fstdifference.cc
 @HAVE_BIN_TRUE@am_fstdifference_OBJECTS = fstdifference.$(OBJEXT)
 fstdifference_OBJECTS = $(am_fstdifference_OBJECTS)
 fstdifference_LDADD = $(LDADD)
 fstdifference_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstdisambiguate_SOURCES_DIST = fstdisambiguate.cc
 @HAVE_BIN_TRUE@am_fstdisambiguate_OBJECTS = fstdisambiguate.$(OBJEXT)
 fstdisambiguate_OBJECTS = $(am_fstdisambiguate_OBJECTS)
 fstdisambiguate_LDADD = $(LDADD)
 fstdisambiguate_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstdraw_SOURCES_DIST = fstdraw.cc
 @HAVE_BIN_TRUE@am_fstdraw_OBJECTS = fstdraw.$(OBJEXT)
 fstdraw_OBJECTS = $(am_fstdraw_OBJECTS)
 fstdraw_LDADD = $(LDADD)
-fstdraw_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstdraw_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstencode_SOURCES_DIST = fstencode.cc
 @HAVE_BIN_TRUE@am_fstencode_OBJECTS = fstencode.$(OBJEXT)
 fstencode_OBJECTS = $(am_fstencode_OBJECTS)
 fstencode_LDADD = $(LDADD)
-fstencode_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstencode_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstepsnormalize_SOURCES_DIST = fstepsnormalize.cc
 @HAVE_BIN_TRUE@am_fstepsnormalize_OBJECTS = fstepsnormalize.$(OBJEXT)
 fstepsnormalize_OBJECTS = $(am_fstepsnormalize_OBJECTS)
 fstepsnormalize_LDADD = $(LDADD)
 fstepsnormalize_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstequal_SOURCES_DIST = fstequal.cc
 @HAVE_BIN_TRUE@am_fstequal_OBJECTS = fstequal.$(OBJEXT)
 fstequal_OBJECTS = $(am_fstequal_OBJECTS)
 fstequal_LDADD = $(LDADD)
-fstequal_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstequal_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstequivalent_SOURCES_DIST = fstequivalent.cc
 @HAVE_BIN_TRUE@am_fstequivalent_OBJECTS = fstequivalent.$(OBJEXT)
 fstequivalent_OBJECTS = $(am_fstequivalent_OBJECTS)
 fstequivalent_LDADD = $(LDADD)
 fstequivalent_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstinfo_SOURCES_DIST = fstinfo.cc
 @HAVE_BIN_TRUE@am_fstinfo_OBJECTS = fstinfo.$(OBJEXT)
 fstinfo_OBJECTS = $(am_fstinfo_OBJECTS)
 fstinfo_LDADD = $(LDADD)
-fstinfo_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstinfo_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstintersect_SOURCES_DIST = fstintersect.cc
 @HAVE_BIN_TRUE@am_fstintersect_OBJECTS = fstintersect.$(OBJEXT)
 fstintersect_OBJECTS = $(am_fstintersect_OBJECTS)
 fstintersect_LDADD = $(LDADD)
-fstintersect_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstintersect_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstinvert_SOURCES_DIST = fstinvert.cc
 @HAVE_BIN_TRUE@am_fstinvert_OBJECTS = fstinvert.$(OBJEXT)
 fstinvert_OBJECTS = $(am_fstinvert_OBJECTS)
 fstinvert_LDADD = $(LDADD)
-fstinvert_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstinvert_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstisomorphic_SOURCES_DIST = fstisomorphic.cc
 @HAVE_BIN_TRUE@am_fstisomorphic_OBJECTS = fstisomorphic.$(OBJEXT)
 fstisomorphic_OBJECTS = $(am_fstisomorphic_OBJECTS)
 fstisomorphic_LDADD = $(LDADD)
 fstisomorphic_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstmap_SOURCES_DIST = fstmap.cc
 @HAVE_BIN_TRUE@am_fstmap_OBJECTS = fstmap.$(OBJEXT)
 fstmap_OBJECTS = $(am_fstmap_OBJECTS)
 fstmap_LDADD = $(LDADD)
-fstmap_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstmap_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstminimize_SOURCES_DIST = fstminimize.cc
 @HAVE_BIN_TRUE@am_fstminimize_OBJECTS = fstminimize.$(OBJEXT)
 fstminimize_OBJECTS = $(am_fstminimize_OBJECTS)
 fstminimize_LDADD = $(LDADD)
-fstminimize_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstminimize_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstprint_SOURCES_DIST = fstprint.cc
 @HAVE_BIN_TRUE@am_fstprint_OBJECTS = fstprint.$(OBJEXT)
 fstprint_OBJECTS = $(am_fstprint_OBJECTS)
 fstprint_LDADD = $(LDADD)
-fstprint_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstprint_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstproject_SOURCES_DIST = fstproject.cc
 @HAVE_BIN_TRUE@am_fstproject_OBJECTS = fstproject.$(OBJEXT)
 fstproject_OBJECTS = $(am_fstproject_OBJECTS)
 fstproject_LDADD = $(LDADD)
-fstproject_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstproject_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstprune_SOURCES_DIST = fstprune.cc
 @HAVE_BIN_TRUE@am_fstprune_OBJECTS = fstprune.$(OBJEXT)
 fstprune_OBJECTS = $(am_fstprune_OBJECTS)
 fstprune_LDADD = $(LDADD)
-fstprune_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstprune_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstpush_SOURCES_DIST = fstpush.cc
 @HAVE_BIN_TRUE@am_fstpush_OBJECTS = fstpush.$(OBJEXT)
 fstpush_OBJECTS = $(am_fstpush_OBJECTS)
 fstpush_LDADD = $(LDADD)
-fstpush_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstpush_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstrandgen_SOURCES_DIST = fstrandgen.cc
 @HAVE_BIN_TRUE@am_fstrandgen_OBJECTS = fstrandgen.$(OBJEXT)
 fstrandgen_OBJECTS = $(am_fstrandgen_OBJECTS)
 fstrandgen_LDADD = $(LDADD)
-fstrandgen_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstrandgen_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstrelabel_SOURCES_DIST = fstrelabel.cc
 @HAVE_BIN_TRUE@am_fstrelabel_OBJECTS = fstrelabel.$(OBJEXT)
 fstrelabel_OBJECTS = $(am_fstrelabel_OBJECTS)
 fstrelabel_LDADD = $(LDADD)
-fstrelabel_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstrelabel_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstreplace_SOURCES_DIST = fstreplace.cc
 @HAVE_BIN_TRUE@am_fstreplace_OBJECTS = fstreplace.$(OBJEXT)
 fstreplace_OBJECTS = $(am_fstreplace_OBJECTS)
 fstreplace_LDADD = $(LDADD)
-fstreplace_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstreplace_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstreverse_SOURCES_DIST = fstreverse.cc
 @HAVE_BIN_TRUE@am_fstreverse_OBJECTS = fstreverse.$(OBJEXT)
 fstreverse_OBJECTS = $(am_fstreverse_OBJECTS)
 fstreverse_LDADD = $(LDADD)
-fstreverse_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstreverse_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstreweight_SOURCES_DIST = fstreweight.cc
 @HAVE_BIN_TRUE@am_fstreweight_OBJECTS = fstreweight.$(OBJEXT)
 fstreweight_OBJECTS = $(am_fstreweight_OBJECTS)
 fstreweight_LDADD = $(LDADD)
-fstreweight_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstreweight_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstrmepsilon_SOURCES_DIST = fstrmepsilon.cc
 @HAVE_BIN_TRUE@am_fstrmepsilon_OBJECTS = fstrmepsilon.$(OBJEXT)
 fstrmepsilon_OBJECTS = $(am_fstrmepsilon_OBJECTS)
 fstrmepsilon_LDADD = $(LDADD)
-fstrmepsilon_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstrmepsilon_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstshortestdistance_SOURCES_DIST = fstshortestdistance.cc
 @HAVE_BIN_TRUE@am_fstshortestdistance_OBJECTS =  \
 @HAVE_BIN_TRUE@	fstshortestdistance.$(OBJEXT)
 fstshortestdistance_OBJECTS = $(am_fstshortestdistance_OBJECTS)
 fstshortestdistance_LDADD = $(LDADD)
 fstshortestdistance_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstshortestpath_SOURCES_DIST = fstshortestpath.cc
 @HAVE_BIN_TRUE@am_fstshortestpath_OBJECTS = fstshortestpath.$(OBJEXT)
 fstshortestpath_OBJECTS = $(am_fstshortestpath_OBJECTS)
 fstshortestpath_LDADD = $(LDADD)
 fstshortestpath_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstsymbols_SOURCES_DIST = fstsymbols.cc
 @HAVE_BIN_TRUE@am_fstsymbols_OBJECTS = fstsymbols.$(OBJEXT)
 fstsymbols_OBJECTS = $(am_fstsymbols_OBJECTS)
 fstsymbols_LDADD = $(LDADD)
-fstsymbols_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstsymbols_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstsynchronize_SOURCES_DIST = fstsynchronize.cc
 @HAVE_BIN_TRUE@am_fstsynchronize_OBJECTS = fstsynchronize.$(OBJEXT)
 fstsynchronize_OBJECTS = $(am_fstsynchronize_OBJECTS)
 fstsynchronize_LDADD = $(LDADD)
 fstsynchronize_DEPENDENCIES = ../script/libfstscript.la \
-	../lib/libfst.la
+	../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fsttopsort_SOURCES_DIST = fsttopsort.cc
 @HAVE_BIN_TRUE@am_fsttopsort_OBJECTS = fsttopsort.$(OBJEXT)
 fsttopsort_OBJECTS = $(am_fsttopsort_OBJECTS)
 fsttopsort_LDADD = $(LDADD)
-fsttopsort_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fsttopsort_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am__fstunion_SOURCES_DIST = fstunion.cc
 @HAVE_BIN_TRUE@am_fstunion_OBJECTS = fstunion.$(OBJEXT)
 fstunion_OBJECTS = $(am_fstunion_OBJECTS)
 fstunion_LDADD = $(LDADD)
-fstunion_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la
+fstunion_DEPENDENCIES = ../script/libfstscript.la ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -435,6 +464,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -549,7 +579,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS)
-LDADD = ../script/libfstscript.la ../lib/libfst.la -lm -ldl
+LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS)
 @HAVE_BIN_TRUE@fstarcsort_SOURCES = fstarcsort.cc
 @HAVE_BIN_TRUE@fstclosure_SOURCES = fstclosure.cc
 @HAVE_BIN_TRUE@fstcompile_SOURCES = fstcompile.cc

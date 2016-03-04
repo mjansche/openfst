@@ -1,22 +1,7 @@
-// weight-tester.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Utility class for regression testing of Fst weights.
+// Utility class for regression testing of FST weights.
 
 #ifndef FST_TEST_WEIGHT_TESTER_H_
 #define FST_TEST_WEIGHT_TESTER_H_
@@ -31,7 +16,7 @@ namespace fst {
 // This class tests a variety of identities and properties that must
 // hold for the Weight class to be well-defined. It calls function object
 // WEIGHT_GENERATOR to select weights that are used in the tests.
-template<class Weight, class WeightGenerator>
+template <class Weight, class WeightGenerator>
 class WeightTester {
  public:
   WeightTester(WeightGenerator generator) : weight_generator_(generator) {}
@@ -49,8 +34,7 @@ class WeightTester {
       VLOG(1) << "w3 = " << w3;
 
       TestSemiring(w1, w2, w3);
-      if (test_division)
-        TestDivision(w1, w2);
+      if (test_division) TestDivision(w1, w2);
       TestReverse(w1, w2);
       TestEquality(w1, w2, w3);
       TestIO(w1);
@@ -113,8 +97,7 @@ class WeightTester {
       CHECK(ApproxEqual(Times(Plus(w1, w2), w3),
                         Plus(Times(w1, w3), Times(w2, w3))));
 
-    if (Weight::Properties() & kIdempotent)
-      CHECK(Plus(w1, w1) == w1);
+    if (Weight::Properties() & kIdempotent) CHECK(Plus(w1, w1) == w1);
 
     if (Weight::Properties() & kPath)
       CHECK(Plus(w1, w2) == w1 || Plus(w1, w2) == w2);
@@ -133,24 +116,21 @@ class WeightTester {
 
     if (Weight::Properties() & kLeftSemiring) {
       Weight d = Divide(p, w1, DIVIDE_LEFT);
-      if (d.Member())
-        CHECK(ApproxEqual(p, Times(w1, d)));
+      if (d.Member()) CHECK(ApproxEqual(p, Times(w1, d)));
       CHECK(!Divide(w1, Weight::NoWeight(), DIVIDE_LEFT).Member());
       CHECK(!Divide(Weight::NoWeight(), w1, DIVIDE_LEFT).Member());
     }
 
     if (Weight::Properties() & kRightSemiring) {
       Weight d = Divide(p, w2, DIVIDE_RIGHT);
-      if (d.Member())
-        CHECK(ApproxEqual(p, Times(d, w2)));
+      if (d.Member()) CHECK(ApproxEqual(p, Times(d, w2)));
       CHECK(!Divide(w1, Weight::NoWeight(), DIVIDE_RIGHT).Member());
       CHECK(!Divide(Weight::NoWeight(), w1, DIVIDE_RIGHT).Member());
     }
 
     if (Weight::Properties() & kCommutative) {
       Weight d = Divide(p, w1, DIVIDE_RIGHT);
-      if (d.Member())
-        CHECK(ApproxEqual(p, Times(d, w1)));
+      if (d.Member()) CHECK(ApproxEqual(p, Times(d, w1)));
     }
   }
 
@@ -175,28 +155,27 @@ class WeightTester {
     CHECK((w1 == w2) == (w2 == w1));
 
     // Checks transitivity.
-    if (w1 == w2 && w2 == w3)
-      CHECK(w1 == w3);
+    if (w1 == w2 && w2 == w3) CHECK(w1 == w3);
   }
 
   // Tests binary serialization and textual I/O.
   void TestIO(Weight w) {
     // Tests binary I/O
     {
-    ostringstream os;
-    w.Write(os);
-    os.flush();
-    istringstream is(os.str());
-    Weight v;
-    v.Read(is);
-    CHECK_EQ(w, v);
+      std::ostringstream os;
+      w.Write(os);
+      os.flush();
+      std::istringstream is(os.str());
+      Weight v;
+      v.Read(is);
+      CHECK_EQ(w, v);
     }
 
     // Tests textual I/O.
     {
-      ostringstream os;
+      std::ostringstream os;
       os << w;
-      istringstream is(os.str());
+      std::istringstream is(os.str());
       Weight v(Weight::One());
       is >> v;
       CHECK(ApproxEqual(w, v));
@@ -213,7 +192,6 @@ class WeightTester {
 
     x.operator=(x);
     CHECK(w == x);
-
   }
 
   // Generates weights used in testing.

@@ -1,35 +1,19 @@
-// sttable.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// A generic string-to-type table file format.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-//
-// \file
-// A generic string-to-type table file format
-//
-// This is not meant as a generalization of SSTable. This is more of
-// a simple replacement for SSTable in order to provide an open-source
-// implementation of the FAR format for the external version of the
-// FST Library.
+// This is not meant as a generalization of SSTable. This is more of a simple
+// replacement for SSTable in order to provide an open-source implementation
+// of the FAR format for the external version of the FST library.
 
 #ifndef FST_EXTENSIONS_FAR_STTABLE_H_
 #define FST_EXTENSIONS_FAR_STTABLE_H_
 
 #include <algorithm>
-#include <iostream>
+#include <istream>
+
 #include <fstream>
-#include <sstream>
 #include <fst/util.h>
 
 namespace fst {
@@ -42,7 +26,7 @@ static const int32 kSTTableFileVersion = 1;
 // following interface:
 //
 //   struct Writer {
-//     void operator()(ostream &, const T &) const;
+//     void operator()(std::ostream &, const T &) const;
 //   };
 //
 template <class T, class W>
@@ -57,26 +41,26 @@ class STTableWriter {
     WriteType(stream_, kSTTableMagicNumber);
     WriteType(stream_, kSTTableFileVersion);
     if (stream_.fail()) {
-      FSTERROR() << "STTableWriter::STTableWriter: error writing to file: "
+      FSTERROR() << "STTableWriter::STTableWriter: Error writing to file: "
                  << filename;
-      error_=true;
+      error_ = true;
     }
   }
 
   static STTableWriter<T, W> *Create(const string &filename) {
     if (filename.empty()) {
-      LOG(ERROR) << "STTableWriter: writing to standard out unsupported.";
-      return 0;
+      LOG(ERROR) << "STTableWriter: Writing to standard out unsupported.";
+      return nullptr;
     }
     return new STTableWriter<T, W>(filename);
   }
 
   void Add(const string &key, const T &t) {
     if (key == "") {
-      FSTERROR() << "STTableWriter::Add: key empty: " << key;
+      FSTERROR() << "STTableWriter::Add: Key empty: " << key;
       error_ = true;
     } else if (key < last_key_) {
-      FSTERROR() << "STTableWriter::Add: key disorder: " << key;
+      FSTERROR() << "STTableWriter::Add: Key out of order: " << key;
       error_ = true;
     }
     if (error_) return;
@@ -94,22 +78,21 @@ class STTableWriter {
   }
 
  private:
-  EntryWriter entry_writer_;  // Write functor for 'EntryType'
-  ofstream stream_;           // Output stream
-  vector<int64> positions_;   // Position in file of each key-entry pair
-  string last_key_;           // Last key
+  EntryWriter entry_writer_;      // Write functor for 'EntryType'
+  std::ofstream stream_;    // Output stream
+  std::vector<int64> positions_;  // Position in file of each key-entry pair
+  string last_key_;               // Last key
   bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STTableWriter);
 };
-
 
 // String-to-type table reading class for object of type 'T' using functor 'R'
 // to read an object of type 'T' form a stream. 'R' must conform to the
 // following interface:
 //
 //   struct Reader {
-//     T *operator()(istream &) const;
+//     T *operator()(std::istream &) const;
 //   };
 //
 template <class T, class R>
@@ -118,26 +101,26 @@ class STTableReader {
   typedef T EntryType;
   typedef R EntryReader;
 
-  explicit STTableReader(const vector<string> &filenames)
-      : sources_(filenames), entry_(0), error_(false) {
+  explicit STTableReader(const std::vector<string> &filenames)
+      : sources_(filenames), entry_(nullptr), error_(false) {
     compare_ = new Compare(&keys_);
     keys_.resize(filenames.size());
     streams_.resize(filenames.size(), 0);
     positions_.resize(filenames.size());
     for (size_t i = 0; i < filenames.size(); ++i) {
-      streams_[i] = new ifstream(
+      streams_[i] = new std::ifstream(
           filenames[i].c_str(), std::ios_base::in | std::ios_base::binary);
       int32 magic_number = 0, file_version = 0;
       ReadType(*streams_[i], &magic_number);
       ReadType(*streams_[i], &file_version);
       if (magic_number != kSTTableMagicNumber) {
-        FSTERROR() << "STTableReader::STTableReader: wrong file type: "
+        FSTERROR() << "STTableReader::STTableReader: Wrong file type: "
                    << filenames[i];
         error_ = true;
         return;
       }
       if (file_version != kSTTableFileVersion) {
-        FSTERROR() << "STTableReader::STTableReader: wrong file version: "
+        FSTERROR() << "STTableReader::STTableReader: Wrong file version: "
                    << filenames[i];
         error_ = true;
         return;
@@ -145,42 +128,41 @@ class STTableReader {
       int64 num_entries;
       streams_[i]->seekg(-static_cast<int>(sizeof(int64)), ios_base::end);
       ReadType(*streams_[i], &num_entries);
-      streams_[i]->seekg(-static_cast<int>(sizeof(int64)) *
-                         (num_entries + 1), ios_base::end);
-      positions_[i].resize(num_entries);
-      for (size_t j = 0; (j < num_entries) && (!streams_[i]->fail()); ++j)
-        ReadType(*streams_[i], &(positions_[i][j]));
-      streams_[i]->seekg(positions_[i][0]);
-      if (streams_[i]->fail()) {
-        FSTERROR() << "STTableReader::STTableReader: error reading file: "
-                   << filenames[i];
-        error_ = true;
-        return;
+      if (num_entries > 0) {
+        streams_[i]->seekg(-static_cast<int>(sizeof(int64)) * (num_entries + 1),
+                           ios_base::end);
+        positions_[i].resize(num_entries);
+        for (size_t j = 0; (j < num_entries) && (!streams_[i]->fail()); ++j)
+          ReadType(*streams_[i], &(positions_[i][j]));
+        streams_[i]->seekg(positions_[i][0]);
+        if (streams_[i]->fail()) {
+          FSTERROR() << "STTableReader::STTableReader: Error reading file: "
+                     << filenames[i];
+          error_ = true;
+          return;
+        }
       }
-
     }
     MakeHeap();
   }
 
   ~STTableReader() {
-    for (size_t i = 0; i < streams_.size(); ++i)
-      delete streams_[i];
+    for (size_t i = 0; i < streams_.size(); ++i) delete streams_[i];
     delete compare_;
-    if (entry_)
-      delete entry_;
+    if (entry_) delete entry_;
   }
 
   static STTableReader<T, R> *Open(const string &filename) {
     if (filename.empty()) {
-      LOG(ERROR) << "STTableReader: reading from standard in not supported";
-      return 0;
+      LOG(ERROR) << "STTableReader: operation not supported on stdin";
+      return nullptr;
     }
-    vector<string> filenames;
+    std::vector<string> filenames;
     filenames.push_back(filename);
     return new STTableReader<T, R>(filenames);
   }
 
-  static STTableReader<T, R> *Open(const vector<string> &filenames) {
+  static STTableReader<T, R> *Open(const std::vector<string> &filenames) {
     return new STTableReader<T, R>(filenames);
   }
 
@@ -193,9 +175,9 @@ class STTableReader {
 
   bool Find(const string &key) {
     if (error_) return false;
-    for (size_t i = 0; i < streams_.size(); ++i)
-      LowerBound(i, key);
+    for (size_t i = 0; i < streams_.size(); ++i) LowerBound(i, key);
     MakeHeap();
+    if (heap_.empty()) return false;
     return keys_[current_] == key;
   }
 
@@ -206,7 +188,7 @@ class STTableReader {
     if (streams_[current_]->tellg() <= positions_[current_].back()) {
       ReadType(*(streams_[current_]), &(keys_[current_]));
       if (streams_[current_]->fail()) {
-        FSTERROR() << "STTableReader: error reading file: "
+        FSTERROR() << "STTableReader: Error reading file: "
                    << sources_[current_];
         error_ = true;
         return;
@@ -215,42 +197,39 @@ class STTableReader {
     } else {
       heap_.pop_back();
     }
-    if (!heap_.empty())
-      PopHeap();
+    if (!heap_.empty()) PopHeap();
   }
 
-  const string &GetKey() const {
-    return keys_[current_];
-  }
+  const string &GetKey() const { return keys_[current_]; }
 
-  const EntryType &GetEntry() const {
-    return *entry_;
-  }
+  const EntryType &GetEntry() const { return *entry_; }
 
   bool Error() const { return error_; }
 
  private:
   // Comparison functor used to compare stream IDs in the heap
   struct Compare {
-    Compare(const vector<string> *keys) : keys_(keys) {}
+    explicit Compare(const std::vector<string> *k) : keys(k) {}
 
     bool operator()(size_t i, size_t j) const {
-      return (*keys_)[i] > (*keys_)[j];
+      return (*keys)[i] > (*keys)[j];
     };
 
    private:
-    const vector<string> *keys_;
+    const std::vector<string> *keys;
   };
 
   // Position the stream with ID 'id' at the position corresponding
   // to the lower bound for key 'find_key'
   void LowerBound(size_t id, const string &find_key) {
-    ifstream *strm = streams_[id];
-    const vector<int64> &positions = positions_[id];
-    size_t low = 0, high = positions.size() - 1;
+    std::istream *strm = streams_[id];
+    const std::vector<int64> &positions = positions_[id];
+    if (positions.size() == 0) return;
+    size_t low = 0;
+    size_t high = positions.size() - 1;
 
     while (low < high) {
-      size_t mid = (low + high)/2;
+      size_t mid = (low + high) / 2;
       strm->seekg(positions[mid]);
       string key;
       ReadType(*strm, &key);
@@ -278,14 +257,16 @@ class STTableReader {
   void MakeHeap() {
     heap_.clear();
     for (size_t i = 0; i < streams_.size(); ++i) {
+      if (positions_[i].size() == 0) continue;
       ReadType(*streams_[i], &(keys_[i]));
       if (streams_[i]->fail()) {
-        FSTERROR() << "STTableReader: error reading file: " << sources_[i];
+        FSTERROR() << "STTableReader: Error reading file: " << sources_[i];
         error_ = true;
         return;
       }
       heap_.push_back(i);
     }
+    if (heap_.empty()) return;
     std::make_heap(heap_.begin(), heap_.end(), *compare_);
     PopHeap();
   }
@@ -296,58 +277,55 @@ class STTableReader {
   void PopHeap() {
     std::pop_heap(heap_.begin(), heap_.end(), *compare_);
     current_ = heap_.back();
-    if (entry_)
-      delete entry_;
+    if (entry_) delete entry_;
     entry_ = entry_reader_(*streams_[current_]);
-    if (!entry_)
-      error_ = true;
+    if (!entry_) error_ = true;
     if (streams_[current_]->fail()) {
-      FSTERROR() << "STTableReader: error reading entry for key: "
+      FSTERROR() << "STTableReader: Error reading entry for key: "
                  << keys_[current_] << ", file: " << sources_[current_];
       error_ = true;
     }
   }
 
-
-  EntryReader entry_reader_;   // Read functor for 'EntryType'
-  vector<ifstream*> streams_;  // Input streams
-  vector<string> sources_;     // and corresponding file names
-  vector<vector<int64> > positions_;  // Index of positions for each stream
-  vector<string> keys_;  // Lowest unread key for each stream
-  vector<int64> heap_;   // Heap containing ID of streams with unread keys
-  int64 current_;        // Id of current stream to be read
-  Compare *compare_;     // Functor comparing stream IDs for the heap
+  EntryReader entry_reader_;                   // Read functor for 'EntryType'
+  std::vector<std::istream *> streams_;        // Input streams
+  std::vector<string> sources_;                // and corresponding file names
+  std::vector<std::vector<int64>> positions_;  // Index of positions
+  std::vector<string> keys_;  // Lowest unread key for each stream
+  std::vector<int64> heap_;   // Heap containing ID of streams with unread keys
+  int64 current_;             // Id of current stream to be read
+  Compare *compare_;          // Functor comparing stream IDs for the heap
   mutable EntryType *entry_;  // Pointer to the currently read entry
   bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STTableReader);
 };
 
-
 // String-to-type table header reading function template on the entry header
 // type 'H' having a member function:
-//   Read(istream &strm, const string &filename);
+//   Read(std::istream &strm, const string &filename);
 // Checks that 'filename' is an STTable and call the H::Read() on the last
 // entry in the STTable.
 template <class H>
 bool ReadSTTableHeader(const string &filename, H *header) {
-  ifstream strm(filename.c_str(), std::ios_base::in | std::ios_base::binary);
-  int32 magic_number = 0, file_version = 0;
+  std::ifstream strm(filename);
+  int32 magic_number = 0;
+  int32 file_version = 0;
   ReadType(strm, &magic_number);
   ReadType(strm, &file_version);
   if (magic_number != kSTTableMagicNumber) {
-    LOG(ERROR) << "ReadSTTableHeader: wrong file type: " << filename;
+    LOG(ERROR) << "ReadSTTableHeader: Wrong file type: " << filename;
     return false;
   }
   if (file_version != kSTTableFileVersion) {
-    LOG(ERROR) << "ReadSTTableHeader: wrong file version: " << filename;
+    LOG(ERROR) << "ReadSTTableHeader: Wrong file version: " << filename;
     return false;
   }
   int64 i = -1;
   strm.seekg(-static_cast<int>(sizeof(int64)), ios_base::end);
   ReadType(strm, &i);  // Read number of entries
   if (strm.fail()) {
-    LOG(ERROR) << "ReadSTTableHeader: error reading file: " << filename;
+    LOG(ERROR) << "ReadSTTableHeader: Error reading file: " << filename;
     return false;
   }
   if (i == 0) return true;  // No entry header to read
@@ -358,7 +336,7 @@ bool ReadSTTableHeader(const string &filename, H *header) {
   ReadType(strm, &key);
   header->Read(strm, filename + ":" + key);
   if (strm.fail()) {
-    LOG(ERROR) << "ReadSTTableHeader: error reading file: " << filename;
+    LOG(ERROR) << "ReadSTTableHeader: Error reading file: " << filename;
     return false;
   }
   return true;

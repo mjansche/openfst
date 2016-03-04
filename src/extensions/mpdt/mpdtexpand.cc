@@ -1,25 +1,9 @@
-// mpdtexpand.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
 // Expands a (bounded-stack) MPDT as an FST.
-//
+
+#include <vector>
 
 #include <fst/extensions/mpdt/read_write_utils.h>
 #include <fst/extensions/mpdt/mpdtscript.h>
@@ -29,7 +13,6 @@ DEFINE_string(mpdt_parentheses, "",
               "MPDT parenthesis label pairs with assignments.");
 DEFINE_bool(connect, true, "Trim output");
 DEFINE_bool(keep_parentheses, false, "Keep PDT parentheses in result.");
-
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -56,14 +39,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  vector<pair<int64, int64> > parens;
-  vector<int64> assignments;
+  std::vector<s::LabelPair> parens;
+  std::vector<int64> assignments;
   fst::ReadLabelTriples(FLAGS_mpdt_parentheses, &parens, &assignments,
                             false);
 
   s::VectorFstClass ofst(ifst->ArcType());
   s::MPdtExpand(*ifst, parens, assignments, &ofst,
-                s::MPdtExpandOptions(FLAGS_connect, FLAGS_keep_parentheses));
+      fst::MPdtExpandOptions(FLAGS_connect, FLAGS_keep_parentheses));
 
   ofst.Write(out_name);
 

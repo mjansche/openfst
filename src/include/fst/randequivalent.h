@@ -1,23 +1,8 @@
-// randequivalent.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-//
-// \file
-// Tests if two FSTS are equivalent by checking if random
-// strings from one FST are transduced the same by both FSTs.
+// Tests if two FSTS are equivalent by checking if random strings from one FST
+// are transduced the same by both FSTs.
 
 #ifndef FST_LIB_RANDEQUIVALENT_H_
 #define FST_LIB_RANDEQUIVALENT_H_
@@ -40,18 +25,18 @@ namespace fst {
 // sharing the same input and output labels as the considered randomly
 // generated path and checks that these two values are within
 // 'delta'. Returns optional error value (when FLAGS_error_fatal = false).
-template<class Arc, class ArcSelector>
+template <class Arc, class ArcSelector>
 bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                    ssize_t num_paths, float delta,
+                    int32 num_paths, float delta,
                     const RandGenOptions<ArcSelector> &opts,
-                    bool *error = 0) {
+                    bool *error = nullptr) {
   typedef typename Arc::Weight Weight;
   if (error) *error = false;
 
   // Check that the symbol table are compatible
   if (!CompatSymbols(fst1.InputSymbols(), fst2.InputSymbols()) ||
       !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols())) {
-    FSTERROR() << "RandEquivalent: input/output symbol tables of 1st "
+    FSTERROR() << "RandEquivalent: Input/output symbol tables of 1st "
                << "argument do not match input/output symbol tables of 2nd "
                << "argument";
     if (error) *error = true;
@@ -68,7 +53,7 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   ArcSort(&sfst2, icomp);
 
   bool ret = true;
-  for (ssize_t n = 0; n < num_paths; ++n) {
+  for (auto n = 0; n < num_paths; ++n) {
     VectorFst<Arc> path;
     const Fst<Arc> &fst = rand() % 2 ? sfst1 : sfst2;
     RandGen(fst, &path, opts);
@@ -99,10 +84,10 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
     Weight sum2 = ShortestDistance(pfst2);
 
     if (!ApproxEqual(sum1, sum2, delta)) {
-        VLOG(1) << "Sum1 = " << sum1;
-        VLOG(1) << "Sum2 = " << sum2;
-        ret = false;
-        break;
+      VLOG(1) << "Sum1 = " << sum1;
+      VLOG(1) << "Sum2 = " << sum2;
+      ret = false;
+      break;
     }
   }
 
@@ -114,21 +99,19 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   return ret;
 }
 
-
 // Test if two FSTs are equivalent by randomly generating 'num_paths' paths
 // of length no more than 'path_length' using the seed 'seed' in these FSTs.
 // Returns optional error value (when FLAGS_error_fatal = false).
 template <class Arc>
 bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                    ssize_t num_paths, float delta = kDelta,
-                    int seed = time(0), int path_length = INT_MAX,
-                    bool *error = 0) {
+                    int32 num_paths, float delta = kDelta,
+                    time_t seed = time(nullptr),
+                    int32 path_length = std::numeric_limits<int32>::max(),
+                    bool *error = nullptr) {
   UniformArcSelector<Arc> uniform_selector(seed);
-  RandGenOptions< UniformArcSelector<Arc> >
-      opts(uniform_selector, path_length);
+  RandGenOptions<UniformArcSelector<Arc>> opts(uniform_selector, path_length);
   return RandEquivalent(fst1, fst2, num_paths, delta, opts, error);
 }
-
 
 }  // namespace fst
 

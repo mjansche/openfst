@@ -1,35 +1,18 @@
-// pdt.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Common classes for PDT expansion/traversal.
 
 #ifndef FST_EXTENSIONS_PDT_PDT_H__
 #define FST_EXTENSIONS_PDT_PDT_H__
 
-#include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
 #include <map>
 #include <set>
+#include <unordered_map>
 
 #include <fst/compat.h>
-#include <fst/state-table.h>
 #include <fst/fst.h>
+#include <fst/state-table.h>
 
 namespace fst {
 
@@ -55,22 +38,18 @@ class PdtStack {
     StackNode(StackId p, size_t i) : parent_id(p), paren_id(i) {}
   };
 
-  PdtStack(const vector<pair<Label, Label> > &parens)
+  explicit PdtStack(const std::vector<std::pair<Label, Label>> &parens)
       : parens_(parens), min_paren_(kNoLabel), max_paren_(kNoLabel) {
     for (size_t i = 0; i < parens.size(); ++i) {
-      const pair<Label, Label>  &p = parens[i];
+      const std::pair<Label, Label> &p = parens[i];
       paren_map_[p.first] = i;
       paren_map_[p.second] = i;
 
-      if (min_paren_ == kNoLabel || p.first < min_paren_)
-        min_paren_ = p.first;
-      if (p.second < min_paren_)
-        min_paren_ = p.second;
+      if (min_paren_ == kNoLabel || p.first < min_paren_) min_paren_ = p.first;
+      if (p.second < min_paren_) min_paren_ = p.second;
 
-      if (max_paren_ == kNoLabel || p.first > max_paren_)
-        max_paren_ = p.first;
-      if (p.second > max_paren_)
-        max_paren_ = p.second;
+      if (max_paren_ == kNoLabel || p.first > max_paren_) max_paren_ = p.first;
+      if (p.second > max_paren_) max_paren_ = p.second;
     }
     nodes_.push_back(StackNode(-1, -1));  // Tree root.
   }
@@ -84,17 +63,17 @@ class PdtStack {
   // ID.
   StackId Find(StackId stack_id, Label label) {
     if (min_paren_ == kNoLabel || label < min_paren_ || label > max_paren_)
-      return stack_id;                       // Non-paren.
+      return stack_id;  // Non-paren.
 
-    typename unordered_map<Label, size_t>::const_iterator pit
-        = paren_map_.find(label);
-    if (pit == paren_map_.end())             // Non-paren.
+    typename std::unordered_map<Label, size_t>::const_iterator pit =
+        paren_map_.find(label);
+    if (pit == paren_map_.end())  // Non-paren.
       return stack_id;
     ssize_t paren_id = pit->second;
 
     if (label == parens_[paren_id].first) {  // Open paren.
       StackId &child_id = child_map_[std::make_pair(stack_id, label)];
-      if (child_id == 0) {                   // Child not found, push label.
+      if (child_id == 0) {  // Child not found, push label.
         child_id = nodes_.size();
         nodes_.push_back(StackNode(stack_id, paren_id));
       }
@@ -102,26 +81,22 @@ class PdtStack {
     }
 
     const StackNode &node = nodes_[stack_id];
-    if (paren_id == node.paren_id)           // Matching close paren.
+    if (paren_id == node.paren_id)  // Matching close paren.
       return node.parent_id;
 
-    return -1;                               // Non-matching close paren.
+    return -1;  // Non-matching close paren.
   }
 
   // Returns the stack ID obtained by "popping" the label at the top
   // of the current stack ID.
-  StackId Pop(StackId stack_id) const {
-    return nodes_[stack_id].parent_id;
-  }
+  StackId Pop(StackId stack_id) const { return nodes_[stack_id].parent_id; }
 
   // Returns the paren ID at the top of the stack for 'stack_id'
-  ssize_t Top(StackId stack_id) const {
-    return nodes_[stack_id].paren_id;
-  }
+  ssize_t Top(StackId stack_id) const { return nodes_[stack_id].paren_id; }
 
   ssize_t ParenId(Label label) const {
-    typename unordered_map<Label, size_t>::const_iterator pit
-        = paren_map_.find(label);
+    typename std::unordered_map<Label, size_t>::const_iterator pit =
+        paren_map_.find(label);
     if (pit == paren_map_.end())  // Non-paren.
       return -1;
     return pit->second;
@@ -129,25 +104,24 @@ class PdtStack {
 
  private:
   struct ChildHash {
-    size_t operator()(const pair<StackId, Label> &p) const {
+    size_t operator()(const std::pair<StackId, Label> &p) const {
       return p.first + p.second * kPrime;
     }
   };
 
   static const size_t kPrime;
 
-  vector<pair<Label, Label> > parens_;
-  vector<StackNode> nodes_;
-  unordered_map<Label, size_t> paren_map_;
-  unordered_map<pair<StackId, Label>,
-           StackId, ChildHash> child_map_;   // Child of stack node wrt label
-  Label min_paren_;                          // For faster paren. check
-  Label max_paren_;                          // For faster paren. check
+  std::vector<std::pair<Label, Label>> parens_;
+  std::vector<StackNode> nodes_;
+  std::unordered_map<Label, size_t> paren_map_;
+  std::unordered_map<std::pair<StackId, Label>, StackId, ChildHash>
+      child_map_;    // Child of stack node wrt label
+  Label min_paren_;  // For faster paren. check
+  Label max_paren_;  // For faster paren. check
 };
 
 template <typename T, typename L>
 const size_t PdtStack<T, L>::kPrime = 7853;
-
 
 // State tuple for PDT expansion
 template <typename S, typename K>
@@ -158,22 +132,18 @@ struct PdtStateTuple {
   StateId state_id;
   StackId stack_id;
 
-  PdtStateTuple()
-      : state_id(kNoStateId), stack_id(-1) {}
+  PdtStateTuple() : state_id(kNoStateId), stack_id(-1) {}
 
-  PdtStateTuple(StateId fs, StackId ss)
-      : state_id(fs), stack_id(ss) {}
+  PdtStateTuple(StateId fs, StackId ss) : state_id(fs), stack_id(ss) {}
 };
 
 // Equality of PDT state tuples.
 template <typename S, typename K>
-inline bool operator==(const PdtStateTuple<S, K>& x,
-                       const PdtStateTuple<S, K>& y) {
-  if (&x == &y)
-    return true;
+inline bool operator==(const PdtStateTuple<S, K> &x,
+                       const PdtStateTuple<S, K> &y) {
+  if (&x == &y) return true;
   return x.state_id == y.state_id && x.stack_id == y.stack_id;
 }
-
 
 // Hash function object for PDT state tuples
 template <class T>
@@ -190,12 +160,11 @@ class PdtStateHash {
 template <typename T>
 const size_t PdtStateHash<T>::kPrime = 7853;
 
-
 // Tuple to PDT state bijection.
 template <class S, class K>
 class PdtStateTable
     : public CompactHashStateTable<PdtStateTuple<S, K>,
-                                   PdtStateHash<PdtStateTuple<S, K> > > {
+                                   PdtStateHash<PdtStateTuple<S, K>> > {
  public:
   typedef S StateId;
   typedef K StackId;

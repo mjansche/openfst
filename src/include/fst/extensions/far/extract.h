@@ -1,40 +1,21 @@
-// extract-main.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use the new arc-dispatch
-
-// \file
 // Extracts component FSTs from an finite-state archive.
-//
 
 #ifndef FST_EXTENSIONS_FAR_EXTRACT_H__
 #define FST_EXTENSIONS_FAR_EXTRACT_H__
 
 #include <string>
 #include <vector>
-using std::vector;
 
 #include <fst/extensions/far/far.h>
 
 namespace fst {
 
-template<class Arc>
-inline void FarWriteFst(const Fst<Arc>* fst, string key,
-                        string* okey, int* nrep,
-                        const int32 &generate_filenames, int i,
+template <class Arc>
+inline void FarWriteFst(const Fst<Arc> *fst, string key, string *okey,
+                        int *nrep, const int32 &generate_filenames, int i,
                         const string &filename_prefix,
                         const string &filename_suffix) {
   if (key == *okey)
@@ -62,33 +43,30 @@ inline void FarWriteFst(const Fst<Arc>* fst, string key,
   fst->Write(filename_prefix + ofilename + filename_suffix);
 }
 
-template<class Arc>
-void FarExtract(const vector<string> &ifilenames,
-                const int32 &generate_filenames,
-                const string &keys,
-                const string &key_separator,
-                const string &range_delimiter,
-                const string &filename_prefix,
-                const string &filename_suffix) {
+template <class Arc>
+void FarExtract(const std::vector<string> &ifilenames,
+                const int32 &generate_filenames, const string &keys,
+                const string &key_separator, const string &range_delimiter,
+                const string &filename_prefix, const string &filename_suffix) {
   FarReader<Arc> *far_reader = FarReader<Arc>::Open(ifilenames);
   if (!far_reader) return;
 
   string okey;
   int nrep = 0;
 
-  vector<char *> key_vector;
+  std::vector<char *> key_vector;
   // User has specified a set of fsts to extract, where some of the "fsts" could
   // be ranges.
   if (!keys.empty()) {
-    char *keys_cstr = new char[keys.size()+1];
+    char *keys_cstr = new char[keys.size() + 1];
     strcpy(keys_cstr, keys.c_str());
     SplitToVector(keys_cstr, key_separator.c_str(), &key_vector, true);
     int i = 0;
     for (int k = 0; k < key_vector.size(); ++k, ++i) {
       string key = string(key_vector[k]);
-      char *key_cstr = new char[key.size()+1];
+      char *key_cstr = new char[key.size() + 1];
       strcpy(key_cstr, key.c_str());
-      vector<char *> range_vector;
+      std::vector<char *> range_vector;
       SplitToVector(key_cstr, range_delimiter.c_str(), &range_vector, false);
       if (range_vector.size() == 1) {  // Not a range
         if (!far_reader->Find(key)) {
@@ -109,7 +87,7 @@ void FarExtract(const vector<string> &ifilenames,
           LOG(ERROR) << "FarExtract: Cannot find key: " << begin_key;
           return;
         }
-        for ( ; !far_reader->Done(); far_reader->Next(), ++i) {
+        for (; !far_reader->Done(); far_reader->Next(), ++i) {
           string ikey = far_reader->GetKey();
           if (end_key < ikey) break;
           const Fst<Arc> &fst = far_reader->GetFst();
@@ -120,17 +98,17 @@ void FarExtract(const vector<string> &ifilenames,
         LOG(ERROR) << "FarExtract: Illegal range specification: " << key;
         return;
       }
-      delete [] key_cstr;
+      delete[] key_cstr;
     }
-    delete [] keys_cstr;
+    delete[] keys_cstr;
     return;
   }
   // Nothing specified: extract everything.
   for (int i = 1; !far_reader->Done(); far_reader->Next(), ++i) {
     string key = far_reader->GetKey();
     const Fst<Arc> &fst = far_reader->GetFst();
-    FarWriteFst(&fst, key, &okey, &nrep, generate_filenames, i,
-                filename_prefix, filename_suffix);
+    FarWriteFst(&fst, key, &okey, &nrep, generate_filenames, i, filename_prefix,
+                filename_suffix);
   }
   return;
 }

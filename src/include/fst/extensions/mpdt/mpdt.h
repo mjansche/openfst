@@ -1,21 +1,6 @@
-// mpdt.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
 // Common classes for Multi Pushdown Transducer (MPDT) expansion/traversal.
 
 #ifndef FST_EXTENSIONS_MPDT_MPDT_H__
@@ -23,7 +8,6 @@
 
 #include <map>
 #include <vector>
-using std::vector;
 
 #include <fst/compat.h>
 #include <fst/extensions/pdt/pdt.h>
@@ -114,10 +98,11 @@ class MPdtStack {
   typedef L Label;
   typedef L Level;  // Not really needed, but I find it confusing otherwise.
   typedef StackConfig<StackId, nlevels> Config;
-  typedef map<Config, StackId, CompConfig<StackId, nlevels>> ConfigToStackId;
+  typedef std::map<Config, StackId, CompConfig<StackId, nlevels>>
+      ConfigToStackId;
 
-  MPdtStack(const vector<pair<Label, Label>> &parens,
-            const vector<int> &assignments);
+  MPdtStack(const std::vector<std::pair<Label, Label>> &parens,
+            const std::vector<int> &assignments);
 
   MPdtStack(const MPdtStack &mstack);
 
@@ -143,14 +128,15 @@ class MPdtStack {
       }
     }
     if (underlying_id == -1) return -1;
-    typename unordered_map<KeyPair<Level>, size_t, KeyPairHasher<L>>::const_iterator
-        ix = paren_id_map_.find(KeyPair<Level>(lev, underlying_id));
+    typename std::unordered_map<KeyPair<Level>, size_t,
+                                KeyPairHasher<L>>::const_iterator ix =
+        paren_id_map_.find(KeyPair<Level>(lev, underlying_id));
     if (ix == paren_id_map_.end()) return -1;  // NB: shouldn't happen
     return ix->second;
   }
 
   ssize_t ParenId(Label label) const {
-    typename unordered_map<Label, size_t>::const_iterator pit =
+    typename std::unordered_map<Label, size_t>::const_iterator pit =
         paren_map_.find(label);
     if (pit == paren_map_.end())  // Non-paren.
       return -1;
@@ -181,7 +167,8 @@ class MPdtStack {
     StackId result;
     if (idx == config_to_stack_id_map_.end()) {
       result = next_stack_id_++;
-      config_to_stack_id_map_.insert(pair<Config, StackId>(config, result));
+      config_to_stack_id_map_.insert(
+          std::pair<Config, StackId>(config, result));
       stack_id_to_config_map_[result] = config;
     } else {
       result = idx->second;
@@ -191,7 +178,7 @@ class MPdtStack {
 
   // This function gets the internal stack id from an external stack id
   inline const Config InternalStackIds(StackId stack_id) const {
-    typename unordered_map<StackId, Config>::const_iterator idx =
+    typename std::unordered_map<StackId, Config>::const_iterator idx =
         stack_id_to_config_map_.find(stack_id);
     if (idx == stack_id_to_config_map_.end())
       idx = stack_id_to_config_map_.find(-1);
@@ -211,22 +198,25 @@ class MPdtStack {
   bool error_;
   Label min_paren_;                      // For faster paren. check
   Label max_paren_;                      // For faster paren. check
-  unordered_map<Label, Label> paren_levels_;  // Stores "level" of each paren
-  vector<pair<Label, Label>> parens_;    // As in pdt.h
-  unordered_map<Label, size_t> paren_map_;    // As in pdt.h
+  std::unordered_map<Label, Label>
+      paren_levels_;                             // Stores "level" of each paren
+  std::vector<std::pair<Label, Label>> parens_;  // As in pdt.h
+  std::unordered_map<Label, size_t> paren_map_;  // As in pdt.h
   // Map between internal paren_id and external paren_id
-  unordered_map<KeyPair<Level>, size_t, KeyPairHasher<Level>> paren_id_map_;
+  std::unordered_map<KeyPair<Level>, size_t, KeyPairHasher<Level>>
+      paren_id_map_;
   // Maps between internal stack ids and external stack id.
   ConfigToStackId config_to_stack_id_map_;
-  unordered_map<StackId, Config> stack_id_to_config_map_;
+  std::unordered_map<StackId, Config> stack_id_to_config_map_;
   StackId next_stack_id_;
   // Underlying stacks
   PdtStack<StackId, Label> *stacks_[nlevels];  // Array of stacks
 };
 
 template <typename K, typename L, L nlevels, MPdtType restrict>
-MPdtStack<K, L, nlevels, restrict>::MPdtStack(const vector<pair<L, L>> &parens,
-                                              const vector<int> &assignments)
+MPdtStack<K, L, nlevels, restrict>::MPdtStack(
+    const std::vector<std::pair<L, L>> &parens,
+    const std::vector<int> &assignments)
     : error_(false),
       min_paren_(kNoLabel),
       max_paren_(kNoLabel),
@@ -236,23 +226,24 @@ MPdtStack<K, L, nlevels, restrict>::MPdtStack(const vector<pair<L, L>> &parens,
   typedef L Label;
   typedef L Level;  // Not really needed, but I find it confusing otherwise.
   typedef StackConfig<StackId, nlevels> Config;
-  typedef map<Config, StackId, CompConfig<StackId, nlevels>> ConfigToStackId;
+  typedef std::map<Config, StackId, CompConfig<StackId, nlevels>>
+      ConfigToStackId;
   if (parens.size() != assignments.size()) {
-    FSTERROR() << "MPdtStack: parens of different size from assignments";
+    FSTERROR() << "MPdtStack: Parens of different size from assignments";
     error_ = true;
     return;
   }
-  vector<pair<Label, Label>> vectors[nlevels];
+  std::vector<std::pair<Label, Label>> vectors[nlevels];
   for (int i = 0; i < assignments.size(); ++i) {
     // Assignments here start at 0, so assuming the human-readable version has
     // them starting at 1, we should subtract 1 here
     Level lev = assignments[i] - 1;
     if (lev < 0 || lev >= nlevels) {
-      FSTERROR() << "MPdtStack: specified level " << lev << " out of bounds";
+      FSTERROR() << "MPdtStack: Specified level " << lev << " out of bounds";
       error_ = true;
       return;
     }
-    const pair<Label, Label> &p = parens[i];
+    const std::pair<Label, Label> &p = parens[i];
     vectors[lev].push_back(p);
     paren_levels_[p.first] = lev;
     paren_levels_[p.second] = lev;
@@ -292,35 +283,26 @@ MPdtStack<K, L, nlevels, restrict>::MPdtStack(
   typedef L Label;
   typedef L Level;  // Not really needed, but I find it confusing otherwise.
   typedef StackConfig<StackId, nlevels> Config;
-  for (typename unordered_map<Label, Label>::const_iterator ix =
-           mstack.paren_levels_.begin();
-       ix != mstack.paren_levels_.end(); ++ix) {
-    paren_levels_[ix->first] = ix->second;
+  for (const auto &kv : mstack.paren_levels_) {
+    paren_levels_[kv.first] = kv.second;
   }
   for (int i = 0; i < mstack.parens_.size(); ++i) {
     parens_.push_back(mstack.parens_[i]);
   }
-  for (typename unordered_map<Label, size_t>::const_iterator ix =
-           mstack.paren_map_.begin();
-       ix != mstack.paren_map_.end(); ++ix) {
-    paren_map_[ix->first] = ix->second;
+  for (const auto &kv : mstack.paren_map_) {
+    paren_map_[kv.first] = kv.second;
   }
-  for (typename unordered_map<KeyPair<Level>, size_t,
-                         KeyPairHasher<Level>>::const_iterator ix =
-           mstack.paren_id_map_.begin();
-       ix != mstack.paren_id_map_.end(); ++ix) {
-    paren_id_map_[ix->first] = ix->second;
+  for (const auto &kv : mstack.paren_id_map_) {
+    paren_id_map_[kv.first] = kv.second;
   }
   for (typename ConfigToStackId::const_iterator ix =
            mstack.config_to_stack_id_map_.begin();
        ix != mstack.config_to_stack_id_map_.end(); ++ix) {
     config_to_stack_id_map_[ix->first] = ix->second;
   }
-  for (typename unordered_map<StackId, Config>::const_iterator ix =
-           mstack.stack_id_to_config_map_.begin();
-       ix != mstack.stack_id_to_config_map_.end(); ++ix) {
-    Config config(ix->second);
-    stack_id_to_config_map_[ix->first] = config;
+  for (const auto &kv : mstack.stack_id_to_config_map_) {
+    Config config(kv.second);
+    stack_id_to_config_map_[kv.first] = config;
   }
   for (int i = 0; i < nlevels; ++i) {
     stacks_[i] = mstack.stacks_[i];
@@ -335,14 +317,15 @@ K MPdtStack<K, L, nlevels, restrict>::Find(K stack_id, L label) {
   typedef StackConfig<StackId, nlevels> Config;
   if (min_paren_ == kNoLabel || label < min_paren_ || label > max_paren_)
     return stack_id;  // Non-paren.
-  typename unordered_map<Label, size_t>::const_iterator pit = paren_map_.find(label);
+  typename std::unordered_map<Label, size_t>::const_iterator pit =
+      paren_map_.find(label);
   if (pit == paren_map_.end())  // Non-paren.
     return stack_id;
   ssize_t paren_id = pit->second;
   // Get the configuration associated with this stack_id
   const Config config = InternalStackIds(stack_id);
   // Get the level
-  typename unordered_map<Label, int>::iterator pli = paren_levels_.find(label);
+  auto pli = paren_levels_.find(label);
   Level lev = pli->second;
   // If label is an open paren we push
   // 1) if the restrict type is not MPDT_WRITE_RESTRICT
