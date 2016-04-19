@@ -4,8 +4,8 @@
 // Class to reweight/push an FST, and utility functions to weigh and reweight
 // an FST.
 
-#ifndef FST_LIB_PUSH_H__
-#define FST_LIB_PUSH_H__
+#ifndef FST_LIB_PUSH_H_
+#define FST_LIB_PUSH_H_
 
 #include <vector>
 

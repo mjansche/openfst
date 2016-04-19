@@ -3,8 +3,8 @@
 //
 // FST memory utilities.
 
-#ifndef FST_LIB_MEMORY_H__
-#define FST_LIB_MEMORY_H__
+#ifndef FST_LIB_MEMORY_H_
+#define FST_LIB_MEMORY_H_
 
 #include <list>
 #include <memory>
@@ -447,4 +447,4 @@ bool operator!=(const PoolAllocator<T> &alloc1,
 
 }  // namespace fst
 
-#endif  // FST_LIB_MEMORY_H__
+#endif  // FST_LIB_MEMORY_H_

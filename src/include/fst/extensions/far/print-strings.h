@@ -68,20 +68,20 @@ void FarPrintStrings(const std::vector<string> &ifilenames,
       nrep = 0;
     okey = key;
 
-    const Fst<Arc> &fst = far_reader->GetFst();
-    if (i == 1 && initial_symbols && syms == nullptr && fst.InputSymbols())
-      syms = fst.InputSymbols()->Copy();
+    const Fst<Arc> *fst = far_reader->GetFst();
+    if (i == 1 && initial_symbols && syms == nullptr && fst->InputSymbols())
+      syms = fst->InputSymbols()->Copy();
     string str;
     VLOG(2) << "Handling key: " << key;
     StringPrinter<Arc> string_printer(token_type,
-                                      syms ? syms : fst.InputSymbols());
-    string_printer(fst, &str);
+                                      syms ? syms : fst->InputSymbols());
+    string_printer(*fst, &str);
 
     if (entry_type == FET_LINE) {
       if (print_key) std::cout << key << FLAGS_far_field_separator[0];
       std::cout << str;
       if (print_weight)
-        std::cout << FLAGS_far_field_separator[0] << ShortestDistance(fst);
+        std::cout << FLAGS_far_field_separator[0] << ShortestDistance(*fst);
       std::cout << std::endl;
     } else if (entry_type == FET_FILE) {
       stringstream sstrm;

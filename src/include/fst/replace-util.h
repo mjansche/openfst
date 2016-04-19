@@ -3,8 +3,8 @@
 //
 // Utility classes for the recursive replacement of FSTs (RTNs).
 
-#ifndef FST_LIB_REPLACE_UTIL_H__
-#define FST_LIB_REPLACE_UTIL_H__
+#ifndef FST_LIB_REPLACE_UTIL_H_
+#define FST_LIB_REPLACE_UTIL_H_
 
 #include <map>
 #include <unordered_map>
@@ -657,4 +657,4 @@ void ReplaceUtil<Arc>::GetSCCProperties() const {
 
 }  // namespace fst
 
-#endif  // FST_LIB_REPLACE_UTIL_H__
+#endif  // FST_LIB_REPLACE_UTIL_H_

@@ -66,7 +66,7 @@ void PrintFst(const FstClass &fst, std::ostream &ostrm, const string &dest,
 // Below are two printing methods with useful defaults for a few of
 // the fst printer arguments.
 template <class Arc>
-void PrintFst(const Fst<Arc> &fst, std::ostream &os, const string dest = "",
+void PrintFst(const Fst<Arc> &fst, std::ostream &os, const string& dest = "",
               const SymbolTable *isyms = nullptr,
               const SymbolTable *osyms = nullptr,
               const SymbolTable *ssyms = nullptr) {

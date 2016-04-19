@@ -3,8 +3,8 @@
 //
 // Tuple weight set operation definitions.
 
-#ifndef FST_LIB_TUPLE_WEIGHT_H__
-#define FST_LIB_TUPLE_WEIGHT_H__
+#ifndef FST_LIB_TUPLE_WEIGHT_H_
+#define FST_LIB_TUPLE_WEIGHT_H_
 
 #include <string>
 #include <vector>
@@ -156,4 +156,4 @@ inline std::istream &operator>>(std::istream &strm, TupleWeight<W, n> &w) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_TUPLE_WEIGHT_H__
+#endif  // FST_LIB_TUPLE_WEIGHT_H_

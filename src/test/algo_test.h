@@ -3,8 +3,8 @@
 //
 // Regression test for various FST algorithms.
 
-#ifndef FST_TEST_ALGO_TEST_H__
-#define FST_TEST_ALGO_TEST_H__
+#ifndef FST_TEST_ALGO_TEST_H_
+#define FST_TEST_ALGO_TEST_H_
 
 #include <fst/fstlib.h>
 #include <fst/random-weight.h>
@@ -1412,4 +1412,4 @@ const int AlgoTester<A, G>::kNumRandomPaths = 100;
 
 }  // namespace fst
 
-#endif  // FST_TEST_ALGO_TEST_H__
+#endif  // FST_TEST_ALGO_TEST_H_

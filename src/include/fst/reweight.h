@@ -3,8 +3,8 @@
 //
 // Function to reweight an FST.
 
-#ifndef FST_LIB_REWEIGHT_H__
-#define FST_LIB_REWEIGHT_H__
+#ifndef FST_LIB_REWEIGHT_H_
+#define FST_LIB_REWEIGHT_H_
 
 #include <vector>
 

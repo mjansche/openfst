@@ -4,8 +4,8 @@
 // FST abstract base class definition, state and arc iterator interface, and
 // suggested base implementation.
 
-#ifndef FST_LIB_FST_H__
-#define FST_LIB_FST_H__
+#ifndef FST_LIB_FST_H_
+#define FST_LIB_FST_H_
 
 #include <stddef.h>
 #include <sys/types.h>
@@ -945,4 +945,4 @@ Fst<A> *StringToFst(const string &s) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_FST_H__
+#endif  // FST_LIB_FST_H_

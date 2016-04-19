@@ -3,8 +3,8 @@
 //
 // Classes to allow matching labels leaving FST states.
 
-#ifndef FST_LIB_MATCHER_H__
-#define FST_LIB_MATCHER_H__
+#ifndef FST_LIB_MATCHER_H_
+#define FST_LIB_MATCHER_H_
 
 #include <algorithm>
 #include <set>
@@ -1247,6 +1247,8 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
 
   const FST &GetFst() const override { return matcher_->GetFst(); }
 
+  const M *GetMatcher() const { return matcher_; }
+
   uint64 Properties(uint64 inprops) const override {
     return matcher_->Properties(inprops);
   }
@@ -1336,4 +1338,4 @@ class Matcher {
 
 }  // namespace fst
 
-#endif  // FST_LIB_MATCHER_H__
+#endif  // FST_LIB_MATCHER_H_

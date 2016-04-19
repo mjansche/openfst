@@ -4,8 +4,8 @@
 // Classes for representing a bijective mapping between an arbitrary entry
 // of type T and a signed integral ID.
 
-#ifndef FST_LIB_BI_TABLE_H__
-#define FST_LIB_BI_TABLE_H__
+#ifndef FST_LIB_BI_TABLE_H_
+#define FST_LIB_BI_TABLE_H_
 
 #include <deque>
 #include <memory>
@@ -160,13 +160,22 @@ class CompactHashBiTable {
 
   // Clear content. With argument, erases last n IDs.
   void Clear(ssize_t n = -1) {
-    if (n < 0 || n > id2entry_.size()) n = id2entry_.size();
-    while (n-- > 0) {
-      I key = id2entry_.size() - 1;
-      keys_.erase(key);
-      id2entry_.pop_back();
+    if (n < 0 || n >= id2entry_.size()) {  // Clear completely.
+      keys_.clear();
+      id2entry_.clear();
+    } else if (n == id2entry_.size() - 1) {  // Leave only key 0
+      const T entry = FindEntry(0);
+      keys_.clear();
+      id2entry_.clear();
+      FindId(entry, true);
+    } else {
+      while (n-- > 0) {
+        I key = id2entry_.size() - 1;
+        keys_.erase(key);
+        id2entry_.pop_back();
+      }
+      keys_.rehash(0);
     }
-    keys_.rehash(0);
   }
 
  private:

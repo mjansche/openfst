@@ -3,8 +3,8 @@
 //
 // Functions and classes to create a partition of states.
 
-#ifndef FST_LIB_PARTITION_H__
-#define FST_LIB_PARTITION_H__
+#ifndef FST_LIB_PARTITION_H_
+#define FST_LIB_PARTITION_H_
 
 #include <algorithm>
 #include <vector>
@@ -244,4 +244,4 @@ class PartitionIterator {
 };
 }  // namespace fst
 
-#endif  // FST_LIB_PARTITION_H__
+#endif  // FST_LIB_PARTITION_H_

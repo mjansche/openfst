@@ -73,8 +73,8 @@ void FarExtract(const std::vector<string> &ifilenames,
           LOG(ERROR) << "FarExtract: Cannot find key: " << key;
           return;
         }
-        const Fst<Arc> &fst = far_reader->GetFst();
-        FarWriteFst(&fst, key, &okey, &nrep, generate_filenames, i,
+        const Fst<Arc> *fst = far_reader->GetFst();
+        FarWriteFst(fst, key, &okey, &nrep, generate_filenames, i,
                     filename_prefix, filename_suffix);
       } else if (range_vector.size() == 2) {  // A legal range
         string begin_key = string(range_vector[0]);
@@ -90,8 +90,8 @@ void FarExtract(const std::vector<string> &ifilenames,
         for (; !far_reader->Done(); far_reader->Next(), ++i) {
           string ikey = far_reader->GetKey();
           if (end_key < ikey) break;
-          const Fst<Arc> &fst = far_reader->GetFst();
-          FarWriteFst(&fst, ikey, &okey, &nrep, generate_filenames, i,
+          const Fst<Arc> *fst = far_reader->GetFst();
+          FarWriteFst(fst, ikey, &okey, &nrep, generate_filenames, i,
                       filename_prefix, filename_suffix);
         }
       } else {
@@ -106,8 +106,8 @@ void FarExtract(const std::vector<string> &ifilenames,
   // Nothing specified: extract everything.
   for (int i = 1; !far_reader->Done(); far_reader->Next(), ++i) {
     string key = far_reader->GetKey();
-    const Fst<Arc> &fst = far_reader->GetFst();
-    FarWriteFst(&fst, key, &okey, &nrep, generate_filenames, i, filename_prefix,
+    const Fst<Arc> *fst = far_reader->GetFst();
+    FarWriteFst(fst, key, &okey, &nrep, generate_filenames, i, filename_prefix,
                 filename_suffix);
   }
   return;

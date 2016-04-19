@@ -10,8 +10,8 @@
 // The + operation on two weights a and b is the lexicographically
 // prior of a and b.
 
-#ifndef FST_LIB_LEXICOGRAPHIC_WEIGHT_H__
-#define FST_LIB_LEXICOGRAPHIC_WEIGHT_H__
+#ifndef FST_LIB_LEXICOGRAPHIC_WEIGHT_H_
+#define FST_LIB_LEXICOGRAPHIC_WEIGHT_H_
 
 #include <string>
 
@@ -129,4 +129,4 @@ inline LexicographicWeight<W1, W2> Divide(const LexicographicWeight<W1, W2> &w,
 
 }  // namespace fst
 
-#endif  // FST_LIB_LEXICOGRAPHIC_WEIGHT_H__
+#endif  // FST_LIB_LEXICOGRAPHIC_WEIGHT_H_

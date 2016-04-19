@@ -4,8 +4,8 @@
 // Classes for filtering the composition matches, e.g. for correct epsilon
 // handling.
 
-#ifndef FST_LIB_COMPOSE_FILTER_H__
-#define FST_LIB_COMPOSE_FILTER_H__
+#ifndef FST_LIB_COMPOSE_FILTER_H_
+#define FST_LIB_COMPOSE_FILTER_H_
 
 #include <fst/filter-state.h>
 #include <fst/fst-decl.h>  // For optional argument declarations

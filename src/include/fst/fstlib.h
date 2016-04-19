@@ -21,8 +21,8 @@
 //
 // This convenience file includes all other FST header files.
 
-#ifndef FST_LIB_FSTLIB_H__
-#define FST_LIB_FSTLIB_H__
+#ifndef FST_LIB_FSTLIB_H_
+#define FST_LIB_FSTLIB_H_
 
 
 // Abstract FST classes
@@ -129,4 +129,4 @@
 #include <fst/util.h>
 
 
-#endif  // FST_LIB_FSTLIB_H__
+#endif  // FST_LIB_FSTLIB_H_

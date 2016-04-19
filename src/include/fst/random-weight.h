@@ -4,8 +4,8 @@
 // Function objects to generate random weights in various semirings for testing
 // purposes.
 
-#ifndef FST_LIB_RANDOM_WEIGHT_H__
-#define FST_LIB_RANDOM_WEIGHT_H__
+#ifndef FST_LIB_RANDOM_WEIGHT_H_
+#define FST_LIB_RANDOM_WEIGHT_H_
 
 #include <cstdlib>
 #include <ctime>
@@ -393,4 +393,4 @@ class SparsePowerWeightGenerator {
 
 }  // namespace fst
 
-#endif  // FST_LIB_RANDOM_WEIGHT_H__
+#endif  // FST_LIB_RANDOM_WEIGHT_H_

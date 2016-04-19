@@ -4,8 +4,8 @@
 // Classes to add lookahead to FST matchers, useful e.g. for improving
 // composition efficiency with certain inputs.
 
-#ifndef FST_LIB_LOOKAHEAD_MATCHER_H__
-#define FST_LIB_LOOKAHEAD_MATCHER_H__
+#ifndef FST_LIB_LOOKAHEAD_MATCHER_H_
+#define FST_LIB_LOOKAHEAD_MATCHER_H_
 
 #include <fst/add-on.h>
 #include <fst/const-fst.h>
@@ -706,6 +706,10 @@ class LookAheadMatcher {
     lookahead_ = false;
   }
 
+  // Takes ownership of base.
+  explicit LookAheadMatcher(MatcherBase<Arc> *base)
+      : base_(base), lookahead_(false) {}
+
   LookAheadMatcher(const LookAheadMatcher<F> &matcher, bool safe = false) {
     base_ = matcher.base_->Copy(safe);
     lookahead_ = matcher.lookahead_;
@@ -796,4 +800,4 @@ class LookAheadMatcher {
 
 }  // namespace fst
 
-#endif  // FST_LIB_LOOKAHEAD_MATCHER_H__
+#endif  // FST_LIB_LOOKAHEAD_MATCHER_H_

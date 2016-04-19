@@ -3,8 +3,8 @@
 //
 // FST utility inline definitions.
 
-#ifndef FST_LIB_UTIL_H__
-#define FST_LIB_UTIL_H__
+#ifndef FST_LIB_UTIL_H_
+#define FST_LIB_UTIL_H_
 
 #include <iostream>
 #include <list>
@@ -432,4 +432,4 @@ class CompactSet {
 
 }  // namespace fst
 
-#endif  // FST_LIB_UTIL_H__
+#endif  // FST_LIB_UTIL_H_

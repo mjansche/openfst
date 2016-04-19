@@ -3,8 +3,8 @@
 //
 // Classes to provide symbol-to-integer and integer-to-symbol mappings.
 
-#ifndef FST_LIB_SYMBOL_TABLE_H__
-#define FST_LIB_SYMBOL_TABLE_H__
+#ifndef FST_LIB_SYMBOL_TABLE_H_
+#define FST_LIB_SYMBOL_TABLE_H_
 
 #include <cstring>
 #include <ios>
@@ -480,4 +480,4 @@ inline SymbolTable* StringToSymbolTable(const string& s) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_SYMBOL_TABLE_H__
+#endif  // FST_LIB_SYMBOL_TABLE_H_

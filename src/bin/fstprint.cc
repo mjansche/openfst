@@ -3,9 +3,10 @@
 //
 // Prints out binary FSTs in simple text format used by AT&T.
 
+#include <memory>
+#include <fstream>
 #include <ostream>
 
-#include <fstream>
 #include <fst/script/print.h>
 
 DEFINE_bool(acceptor, false, "Input in acceptor format");
@@ -43,53 +44,54 @@ int main(int argc, char **argv) {
   s::FstClass *fst = s::FstClass::Read(in_name);
   if (!fst) return 1;
 
-  std::ostream *ostrm = &std::cout;
   string dest = "standard output";
+  std::ofstream fstrm;
   if (argc == 3) {
-    dest = argv[2];
-    ostrm = new std::ofstream(argv[2]);
-    if (!*ostrm) {
+    fstrm.open(argv[2]);
+    if (!fstrm) {
       LOG(ERROR) << argv[0] << ": Open failed, file = " << argv[2];
       return 1;
     }
+    dest = argv[2];
   }
-  ostrm->precision(9);
-
-  const SymbolTable *isyms = nullptr;
-  const SymbolTable *osyms = nullptr;
-  const SymbolTable *ssyms = nullptr;
+  std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
+  ostrm.precision(9);
 
   fst::SymbolTableTextOptions opts;
   opts.allow_negative = FLAGS_allow_negative_labels;
 
+  std::unique_ptr<const SymbolTable> isyms;
   if (!FLAGS_isymbols.empty() && !FLAGS_numeric) {
-    isyms = SymbolTable::ReadText(FLAGS_isymbols, opts);
+    isyms.reset(SymbolTable::ReadText(FLAGS_isymbols, opts));
     if (!isyms) return 1;
   }
 
+  std::unique_ptr<const SymbolTable> osyms;
   if (!FLAGS_osymbols.empty() && !FLAGS_numeric) {
-    osyms = SymbolTable::ReadText(FLAGS_osymbols, opts);
+    osyms.reset(SymbolTable::ReadText(FLAGS_osymbols, opts));
     if (!osyms) return 1;
   }
 
+  std::unique_ptr<const SymbolTable> ssyms;
   if (!FLAGS_ssymbols.empty() && !FLAGS_numeric) {
-    ssyms = SymbolTable::ReadText(FLAGS_ssymbols);
+    ssyms.reset(SymbolTable::ReadText(FLAGS_ssymbols));
     if (!ssyms) return 1;
   }
 
-  if (!isyms && !FLAGS_numeric) isyms = fst->InputSymbols();
-  if (!osyms && !FLAGS_numeric) osyms = fst->OutputSymbols();
+  if (!isyms && !FLAGS_numeric && fst->InputSymbols())
+    isyms.reset(fst->InputSymbols()->Copy());
 
-  s::PrintFst(*fst, *ostrm, dest, isyms, osyms, ssyms, FLAGS_acceptor,
-              FLAGS_show_weight_one, FLAGS_missing_symbol);
+  if (!osyms && !FLAGS_numeric && fst->OutputSymbols())
+    osyms.reset(fst->OutputSymbols()->Copy());
+
+  s::PrintFst(*fst, ostrm, dest, isyms.get(), osyms.get(), ssyms.get(),
+              FLAGS_acceptor, FLAGS_show_weight_one, FLAGS_missing_symbol);
 
   if (isyms && !FLAGS_save_isymbols.empty())
     isyms->WriteText(FLAGS_save_isymbols);
 
   if (osyms && !FLAGS_save_osymbols.empty())
     osyms->WriteText(FLAGS_save_osymbols);
-
-  if (ostrm != &std::cout) delete ostrm;
 
   return 0;
 }

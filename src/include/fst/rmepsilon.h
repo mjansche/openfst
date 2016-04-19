@@ -3,8 +3,8 @@
 //
 // Functions and classes that implemement epsilon-removal.
 
-#ifndef FST_LIB_RMEPSILON_H__
-#define FST_LIB_RMEPSILON_H__
+#ifndef FST_LIB_RMEPSILON_H_
+#define FST_LIB_RMEPSILON_H_
 
 #include <forward_list>
 #include <stack>
@@ -557,4 +557,4 @@ typedef RmEpsilonFst<StdArc> StdRmEpsilonFst;
 
 }  // namespace fst
 
-#endif  // FST_LIB_RMEPSILON_H__
+#endif  // FST_LIB_RMEPSILON_H_

@@ -202,7 +202,7 @@ class STTableReader {
 
   const string &GetKey() const { return keys_[current_]; }
 
-  const EntryType &GetEntry() const { return *entry_; }
+  const EntryType *GetEntry() const { return entry_; }
 
   bool Error() const { return error_; }
 

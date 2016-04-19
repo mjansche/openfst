@@ -4,8 +4,8 @@
 // Creates binary FSTs from simple text format used by AT&T.
 
 #include <istream>
-
 #include <fstream>
+
 #include <fst/script/compile.h>
 
 DEFINE_bool(acceptor, false, "Input in acceptor format");
@@ -35,46 +35,46 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  const char *source = "standard input";
-  std::istream *istrm = &std::cin;
+  string source = "standard input";
+  std::ifstream fstrm;
   if (argc > 1 && strcmp(argv[1], "-") != 0) {
-    source = argv[1];
-    istrm = new std::ifstream(argv[1]);
-    if (!*istrm) {
+    fstrm.open(argv[1]);
+    if (!fstrm) {
       LOG(ERROR) << argv[0] << ": Open failed, file = " << argv[1];
       return 1;
     }
+    source = argv[1];
   }
-  const SymbolTable *isyms = nullptr;
-  const SymbolTable *osyms = nullptr;
-  const SymbolTable *ssyms = nullptr;
+  std::istream &istrm = fstrm.is_open() ? fstrm : std::cin;
 
   fst::SymbolTableTextOptions opts;
   opts.allow_negative = FLAGS_allow_negative_labels;
 
+  std::unique_ptr<const SymbolTable> isyms;
   if (!FLAGS_isymbols.empty()) {
-    isyms = SymbolTable::ReadText(FLAGS_isymbols, opts);
+    isyms.reset(SymbolTable::ReadText(FLAGS_isymbols, opts));
     if (!isyms) return 1;
   }
 
+  std::unique_ptr<const SymbolTable> osyms;
   if (!FLAGS_osymbols.empty()) {
-    osyms = SymbolTable::ReadText(FLAGS_osymbols, opts);
+    osyms.reset(SymbolTable::ReadText(FLAGS_osymbols, opts));
     if (!osyms) return 1;
   }
 
+  std::unique_ptr<const SymbolTable> ssyms;
   if (!FLAGS_ssymbols.empty()) {
-    ssyms = SymbolTable::ReadText(FLAGS_ssymbols);
+    ssyms.reset(SymbolTable::ReadText(FLAGS_ssymbols));
     if (!ssyms) return 1;
   }
 
   string dest = argc > 2 ? argv[2] : "";
 
-  s::CompileFst(*istrm, source, dest, FLAGS_fst_type, FLAGS_arc_type, isyms,
-                osyms, ssyms, FLAGS_acceptor, FLAGS_keep_isymbols,
+  s::CompileFst(istrm, source, dest, FLAGS_fst_type, FLAGS_arc_type,
+                isyms.get(), osyms.get(), ssyms.get(),
+                FLAGS_acceptor, FLAGS_keep_isymbols,
                 FLAGS_keep_osymbols, FLAGS_keep_state_numbering,
                 FLAGS_allow_negative_labels);
-
-  if (istrm != &std::cin) delete istrm;
 
   return 0;
 }

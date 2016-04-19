@@ -129,9 +129,9 @@ class FarReader {
   // the current position in the archive is changed.
   virtual const string &GetKey() const = 0;
 
-  // Returns FST at the current position. This reference is invalidated if
+  // Returns pointer to FST at the current position. This is invalidated if
   // the current position in the archive is changed.
-  virtual const Fst<A> &GetFst() const = 0;
+  virtual const Fst<A> *GetFst() const = 0;
 
   virtual FarType Type() const = 0;
 
@@ -306,7 +306,7 @@ class STTableFarReader : public FarReader<A> {
 
   const string &GetKey() const override { return reader_->GetKey(); }
 
-  const Fst<A> &GetFst() const override { return reader_->GetEntry(); }
+  const Fst<A> *GetFst() const override { return reader_->GetEntry(); }
 
   FarType Type() const override { return FAR_STTABLE; }
 
@@ -353,7 +353,7 @@ class STListFarReader : public FarReader<A> {
 
   const string &GetKey() const override { return reader_->GetKey(); }
 
-  const Fst<A> &GetFst() const override { return reader_->GetEntry(); }
+  const Fst<A> *GetFst() const override { return reader_->GetEntry(); }
 
   FarType Type() const override { return FAR_STLIST; }
 
@@ -442,7 +442,7 @@ class FstFarReader : public FarReader<A> {
 
   const string &GetKey() const override { return keys_[pos_]; }
 
-  const Fst<A> &GetFst() const override { return *fst_; }
+  const Fst<A> *GetFst() const override { return fst_; }
 
   FarType Type() const override { return FAR_FST; }
 

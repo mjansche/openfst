@@ -122,7 +122,9 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-@HAVE_SCRIPT_TRUE@libfstscript_la_DEPENDENCIES = ../lib/libfst.la
+am__DEPENDENCIES_1 =
+@HAVE_SCRIPT_TRUE@libfstscript_la_DEPENDENCIES = ../lib/libfst.la \
+@HAVE_SCRIPT_TRUE@	$(am__DEPENDENCIES_1)
 am__libfstscript_la_SOURCES_DIST = arciterator-class.cc arcsort.cc \
 	closure.cc compile.cc compose.cc concat.cc connect.cc \
 	convert.cc decode.cc determinize.cc difference.cc \
@@ -357,7 +359,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
-LDADD = $(DL_LIBS)
 @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstscript.la
 @HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arciterator-class.cc arcsort.cc closure.cc \
 @HAVE_SCRIPT_TRUE@compile.cc compose.cc concat.cc connect.cc convert.cc decode.cc determinize.cc \
@@ -369,8 +370,8 @@ LDADD = $(DL_LIBS)
 @HAVE_SCRIPT_TRUE@shortest-distance.cc shortest-path.cc stateiterator-class.cc synchronize.cc \
 @HAVE_SCRIPT_TRUE@text-io.cc topsort.cc union.cc weight-class.cc verify.cc
 
-@HAVE_SCRIPT_TRUE@libfstscript_la_LIBADD = ../lib/libfst.la
-@HAVE_SCRIPT_TRUE@libfstscript_la_LDFLAGS = -version-info 2:5:0
+@HAVE_SCRIPT_TRUE@libfstscript_la_LIBADD = ../lib/libfst.la -lm $(DL_LIBS)
+@HAVE_SCRIPT_TRUE@libfstscript_la_LDFLAGS = -version-info 3:0:0
 all: all-am
 
 .SUFFIXES:

@@ -55,7 +55,7 @@ bool FarEqual(const string &filename1, const string &filename2,
       delete reader2;
       return false;
     }
-    if (!Equal(reader1->GetFst(), reader2->GetFst(), delta)) {
+    if (!Equal(*(reader1->GetFst()), *(reader2->GetFst()), delta)) {
       VLOG(1) << "FarEqual: Fsts for key \"" << key1 << "\" are not equal.";
       delete reader1;
       delete reader2;

@@ -3,8 +3,8 @@
 //
 // Product weight set and associated semiring operation definitions.
 
-#ifndef FST_LIB_PRODUCT_WEIGHT_H__
-#define FST_LIB_PRODUCT_WEIGHT_H__
+#ifndef FST_LIB_PRODUCT_WEIGHT_H_
+#define FST_LIB_PRODUCT_WEIGHT_H_
 
 #include <stack>
 #include <string>
@@ -93,4 +93,4 @@ inline ProductWeight<W1, W2> Divide(const ProductWeight<W1, W2> &w,
 
 }  // namespace fst
 
-#endif  // FST_LIB_PRODUCT_WEIGHT_H__
+#endif  // FST_LIB_PRODUCT_WEIGHT_H_

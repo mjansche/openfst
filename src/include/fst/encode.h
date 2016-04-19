@@ -3,8 +3,8 @@
 //
 // Class to encode and decode an FST.
 
-#ifndef FST_LIB_ENCODE_H__
-#define FST_LIB_ENCODE_H__
+#ifndef FST_LIB_ENCODE_H_
+#define FST_LIB_ENCODE_H_
 
 #include <climits>
 #include <iostream>
@@ -558,4 +558,4 @@ typedef DecodeFst<StdArc> StdDecodeFst;
 
 }  // namespace fst
 
-#endif  // FST_LIB_ENCODE_H__
+#endif  // FST_LIB_ENCODE_H_

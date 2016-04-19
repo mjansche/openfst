@@ -3,8 +3,8 @@
 //
 // Functions implementing pruning.
 
-#ifndef FST_LIB_PRUNE_H__
-#define FST_LIB_PRUNE_H__
+#ifndef FST_LIB_PRUNE_H_
+#define FST_LIB_PRUNE_H_
 
 #include <vector>
 

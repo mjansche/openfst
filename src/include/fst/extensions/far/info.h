@@ -53,17 +53,17 @@ void FarInfo(const std::vector<string> &filenames, const string &begin_key,
     string key = far_reader->GetKey();
     if (!end_key.empty() && end_key < key) break;
     ++nfst;
-    const Fst<Arc> &fst = far_reader->GetFst();
-    fst_types.insert(fst.Type());
+    const Fst<Arc> *fst = far_reader->GetFst();
+    fst_types.insert(fst->Type());
     if (infos) {
-      KeyInfo info(key, fst.Type());
-      CountStatesAndArcs(fst, &info.nstate, &info.narc, &info.nfinal);
+      KeyInfo info(key, fst->Type());
+      CountStatesAndArcs(*fst, &info.nstate, &info.narc, &info.nfinal);
       nstate += info.nstate;
       narc += info.narc;
       nfinal += info.nfinal;
       infos->push_back(info);
     } else {
-      CountStatesAndArcs(fst, &nstate, &narc, &nfinal);
+      CountStatesAndArcs(*fst, &nstate, &narc, &nfinal);
     }
   }
 

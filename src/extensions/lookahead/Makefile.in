@@ -141,7 +141,9 @@ ilabel_lookahead_fst_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(AM_CXXFLAGS) $(CXXFLAGS) $(ilabel_lookahead_fst_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
-libfstlookahead_la_LIBADD =
+am__DEPENDENCIES_1 =
+libfstlookahead_la_DEPENDENCIES = ../../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am_libfstlookahead_la_OBJECTS = arc_lookahead-fst.lo \
 	ilabel_lookahead-fst.lo olabel_lookahead-fst.lo
 libfstlookahead_la_OBJECTS = $(am_libfstlookahead_la_OBJECTS)
@@ -367,7 +369,10 @@ lib_LTLIBRARIES = libfstlookahead.la
 libfstlookahead_la_SOURCES = arc_lookahead-fst.cc ilabel_lookahead-fst.cc \
 olabel_lookahead-fst.cc
 
-libfstlookahead_la_LDFLAGS = -version-info 2:5:0
+libfstlookahead_la_LDFLAGS = -version-info 3:0:0
+libfstlookahead_la_LIBADD = \
+    ../../lib/libfst.la -lm $(DL_LIBS)
+
 arc_lookahead_fst_la_SOURCES = arc_lookahead-fst.cc
 arc_lookahead_fst_la_LDFLAGS = -module
 ilabel_lookahead_fst_la_SOURCES = ilabel_lookahead-fst.cc

@@ -125,7 +125,10 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libfstmpdtscript_la_LIBADD =
+am__DEPENDENCIES_1 =
+@HAVE_SCRIPT_TRUE@libfstmpdtscript_la_DEPENDENCIES =  \
+@HAVE_SCRIPT_TRUE@	../../script/libfstscript.la \
+@HAVE_SCRIPT_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__libfstmpdtscript_la_SOURCES_DIST = mpdtscript.cc
 @HAVE_SCRIPT_TRUE@am_libfstmpdtscript_la_OBJECTS = mpdtscript.lo
 libfstmpdtscript_la_OBJECTS = $(am_libfstmpdtscript_la_OBJECTS)
@@ -143,7 +146,6 @@ am__mpdtcompose_SOURCES_DIST = mpdtcompose.cc
 @HAVE_BIN_TRUE@am_mpdtcompose_OBJECTS = mpdtcompose.$(OBJEXT)
 mpdtcompose_OBJECTS = $(am_mpdtcompose_OBJECTS)
 mpdtcompose_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 @HAVE_BIN_TRUE@mpdtcompose_DEPENDENCIES = libfstmpdtscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
 @HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
@@ -379,7 +381,11 @@ AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 @HAVE_BIN_TRUE@mpdtreverse_SOURCES = mpdtreverse.cc
 @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstmpdtscript.la
 @HAVE_SCRIPT_TRUE@libfstmpdtscript_la_SOURCES = mpdtscript.cc
-@HAVE_SCRIPT_TRUE@libfstmpdtscript_la_LDFLAGS = -version-info 2:5:0
+@HAVE_SCRIPT_TRUE@libfstmpdtscript_la_LDFLAGS = -version-info 3:0:0
+@HAVE_SCRIPT_TRUE@libfstmpdtscript_la_LIBADD = \
+@HAVE_SCRIPT_TRUE@  ../../script/libfstscript.la \
+@HAVE_SCRIPT_TRUE@  ../../lib/libfst.la -lm $(DL_LIBS)
+
 all: all-am
 
 .SUFFIXES:

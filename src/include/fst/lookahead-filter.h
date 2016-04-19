@@ -4,8 +4,8 @@
 // Composition filters to support lookahead matchers, useful for improving
 // composition efficiency with certain inputs.
 
-#ifndef FST_LIB_LOOKAHEAD_FILTER_H__
-#define FST_LIB_LOOKAHEAD_FILTER_H__
+#ifndef FST_LIB_LOOKAHEAD_FILTER_H_
+#define FST_LIB_LOOKAHEAD_FILTER_H_
 
 #include <vector>
 
@@ -646,4 +646,4 @@ class DefaultLookAhead<LogArc, MATCH_OUTPUT> {
 
 }  // namespace fst
 
-#endif  // FST_LIB_LOOKAHEAD_FILTER_H__
+#endif  // FST_LIB_LOOKAHEAD_FILTER_H_

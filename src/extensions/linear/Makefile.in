@@ -126,7 +126,10 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libfstdir)" \
 	"$(DESTDIR)$(bindir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(libfst_LTLIBRARIES)
-libfstlinearscript_la_LIBADD =
+am__DEPENDENCIES_1 =
+@HAVE_SCRIPT_TRUE@libfstlinearscript_la_DEPENDENCIES =  \
+@HAVE_SCRIPT_TRUE@	../../script/libfstscript.la \
+@HAVE_SCRIPT_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__libfstlinearscript_la_SOURCES_DIST = linearscript.cc
 @HAVE_SCRIPT_TRUE@am_libfstlinearscript_la_OBJECTS = linearscript.lo
 libfstlinearscript_la_OBJECTS = $(am_libfstlinearscript_la_OBJECTS)
@@ -165,7 +168,6 @@ am__fstlinear_SOURCES_DIST = fstlinear.cc
 @HAVE_BIN_TRUE@am_fstlinear_OBJECTS = fstlinear.$(OBJEXT)
 fstlinear_OBJECTS = $(am_fstlinear_OBJECTS)
 fstlinear_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 @HAVE_BIN_TRUE@fstlinear_DEPENDENCIES = libfstlinearscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
 @HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
@@ -381,15 +383,19 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 @HAVE_BIN_TRUE@LDADD = libfstlinearscript.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la -lm $(DL_LIBS)
+@HAVE_BIN_TRUE@    ../../lib/libfst.la -lm $(DL_LIBS)
 
 @HAVE_BIN_TRUE@fstlinear_SOURCES = fstlinear.cc
 @HAVE_BIN_TRUE@fstloglinearapply_SOURCES = fstloglinearapply.cc
 @HAVE_SCRIPT_TRUE@libfstlinearscript_la_SOURCES = linearscript.cc
-@HAVE_SCRIPT_TRUE@libfstlinearscript_la_LDFLAGS = -version-info 2:5:0
+@HAVE_SCRIPT_TRUE@libfstlinearscript_la_LDFLAGS = -version-info 3:0:0 -lm $(DL_LIBS)
+@HAVE_SCRIPT_TRUE@libfstlinearscript_la_LIBADD = \
+@HAVE_SCRIPT_TRUE@    ../../script/libfstscript.la \
+@HAVE_SCRIPT_TRUE@    ../../lib/libfst.la -lm $(DL_LIBS)
+
 @HAVE_SCRIPT_FALSE@libfst_LTLIBRARIES = linear_tagger-fst.la linear_classifier-fst.la
 @HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = linear_tagger-fst.la \
-@HAVE_SCRIPT_TRUE@	linear_classifier-fst.la
+@HAVE_SCRIPT_TRUE@    linear_classifier-fst.la
 
 @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstlinearscript.la
 linear_tagger_fst_la_SOURCES = linear-tagger-fst.cc

@@ -3,8 +3,8 @@
 //
 // Function objects to restrict which arcs are traversed in an FST.
 
-#ifndef FST_LIB_ARCFILTER_H__
-#define FST_LIB_ARCFILTER_H__
+#ifndef FST_LIB_ARCFILTER_H_
+#define FST_LIB_ARCFILTER_H_
 
 
 #include <fst/fst.h>
@@ -43,6 +43,30 @@ class OutputEpsilonArcFilter {
   bool operator()(const A &arc) const { return arc.olabel == 0; }
 };
 
+// True if specified label matches (doesn't match) when keep_match is
+// true (false).
+template <class A>
+class LabelArcFilter {
+ public:
+  typedef typename A::Label Label;
+
+  explicit LabelArcFilter(Label label, bool match_input = true,
+                          bool keep_match = true)
+      : label_(label), match_input_(match_input), keep_match_(keep_match) {}
+
+  bool operator()(const A &arc) const {
+    Label label = match_input_ ? arc.ilabel : arc.olabel;
+    bool match = label == label_;
+    return keep_match_ ? match : !match;
+  }
+
+ private:
+  Label label_;
+  bool match_input_;
+  bool keep_match_;
+};
+
+
 // True if specified labels match (don't match) when keep_match is
 // true (false).
 template <class A>
@@ -69,4 +93,4 @@ class MultiLabelArcFilter {
 
 }  // namespace fst
 
-#endif  // FST_LIB_ARCFILTER_H__
+#endif  // FST_LIB_ARCFILTER_H_

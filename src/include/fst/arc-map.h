@@ -5,8 +5,8 @@
 // implement project/invert. Consider using when operation does
 // not change the number of arcs (except possibly superfinal arcs).
 
-#ifndef FST_LIB_ARC_MAP_H__
-#define FST_LIB_ARC_MAP_H__
+#ifndef FST_LIB_ARC_MAP_H_
+#define FST_LIB_ARC_MAP_H_
 
 #include <string>
 #include <unordered_map>
@@ -1156,4 +1156,4 @@ struct ReverseWeightMapper {
 
 }  // namespace fst
 
-#endif  // FST_LIB_ARC_MAP_H__
+#endif  // FST_LIB_ARC_MAP_H_

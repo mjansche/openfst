@@ -3,8 +3,8 @@
 //
 // Float weight set and associated semiring operation definitions.
 
-#ifndef FST_LIB_FLOAT_WEIGHT_H__
-#define FST_LIB_FLOAT_WEIGHT_H__
+#ifndef FST_LIB_FLOAT_WEIGHT_H_
+#define FST_LIB_FLOAT_WEIGHT_H_
 
 #include <climits>
 #include <limits>
@@ -568,4 +568,4 @@ struct WeightConvert<LogWeight, Log64Weight> {
 
 }  // namespace fst
 
-#endif  // FST_LIB_FLOAT_WEIGHT_H__
+#endif  // FST_LIB_FLOAT_WEIGHT_H_

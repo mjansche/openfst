@@ -39,7 +39,7 @@ class STListWriter {
   typedef T EntryType;
   typedef W EntryWriter;
 
-  explicit STListWriter(const string filename)
+  explicit STListWriter(const string& filename)
       : stream_(filename.empty() ? &std::cout : new std::ofstream(
                                                     filename.c_str(),
                                                     std::ios_base::out |
@@ -214,7 +214,7 @@ class STListReader {
 
   const string &GetKey() const { return heap_.top().first; }
 
-  const EntryType &GetEntry() const { return *entry_; }
+  const EntryType *GetEntry() const { return entry_; }
 
   bool Error() const { return error_; }
 

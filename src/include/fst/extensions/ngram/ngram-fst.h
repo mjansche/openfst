@@ -69,7 +69,7 @@ class NGramFstImpl : public FstImpl<A> {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  NGramFstImpl() : data_region_(nullptr), data_(nullptr), owned_(false) {
+  NGramFstImpl() {
     SetType("ngram");
     SetInputSymbols(nullptr);
     SetOutputSymbols(nullptr);
@@ -125,7 +125,7 @@ class NGramFstImpl : public FstImpl<A> {
     return !strm.fail();
   }
 
-  StateId Start() const { return 1; }
+  StateId Start() const { return start_; }
 
   Weight Final(StateId state) const {
     if (final_index_.Get(state)) {
@@ -246,16 +246,24 @@ class NGramFstImpl : public FstImpl<A> {
   // Minimum file format version supported.
   static const int kMinFileVersion = 4;
 
-  MappedFile *data_region_;
-  const char *data_;
-  bool owned_;  // True if we own data_
-  uint64 num_states_, num_futures_, num_final_;
+  MappedFile *data_region_ = nullptr;
+  const char *data_ = nullptr;
+  bool owned_ = false;  // True if we own data_
+  StateId start_ = fst::kNoStateId;
+  uint64 num_states_ = 0;
+  uint64 num_futures_ = 0;
+  uint64 num_final_ = 0;
   std::pair<size_t, size_t> select_root_;
-  const Label *root_children_;
+  const Label *root_children_ = nullptr;
   // borrowed references
-  const uint64 *context_, *future_, *final_;
-  const Label *context_words_, *future_words_;
-  const Weight *backoff_, *final_probs_, *future_probs_;
+  const uint64 *context_ = nullptr;
+  const uint64 *future_ = nullptr;
+  const uint64 *final_ = nullptr;
+  const Label *context_words_ = nullptr;
+  const Label *future_words_ = nullptr;
+  const Weight *backoff_ = nullptr;
+  const Weight *final_probs_ = nullptr;
+  const Weight *future_probs_ = nullptr;
   BitmapIndex context_index_;
   BitmapIndex future_index_;
   BitmapIndex final_index_;
@@ -453,8 +461,7 @@ inline void NGramFst<A>::InitArcIterator(StateId s,
 
 template <typename A>
 NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst,
-                              std::vector<StateId> *order_out)
-    : data_region_(nullptr), data_(nullptr), owned_(false) {
+                              std::vector<StateId> *order_out) {
   typedef A Arc;
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
@@ -729,6 +736,7 @@ inline void NGramFstImpl<A>::Init(const char *data, bool owned,
     return;
   }
   root_children_ = context_words_ + context_index_.Rank1(2);
+  start_ = 1;
 }
 
 template <typename A>

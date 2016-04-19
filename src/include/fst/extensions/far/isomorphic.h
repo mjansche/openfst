@@ -45,7 +45,7 @@ bool FarIsomorphic(const string &filename1, const string &filename2,
               << key2 << "\".";
       return false;
     }
-    if (!Isomorphic(reader1->GetFst(), reader2->GetFst(), delta)) {
+    if (!Isomorphic(*(reader1->GetFst()), *(reader2->GetFst()), delta)) {
       VLOG(1) << "FarIsomorphic: FSTs for key \"" << key1
               << "\" are not isomorphic.";
       return false;

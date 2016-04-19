@@ -4,8 +4,8 @@
 // Expanded FST augmented with mutators; interface class definition and
 // mutable arc iterator interface.
 
-#ifndef FST_LIB_MUTABLE_FST_H__
-#define FST_LIB_MUTABLE_FST_H__
+#ifndef FST_LIB_MUTABLE_FST_H_
+#define FST_LIB_MUTABLE_FST_H_
 
 #include <stddef.h>
 #include <sys/types.h>
@@ -352,4 +352,4 @@ class ImplToMutableFst : public ImplToExpandedFst<I, F> {
 
 }  // namespace fst
 
-#endif  // FST_LIB_MUTABLE_FST_H__
+#endif  // FST_LIB_MUTABLE_FST_H_

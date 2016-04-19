@@ -3,8 +3,8 @@
 //
 // Cartesian power weight semiring operation definitions.
 
-#ifndef FST_LIB_POWER_WEIGHT_H__
-#define FST_LIB_POWER_WEIGHT_H__
+#ifndef FST_LIB_POWER_WEIGHT_H_
+#define FST_LIB_POWER_WEIGHT_H_
 
 #include <fst/tuple-weight.h>
 #include <fst/weight.h>
@@ -131,4 +131,4 @@ inline W DotProduct(const PowerWeight<W, n> &w1, const PowerWeight<W, n> &w2) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_POWER_WEIGHT_H__
+#endif  // FST_LIB_POWER_WEIGHT_H_

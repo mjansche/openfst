@@ -3,8 +3,8 @@
 //
 // Functions and classes to compute the concatenative closure of an FST.
 
-#ifndef FST_LIB_CLOSURE_H__
-#define FST_LIB_CLOSURE_H__
+#ifndef FST_LIB_CLOSURE_H_
+#define FST_LIB_CLOSURE_H_
 
 #include <algorithm>
 #include <vector>
@@ -130,4 +130,4 @@ typedef ClosureFst<StdArc> StdClosureFst;
 
 }  // namespace fst
 
-#endif  // FST_LIB_CLOSURE_H__
+#endif  // FST_LIB_CLOSURE_H_

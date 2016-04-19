@@ -3,8 +3,8 @@
 //
 // String weight set and associated semiring operation definitions.
 
-#ifndef FST_LIB_STRING_WEIGHT_H__
-#define FST_LIB_STRING_WEIGHT_H__
+#ifndef FST_LIB_STRING_WEIGHT_H_
+#define FST_LIB_STRING_WEIGHT_H_
 
 #include <list>
 #include <string>
@@ -731,4 +731,4 @@ inline GallicWeight<L, W, GALLIC> Divide(const GallicWeight<L, W, GALLIC> &w1,
 
 }  // namespace fst
 
-#endif  // FST_LIB_STRING_WEIGHT_H__
+#endif  // FST_LIB_STRING_WEIGHT_H_

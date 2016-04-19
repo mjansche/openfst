@@ -5,8 +5,8 @@
 // in heap using a key. The key can be used to do an in-place update of
 // values in the heap.
 
-#ifndef FST_LIB_HEAP_H__
-#define FST_LIB_HEAP_H__
+#ifndef FST_LIB_HEAP_H_
+#define FST_LIB_HEAP_H_
 
 #include <utility>
 #include <vector>
@@ -175,4 +175,4 @@ class Heap {
 
 }  // namespace fst
 
-#endif  // FST_LIB_HEAP_H__
+#endif  // FST_LIB_HEAP_H_

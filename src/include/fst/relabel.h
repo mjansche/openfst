@@ -3,8 +3,8 @@
 //
 // Functions and classes to relabel an FST (either on input or output).
 
-#ifndef FST_LIB_RELABEL_H__
-#define FST_LIB_RELABEL_H__
+#ifndef FST_LIB_RELABEL_H_
+#define FST_LIB_RELABEL_H_
 
 #include <string>
 #include <unordered_map>
@@ -516,4 +516,4 @@ typedef RelabelFst<StdArc> StdRelabelFst;
 
 }  // namespace fst
 
-#endif  // FST_LIB_RELABEL_H__
+#endif  // FST_LIB_RELABEL_H_

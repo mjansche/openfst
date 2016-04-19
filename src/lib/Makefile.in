@@ -122,7 +122,8 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libfst_la_LIBADD =
+am__DEPENDENCIES_1 =
+libfst_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_libfst_la_OBJECTS = compat.lo flags.lo fst.lo properties.lo \
 	symbol-table.lo util.lo symbol-table-ops.lo mapped-file.lo
 libfst_la_OBJECTS = $(am_libfst_la_OBJECTS)
@@ -330,12 +331,12 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
-LDADD = $(DL_LIBS)
 lib_LTLIBRARIES = libfst.la
 libfst_la_SOURCES = compat.cc flags.cc fst.cc properties.cc \
 symbol-table.cc util.cc symbol-table-ops.cc mapped-file.cc
 
-libfst_la_LDFLAGS = -version-info 2:5:0
+libfst_la_LDFLAGS = -version-info 3:0:0
+libfst_la_LIBADD = $(DL_LIBS)
 all: all-am
 
 .SUFFIXES:

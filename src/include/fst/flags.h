@@ -17,8 +17,8 @@
 // \file
 // Google-style flag handling declarations and inline definitions.
 
-#ifndef FST_LIB_FLAGS_H__
-#define FST_LIB_FLAGS_H__
+#ifndef FST_LIB_FLAGS_H_
+#define FST_LIB_FLAGS_H_
 
 #include <iostream>
 #include <map>
@@ -239,4 +239,4 @@ inline void InitFst(const char *usage, int *argc, char ***argv, bool rmflags) {
 
 void ShowUsage(bool long_usage = true);
 
-#endif  // FST_LIB_FLAGS_H__
+#endif  // FST_LIB_FLAGS_H_

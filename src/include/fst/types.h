@@ -22,8 +22,8 @@
 
 #include <fst/compat.h>  // for DISALLOW_COPY_AND_ASSIGN
 
-#ifndef FST_LIB_TYPES_H__
-#define FST_LIB_TYPES_H__
+#ifndef FST_LIB_TYPES_H_
+#define FST_LIB_TYPES_H_
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -35,4 +35,4 @@ typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
 
-#endif  // FST_LIB_TYPES_H__
+#endif  // FST_LIB_TYPES_H_

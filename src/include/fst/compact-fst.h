@@ -4,8 +4,8 @@
 // FST Class for memory-efficient representation of common types of
 // FSTs: linear automata, acceptors, unweighted FSTs, ...
 
-#ifndef FST_LIB_COMPACT_FST_H__
-#define FST_LIB_COMPACT_FST_H__
+#ifndef FST_LIB_COMPACT_FST_H_
+#define FST_LIB_COMPACT_FST_H_
 
 #include <iterator>
 #include <utility>
@@ -1397,4 +1397,4 @@ typedef CompactFst<StdArc, UnweightedAcceptorCompactor<StdArc>>
 
 }  // namespace fst
 
-#endif  // FST_LIB_COMPACT_FST_H__
+#endif  // FST_LIB_COMPACT_FST_H_

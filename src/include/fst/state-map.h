@@ -5,8 +5,8 @@
 //
 // Consider using when operation does not change the number of states.
 
-#ifndef FST_LIB_STATE_MAP_H__
-#define FST_LIB_STATE_MAP_H__
+#ifndef FST_LIB_STATE_MAP_H_
+#define FST_LIB_STATE_MAP_H_
 
 #include <algorithm>
 #include <string>
@@ -563,4 +563,4 @@ class ArcUniqueMapper {
 
 }  // namespace fst
 
-#endif  // FST_LIB_STATE_MAP_H__
+#endif  // FST_LIB_STATE_MAP_H_

@@ -3,8 +3,8 @@
 //
 // Functions to find shortest paths in an FST.
 
-#ifndef FST_LIB_SHORTEST_PATH_H__
-#define FST_LIB_SHORTEST_PATH_H__
+#ifndef FST_LIB_SHORTEST_PATH_H_
+#define FST_LIB_SHORTEST_PATH_H_
 
 #include <functional>
 #include <utility>
@@ -524,4 +524,4 @@ void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst, int32 n = 1,
 
 }  // namespace fst
 
-#endif  // FST_LIB_SHORTEST_PATH_H__
+#endif  // FST_LIB_SHORTEST_PATH_H_

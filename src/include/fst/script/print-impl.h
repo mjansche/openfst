@@ -11,7 +11,7 @@
 #include <sstream>
 #include <string>
 
-#include <fst/fst.h>
+#include <fst/fstlib.h>
 #include <fst/util.h>
 
 DECLARE_string(fst_field_separator);
