@@ -3,6 +3,8 @@
 //
 // Find shortest path(s) in an FST.
 
+#include <memory>
+
 #include <fst/script/shortest-path.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
@@ -35,7 +37,7 @@ int main(int argc, char **argv) {
   string in_fname = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
   string out_fname = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_fname);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_fname));
   if (!ifst) return 1;
 
   WeightClass weight_threshold =
@@ -43,10 +45,8 @@ int main(int argc, char **argv) {
                            : WeightClass(ifst->WeightType(), FLAGS_weight);
 
   VectorFstClass ofst(ifst->ArcType());
-  std::vector<WeightClass> distance;
 
   fst::QueueType qt;
-
   if (FLAGS_queue_type == "auto") {
     qt = fst::AUTO_QUEUE;
   } else if (FLAGS_queue_type == "fifo") {
@@ -67,6 +67,8 @@ int main(int argc, char **argv) {
   s::ShortestPathOptions opts(qt, FLAGS_nshortest, FLAGS_unique, false,
                               FLAGS_delta, false, weight_threshold,
                               FLAGS_nstate);
+
+  std::vector<WeightClass> distance;
 
   s::ShortestPath(*ifst, &ofst, &distance, opts);
 

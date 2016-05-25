@@ -86,15 +86,15 @@ class StringReader {
     }
   }
 
-  CompactFst<A, StringCompactor<A>> *GetCompactFst(bool keep_symbols = false) {
-    CompactFst<A, StringCompactor<A>> *fst;
+  CompactStringFst<A> *GetCompactFst(bool keep_symbols = false) {
+    CompactStringFst<A> *fst;
     if (keep_symbols) {
       VectorFst<A> tmp;
       tmp.SetInputSymbols(symbols_);
       tmp.SetOutputSymbols(symbols_);
-      fst = new CompactFst<A, StringCompactor<A>>(tmp);
+      fst = new CompactStringFst<A>(tmp);
     } else {
-      fst = new CompactFst<A, StringCompactor<A>>;
+      fst = new CompactStringFst<A>;
     }
     if (compiler_(content_, fst)) {
       return fst;

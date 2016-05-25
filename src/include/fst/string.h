@@ -18,6 +18,10 @@ DECLARE_string(fst_field_separator);
 
 namespace fst {
 
+// This will eventually replace StringCompiler<Arc>::TokenType and
+// StringPrinter<Arc>::TokenType.
+enum StringTokenType { SYMBOL = 1, BYTE = 2, UTF8 = 3 };
+
 // Functor compiling a string in an FST
 template <class A>
 class StringCompiler {
@@ -34,6 +38,11 @@ class StringCompiler {
         syms_(syms),
         unknown_label_(unknown_label),
         allow_negative_(allow_negative) {}
+
+  StringCompiler(StringTokenType type, const SymbolTable *syms = 0,
+                 Label unknown_label = kNoLabel, bool allow_negative = false)
+      : StringCompiler(static_cast<TokenType>(type), syms, unknown_label,
+                       allow_negative) {}
 
   // Compile string 's' into FST 'fst'.
   template <class F>
@@ -93,13 +102,13 @@ class StringCompiler {
 
   template <class Unsigned>
   void Compile(const std::vector<Label> &labels,
-               CompactFst<A, StringCompactor<A>, Unsigned> *fst) const {
+               CompactStringFst<A, Unsigned> *fst) const {
     fst->SetCompactElements(labels.begin(), labels.end());
   }
 
   template <class Unsigned>
   void Compile(const std::vector<Label> &labels,
-               CompactFst<A, WeightedStringCompactor<A>, Unsigned> *fst,
+               CompactWeightedStringFst<A, Unsigned> *fst,
                const Weight &weight = Weight::One()) const {
     std::vector<std::pair<Label, Weight>> compacts;
     compacts.reserve(labels.size() + 1);
@@ -155,6 +164,10 @@ class StringPrinter {
 
   explicit StringPrinter(TokenType token_type, const SymbolTable *syms = 0)
       : token_type_(token_type), syms_(syms) {}
+
+  explicit StringPrinter(StringTokenType token_type,
+                         const SymbolTable *syms = 0)
+      : StringPrinter(static_cast<TokenType>(token_type), syms) {}
 
   // Convert the FST 'fst' into the string 'output'
   bool operator()(const Fst<A> &fst, string *output) {

@@ -3,6 +3,7 @@
 //
 // Concatenates two FSTs.
 
+#include <memory>
 #include <string>
 
 #include <fst/script/concat.h>
@@ -32,13 +33,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  MutableFstClass *fst1 = MutableFstClass::Read(in1_name, true);
+  std::unique_ptr<MutableFstClass> fst1(MutableFstClass::Read(in1_name, true));
   if (!fst1) return 1;
 
-  FstClass *fst2 = FstClass::Read(in2_name);
+  std::unique_ptr<FstClass> fst2(FstClass::Read(in2_name));
   if (!fst2) return 1;
 
-  s::Concat(fst1, *fst2);
+  s::Concat(fst1.get(), *fst2);
   fst1->Write(out_fname);
 
   return 0;

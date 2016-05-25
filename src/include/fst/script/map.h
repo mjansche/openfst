@@ -4,6 +4,8 @@
 #ifndef FST_SCRIPT_MAP_H_
 #define FST_SCRIPT_MAP_H_
 
+#include <memory>
+
 #include <fst/arc-map.h>
 #include <fst/state-map.h>
 #include <fst/script/arg-packs.h>
@@ -58,59 +60,55 @@ void Map(MapArgs *args) {
   float delta = args->args.arg3;
   typename Arc::Weight weight_param =
       *(args->args.arg4.GetWeight<typename Arc::Weight>());
-  Fst<Arc> *fst = nullptr;
-  Fst<LogArc> *lfst = nullptr;
-  Fst<Log64Arc> *l64fst = nullptr;
-  Fst<StdArc> *sfst = nullptr;
+  std::unique_ptr<Fst<Arc>> fst;
+  std::unique_ptr<Fst<LogArc>> lfst;
+  std::unique_ptr<Fst<Log64Arc>> l64fst;
+  std::unique_ptr<Fst<StdArc>> sfst;
   if (map_type == ARC_SUM_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::StateMap(ifst, ArcSumMapper<Arc>(ifst))));
+    fst.reset(script::StateMap(ifst, ArcSumMapper<Arc>(ifst)));
+    args->retval = new FstClass(*fst);
   } else if (map_type == IDENTITY_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, IdentityArcMapper<Arc>())));
+    fst.reset(script::ArcMap(ifst, IdentityArcMapper<Arc>()));
+    args->retval = new FstClass(*fst);
   } else if (map_type == INPUT_EPSILON_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, InputEpsilonMapper<Arc>())));
+    fst.reset(script::ArcMap(ifst, InputEpsilonMapper<Arc>()));
+    args->retval = new FstClass(*fst);
   } else if (map_type == INVERT_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, InvertWeightMapper<Arc>())));
+    fst.reset(script::ArcMap(ifst, InvertWeightMapper<Arc>()));
+    args->retval = new FstClass(*fst);
   } else if (map_type == OUTPUT_EPSILON_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, OutputEpsilonMapper<Arc>())));
+    fst.reset(script::ArcMap(ifst, OutputEpsilonMapper<Arc>()));
+    args->retval = new FstClass(*fst);
   } else if (map_type == PLUS_MAPPER) {
-    args->retval = new FstClass(
-        *(fst = script::ArcMap(ifst, PlusMapper<Arc>(weight_param))));
+    fst.reset(script::ArcMap(ifst, PlusMapper<Arc>(weight_param)));
+    args->retval = new FstClass(*fst);
   } else if (map_type == QUANTIZE_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, QuantizeMapper<Arc>(delta))));
+    fst.reset(script::ArcMap(ifst, QuantizeMapper<Arc>(delta)));
+    args->retval = new FstClass(*fst);
   } else if (map_type == RMWEIGHT_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, RmWeightMapper<Arc>())));
+    fst.reset(script::ArcMap(ifst, RmWeightMapper<Arc>()));
+    args->retval = new FstClass(*fst);
   } else if (map_type == SUPERFINAL_MAPPER) {
-    args->retval =
-        new FstClass(*(fst = script::ArcMap(ifst, SuperFinalMapper<Arc>())));
+    fst.reset(script::ArcMap(ifst, SuperFinalMapper<Arc>()));
+    args->retval = new FstClass(*fst);
   } else if (map_type == TIMES_MAPPER) {
-    args->retval = new FstClass(
-        *(fst = script::ArcMap(ifst, TimesMapper<Arc>(weight_param))));
+    fst.reset(script::ArcMap(ifst, TimesMapper<Arc>(weight_param)));
+    args->retval = new FstClass(*fst);
   } else if (map_type == TO_LOG_MAPPER) {
-    args->retval = new FstClass(
-        *(lfst = script::ArcMap(ifst, WeightConvertMapper<Arc, LogArc>())));
+    lfst.reset(script::ArcMap(ifst, WeightConvertMapper<Arc, LogArc>()));
+    args->retval = new FstClass(*lfst);
   } else if (map_type == TO_LOG64_MAPPER) {
-    args->retval = new FstClass(
-        *(l64fst = script::ArcMap(ifst, WeightConvertMapper<Arc, Log64Arc>())));
+    l64fst.reset(script::ArcMap(ifst, WeightConvertMapper<Arc, Log64Arc>()));
+    args->retval = new FstClass(*l64fst);
   } else if (map_type == TO_STD_MAPPER) {
-    args->retval = new FstClass(
-        *(sfst = script::ArcMap(ifst, WeightConvertMapper<Arc, StdArc>())));
+    sfst.reset(script::ArcMap(ifst, WeightConvertMapper<Arc, StdArc>()));
+    args->retval = new FstClass(*sfst);
   } else {
     FSTERROR() << "Unknown mapper type: " << map_type;
     VectorFst<Arc> *ofst = new VectorFst<Arc>;
     ofst->SetProperties(kError, kError);
-    args->retval = new FstClass(*(fst = ofst));
+    args->retval = new FstClass(*ofst);
   }
-  delete sfst;
-  delete l64fst;
-  delete lfst;
-  delete fst;
 }
 
 FstClass *Map(const FstClass &fst, MapType map_type, float delta,

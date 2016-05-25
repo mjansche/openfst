@@ -3,9 +3,12 @@
 //
 // Minimizes a deterministic FST.
 
+#include <memory>
+
 #include <fst/script/minimize.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
+DEFINE_bool(allow_nondet, false, "Minimize non-deterministic FSTs");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -33,15 +36,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  MutableFstClass *fst1 = MutableFstClass::Read(in_name, true);
+  std::unique_ptr<MutableFstClass> fst1(MutableFstClass::Read(in_name, true));
   if (!fst1) return 1;
 
-  MutableFstClass *fst2 = argc > 3 ? new VectorFstClass(fst1->ArcType()) : 0;
-
-  s::Minimize(fst1, fst2, FLAGS_delta);
-
+  if (argc > 3) {
+    std::unique_ptr<MutableFstClass> fst2(new VectorFstClass(fst1->ArcType()));
+    s::Minimize(fst1.get(), fst2.get(), FLAGS_delta, FLAGS_allow_nondet);
+    fst2->Write(out2_name);
+  } else {
+    s::Minimize(fst1.get(), nullptr, FLAGS_delta, FLAGS_allow_nondet);
+  }
   fst1->Write(out1_name);
-  if (fst2) fst2->Write(out2_name);
 
   return 0;
 }

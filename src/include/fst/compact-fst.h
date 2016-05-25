@@ -57,19 +57,19 @@ struct CompactFstOptions : public CacheOptions {
 //   Element Compact(StateId s, const Arc &arc);
 //   // Return the transition at state 's' represented by the compacted
 //   // transition 'e'.
-//   Arc Expand(StateId s, const Element &e);
+//   Arc Expand(StateId s, const Element &e) const;
 //   // Return -1 for variable out-degree compactors, and the mandatory
 //   // out-degree otherwise.
-//   ssize_t Size();
+//   ssize_t Size() const;
 //   // Test whether 'fst' can be compacted by this compactor.
-//   bool Compatible(const Fst<A> &fst);
+//   bool Compatible(const Fst<A> &fst) const;
 //   // Return the properties that are always true for an fst
 //   // compacted using this compactor
-//   uint64 Properties();
+//   uint64 Properties() const;
 //   // Return a string identifying the type of compactor.
 //   static const string &Type();
 //   // Write a compactor to a file.
-//   bool Write(std::ostream &strm);
+//   bool Write(std::ostream &strm) const;
 //   // Read a compactor from a file.
 //   static Compactor *Read(std::istream &strm);
 //   // Default constructor (optional, see comment below).
@@ -443,8 +443,7 @@ class CompactFstImpl : public CacheImpl<A> {
 
   CompactFstImpl()
       : CacheImpl<A>(CompactFstOptions()),
-        compactor_(0),
-        own_compactor_(false),
+        compactor_(),
         data_() {
     string type = "compact";
     if (sizeof(U) != sizeof(uint32)) {
@@ -462,49 +461,27 @@ class CompactFstImpl : public CacheImpl<A> {
     SetProperties(kNullProperties | kStaticProperties);
   }
 
-  CompactFstImpl(const Fst<Arc> &fst, const C &compactor,
-                 const CompactFstOptions &opts)
-      : CacheImpl<A>(opts),
-        compactor_(new C(compactor)),
-        own_compactor_(true),
-        data_() {
-    Init(fst);
-  }
-
-  CompactFstImpl(const Fst<Arc> &fst, C *compactor,
-                 const CompactFstOptions &opts)
-      : CacheImpl<A>(opts),
-        compactor_(compactor),
-        own_compactor_(false),
-        data_() {
-    Init(fst);
+  CompactFstImpl(const Fst<Arc> &fst, std::shared_ptr<C> compactor,
+                 const CompactFstOptions &opts,
+                 std::shared_ptr<DataStorage> data)
+      : CacheImpl<A>(opts), compactor_(compactor) {
+    Init(fst, data);
   }
 
   template <class Iterator>
-  CompactFstImpl(const Iterator &b, const Iterator &e, const C &compactor,
+  CompactFstImpl(const Iterator &b, const Iterator &e,
+                 std::shared_ptr<C> compactor,
                  const CompactFstOptions &opts)
       : CacheImpl<A>(opts),
-        compactor_(new C(compactor)),
-        own_compactor_(true),
-        data_() {
-    Init(b, e);
-  }
-
-  template <class Iterator>
-  CompactFstImpl(const Iterator &b, const Iterator &e, C *compactor,
-                 const CompactFstOptions &opts)
-      : CacheImpl<A>(opts),
-        compactor_(compactor),
-        own_compactor_(false),
-        data_() {
+        compactor_(compactor) {
     Init(b, e);
   }
 
   CompactFstImpl(const CompactFstImpl<A, C, U, S> &impl)
       : CacheImpl<A>(impl),
-        compactor_(impl.compactor_ == nullptr ? nullptr
-                                              : new C(*impl.compactor_)),
-        own_compactor_(true),
+        compactor_(impl.compactor_ == nullptr ?
+                   nullptr :
+                   std::make_shared<C>(*impl.compactor_)),
         data_(impl.data_) {
     SetType(impl.Type());
     SetProperties(impl.Properties());
@@ -512,9 +489,7 @@ class CompactFstImpl : public CacheImpl<A> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~CompactFstImpl() override {
-    if (own_compactor_) delete compactor_;
-  }
+  ~CompactFstImpl() override {}
 
   StateId Start() {
     if (!HasStart()) {
@@ -602,12 +577,11 @@ class CompactFstImpl : public CacheImpl<A> {
     if (hdr.Version() == kAlignedFileVersion)
       hdr.SetFlags(hdr.GetFlags() | FstHeader::IS_ALIGNED);
 
-    impl->compactor_ = C::Read(strm);
+    impl->compactor_ = std::shared_ptr<C>(C::Read(strm));
     if (!impl->compactor_) {
       delete impl;
       return nullptr;
     }
-    impl->own_compactor_ = true;
     impl->data_ = std::shared_ptr<DataStorage>(
         DataStorage::Read(strm, opts, hdr, *impl->compactor_));
     if (!impl->data_) {
@@ -668,7 +642,8 @@ class CompactFstImpl : public CacheImpl<A> {
     if (data_->Error()) SetProperties(kError, kError);
   }
 
-  C *GetCompactor() const { return compactor_; }
+  const C *GetCompactor() const { return compactor_.get(); }
+  std::shared_ptr<C> SharedCompactor() const { return compactor_; }
   const DataStorage *Data() const { return data_.get(); }
   std::shared_ptr<DataStorage> SharedData() const { return data_; }
 
@@ -679,8 +654,7 @@ class CompactFstImpl : public CacheImpl<A> {
   template <class OtherA, class OtherC>
   explicit CompactFstImpl(const CompactFstImpl<OtherA, OtherC, U, S> &impl)
       : CacheImpl<A>(CacheOptions(impl.GetCacheGc(), impl.GetCacheLimit())),
-        compactor_(new C(*impl.GetCompactor())),
-        own_compactor_(true),
+        compactor_(std::make_shared<C>(*impl.GetCompactor())),
         data_(impl.SharedData()) {
     SetType(impl.Type());
     SetProperties(impl.Properties());
@@ -691,7 +665,7 @@ class CompactFstImpl : public CacheImpl<A> {
  private:
   friend class CompactFst<A, C, U, S>;  // allow access during write.
 
-  void Init(const Fst<Arc> &fst) {
+  void Init(const Fst<Arc> &fst, std::shared_ptr<DataStorage> data) {
     string type = "compact";
     if (sizeof(U) != sizeof(uint32)) {
       string size;
@@ -707,7 +681,10 @@ class CompactFstImpl : public CacheImpl<A> {
     SetType(type);
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
-    data_ = std::make_shared<DataStorage>(fst, *compactor_);
+    if (data != nullptr)
+      data_ = data;
+    else
+      data_ = std::make_shared<DataStorage>(fst, *compactor_);
     if (data_->Error()) SetProperties(kError, kError);
     uint64 copy_properties = fst.Properties(kMutable, false) ?
         fst.Properties(kCopyProperties, true):
@@ -745,8 +722,7 @@ class CompactFstImpl : public CacheImpl<A> {
   // Minimum file format version supported
   static const int kMinFileVersion = 1;
 
-  C *compactor_;
-  bool own_compactor_;
+  std::shared_ptr<C> compactor_;
   std::shared_ptr<DataStorage> data_;
 };
 
@@ -782,13 +758,20 @@ class CompactFst : public ImplToExpandedFst<CompactFstImpl<A, C, U, S>> {
 
   CompactFst() : ImplToExpandedFst<Impl>(std::make_shared<Impl>()) {}
 
+  // If data is not nullptr, it is assumed to be already initialized.
   explicit CompactFst(const Fst<A> &fst, const C &compactor = C(),
-                      const CompactFstOptions &opts = CompactFstOptions())
-      : ImplToExpandedFst<Impl>(std::make_shared<Impl>(fst, compactor, opts)) {}
+                      const CompactFstOptions &opts = CompactFstOptions(),
+                      std::shared_ptr<S> data = std::shared_ptr<S>())
+      : ImplToExpandedFst<Impl>(
+            std::make_shared<Impl>(
+                fst, std::make_shared<C>(compactor), opts, data)) {}
 
-  CompactFst(const Fst<A> &fst, C *compactor,
-             const CompactFstOptions &opts = CompactFstOptions())
-      : ImplToExpandedFst<Impl>(std::make_shared<Impl>(fst, compactor, opts)) {}
+  // If data is not nullptr, it is assumed to be already initialized.
+  CompactFst(const Fst<A> &fst, std::shared_ptr<C> compactor,
+             const CompactFstOptions &opts = CompactFstOptions(),
+             std::shared_ptr<S> data = std::shared_ptr<S>())
+      : ImplToExpandedFst<Impl>(
+            std::make_shared<Impl>(fst, compactor, opts, data)) {}
 
   // The following 2 constructors take as input two iterators delimiting
   // a set of (already) compacted transitions, starting with the
@@ -814,10 +797,12 @@ class CompactFst : public ImplToExpandedFst<CompactFstImpl<A, C, U, S>> {
                       const C &compactor = C(),
                       const CompactFstOptions &opts = CompactFstOptions())
       : ImplToExpandedFst<Impl>(
-            std::make_shared<Impl>(begin, end, compactor, opts)) {}
+            std::make_shared<Impl>(
+                begin, end, std::make_shared<C>(compactor), opts)) {}
 
   template <class Iterator>
-  CompactFst(const Iterator &begin, const Iterator &end, C *compactor,
+  CompactFst(const Iterator &begin, const Iterator &end,
+             std::shared_ptr<C> compactor,
              const CompactFstOptions &opts = CompactFstOptions())
       : ImplToExpandedFst<Impl>(
             std::make_shared<Impl>(begin, end, compactor, opts)) {}
@@ -1086,7 +1071,7 @@ class ArcIterator<CompactFst<A, C, U>> {
   }
 
  private:
-  C *compactor_;
+  const C *compactor_;
   StateId state_;
   const CompactElement *compacts_;
   size_t pos_;
@@ -1385,15 +1370,25 @@ class UnweightedCompactor {
   }
 };
 
-// Useful aliases when using StdArc
-typedef CompactFst<StdArc, StringCompactor<StdArc>> StdCompactStringFst;
-typedef CompactFst<StdArc, WeightedStringCompactor<StdArc>>
-    StdCompactWeightedStringFst;
-typedef CompactFst<StdArc, AcceptorCompactor<StdArc>> StdCompactAcceptorFst;
-typedef CompactFst<StdArc, UnweightedCompactor<StdArc>>
-    StdCompactUnweightedFst;
-typedef CompactFst<StdArc, UnweightedAcceptorCompactor<StdArc>>
-    StdCompactUnweightedAcceptorFst;
+// Useful aliases
+template <class A, class U /* = uint32 */>
+using CompactStringFst = CompactFst<A, StringCompactor<A>, U>;
+template <class A, class U /* = uint32 */>
+using CompactWeightedStringFst = CompactFst<A, WeightedStringCompactor<A>, U>;
+template <class A, class U /* = uint32 */>
+using CompactAcceptorFst = CompactFst<A, AcceptorCompactor<A>, U>;
+template <class A, class U /* = uint32 */>
+using CompactUnweightedFst = CompactFst<A, UnweightedCompactor<A>, U>;
+template <class A, class U /* = uint32 */>
+using CompactUnweightedAcceptorFst =
+    CompactFst<A, UnweightedAcceptorCompactor<A>, U>;
+
+using StdCompactStringFst = CompactStringFst<StdArc, uint32>;
+using StdCompactWeightedStringFst = CompactWeightedStringFst<StdArc, uint32>;
+using StdCompactAcceptorFst = CompactAcceptorFst<StdArc, uint32>;
+using StdCompactUnweightedFst = CompactUnweightedFst<StdArc, uint32>;
+using StdCompactUnweightedAcceptorFst =
+    CompactUnweightedAcceptorFst<StdArc, uint32>;
 
 }  // namespace fst
 

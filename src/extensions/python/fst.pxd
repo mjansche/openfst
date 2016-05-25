@@ -262,6 +262,13 @@ cdef extern from "<fst/script/fstscript.h>" namespace "fst::script" nogil:
     @staticmethod
     const WeightClass &NoWeight(const string &)
 
+  cdef WeightClass Plus(const WeightClass &, const WeightClass &)
+
+  cdef WeightClass Times(const WeightClass &, const WeightClass &)
+
+  cdef WeightClass Divide(const WeightClass &, const WeightClass &)
+
+  cdef WeightClass Power(const WeightClass &, size_t)
 
   # Arcs.
   cdef cppclass ArcClass:
@@ -315,8 +322,6 @@ cdef extern from "<fst/script/fstscript.h>" namespace "fst::script" nogil:
 
   cdef cppclass MutableFstClass(FstClass):
 
-    MutableFstClass(const FstClass &)
-
     bool AddArc(int64, const ArcClass &)
 
     int64 AddState()
@@ -351,7 +356,9 @@ cdef extern from "<fst/script/fstscript.h>" namespace "fst::script" nogil:
 
   cdef cppclass VectorFstClass(MutableFstClass):
 
-    VectorFstClass(const string &)
+   VectorFstClass(const FstClass &)
+
+   VectorFstClass(const string &)
 
 
   # EncodeMapper.

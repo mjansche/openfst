@@ -3,6 +3,8 @@
 //
 // Projects a transduction onto its input or output language.
 
+#include <memory>
+
 #include <fst/script/project.h>
 
 DEFINE_bool(project_output, false, "Project on output (vs. input)");
@@ -28,13 +30,13 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_name, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_name, true));
   if (!fst) return 1;
 
   fst::ProjectType project_type =
       FLAGS_project_output ? fst::PROJECT_OUTPUT : fst::PROJECT_INPUT;
 
-  s::Project(fst, project_type);
+  s::Project(fst.get(), project_type);
 
   fst->Write(out_name);
 

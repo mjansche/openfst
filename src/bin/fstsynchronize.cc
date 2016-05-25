@@ -3,6 +3,8 @@
 //
 // Synchronizes an FST.
 
+#include <memory>
+
 #include <fst/script/synchronize.h>
 
 int main(int argc, char **argv) {
@@ -24,7 +26,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
   VectorFstClass ofst(ifst->ArcType());

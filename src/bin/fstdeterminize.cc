@@ -3,6 +3,8 @@
 //
 // Determinizes an FST.
 
+#include <memory>
+
 #include <fst/script/determinize.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
@@ -51,7 +53,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
   VectorFstClass ofst(ifst->ArcType());
@@ -60,9 +62,9 @@ int main(int argc, char **argv) {
       FLAGS_weight.empty() ? WeightClass::Zero(ifst->WeightType())
                            : WeightClass(ifst->WeightType(), FLAGS_weight);
 
-  s::DeterminizeOptions opts(FLAGS_delta, weight_threshold,
-                             FLAGS_nstate, FLAGS_subsequential_label,
-                             det_type, FLAGS_increment_subsequential_label);
+  s::DeterminizeOptions opts(FLAGS_delta, weight_threshold, FLAGS_nstate,
+                             FLAGS_subsequential_label, det_type,
+                             FLAGS_increment_subsequential_label);
 
   s::Determinize(*ifst, &ofst, opts);
 

@@ -51,11 +51,12 @@ namespace fst {
 //
 // Note this is more general than DfsVisit() in dfs-visit.h but lacks
 // some DFS-specific Visitor behavior.
-template <class Arc, class V, class Q, class ArcFilter>
-void Visit(const Fst<Arc> &fst, V *visitor, Q *queue, ArcFilter filter,
+template <class F, class V, class Q, class ArcFilter>
+void Visit(const F &fst, V *visitor, Q *queue, ArcFilter filter,
            bool access_only = false) {
+  typedef typename F::Arc Arc;
   typedef typename Arc::StateId StateId;
-  typedef ArcIterator<Fst<Arc>> AIterator;
+  typedef ArcIterator<F> AIterator;
 
   visitor->InitVisit(fst);
 

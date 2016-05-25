@@ -3,6 +3,8 @@
 //
 //  Encode transducer labels and/or weights.
 
+#include <memory>
+
 #include <fst/script/decode.h>
 #include <fst/script/encode.h>
 
@@ -32,20 +34,19 @@ int main(int argc, char **argv) {
   string codex_name = argv[2];
   string out_name = argc > 3 ? argv[3] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_name, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_name, true));
   if (!fst) return 1;
 
   if (FLAGS_decode == false) {
     uint32 flags = 0;
     flags |= FLAGS_encode_labels ? fst::kEncodeLabels : 0;
     flags |= FLAGS_encode_weights ? fst::kEncodeWeights : 0;
-    s::Encode(fst, flags, FLAGS_encode_reuse, codex_name);
+    s::Encode(fst.get(), flags, FLAGS_encode_reuse, codex_name);
     fst->Write(out_name);
   } else {
-    s::Decode(fst, codex_name);
+    s::Decode(fst.get(), codex_name);
     fst->Write(out_name);
   }
 
-  delete fst;
   return 0;
 }

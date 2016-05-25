@@ -22,7 +22,7 @@ void Reweight(ReweightArgs *args) {
   MutableFst<Arc> *fst = args->arg1->GetMutableFst<Arc>();
   typedef typename Arc::Weight Weight;
   std::vector<Weight> potentials(args->arg2.size());
-  for (unsigned i = 0; i < args->arg2.size(); ++i)
+  for (auto i = 0; i < args->arg2.size(); ++i)
     potentials[i] = *(args->arg2[i].GetWeight<Weight>());
   Reweight(fst, potentials, args->arg3);
 }

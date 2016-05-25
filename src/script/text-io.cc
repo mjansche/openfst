@@ -4,6 +4,7 @@
 #include <fst/script/text-io.h>
 
 #include <cstring>
+#include <fstream>
 #include <ostream>
 #include <sstream>
 #include <utility>
@@ -54,26 +55,22 @@ bool ReadPotentials(const string &weight_type, const string &filename,
 // Writes vector of weights; returns true on success.
 bool WritePotentials(const string &filename,
                      const std::vector<WeightClass> &potential) {
-  std::ostream *strm = &std::cout;
+  std::ofstream fstrm;
   if (!filename.empty()) {
-    strm = new std::ofstream(filename.c_str());
-    if (!strm->good()) {
+    fstrm.open(filename.c_str());
+    if (!fstrm) {
       LOG(ERROR) << "WritePotentials: Can't open file: " << filename;
-      delete strm;
       return false;
     }
   }
-
-  strm->precision(9);
-  for (ssize_t s = 0; s < potential.size(); ++s)
-    *strm << s << "\t" << potential[s] << "\n";
-
-  if (strm->fail())
+  std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
+  ostrm.precision(9);
+  for (size_t s = 0; s < potential.size(); ++s)
+    ostrm << s << "\t" << potential[s] << "\n";
+  if (ostrm.fail())
     LOG(ERROR) << "WritePotentials: Write failed: "
                << (filename.empty() ? "standard output" : filename);
-  bool ret = !strm->fail();
-  if (strm != &std::cout) delete strm;
-  return ret;
+  return !ostrm;
 }
 
 }  // namespace script

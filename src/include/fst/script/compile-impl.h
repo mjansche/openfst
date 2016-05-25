@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -41,14 +42,11 @@ class FstCompiler {
               const SymbolTable *isyms, const SymbolTable *osyms,
               const SymbolTable *ssyms, bool accep, bool ikeep,
               bool okeep, bool nkeep, bool allow_negative_labels = false) {
-    SymbolTable* misyms = isyms ? isyms->Copy() : nullptr;
-    SymbolTable* mosyms = osyms ? osyms->Copy() : nullptr;
-    SymbolTable* mssyms = ssyms ? ssyms->Copy() : nullptr;
-    Init(istrm, source, misyms, mosyms, mssyms, accep, ikeep, okeep, nkeep,
-         allow_negative_labels, false);
-    delete mssyms;
-    delete mosyms;
-    delete misyms;
+    std::unique_ptr<SymbolTable> misyms(isyms ? isyms->Copy() : nullptr);
+    std::unique_ptr<SymbolTable> mosyms(osyms ? osyms->Copy() : nullptr);
+    std::unique_ptr<SymbolTable> mssyms(ssyms ? ssyms->Copy() : nullptr);
+    Init(istrm, source, misyms.get(), mosyms.get(), mssyms.get(), accep,
+         ikeep, okeep, nkeep, allow_negative_labels, false);
   }
 
   FstCompiler(std::istream &istrm, const string &source,  // NOLINT

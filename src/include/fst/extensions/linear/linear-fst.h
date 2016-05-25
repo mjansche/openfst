@@ -67,8 +67,8 @@ class LinearTaggerFstImpl : public CacheImpl<A> {
   //
   // TODO(wuke): when there is no constraint on output we can delay
   // less than `data->MaxFutureSize` positions.
-  LinearTaggerFstImpl(const LinearFstData<Arc> *data, SymbolTable *isyms,
-                      SymbolTable *osyms, CacheOptions opts)
+  LinearTaggerFstImpl(const LinearFstData<Arc> *data, const SymbolTable *isyms,
+                      const SymbolTable *osyms, CacheOptions opts)
       : CacheImpl<A>(opts), data_(data), delay_(data->MaxFutureSize()) {
     SetType("linear-tagger");
     SetProperties(kILabelSorted, kFstProperties);
@@ -460,8 +460,9 @@ class LinearTaggerFst : public ImplToFst<LinearTaggerFstImpl<A>> {
 
   LinearTaggerFst() : ImplToFst<Impl>(std::make_shared<Impl>()) {}
 
-  explicit LinearTaggerFst(LinearFstData<A> *data, SymbolTable *isyms = nullptr,
-                           SymbolTable *osyms = nullptr,
+  explicit LinearTaggerFst(LinearFstData<A> *data,
+                           const SymbolTable *isyms = nullptr,
+                           const SymbolTable *osyms = nullptr,
                            CacheOptions opts = CacheOptions())
       : ImplToFst<Impl>(std::make_shared<Impl>(data, isyms, osyms, opts)) {}
 
@@ -605,7 +606,7 @@ class LinearClassifierFstImpl : public CacheImpl<A> {
   // Constructs the FST with given data storage, number of classes and
   // symbol tables.
   LinearClassifierFstImpl(const LinearFstData<Arc> *data, size_t num_classes,
-                          SymbolTable *isyms, SymbolTable *osyms,
+                          const SymbolTable *isyms, const SymbolTable *osyms,
                           CacheOptions opts)
       : CacheImpl<A>(opts),
         data_(data),
@@ -916,8 +917,8 @@ class LinearClassifierFst : public ImplToFst<LinearClassifierFstImpl<A>> {
   LinearClassifierFst() : ImplToFst<Impl>(std::make_shared<Impl>()) {}
 
   explicit LinearClassifierFst(LinearFstData<A> *data, size_t num_classes,
-                               SymbolTable *isyms = nullptr,
-                               SymbolTable *osyms = nullptr,
+                               const SymbolTable *isyms = nullptr,
+                               const SymbolTable *osyms = nullptr,
                                CacheOptions opts = CacheOptions())
       : ImplToFst<Impl>(
             std::make_shared<Impl>(data, num_classes, isyms, osyms, opts)) {}

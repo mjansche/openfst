@@ -3,8 +3,8 @@
 //
 // Prints out binary FSTs in simple text format used by AT&T.
 
-#include <memory>
 #include <fstream>
+#include <memory>
 #include <ostream>
 
 #include <fst/script/print.h>
@@ -26,6 +26,7 @@ DEFINE_string(missing_symbol, "",
 int main(int argc, char **argv) {
   namespace s = fst::script;
   using fst::SymbolTable;
+  using fst::script::FstClass;
 
   string usage = "Prints out binary FSTs in simple text format.\n\n  Usage: ";
   usage += argv[0];
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  s::FstClass *fst = s::FstClass::Read(in_name);
+  std::unique_ptr<FstClass> fst(FstClass::Read(in_name));
   if (!fst) return 1;
 
   string dest = "standard output";

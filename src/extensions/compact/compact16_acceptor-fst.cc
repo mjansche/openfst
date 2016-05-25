@@ -5,12 +5,11 @@
 #include <fst/compact-fst.h>
 
 using fst::FstRegisterer;
-using fst::CompactFst;
+using fst::CompactAcceptorFst;
 using fst::LogArc;
 using fst::StdArc;
-using fst::AcceptorCompactor;
 
-static FstRegisterer<CompactFst<StdArc, AcceptorCompactor<StdArc>, uint16>>
-    CompactFst_StdArc_AcceptorCompactor_uint16_registerer;
-static FstRegisterer<CompactFst<LogArc, AcceptorCompactor<LogArc>, uint16>>
-    CompactFst_LogArc_AcceptorCompactor_uint16_registerer;
+static FstRegisterer<CompactAcceptorFst<StdArc, uint16>>
+    CompactAcceptorFst_StdArc_uint16_registerer;
+static FstRegisterer<CompactAcceptorFst<LogArc, uint16>>
+    CompactAcceptorFst_LogArc_uint16_registerer;

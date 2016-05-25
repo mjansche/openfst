@@ -3,8 +3,8 @@
 //
 // Creates binary FSTs from simple text format used by AT&T.
 
-#include <istream>
 #include <fstream>
+#include <istream>
 
 #include <fst/script/compile.h>
 
@@ -71,10 +71,9 @@ int main(int argc, char **argv) {
   string dest = argc > 2 ? argv[2] : "";
 
   s::CompileFst(istrm, source, dest, FLAGS_fst_type, FLAGS_arc_type,
-                isyms.get(), osyms.get(), ssyms.get(),
-                FLAGS_acceptor, FLAGS_keep_isymbols,
-                FLAGS_keep_osymbols, FLAGS_keep_state_numbering,
-                FLAGS_allow_negative_labels);
+                isyms.get(), osyms.get(), ssyms.get(), FLAGS_acceptor,
+                FLAGS_keep_isymbols, FLAGS_keep_osymbols,
+                FLAGS_keep_state_numbering, FLAGS_allow_negative_labels);
 
   return 0;
 }

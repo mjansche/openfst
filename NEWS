@@ -50,11 +50,13 @@ OpenFst: Release 1.5
       - Added FarReader and FarWriter classes.
     * FarReader's GetFst method now returns a pointer (1.5.2)
     * Fixed FSTERROR macro (1.5.2)
-    * Fixed build flags for `dlopen` (1.5.2)
+    * Fixed build flags for dlopen (1.5.2)
     * Consolidated Python extension into single module (1.5.2)
     * Python add_arc now takes an Arc object (1.5.2)
-    * Mutation methods of the Python `Fst` object now return `self`, allowing
-      so they can be chained (1.5.2)
+    * Adds optional minimization of non-deterministic FSTs (1.5.3)
+    * Mutation methods of the Python Fst object now support chaining (1.5.3)
+    * Scripting API and Python weight objects now support semiring arithmetic
+      (1.5.3)
 
 OpenFst: Release 1.4
     * Port to C++11 (1.4.0)

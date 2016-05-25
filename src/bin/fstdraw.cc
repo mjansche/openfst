@@ -3,9 +3,10 @@
 //
 // Draws a binary FSTs in the Graphviz dot text format.
 
-#include <memory>
 #include <fstream>
+#include <memory>
 #include <ostream>
+#include <string>
 
 #include <fst/script/draw.h>
 
@@ -32,6 +33,7 @@ DEFINE_bool(allow_negative_labels, false,
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
+  using fst::script::FstClass;
   using fst::SymbolTable;
 
   string usage = "Prints out binary FSTs in dot text format.\n\n  Usage: ";
@@ -47,7 +49,7 @@ int main(int argc, char **argv) {
 
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
 
-  s::FstClass *fst = s::FstClass::Read(in_name);
+  std::unique_ptr<FstClass> fst(FstClass::Read(in_name));
   if (!fst) return 1;
 
   string dest = "stdout";

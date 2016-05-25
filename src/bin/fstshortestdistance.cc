@@ -3,6 +3,7 @@
 //
 // Find shortest distances in an FST.
 
+#include <memory>
 #include <vector>
 
 #include <fst/script/shortest-distance.h>
@@ -10,7 +11,7 @@
 
 DEFINE_bool(reverse, false, "Perform in the reverse direction");
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
-DEFINE_int64(nstate, fst::kNoStateId, "State number threhold");
+DEFINE_int64(nstate, fst::kNoStateId, "State number threshold");
 DEFINE_string(queue_type, "auto",
               "Queue type: one of: \"auto\", "
               "\"fifo\", \"lifo\", \"shortest\", \"state\", \"top\"");
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
   string in_fname = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
   string out_fname = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_fname);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_fname));
   if (!ifst) return 1;
 
   std::vector<WeightClass> distance;
@@ -60,8 +61,7 @@ int main(int argc, char **argv) {
   }
 
   if (FLAGS_reverse && qt != fst::AUTO_QUEUE) {
-    LOG(ERROR) << argv[0]
-               << ": Non-default queue with reverse not supported.";
+    LOG(ERROR) << argv[0] << ": Non-default queue with reverse not supported.";
     return 1;
   }
 

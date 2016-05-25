@@ -107,6 +107,18 @@ class UnweightedCompactor;
 template <class A>
 class WeightedStringCompactor;
 
+template <class A, class U = uint32>
+using CompactStringFst = CompactFst<A, StringCompactor<A>, U>;
+template <class A, class U = uint32>
+using CompactWeightedStringFst = CompactFst<A, WeightedStringCompactor<A>, U>;
+template <class A, class U = uint32>
+using CompactAcceptorFst = CompactFst<A, AcceptorCompactor<A>, U>;
+template <class A, class U = uint32>
+using CompactUnweightedFst = CompactFst<A, UnweightedCompactor<A>, U>;
+template <class A, class U = uint32>
+using CompactUnweightedAcceptorFst =
+    CompactFst<A, UnweightedAcceptorCompactor<A>, U>;
+
 typedef ConstFst<StdArc> StdConstFst;
 typedef ExpandedFst<StdArc> StdExpandedFst;
 typedef Fst<StdArc> StdFst;

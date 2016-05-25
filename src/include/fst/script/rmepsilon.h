@@ -141,7 +141,7 @@ void RmEpsilon(RmEpsilonArgs3 *args) {
   RmEpsilonHelper(fst, &weights, opts);
   // Copy the weights back....
   args->arg2->resize(weights.size());
-  for (unsigned i = 0; i < weights.size(); ++i) {
+  for (auto i = 0; i < weights.size(); ++i) {
     (*args->arg2)[i] = WeightClass(weights[i]);
   }
 }
