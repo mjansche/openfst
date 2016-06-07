@@ -11,34 +11,34 @@ algo_test_SOURCES = algo_test.cc algo_test.h rand-fst.h
 
 check_PROGRAMS += algo_test_log
 algo_test_log_SOURCES = $(algo_test_SOURCES)
-algo_test_log_CPPFLAGS = -DTEST_LOG
+algo_test_log_CPPFLAGS = -DTEST_LOG $(AM_CPPFLAGS)
 
 check_PROGRAMS += algo_test_tropical
 algo_test_tropical_SOURCES = $(algo_test_SOURCES)
-algo_test_tropical_CPPFLAGS = -DTEST_TROPICAL
+algo_test_tropical_CPPFLAGS = -DTEST_TROPICAL $(AM_CPPFLAGS)
 
 check_PROGRAMS += algo_test_minmax
 algo_test_minmax_SOURCES = $(algo_test_SOURCES)
-algo_test_minmax_CPPFLAGS = -DTEST_MINMAX
+algo_test_minmax_CPPFLAGS = -DTEST_MINMAX $(AM_CPPFLAGS)
 
 # check_PROGRAMS += algo_test_left_string
 # algo_test_left_string_SOURCES = $(algo_test_SOURCES)
-# algo_test_left_string_CPPFLAGS = -DTEST_LEFT_STRING
+# algo_test_left_string_CPPFLAGS = -DTEST_LEFT_STRING $(AM_CPPFLAGS)
 
 # check_PROGRAMS += algo_test_right_string
 # algo_test_right_string_SOURCES = $(algo_test_SOURCES)
-# algo_test_right_string_CPPFLAGS = -DTEST_RIGHT_STRING
+# algo_test_right_string_CPPFLAGS = -DTEST_RIGHT_STRING $(AM_CPPFLAGS)
 
 # check_PROGRAMS += algo_test_gallic
 # algo_test_gallic_SOURCES = $(algo_test_SOURCES)
-# algo_test_gallic_CPPFLAGS = -DTEST_GALLIC
+# algo_test_gallic_CPPFLAGS = -DTEST_GALLIC $(AM_CPPFLAGS)
 
 check_PROGRAMS += algo_test_lexicographic
 algo_test_lexicographic_SOURCES = $(algo_test_SOURCES)
-algo_test_lexicographic_CPPFLAGS = -DTEST_LEXICOGRAPHIC
+algo_test_lexicographic_CPPFLAGS = -DTEST_LEXICOGRAPHIC $(AM_CPPFLAGS)
 
 check_PROGRAMS += algo_test_power
 algo_test_power_SOURCES = $(algo_test_SOURCES)
-algo_test_power_CPPFLAGS = -DTEST_POWER
+algo_test_power_CPPFLAGS = -DTEST_POWER $(AM_CPPFLAGS)
 
 TESTS = $(check_PROGRAMS)
