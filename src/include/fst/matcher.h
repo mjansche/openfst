@@ -151,7 +151,7 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   SortedMatcher(const F &fst, MatchType match_type, Label binary_label = 1)
       : fst_(fst.Copy()),
         s_(kNoStateId),
-        aiter_(0),
+        aiter_(nullptr),
         match_type_(match_type),
         binary_label_(binary_label),
         match_label_(kNoLabel),
@@ -176,7 +176,7 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   SortedMatcher(const SortedMatcher<F> &matcher, bool safe = false)
       : fst_(matcher.fst_->Copy(safe)),
         s_(kNoStateId),
-        aiter_(0),
+        aiter_(nullptr),
         match_type_(matcher.match_type_),
         binary_label_(matcher.binary_label_),
         match_label_(kNoLabel),
@@ -187,7 +187,6 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
 
   ~SortedMatcher() override {
     Destroy(aiter_, &aiter_pool_);
-    delete fst_;
   }
 
   SortedMatcher<F> *Copy(bool safe = false) const override {
@@ -203,12 +202,13 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
         match_type_ == MATCH_INPUT ? kNotILabelSorted : kNotOLabelSorted;
     uint64 props = fst_->Properties(true_prop | false_prop, test);
 
-    if (props & true_prop)
+    if (props & true_prop) {
       return match_type_;
-    else if (props & false_prop)
+    } else if (props & false_prop) {
       return MATCH_NONE;
-    else
+    } else {
       return MATCH_UNKNOWN;
+    }
   }
 
   void SetState(StateId s) {
@@ -277,10 +277,11 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   }
 
   void Next() {
-    if (current_loop_)
+    if (current_loop_) {
       current_loop_ = false;
-    else
+    } else {
       aiter_->Next();
+    }
   }
 
   Weight Final(StateId s) const { return internal::Final(*fst_, s); }
@@ -308,7 +309,7 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
 
   bool Search();
 
-  const F *fst_;
+  std::unique_ptr<const F> fst_;
   StateId s_;                               // Current state
   ArcIterator<F> *aiter_;                   // Iterator for current state
   MatchType match_type_;                    // Type of match to perform
@@ -320,8 +321,6 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   bool exact_match_;                        // Exact match or lower bound?
   bool error_;                              // Error encountered
   MemoryPool<ArcIterator<F>> aiter_pool_;  // Pool of arc iterators
-
-  void operator=(const SortedMatcher<F> &);  // Disallow
 };
 
 // Returns true iff match to match_label_. Positions arc iterator at
@@ -403,7 +402,7 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
 
   RhoMatcher(const FST &fst, MatchType match_type, Label rho_label = kNoLabel,
              MatcherRewriteMode rewrite_mode = MATCHER_REWRITE_AUTO,
-             M *matcher = 0)
+             M *matcher = nullptr)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         match_type_(match_type),
         rho_label_(rho_label),
@@ -420,12 +419,13 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
       error_ = true;
     }
 
-    if (rewrite_mode == MATCHER_REWRITE_AUTO)
+    if (rewrite_mode == MATCHER_REWRITE_AUTO) {
       rewrite_both_ = fst.Properties(kAcceptor, true);
-    else if (rewrite_mode == MATCHER_REWRITE_ALWAYS)
+    } else if (rewrite_mode == MATCHER_REWRITE_ALWAYS) {
       rewrite_both_ = true;
-    else
+    } else {
       rewrite_both_ = false;
+    }
   }
 
   RhoMatcher(const RhoMatcher<M> &matcher, bool safe = false)
@@ -435,8 +435,6 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
         rewrite_both_(matcher.rewrite_both_),
         error_(matcher.error_),
         s_(kNoStateId) {}
-
-  ~RhoMatcher() override { delete matcher_; }
 
   RhoMatcher<M> *Copy(bool safe = false) const override {
     return new RhoMatcher<M>(*this, safe);
@@ -523,7 +521,7 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
   Weight Final_(StateId s) const override { return Final(s); }
   ssize_t Priority_(StateId s) override { return Priority(s); }
 
-  M *matcher_;
+  std::unique_ptr<M> matcher_;
   MatchType match_type_;  // Type of match requested
   Label rho_label_;       // Label that represents the rho transition
   bool rewrite_both_;     // Rewrite both sides when both are 'rho_label_'
@@ -532,8 +530,6 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
   mutable Arc rho_arc_;   // Arc to return when rho match
   bool error_;            // Error encountered
   StateId s_;             // Current state
-
-  void operator=(const RhoMatcher<M> &);  // Disallow
 };
 
 template <class M>
@@ -594,7 +590,7 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
   SigmaMatcher(const FST &fst, MatchType match_type,
                Label sigma_label = kNoLabel,
                MatcherRewriteMode rewrite_mode = MATCHER_REWRITE_AUTO,
-               M *matcher = 0)
+               M *matcher = nullptr)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         match_type_(match_type),
         sigma_label_(sigma_label),
@@ -611,12 +607,13 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
       error_ = true;
     }
 
-    if (rewrite_mode == MATCHER_REWRITE_AUTO)
+    if (rewrite_mode == MATCHER_REWRITE_AUTO) {
       rewrite_both_ = fst.Properties(kAcceptor, true);
-    else if (rewrite_mode == MATCHER_REWRITE_ALWAYS)
+    } else if (rewrite_mode == MATCHER_REWRITE_ALWAYS) {
       rewrite_both_ = true;
-    else
+    } else {
       rewrite_both_ = false;
+    }
   }
 
   SigmaMatcher(const SigmaMatcher<M> &matcher, bool safe = false)
@@ -626,8 +623,6 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
         rewrite_both_(matcher.rewrite_both_),
         error_(matcher.error_),
         s_(kNoStateId) {}
-
-  ~SigmaMatcher() override { delete matcher_; }
 
   SigmaMatcher<M> *Copy(bool safe = false) const override {
     return new SigmaMatcher<M>(*this, safe);
@@ -706,8 +701,9 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
   uint64 Properties(uint64 props) const override;
 
   uint32 Flags() const override {
-    if (sigma_label_ == kNoLabel || match_type_ == MATCH_NONE)
+    if (sigma_label_ == kNoLabel || match_type_ == MATCH_NONE) {
       return matcher_->Flags();
+    }
     return matcher_->Flags() | kRequireMatch;
   }
 
@@ -720,7 +716,7 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
   Weight Final_(StateId s) const override { return Final(s); }
   ssize_t Priority_(StateId s) override { return Priority(s); }
 
-  M *matcher_;
+  std::unique_ptr<M> matcher_;
   MatchType match_type_;   // Type of match requested
   Label sigma_label_;      // Label that represents the sigma transition
   bool rewrite_both_;      // Rewrite both sides when both are 'sigma_label_'
@@ -730,8 +726,6 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
   Label match_label_;      // Label being matched
   bool error_;             // Error encountered
   StateId s_;              // Current state
-
-  void operator=(const SigmaMatcher<M> &);  // disallow
 };
 
 template <class M>
@@ -789,7 +783,7 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
   PhiMatcher(const FST &fst, MatchType match_type, Label phi_label = kNoLabel,
              bool phi_loop = true,
              MatcherRewriteMode rewrite_mode = MATCHER_REWRITE_AUTO,
-             M *matcher = 0)
+             M *matcher = nullptr)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         match_type_(match_type),
         phi_label_(phi_label),
@@ -802,12 +796,13 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
       error_ = true;
     }
 
-    if (rewrite_mode == MATCHER_REWRITE_AUTO)
+    if (rewrite_mode == MATCHER_REWRITE_AUTO) {
       rewrite_both_ = fst.Properties(kAcceptor, true);
-    else if (rewrite_mode == MATCHER_REWRITE_ALWAYS)
+    } else if (rewrite_mode == MATCHER_REWRITE_ALWAYS) {
       rewrite_both_ = true;
-    else
+    } else {
       rewrite_both_ = false;
+    }
   }
 
   PhiMatcher(const PhiMatcher<M> &matcher, bool safe = false)
@@ -818,8 +813,6 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
         state_(kNoStateId),
         phi_loop_(matcher.phi_loop_),
         error_(matcher.error_) {}
-
-  ~PhiMatcher() override { delete matcher_; }
 
   PhiMatcher<M> *Copy(bool safe = false) const override {
     return new PhiMatcher<M>(*this, safe);
@@ -843,8 +836,9 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
       return matcher_->Value();
     } else if (phi_match_ == 0) {  // Virtual epsilon loop
       phi_arc_ = Arc(kNoLabel, 0, Weight::One(), state_);
-      if (match_type_ == MATCH_OUTPUT)
+      if (match_type_ == MATCH_OUTPUT) {
         std::swap(phi_arc_.ilabel, phi_arc_.olabel);
+      }
       return phi_arc_;
     } else {
       phi_arc_ = matcher_->Value();
@@ -866,23 +860,24 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
   void Next() { matcher_->Next(); }
 
   Weight Final(StateId s) const {
-    Weight final = matcher_->Final(s);
-    if (phi_label_ == kNoLabel || final != Weight::Zero()) {
-      return final;
+    Weight final_weight = matcher_->Final(s);
+    if (phi_label_ == kNoLabel || final_weight != Weight::Zero()) {
+      return final_weight;
     } else {
-      final = Weight::One();
+      final_weight = Weight::One();
       StateId state = s;
       matcher_->SetState(state);
       while (matcher_->Final(state) == Weight::Zero()) {
         if (!matcher_->Find(phi_label_ == 0 ? -1 : phi_label_)) break;
-        final = Times(final, matcher_->Value().weight);
-        if (state == matcher_->Value().nextstate)
+        final_weight = Times(final_weight, matcher_->Value().weight);
+        if (state == matcher_->Value().nextstate) {
           return Weight::Zero();  // Do not follow phi self loops.
+        }
         state = matcher_->Value().nextstate;
         matcher_->SetState(state);
       }
-      final = Times(final, matcher_->Final(state));
-      return final;
+      final_weight = Times(final_weight, matcher_->Final(state));
+      return final_weight;
     }
   }
 
@@ -901,8 +896,9 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
   uint64 Properties(uint64 props) const override;
 
   uint32 Flags() const override {
-    if (phi_label_ == kNoLabel || match_type_ == MATCH_NONE)
+    if (phi_label_ == kNoLabel || match_type_ == MATCH_NONE) {
       return matcher_->Flags();
+    }
     return matcher_->Flags() | kRequireMatch;
   }
 
@@ -915,7 +911,7 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
   Weight Final_(StateId s) const override { return Final(s); }
   ssize_t Priority_(StateId s) override { return Priority(s); }
 
-  mutable M *matcher_;
+  mutable std::unique_ptr<M> matcher_;
   MatchType match_type_;  // Type of match requested
   Label phi_label_;       // Label that represents the phi transition
   bool rewrite_both_;     // Rewrite both sides when both are 'phi_label_'
@@ -928,7 +924,7 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
                           // as rho (required for Aho-Corasick)
   bool error_;            // Error encountered
 
-  void operator=(const PhiMatcher<M> &);  // disallow
+  PhiMatcher &operator=(const PhiMatcher &) = delete;
 };
 
 template <class M>
@@ -942,8 +938,9 @@ inline bool PhiMatcher<M>::Find(Label match_label) {
   phi_match_ = kNoLabel;
   phi_weight_ = Weight::One();
   if (phi_label_ == 0) {          // When 'phi_label_ == 0',
-    if (match_label == kNoLabel)  // there are no more true epsilon arcs,
+    if (match_label == kNoLabel) {  // there are no more true epsilon arcs,
       return false;
+    }
     if (match_label == 0) {  // but virtual eps loop need to be returned
       if (!matcher_->Find(kNoLabel)) {
         return matcher_->Find(0);
@@ -953,8 +950,9 @@ inline bool PhiMatcher<M>::Find(Label match_label) {
       }
     }
   }
-  if (!has_phi_ || match_label == 0 || match_label == kNoLabel)
+  if (!has_phi_ || match_label == 0 || match_label == kNoLabel) {
     return matcher_->Find(match_label);
+  }
   StateId state = state_;
   while (!matcher_->Find(match_label)) {
     // Look for phi transition (if phi_label_ == 0, we need to look
@@ -1046,7 +1044,7 @@ class MultiEpsMatcher {
 
   MultiEpsMatcher(const FST &fst, MatchType match_type,
                   uint32 flags = (kMultiEpsLoop | kMultiEpsList),
-                  M *matcher = 0, bool own_matcher = true)
+                  M *matcher = nullptr, bool own_matcher = true)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         flags_(flags),
         own_matcher_(matcher ? own_matcher : true) {
@@ -1098,12 +1096,14 @@ class MultiEpsMatcher {
       if (done_ && multi_eps_iter_ != multi_eps_labels_.End()) {
         ++multi_eps_iter_;
         while ((multi_eps_iter_ != multi_eps_labels_.End()) &&
-               !matcher_->Find(*multi_eps_iter_))
+               !matcher_->Find(*multi_eps_iter_)) {
           ++multi_eps_iter_;
-        if (multi_eps_iter_ != multi_eps_labels_.End())
+        }
+        if (multi_eps_iter_ != multi_eps_labels_.End()) {
           done_ = false;
-        else
+        } else {
           done_ = !matcher_->Find(kNoLabel);
+        }
       }
     } else {
       done_ = true;
@@ -1153,7 +1153,7 @@ class MultiEpsMatcher {
   mutable Arc loop_;   // For non-consuming symbols
   bool done_;          // Matching done
 
-  void operator=(const MultiEpsMatcher<M> &);  // Disallow
+  MultiEpsMatcher &operator=(const MultiEpsMatcher &) = delete;
 };
 
 template <class M>
@@ -1168,12 +1168,14 @@ inline bool MultiEpsMatcher<M>::Find(Label match_label) {
       // return all non-consuming arcs (incl. epsilon)
       multi_eps_iter_ = multi_eps_labels_.Begin();
       while ((multi_eps_iter_ != multi_eps_labels_.End()) &&
-             !matcher_->Find(*multi_eps_iter_))
+             !matcher_->Find(*multi_eps_iter_)) {
         ++multi_eps_iter_;
-      if (multi_eps_iter_ != multi_eps_labels_.End())
+      }
+      if (multi_eps_iter_ != multi_eps_labels_.End()) {
         ret = true;
-      else
+      } else {
         ret = matcher_->Find(kNoLabel);
+      }
     } else {
       // return all epsilon arcs
       ret = matcher_->Find(kNoLabel);
@@ -1206,7 +1208,7 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  ExplicitMatcher(const FST &fst, MatchType match_type, M *matcher = 0)
+  ExplicitMatcher(const FST &fst, MatchType match_type, M *matcher = nullptr)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         match_type_(match_type),
         error_(false) {}
@@ -1215,8 +1217,6 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
       : matcher_(new M(*matcher.matcher_, safe)),
         match_type_(matcher.match_type_),
         error_(matcher.error_) {}
-
-  ~ExplicitMatcher() override { delete matcher_; }
 
   ExplicitMatcher<M> *Copy(bool safe = false) const override {
     return new ExplicitMatcher<M>(*this, safe);
@@ -1247,7 +1247,7 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
 
   const FST &GetFst() const override { return matcher_->GetFst(); }
 
-  const M *GetMatcher() const { return matcher_; }
+  const M *GetMatcher() const { return matcher_.get(); }
 
   uint64 Properties(uint64 inprops) const override {
     return matcher_->Properties(inprops);
@@ -1274,11 +1274,9 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
   Weight Final_(StateId s) const override { return Final(s); }
   ssize_t Priority_(StateId s) override { return Priority(s); }
 
-  M *matcher_;
+  std::unique_ptr<M> matcher_;
   MatchType match_type_;  // Type of match requested
   bool error_;            // Error encountered
-
-  void operator=(const ExplicitMatcher<M> &);  // disallow
 };
 
 // Generic matcher, templated on the FST definition
@@ -1301,18 +1299,18 @@ class Matcher {
   typedef typename Arc::Weight Weight;
 
   Matcher(const F &fst, MatchType match_type) {
-    base_ = fst.InitMatcher(match_type);
-    if (!base_) base_ = new SortedMatcher<F>(fst, match_type);
+    base_.reset(fst.InitMatcher(match_type));
+    if (!base_) base_.reset(new SortedMatcher<F>(fst, match_type));
   }
 
   Matcher(const Matcher<F> &matcher, bool safe = false) {
-    base_ = matcher.base_->Copy(safe);
+    base_.reset(matcher.base_->Copy(safe));
   }
 
   // Takes ownership of the provided matcher
-  Matcher(MatcherBase<Arc> *base_matcher) { base_ = base_matcher; }
-
-  ~Matcher() { delete base_; }
+  explicit Matcher(MatcherBase<Arc> *base_matcher) {
+    base_.reset(base_matcher);
+  }
 
   Matcher<F> *Copy(bool safe = false) const {
     return new Matcher<F>(*this, safe);
@@ -1331,9 +1329,7 @@ class Matcher {
   uint32 Flags() const { return base_->Flags() & kMatcherFlags; }
 
  private:
-  MatcherBase<Arc> *base_;
-
-  void operator=(const Matcher<Arc> &);  // disallow
+  std::unique_ptr<MatcherBase<Arc>> base_;
 };
 
 }  // namespace fst

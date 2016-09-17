@@ -4,6 +4,7 @@
 // Synchronizes an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/synchronize.h>
 

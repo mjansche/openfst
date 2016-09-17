@@ -175,7 +175,7 @@ class MatcherFst : public ImplToExpandedFst<AddOnImpl<F, A>> {
       : ImplToExpandedFst<Impl>(impl) {}
 
  private:
-  void operator=(const MatcherFst<F, M, N, I, A> &fst);  // disallow
+  MatcherFst &operator=(const MatcherFst &fst) = delete;
 };
 
 // Specialization fo MatcherFst.
@@ -203,13 +203,10 @@ class Matcher<MatcherFst<F, M, N, I>> {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
 
-  Matcher(const FST &fst, MatchType match_type) {
-    matcher_ = fst.InitMatcher(match_type);
-  }
+  Matcher(const FST &fst, MatchType match_type)
+      : matcher_(fst.InitMatcher(match_type)) {}
 
-  Matcher(const Matcher<FST> &matcher) { matcher_ = matcher.matcher_->Copy(); }
-
-  ~Matcher() { delete matcher_; }
+  Matcher(const Matcher<FST> &matcher) : matcher_(matcher.matcher_->Copy()) {}
 
   Matcher<FST> *Copy() const { return new Matcher<FST>(*this); }
 
@@ -223,9 +220,7 @@ class Matcher<MatcherFst<F, M, N, I>> {
   uint32 Flags() const { return matcher_->Flags(); }
 
  private:
-  M *matcher_;
-
-  void operator=(const Matcher<Arc> &);  // disallow
+  std::unique_ptr<M> matcher_;
 };
 
 // Specialization for MatcherFst
@@ -238,15 +233,11 @@ class LookAheadMatcher<MatcherFst<F, M, N, I>> {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  LookAheadMatcher(const FST &fst, MatchType match_type) {
-    matcher_ = fst.InitMatcher(match_type);
-  }
+  LookAheadMatcher(const FST &fst, MatchType match_type)
+      : matcher_(fst.InitMatcher(match_type)) {}
 
-  LookAheadMatcher(const LookAheadMatcher<FST> &matcher, bool safe = false) {
-    matcher_ = matcher.matcher_->Copy(safe);
-  }
-
-  ~LookAheadMatcher() { delete matcher_; }
+  LookAheadMatcher(const LookAheadMatcher<FST> &matcher, bool safe = false)
+      : matcher_(matcher.matcher_->Copy(safe)) {}
 
   // General matcher methods
   LookAheadMatcher<FST> *Copy(bool safe = false) const {
@@ -283,9 +274,7 @@ class LookAheadMatcher<MatcherFst<F, M, N, I>> {
   }
 
  private:
-  M *matcher_;
-
-  void operator=(const LookAheadMatcher<FST> &);  // disallow
+  std::unique_ptr<M> matcher_;
 };
 
 //

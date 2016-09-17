@@ -8,7 +8,6 @@ using fst::FstRegisterer;
 using fst::CompactAcceptorFst;
 using fst::LogArc;
 using fst::StdArc;
-using fst::AcceptorCompactor;
 
 static FstRegisterer<CompactAcceptorFst<StdArc, uint8>>
     CompactAcceptorFst_StdArc_uint8_registerer;

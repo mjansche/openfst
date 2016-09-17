@@ -19,8 +19,7 @@ void Compose(ComposeArgs1 *args) {
   const Fst<Arc> &ifst1 = *(args->arg1.GetFst<Arc>());
   const Fst<Arc> &ifst2 = *(args->arg2.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
-
-  Compose(ifst1, ifst2, ofst, args->arg4);
+  Compose(ifst1, ifst2, ofst, ComposeOptions(args->arg4));
 }
 
 typedef fst::ComposeOptions ComposeOptions;
@@ -33,7 +32,6 @@ void Compose(ComposeArgs2 *args) {
   const Fst<Arc> &ifst1 = *(args->arg1.GetFst<Arc>());
   const Fst<Arc> &ifst2 = *(args->arg2.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
-
   Compose(ifst1, ifst2, ofst, args->arg4);
 }
 

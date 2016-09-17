@@ -98,10 +98,12 @@ class GallicCommonDivisor<L, W, GALLIC, D> {
 
   Weight operator()(const Weight &w1, const Weight &w2) const {
     GRWeight w = GRWeight::Zero();
-    for (Iter iter(w1); !iter.Done(); iter.Next())
+    for (Iter iter(w1); !iter.Done(); iter.Next()) {
       w = common_divisor_(w, iter.Value());
-    for (Iter iter(w2); !iter.Done(); iter.Next())
+    }
+    for (Iter iter(w2); !iter.Done(); iter.Next()) {
       w = common_divisor_(w, iter.Value());
+    }
     return w == GRWeight::Zero() ? Weight::Zero() : Weight(w);
   }
 
@@ -117,7 +119,7 @@ struct DeterminizeElement {
 
   DeterminizeElement() {}
 
-  DeterminizeElement(StateId s, Weight w) : state_id(s), weight(w) {}
+  DeterminizeElement(StateId s, Weight w) : state_id(s), weight(std::move(w)) {}
 
   bool operator==(const DeterminizeElement<A> &element) const {
     return state_id == element.state_id && weight == element.weight;
@@ -165,7 +167,8 @@ struct DeterminizeArc {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  DeterminizeArc() : label(kNoLabel), weight(Weight::Zero()), dest_tuple(0) {}
+  DeterminizeArc()
+      : label(kNoLabel), weight(Weight::Zero()), dest_tuple(nullptr) {}
 
   explicit DeterminizeArc(const Arc &arc)
       : label(arc.ilabel), weight(Weight::Zero()), dest_tuple(new S) {}
@@ -203,7 +206,7 @@ class DefaultDeterminizeFilter {
     typedef DefaultDeterminizeFilter<A> other;
   };
 
-  DefaultDeterminizeFilter(const Fst<Arc> &fst) : fst_(fst.Copy()) {}
+  explicit DefaultDeterminizeFilter(const Fst<Arc> &fst) : fst_(fst.Copy()) {}
 
   // This is needed e.g. to go into the gallic domain for transducers.
   // Ownership of the templated filter argument is given to this class.
@@ -213,11 +216,9 @@ class DefaultDeterminizeFilter {
   }
 
   // Copy ctr. The FST can be passed if it has been e.g. (deep) copied.
-  explicit DefaultDeterminizeFilter(const DefaultDeterminizeFilter<Arc> &filter,
-                                    const Fst<Arc> *fst = 0)
+  DefaultDeterminizeFilter(const DefaultDeterminizeFilter<Arc> &filter,
+                           const Fst<Arc> *fst = nullptr)
       : fst_(fst ? fst->Copy() : filter.fst_->Copy()) {}
-
-  ~DefaultDeterminizeFilter() { delete fst_; }
 
   FilterState Start() const { return FilterState(0); }
 
@@ -245,8 +246,7 @@ class DefaultDeterminizeFilter {
   static uint64 Properties(uint64 props) { return props; }
 
  private:
-  Fst<Arc> *fst_;
-  void operator=(const DefaultDeterminizeFilter<Arc> &);  // disallow
+  std::unique_ptr<Fst<Arc>> fst_;
 };
 
 //
@@ -359,7 +359,8 @@ class DefaultDeterminizeStateTable {
 
   StateTupleTable tuples_;
 
-  void operator=(const DefaultDeterminizeStateTable<A, F> &);  // disallow
+  DefaultDeterminizeStateTable &operator=(
+      const DefaultDeterminizeStateTable &) = delete;
 };
 
 // Type of determinization
@@ -392,8 +393,8 @@ struct DeterminizeFstOptions : CacheOptions {
   explicit DeterminizeFstOptions(const CacheOptions &opts, float del = kDelta,
                                  Label lab = 0,
                                  DeterminizeType typ = DETERMINIZE_FUNCTIONAL,
-                                 bool inc_lab = false, F *filt = 0,
-                                 T *table = 0)
+                                 bool inc_lab = false, F *filt = nullptr,
+                                 T *table = nullptr)
       : CacheOptions(opts),
         delta(del),
         subsequential_label(lab),
@@ -404,8 +405,8 @@ struct DeterminizeFstOptions : CacheOptions {
 
   explicit DeterminizeFstOptions(float del = kDelta, Label lab = 0,
                                  DeterminizeType typ = DETERMINIZE_FUNCTIONAL,
-                                 bool inc_lab = false, F *filt = 0,
-                                 T *table = 0)
+                                 bool inc_lab = false, F *filt = nullptr,
+                                 T *table = nullptr)
       : delta(del),
         subsequential_label(lab),
         type(typ),
@@ -462,8 +463,6 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~DeterminizeFstImplBase() override { delete fst_; }
-
   virtual DeterminizeFstImplBase<A> *Copy() const = 0;
 
   StateId Start() {
@@ -478,8 +477,7 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
 
   Weight Final(StateId s) {
     if (!HasFinal(s)) {
-      Weight final = ComputeFinal(s);
-      SetFinal(s, final);
+      SetFinal(s, ComputeFinal(s));
     }
     return CacheImpl<A>::Final(s);
   }
@@ -513,9 +511,7 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
   const Fst<A> &GetFst() const { return *fst_; }
 
  private:
-  const Fst<A> *fst_;  // Input Fst
-
-  void operator=(const DeterminizeFstImplBase<A> &);  // disallow
+  std::unique_ptr<const Fst<A>> fst_;  // Input Fst
 };
 
 // Implementation of delayed determinization for weighted acceptors.
@@ -560,19 +556,14 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
   DeterminizeFsaImpl(const DeterminizeFsaImpl<A, D, F, T> &impl)
       : DeterminizeFstImplBase<A>(impl),
         delta_(impl.delta_),
-        in_dist_(0),
-        out_dist_(0),
+        in_dist_(nullptr),
+        out_dist_(nullptr),
         filter_(new F(*impl.filter_, &GetFst())),
         state_table_(new T(*impl.state_table_)) {
     if (impl.out_dist_) {
       FSTERROR() << "DeterminizeFsaImpl: Cannot copy with out_dist vector";
       SetProperties(kError, kError);
     }
-  }
-
-  ~DeterminizeFsaImpl() override {
-    delete filter_;
-    delete state_table_;
   }
 
   DeterminizeFsaImpl<A, D, F, T> *Copy() const override {
@@ -583,8 +574,9 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) && (GetFst().Properties(kError, false)))
+    if ((mask & kError) && (GetFst().Properties(kError, false))) {
       SetProperties(kError, kError);
+    }
     return FstImpl<A>::Properties(mask);
   }
 
@@ -602,22 +594,24 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
     const StateTuple *tuple = state_table_->Tuple(s);
     filter_->SetState(s, *tuple);
 
-    Weight final = Weight::Zero();
+    Weight final_weight = Weight::Zero();
     for (typename Subset::const_iterator siter = tuple->subset.begin();
          siter != tuple->subset.end(); ++siter) {
       const Element &element = *siter;
-      final =
-          Plus(final, Times(element.weight, GetFst().Final(element.state_id)));
-      final = filter_->FilterFinal(final, element);
-      if (!final.Member()) SetProperties(kError, kError);
+      final_weight =
+          Plus(final_weight,
+               Times(element.weight, GetFst().Final(element.state_id)));
+      final_weight = filter_->FilterFinal(final_weight, element);
+      if (!final_weight.Member()) SetProperties(kError, kError);
     }
-    return final;
+    return final_weight;
   }
 
   StateId FindState(StateTuple *tuple) {
     StateId s = state_table_->FindState(tuple);
-    if (in_dist_ && out_dist_->size() <= s)
+    if (in_dist_ && out_dist_->size() <= s) {
       out_dist_->push_back(ComputeDistance(tuple->subset));
+    }
     return s;
   }
 
@@ -723,10 +717,8 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
   std::vector<Weight> *out_dist_;       // Distance to final DFA states
 
   D common_divisor_;
-  F *filter_;
-  T *state_table_;
-
-  void operator=(const DeterminizeFsaImpl<A, D, F, T> &);  // disallow
+  std::unique_ptr<F> filter_;
+  std::unique_ptr<T> state_table_;
 };
 
 // Implementation of delayed determinization for transducers.
@@ -779,10 +771,8 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
         delta_(impl.delta_),
         subsequential_label_(impl.subsequential_label_),
         increment_subsequential_label_(impl.increment_subsequential_label_) {
-    Init(GetFst(), 0);
+    Init(GetFst(), nullptr);
   }
-
-  ~DeterminizeFstImpl() override { delete from_fst_; }
 
   DeterminizeFstImpl<A, G, D, F, T> *Copy() const override {
     return new DeterminizeFstImpl<A, G, D, F, T>(*this);
@@ -793,8 +783,9 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
     if ((mask & kError) && (GetFst().Properties(kError, false) ||
-                            from_fst_->Properties(kError, false)))
+                            from_fst_->Properties(kError, false))) {
       SetProperties(kError, kError);
+    }
     return FstImpl<A>::Properties(mask);
   }
 
@@ -803,8 +794,10 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   Weight ComputeFinal(StateId s) override { return from_fst_->Final(s); }
 
   void Expand(StateId s) override {
-    for (ArcIterator<FromFst> aiter(*from_fst_, s); !aiter.Done(); aiter.Next())
+    for (ArcIterator<FromFst> aiter(*from_fst_, s); !aiter.Done();
+         aiter.Next()) {
       CacheImpl<A>::PushArc(s, aiter.Value());
+    }
     CacheImpl<A>::SetArcs(s);
   }
 
@@ -816,9 +809,7 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   float delta_;
   Label subsequential_label_;
   bool increment_subsequential_label_;
-  FromFst *from_fst_;
-
-  void operator=(const DeterminizeFstImpl<A, G, D, F, T> &);  // disallow
+  std::unique_ptr<FromFst> from_fst_;
 };
 
 // Determinizes a weighted transducer. This version is a delayed
@@ -942,7 +933,7 @@ class DeterminizeFst : public ImplToFst<DeterminizeFstImplBase<A>> {
     }
   }
 
-  void operator=(const DeterminizeFst<A> &fst);  // Disallow
+  DeterminizeFst &operator=(const DeterminizeFst &fst) = delete;
 };
 
 // Initialization of transducer determinization implementation, which
@@ -951,7 +942,7 @@ template <class A, GallicType G, class D, class F, class T>
 void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst, F *filter) {
   // Mapper to an acceptor.
   ToFst to_fst(fst, ToMapper());
-  ToF *to_filter = filter ? new ToF(to_fst, filter) : 0;
+  ToF *to_filter = filter ? new ToF(to_fst, filter) : nullptr;
 
   // Determinizes acceptor.
   // This recursive call terminates since it is to a (non-recursive)
@@ -960,7 +951,7 @@ void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst, F *filter) {
   DeterminizeFstOptions<ToArc, ToD, ToF, ToT> dopts(
       copts, delta_, 0, DETERMINIZE_FUNCTIONAL, false, to_filter);
   // Uses acceptor-only constructor to avoid template recursion
-  DeterminizeFst<ToArc> det_fsa(to_fst, 0, 0, dopts);
+  DeterminizeFst<ToArc> det_fsa(to_fst, nullptr, nullptr, dopts);
 
   // Mapper back to transducer.
   FactorWeightOptions<ToArc> fopts(
@@ -968,7 +959,7 @@ void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst, F *filter) {
       subsequential_label_, increment_subsequential_label_,
       increment_subsequential_label_);
   FactorWeightFst<ToArc, FactorIterator> factored_fst(det_fsa, fopts);
-  from_fst_ = new FromFst(factored_fst, FromMapper(subsequential_label_));
+  from_fst_.reset(new FromFst(factored_fst, FromMapper(subsequential_label_)));
 }
 
 // Specialization for DeterminizeFst.
@@ -991,9 +982,6 @@ class ArcIterator<DeterminizeFst<A>>
       : CacheArcIterator<DeterminizeFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>
@@ -1025,7 +1013,7 @@ struct DeterminizeOptions {
                               DeterminizeType t = DETERMINIZE_FUNCTIONAL,
                               bool isl = false)
       : delta(d),
-        weight_threshold(w),
+        weight_threshold(std::move(w)),
         state_threshold(n),
         subsequential_label(l),
         type(t),

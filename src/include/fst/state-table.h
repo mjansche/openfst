@@ -307,8 +307,8 @@ class GenericComposeStateTable : public H {
   bool Error() const { return false; }
 
  private:
-  void operator=(
-      const GenericComposeStateTable<A, FS, T, H> &table);  // disallow
+  GenericComposeStateTable &operator=(const GenericComposeStateTable &table) =
+      delete;
 };
 
 //  Fingerprint for general composition tuples.
@@ -382,7 +382,8 @@ class ProductComposeStateTable
   bool Error() const { return false; }
 
  private:
-  void operator=(const ProductComposeStateTable<A, T> &table);  // disallow
+  ProductComposeStateTable &operator=(const ProductComposeStateTable &table) =
+      delete;
 };
 
 // A VectorStateTable over composition tuples.  This can be used when
@@ -421,7 +422,8 @@ class StringDetComposeStateTable
  private:
   bool error_;
 
-  void operator=(const StringDetComposeStateTable<A, T> &table);  // disallow
+  StringDetComposeStateTable &operator=(
+      const StringDetComposeStateTable &table) = delete;
 };
 
 // A VectorStateTable over composition tuples.  This can be used when
@@ -460,7 +462,8 @@ class DetStringComposeStateTable
  private:
   bool error_;
 
-  void operator=(const DetStringComposeStateTable<A, T> &table);  // disallow
+  DetStringComposeStateTable &operator=(
+      const DetStringComposeStateTable &table) = delete;
 };
 
 // An ErasableStateTable over composition tuples. The Erase(StateId) method
@@ -480,9 +483,10 @@ class ErasableComposeStateTable
   bool Error() const { return false; }
 
  private:
-  void operator=(const ErasableComposeStateTable<A, T> &table);  // disallow
+  ErasableComposeStateTable &operator=(const ErasableComposeStateTable &table) =
+      delete;
 };
 
 }  // namespace fst
 
-#endif  // FST_LIB_STATE_TABLE_H__
+#endif  // FST_LIB_STATE_TABLE_H_

@@ -24,7 +24,7 @@ bool ReadLabelTriples(const string& filename,
                       std::vector<std::pair<Label, Label>>* pairs,
                       std::vector<Label>* assignments,
                       bool allow_negative = false) {
-  std::ifstream strm(filename.c_str());
+  std::ifstream strm(filename);
 
   if (!strm) {
     LOG(ERROR) << "ReadIntTriples: Can't open file: " << filename;
@@ -41,7 +41,7 @@ bool ReadLabelTriples(const string& filename,
     std::vector<char*> col;
     SplitToVector(line, "\n\t ", &col, true);
     // empty line or comment?
-    if (col.size() == 0 || col[0][0] == '\0' || col[0][0] == '#') continue;
+    if (col.empty() || col[0][0] == '\0' || col[0][0] == '#') continue;
     if (col.size() != 3) {
       LOG(ERROR) << "ReadLabelTriples: Bad number of columns, "
                  << "file = " << filename << ", line = " << nline;
@@ -73,7 +73,7 @@ bool WriteLabelTriples(const string& filename,
   }
 
   if (!filename.empty()) {
-    strm = new std::ofstream(filename.c_str());
+    strm = new std::ofstream(filename);
     if (!*strm) {
       LOG(ERROR) << "WriteLabelTriples: Can't open file: " << filename;
       return false;

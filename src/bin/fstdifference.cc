@@ -4,8 +4,9 @@
 // Subtracts an unweighted DFA from an FSA.
 
 #include <memory>
+#include <string>
 
-#include <fst/script/connect.h>
+#include <fst/script/getters.h>
 #include <fst/script/difference.h>
 
 DEFINE_string(compose_filter, "auto",
@@ -46,23 +47,14 @@ int main(int argc, char **argv) {
 
   VectorFstClass ofst(ifst1->ArcType());
 
-  fst::ComposeFilter cf;
-
-  if (FLAGS_compose_filter == "auto") {
-    cf = fst::AUTO_FILTER;
-  } else if (FLAGS_compose_filter == "sequence") {
-    cf = fst::SEQUENCE_FILTER;
-  } else if (FLAGS_compose_filter == "alt_sequence") {
-    cf = fst::ALT_SEQUENCE_FILTER;
-  } else if (FLAGS_compose_filter == "match") {
-    cf = fst::MATCH_FILTER;
-  } else {
-    LOG(ERROR) << argv[0] << ": Bad filter type \"" << FLAGS_compose_filter
-               << "\"";
+  fst::ComposeFilter compose_filter;
+  if (!s::GetComposeFilter(FLAGS_compose_filter, &compose_filter)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported compose filter type: "
+               << FLAGS_compose_filter;
     return 1;
   }
 
-  fst::DifferenceOptions opts(FLAGS_connect, cf);
+  fst::DifferenceOptions opts(FLAGS_connect, compose_filter);
 
   s::Difference(*ifst1, *ifst2, &ofst, opts);
 

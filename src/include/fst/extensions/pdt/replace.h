@@ -305,7 +305,7 @@ void PdtParser<Arc>::AddParensToFst(
   typedef MutableArcIterator<MutableFst<Arc>> MIter;
   for (StateIterator<Fst<Arc>> siter(*ofst); !siter.Done(); siter.Next()) {
     StateId os = siter.Value();
-    MIter *aiter = new MIter(ofst, os);
+    std::unique_ptr<MIter> aiter(new MIter(ofst, os));
     for (auto n = 0; !aiter->Done(); aiter->Next(), ++n) {
       Arc arc = aiter->Value();
       StateId nfst_id = Label2Id(arc.olabel);
@@ -342,15 +342,13 @@ void PdtParser<Arc>::AddParensToFst(
 
             ofst->AddArc(p.first, farc);
             if (os == p.first) {  // Invalidated iterator
-              delete aiter;
-              aiter = new MIter(ofst, os);
+              aiter.reset(new MIter(ofst, os));
               aiter->Seek(n);
             }
           }
         }
       }
     }
-    delete aiter;
   }
 }
 
@@ -718,9 +716,10 @@ void PdtLeftSRParser<Arc>::ProcSCCs(
           aiter.SetValue(arc);
         }
       }
-      Weight final = ifst->Final(is);
-      if (final != Weight::Zero() && NonTermDests(fst_id).count(is) == 0) {
-        Arc arc(0, 0, final, rs);
+      Weight final_weight = ifst->Final(is);
+      if (final_weight != Weight::Zero() &&
+          NonTermDests(fst_id).count(is) == 0) {
+        Arc arc(0, 0, final_weight, rs);
         ofst->AddArc(os, arc);
         if (ofst->Final(os) != Weight::Zero()) {
           ofst->SetFinal(os, Weight::Zero());

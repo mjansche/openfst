@@ -4,8 +4,10 @@
 // Creates the Kleene closure of an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/closure.h>
+#include <fst/script/getters.h>
 
 DEFINE_bool(closure_plus, false,
             "Do not add the empty path (T+ instead of T*)");
@@ -32,8 +34,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_fname, true));
   if (!fst) return 1;
 
-  fst::ClosureType closure_type =
-      FLAGS_closure_plus ? fst::CLOSURE_PLUS : fst::CLOSURE_STAR;
+  auto closure_type = s::GetClosureType(FLAGS_closure_plus);
 
   s::Closure(fst.get(), closure_type);
 

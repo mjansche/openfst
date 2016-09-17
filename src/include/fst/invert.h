@@ -39,13 +39,13 @@ struct InvertMapper {
 // where V = # of states and E = # of arcs.
 template <class Arc>
 inline void Invert(MutableFst<Arc> *fst) {
-  SymbolTable *input = fst->InputSymbols() ? fst->InputSymbols()->Copy() : 0;
-  SymbolTable *output = fst->OutputSymbols() ? fst->OutputSymbols()->Copy() : 0;
+  std::unique_ptr<SymbolTable> input(
+      fst->InputSymbols() ? fst->InputSymbols()->Copy() : nullptr);
+  std::unique_ptr<SymbolTable> output(
+      fst->OutputSymbols() ? fst->OutputSymbols()->Copy() : nullptr);
   ArcMap(fst, InvertMapper<Arc>());
-  fst->SetInputSymbols(output);
-  fst->SetOutputSymbols(input);
-  delete input;
-  delete output;
+  fst->SetInputSymbols(output.get());
+  fst->SetOutputSymbols(input.get());
 }
 
 // Inverts the transduction corresponding to an FST by exchanging the

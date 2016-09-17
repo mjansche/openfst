@@ -42,13 +42,7 @@ class MemoryArena : public MemoryArenaBase {
  public:
   explicit MemoryArena(size_t block_size = kAllocSize)
       : block_size_(block_size * sizeof(T)), block_pos_(0) {
-    blocks_.push_front(new char[block_size_]);
-  }
-
-  ~MemoryArena() override {
-    for (auto it = blocks_.begin(); it != blocks_.end(); ++it) {
-      delete[] * it;
-    }
+    blocks_.emplace_front(new char[block_size_]);
   }
 
   void *Allocate(size_t size) {
@@ -56,7 +50,7 @@ class MemoryArena : public MemoryArenaBase {
     if (byte_size * kAllocFit > block_size_) {
       // large block; add new large block
       char *ptr = new char[byte_size];
-      blocks_.push_back(ptr);
+      blocks_.emplace_back(ptr);
       return ptr;
     }
 
@@ -64,11 +58,11 @@ class MemoryArena : public MemoryArenaBase {
       // Doesn't fit; add new standard block
       char *ptr = new char[block_size_];
       block_pos_ = 0;
-      blocks_.push_front(ptr);
+      blocks_.emplace_front(ptr);
     }
 
     // Fits; use current block
-    char *ptr = blocks_.front() + block_pos_;
+    char *ptr = blocks_.front().get() + block_pos_;
     block_pos_ += byte_size;
     return ptr;
   }
@@ -78,9 +72,7 @@ class MemoryArena : public MemoryArenaBase {
  private:
   size_t block_size_;    // default block size in bytes
   size_t block_pos_;     // current position in block in bytes
-  std::list<char *> blocks_;  // list of allocated blocks
-
-  DISALLOW_COPY_AND_ASSIGN(MemoryArena);
+  std::list<std::unique_ptr<char[]>> blocks_;  // list of allocated blocks
 };
 
 // Base class for MemoryPool that allows e.g. MemoryPoolCollection to
@@ -111,14 +103,12 @@ class MemoryPool : public MemoryPoolBase {
 
   // 'pool_size' specifies the size of the initial pool and how it is extended
   explicit MemoryPool(size_t pool_size = kAllocSize)
-      : mem_arena_(pool_size), free_list_(0) {}
-
-  ~MemoryPool() override {}
+      : mem_arena_(pool_size), free_list_(nullptr) {}
 
   void *Allocate() {
-    if (free_list_ == 0) {
+    if (free_list_ == nullptr) {
       Link *link = static_cast<Link *>(mem_arena_.Allocate(1));
-      link->next = 0;
+      link->next = nullptr;
       return link;
     } else {
       Link *link = free_list_;
@@ -141,7 +131,8 @@ class MemoryPool : public MemoryPoolBase {
   MemoryArena<Link> mem_arena_;
   Link *free_list_;
 
-  DISALLOW_COPY_AND_ASSIGN(MemoryPool);
+  MemoryPool(const MemoryPool &) = delete;
+  MemoryPool &operator=(const MemoryPool &) = delete;
 };
 
 //
@@ -155,17 +146,13 @@ class MemoryArenaCollection {
   explicit MemoryArenaCollection(size_t block_size = kAllocSize)
       : block_size_(block_size), ref_count_(1) {}
 
-  ~MemoryArenaCollection() {
-    for (size_t i = 0; i < arenas_.size(); ++i) delete arenas_[i];
-  }
-
   template <typename T>
   MemoryArena<T> *Arena() {
-    if (sizeof(T) >= arenas_.size()) arenas_.resize(sizeof(T) + 1, 0);
-    MemoryArenaBase *arena = arenas_[sizeof(T)];
-    if (arena == 0) {
+    if (sizeof(T) >= arenas_.size()) arenas_.resize(sizeof(T) + 1);
+    MemoryArenaBase *arena = arenas_[sizeof(T)].get();
+    if (arena == nullptr) {
       arena = new MemoryArena<T>(block_size_);
-      arenas_[sizeof(T)] = arena;
+      arenas_[sizeof(T)].reset(arena);
     }
     return static_cast<MemoryArena<T> *>(arena);
   }
@@ -179,9 +166,7 @@ class MemoryArenaCollection {
  private:
   size_t block_size_;
   size_t ref_count_;
-  std::vector<MemoryArenaBase *> arenas_;
-
-  DISALLOW_COPY_AND_ASSIGN(MemoryArenaCollection);
+  std::vector<std::unique_ptr<MemoryArenaBase>> arenas_;
 };
 
 // Stores a collection of memory pools
@@ -191,17 +176,13 @@ class MemoryPoolCollection {
   explicit MemoryPoolCollection(size_t pool_size = kAllocSize)
       : pool_size_(pool_size), ref_count_(1) {}
 
-  ~MemoryPoolCollection() {
-    for (size_t i = 0; i < pools_.size(); ++i) delete pools_[i];
-  }
-
   template <typename T>
   MemoryPool<T> *Pool() {
-    if (sizeof(T) >= pools_.size()) pools_.resize(sizeof(T) + 1, 0);
-    MemoryPoolBase *pool = pools_[sizeof(T)];
-    if (pool == 0) {
+    if (sizeof(T) >= pools_.size()) pools_.resize(sizeof(T) + 1);
+    MemoryPoolBase *pool = pools_[sizeof(T)].get();
+    if (pool == nullptr) {
       pool = new MemoryPool<T>(pool_size_);
-      pools_[sizeof(T)] = pool;
+      pools_[sizeof(T)].reset(pool);
     }
     return static_cast<MemoryPool<T> *>(pool);
   }
@@ -215,9 +196,7 @@ class MemoryPoolCollection {
  private:
   size_t pool_size_;
   size_t ref_count_;
-  std::vector<MemoryPoolBase *> pools_;
-
-  DISALLOW_COPY_AND_ASSIGN(MemoryPoolCollection);
+  std::vector<std::unique_ptr<MemoryPoolBase>> pools_;
 };
 
 //
@@ -260,7 +239,7 @@ class BlockAllocator {
   }
 
   template <typename U>
-  BlockAllocator(const BlockAllocator<U> &arena_alloc)
+  explicit BlockAllocator(const BlockAllocator<U> &arena_alloc)
       : arenas_(arena_alloc.Arenas()) {
     Arenas()->IncrRefCount();
   }
@@ -282,7 +261,7 @@ class BlockAllocator {
 
   void destroy(pointer p) { A().destroy(p); }
 
-  pointer allocate(size_type n, const void *hint = 0) {
+  pointer allocate(size_type n, const void *hint = nullptr) {
     if (n * kAllocFit <= kAllocSize) {
       return static_cast<pointer>(Arena()->Allocate(n));
     } else {
@@ -353,7 +332,7 @@ class PoolAllocator {
   }
 
   template <typename U>
-  PoolAllocator(const PoolAllocator<U> &pool_alloc)
+  explicit PoolAllocator(const PoolAllocator<U> &pool_alloc)
       : pools_(pool_alloc.Pools()) {
     Pools()->IncrRefCount();
   }
@@ -375,7 +354,7 @@ class PoolAllocator {
 
   void destroy(pointer p) { A().destroy(p); }
 
-  pointer allocate(size_type n, const void *hint = 0) {
+  pointer allocate(size_type n, const void *hint = nullptr) {
     if (n == 1) {
       return static_cast<pointer>(Pool<1>()->Allocate());
     } else if (n == 2) {

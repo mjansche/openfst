@@ -4,6 +4,7 @@
 // Topologically sorts an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/topsort.h>
 

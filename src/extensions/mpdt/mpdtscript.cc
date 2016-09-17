@@ -7,6 +7,7 @@
 // See comments in nlp/fst/script/script-impl.h for how the registration
 // mechanism allows these to work with various arc types.
 
+#include <string>
 #include <vector>
 
 #include <fst/extensions/mpdt/compose.h>
@@ -14,7 +15,6 @@
 #include <fst/extensions/mpdt/mpdtscript.h>
 #include <fst/extensions/mpdt/reverse.h>
 #include <fst/script/script-impl.h>
-
 
 namespace fst {
 namespace script {

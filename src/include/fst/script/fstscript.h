@@ -25,7 +25,7 @@
 #include <fst/script/text-io.h>
 #include <fst/script/weight-class.h>
 
-// Templates like Operation< >, Apply< >
+// Templates like Operation< >, Apply< >, and flag-to-enum getters.
 #include <fst/script/script-impl.h>
 
 // Operations
@@ -64,7 +64,6 @@
 #include <fst/script/rmepsilon.h>
 #include <fst/script/shortest-distance.h>
 #include <fst/script/shortest-path.h>
-#include <fst/script/symbols.h>
 #include <fst/script/synchronize.h>
 #include <fst/script/topsort.h>
 #include <fst/script/union.h>

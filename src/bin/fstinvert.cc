@@ -4,6 +4,7 @@
 // Inverts a transduction.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/invert.h>
 

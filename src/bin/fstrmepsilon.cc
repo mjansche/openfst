@@ -4,7 +4,9 @@
 // Removes epsilons from an FST.
 
 #include <memory>
+#include <string>
 
+#include <fst/script/getters.h>
 #include <fst/script/rmepsilon.h>
 
 DEFINE_bool(connect, true, "Trim output");
@@ -44,28 +46,15 @@ int main(int argc, char **argv) {
       FLAGS_weight.empty() ? WeightClass::Zero(ifst->WeightType())
                            : WeightClass(ifst->WeightType(), FLAGS_weight);
 
-  fst::QueueType qt;
-
-  if (FLAGS_queue_type == "auto") {
-    qt = fst::AUTO_QUEUE;
-  } else if (FLAGS_queue_type == "fifo") {
-    qt = fst::FIFO_QUEUE;
-  } else if (FLAGS_queue_type == "lifo") {
-    qt = fst::LIFO_QUEUE;
-  } else if (FLAGS_queue_type == "shortest") {
-    qt = fst::SHORTEST_FIRST_QUEUE;
-  } else if (FLAGS_queue_type == "state") {
-    qt = fst::STATE_ORDER_QUEUE;
-  } else if (FLAGS_queue_type == "top") {
-    qt = fst::TOP_ORDER_QUEUE;
-  } else {
+  fst::QueueType queue_type;
+  if (!s::GetQueueType(FLAGS_queue_type, &queue_type)) {
     LOG(ERROR) << argv[0]
                << ": Unknown or unsupported queue type: " << FLAGS_queue_type;
     return 1;
   }
 
-  s::RmEpsilonOptions opts(qt, FLAGS_delta, FLAGS_connect, weight_threshold,
-                           FLAGS_nstate);
+  s::RmEpsilonOptions opts(queue_type, FLAGS_delta, FLAGS_connect,
+                           weight_threshold, FLAGS_nstate);
 
   VectorFstClass ofst(ifst->ArcType());
   s::RmEpsilon(*ifst, &ofst, FLAGS_reverse, opts);

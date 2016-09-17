@@ -20,6 +20,7 @@
 #include <string>
 
 #include <fst/pair-weight.h>
+#include <fst/product-weight.h>
 
 
 namespace fst {
@@ -45,30 +46,30 @@ class ExpectationWeight : public PairWeight<X1, X2> {
   typedef X2 W2;
 
   typedef ExpectationWeight<typename X1::ReverseWeight,
-                            typename X2::ReverseWeight> ReverseWeight;
+                            typename X2::ReverseWeight>
+      ReverseWeight;
 
   ExpectationWeight() : PairWeight<X1, X2>(Zero()) {}
 
-  ExpectationWeight(const ExpectationWeight<X1, X2> &w)
-      : PairWeight<X1, X2>(w) {}
+  ExpectationWeight(const ExpectationWeight &w) : PairWeight<X1, X2>(w) {}
 
-  ExpectationWeight(const PairWeight<X1, X2> &w) : PairWeight<X1, X2>(w) {}
+  explicit ExpectationWeight(const PairWeight<X1, X2> &w)
+      : PairWeight<X1, X2>(w) {}
 
   ExpectationWeight(const X1 &x1, const X2 &x2) : PairWeight<X1, X2>(x1, x2) {}
 
-  static const ExpectationWeight<X1, X2> &Zero() {
-    static const ExpectationWeight<X1, X2> zero(X1::Zero(), X2::Zero());
+  static const ExpectationWeight &Zero() {
+    static const ExpectationWeight zero(X1::Zero(), X2::Zero());
     return zero;
   }
 
-  static const ExpectationWeight<X1, X2> &One() {
-    static const ExpectationWeight<X1, X2> one(X1::One(), X2::Zero());
+  static const ExpectationWeight &One() {
+    static const ExpectationWeight one(X1::One(), X2::Zero());
     return one;
   }
 
-  static const ExpectationWeight<X1, X2> &NoWeight() {
-    static const ExpectationWeight<X1, X2> no_weight(X1::NoWeight(),
-                                                     X2::NoWeight());
+  static const ExpectationWeight &NoWeight() {
+    static const ExpectationWeight no_weight(X1::NoWeight(), X2::NoWeight());
     return no_weight;
   }
 
@@ -78,17 +79,17 @@ class ExpectationWeight : public PairWeight<X1, X2> {
   }
 
   PairWeight<X1, X2> Quantize(float delta = kDelta) const {
-    return PairWeight<X1, X2>::Quantize();
+    return ExpectationWeight(PairWeight<X1, X2>::Quantize());
   }
 
-  ReverseWeight Reverse() const { return PairWeight<X1, X2>::Reverse(); }
+  ReverseWeight Reverse() const {
+    return ReverseWeight(PairWeight<X1, X2>::Reverse());
+  }
 
   bool Member() const { return PairWeight<X1, X2>::Member(); }
 
-  static uint64 Properties() {
-    uint64 props1 = W1::Properties();
-    uint64 props2 = W2::Properties();
-    return props1 & props2 &
+  static constexpr uint64 Properties() {
+    return W1::Properties() & W2::Properties() &
            (kLeftSemiring | kRightSemiring | kCommutative | kIdempotent);
   }
 };
@@ -115,6 +116,21 @@ inline ExpectationWeight<X1, X2> Divide(const ExpectationWeight<X1, X2> &w,
   FSTERROR() << "ExpectationWeight::Divide: Not implemented";
   return ExpectationWeight<X1, X2>::NoWeight();
 }
+
+// This function object generates weights by calling the underlying generators
+// for the template weight types, like all other pair weight types. This is
+// intended primarily for testing.
+template <class W1, class W2>
+class WeightGenerate<ExpectationWeight<W1, W2>> :
+    public WeightGenerate<PairWeight<W1, W2>> {
+ public:
+  using Weight = ExpectationWeight<W1, W2>;
+  using Generate = WeightGenerate<PairWeight<W1, W2>>;
+
+  explicit WeightGenerate(bool allow_zero = true) : Generate(allow_zero) {}
+
+  Weight operator()() const { return Weight(Generate::operator()()); }
+};
 
 }  // namespace fst
 

@@ -7,6 +7,7 @@
 // See comments in nlp/fst/script/script-impl.h for how the registration
 // mechanism allows these to work with various arc types.
 
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -46,7 +47,6 @@ void PdtExpand(const FstClass &ifst,
   PdtExpand(ifst, parens, ofst,
             PdtExpandOptions(connect, keep_parentheses, weight_threshold));
 }
-
 
 void PdtReplace(const std::vector<LabelFstClassPair> &pairs,
                 MutableFstClass *ofst, std::vector<LabelPair> *parens,

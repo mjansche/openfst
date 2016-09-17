@@ -3,8 +3,10 @@
 //
 // Tests if two Far files contains the same (key,fst) pairs.
 
+#include <string>
+
 #include <fst/extensions/far/farscript.h>
-#include <fst/extensions/far/main.h>
+#include <fst/extensions/far/util.h>
 
 DEFINE_string(begin_key, "",
               "First key to extract (def: first key in archive)");
@@ -29,11 +31,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  string filename1(argv[1]), filename2(argv[2]);
+  string arc_type = s::LoadArcTypeFromFar(argv[1]);
+  if (arc_type.empty()) return 1;
 
-  bool result =
-      s::FarEqual(filename1, filename2, fst::LoadArcTypeFromFar(filename1),
-                  FLAGS_delta, FLAGS_begin_key, FLAGS_end_key);
+  bool result = s::FarEqual(argv[1], argv[2], arc_type, FLAGS_delta,
+                            FLAGS_begin_key, FLAGS_end_key);
 
   if (!result) VLOG(1) << "FARs are not equal.";
 

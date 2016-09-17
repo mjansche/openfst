@@ -110,10 +110,9 @@ void LempelZiv<Var, Edge, EdgeLessThan, EdgeEquals>::BatchEncode(
        it != input.end(); ++it) {
     Node *temp_node = &root_;
     while (it != input.end()) {
-      if ((temp_node->next_number).find(*it) !=
-          (temp_node->next_number).end()) {
-        temp_node = (temp_node->next_number)[*it];
-
+      auto next = (temp_node->next_number).find(*it);
+      if (next != (temp_node->next_number).end()) {
+        temp_node = next->second;
         ++it;
       } else {
         break;
@@ -213,7 +212,7 @@ class Compressor {
   void WriteToBuffer(CVar input) {
     std::vector<bool> current_code;
     Elias<CVar>::DeltaEncode(input, &current_code);
-    if (buffer_code_.size() > 0) {
+    if (!buffer_code_.empty()) {
       buffer_code_.insert(buffer_code_.end(), current_code.begin(),
                           current_code.end());
     } else {
@@ -422,7 +421,7 @@ void Compressor<Arc>::EncodeProcessedFst(const ExpandedFst<Arc> &fst,
       dict_old_temp.push_back(it->first);
       transition_old_temp.push_back(it->second);
     }
-    if (transition_old_temp.size() > 0) {
+    if (!transition_old_temp.empty()) {
       if ((transition_old_temp.back()).nextstate == 0 &&
           (transition_old_temp.back()).label == 0) {
         transition_old_temp.pop_back();
@@ -439,7 +438,7 @@ void Compressor<Arc>::EncodeProcessedFst(const ExpandedFst<Arc> &fst,
       WriteToBuffer<int>(0);
 
     StateId previous;
-    if (dict_old_temp.size() > 0) {
+    if (!dict_old_temp.empty()) {
       WriteToBuffer<StateId>(dict_old_temp.front());
       previous = dict_old_temp.front();
     }
@@ -450,7 +449,7 @@ void Compressor<Arc>::EncodeProcessedFst(const ExpandedFst<Arc> &fst,
         previous = *it;
       }
     }
-    if (transition_old_temp.size() > 0) {
+    if (!transition_old_temp.empty()) {
       WriteToBuffer<StateId>((transition_old_temp.front()).nextstate);
       previous = (transition_old_temp.front()).nextstate;
       WriteToBuffer<Label>((transition_old_temp.front()).label);
@@ -466,7 +465,7 @@ void Compressor<Arc>::EncodeProcessedFst(const ExpandedFst<Arc> &fst,
   }
   // Adding final states
   WriteToBuffer<StateId>(final_states.size());
-  if (final_states.size() > 0) {
+  if (!final_states.empty()) {
     for (auto it = final_states.begin(); it != final_states.end(); ++it) {
       WriteToBuffer<StateId>(*it);
     }
@@ -659,7 +658,7 @@ void Compressor<Arc>::DecodeProcessedFst(const std::vector<StateId> &input,
       if (!unweighted) {
         fst->SetFinal(*main_it, final_weight_[temp_int]);
       } else {
-        fst->SetFinal(*main_it, 0);
+        fst->SetFinal(*main_it, Weight(0));
       }
       ++main_it;
     }
@@ -697,8 +696,8 @@ bool Compressor<Arc>::Decompress(std::istream &strm, const string &source,
     }
     return false;
   }
-  EncodeMapper<Arc> *encoder =
-      EncodeMapper<Arc>::Read(strm, "Decoding", DECODE);
+  std::unique_ptr<EncodeMapper<Arc>> encoder(
+      EncodeMapper<Arc>::Read(strm, "Decoding", DECODE));
   std::vector<bool> bool_code;
   uint8 block;
   uint8 msb = 128;
@@ -726,7 +725,6 @@ bool Compressor<Arc>::Decompress(std::istream &strm, const string &source,
   }
   DecodeProcessedFst(int_code, fst, unweighted);
   DecodeForCompress(fst, *encoder);
-  delete encoder;
   return !fst->Properties(kError, false);
 }
 

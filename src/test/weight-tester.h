@@ -9,7 +9,9 @@
 #include <iostream>
 #include <sstream>
 
-#include <fst/random-weight.h>
+#include <utility>
+
+#include <fst/weight.h>
 
 namespace fst {
 
@@ -19,14 +21,15 @@ namespace fst {
 template <class Weight, class WeightGenerator>
 class WeightTester {
  public:
-  WeightTester(WeightGenerator generator) : weight_generator_(generator) {}
+  WeightTester(WeightGenerator generator)
+      : weight_generator_(std::move(generator)) {}
 
   void Test(int iterations, bool test_division = true) {
     for (int i = 0; i < iterations; ++i) {
       // Selects the test weights.
-      Weight w1 = weight_generator_();
-      Weight w2 = weight_generator_();
-      Weight w3 = weight_generator_();
+      const Weight w1(weight_generator_());
+      const Weight w2(weight_generator_());
+      const Weight w3(weight_generator_());
 
       VLOG(1) << "weight type = " << Weight::Type();
       VLOG(1) << "w1 = " << w1;
@@ -196,8 +199,6 @@ class WeightTester {
 
   // Generates weights used in testing.
   WeightGenerator weight_generator_;
-
-  DISALLOW_COPY_AND_ASSIGN(WeightTester);
 };
 
 }  // namespace fst

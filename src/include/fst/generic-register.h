@@ -66,7 +66,7 @@ class GenericRegister {
     string so_filename = ConvertKeyToSoFilename(key);
 
     void *handle = dlopen(so_filename.c_str(), RTLD_LAZY);
-    if (handle == 0) {
+    if (handle == nullptr) {
       LOG(ERROR) << "GenericRegister::GetEntry: " << dlerror();
       return EntryType();
     }
@@ -78,7 +78,7 @@ class GenericRegister {
     // scope that does the registration. Thus we need only load it, not
     // call any methods.
     const EntryType *entry = this->LookupEntry(key);
-    if (entry == 0) {
+    if (entry == nullptr) {
       LOG(ERROR) << "GenericRegister::GetEntry: "
                  << "lookup failed in shared object: " << so_filename;
       return EntryType();
@@ -98,7 +98,7 @@ class GenericRegister {
     if (it != register_table_.end()) {
       return &it->second;
     } else {
-      return 0;
+      return nullptr;
     }
   }
 
@@ -122,10 +122,12 @@ FstOnceType GenericRegister<KeyType, EntryType,
                                RegisterType>::register_init_ = FST_ONCE_INIT;
 
 template <class KeyType, class EntryType, class RegisterType>
-Mutex *GenericRegister<KeyType, EntryType, RegisterType>::register_lock_ = 0;
+Mutex *GenericRegister<KeyType, EntryType, RegisterType>::register_lock_ =
+    nullptr;
 
 template <class KeyType, class EntryType, class RegisterType>
-RegisterType *GenericRegister<KeyType, EntryType, RegisterType>::register_ = 0;
+RegisterType *GenericRegister<KeyType, EntryType, RegisterType>::register_ =
+    nullptr;
 
 //
 // GENERIC REGISTRATION

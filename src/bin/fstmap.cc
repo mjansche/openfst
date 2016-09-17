@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include <fst/script/getters.h>
 #include <fst/script/map.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
@@ -14,7 +15,7 @@ DEFINE_string(map_type, "identity",
               "\"input_epsilon\", \"invert\", \"output_epsilon\", "
               "\"plus (--weight)\", \"quantize (--delta)\", \"rmweight\", "
               "\"superfinal\", \"times (--weight)\", \"to_log\", \"to_log64\", "
-              "\"to_standard\"");
+              "\"to_std\"");
 DEFINE_string(weight, "", "Weight parameter");
 
 int main(int argc, char **argv) {
@@ -41,36 +42,10 @@ int main(int argc, char **argv) {
   std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
-  s::MapType mt;
-  if (FLAGS_map_type == "arc_sum") {
-    mt = s::ARC_SUM_MAPPER;
-  } else if (FLAGS_map_type == "identity") {
-    mt = s::IDENTITY_MAPPER;
-  } else if (FLAGS_map_type == "input_epsilon") {
-    mt = s::INPUT_EPSILON_MAPPER;
-  } else if (FLAGS_map_type == "invert") {
-    mt = s::INVERT_MAPPER;
-  } else if (FLAGS_map_type == "output_epsilon") {
-    mt = s::OUTPUT_EPSILON_MAPPER;
-  } else if (FLAGS_map_type == "plus") {
-    mt = s::PLUS_MAPPER;
-  } else if (FLAGS_map_type == "quantize") {
-    mt = s::QUANTIZE_MAPPER;
-  } else if (FLAGS_map_type == "rmweight") {
-    mt = s::RMWEIGHT_MAPPER;
-  } else if (FLAGS_map_type == "superfinal") {
-    mt = s::SUPERFINAL_MAPPER;
-  } else if (FLAGS_map_type == "times") {
-    mt = s::TIMES_MAPPER;
-  } else if (FLAGS_map_type == "to_log") {
-    mt = s::TO_LOG_MAPPER;
-  } else if (FLAGS_map_type == "to_log64") {
-    mt = s::TO_LOG64_MAPPER;
-  } else if (FLAGS_map_type == "to_standard") {
-    mt = s::TO_STD_MAPPER;
-  } else {
-    LOG(ERROR) << argv[0] << ": Unknown map type \"" << FLAGS_map_type
-               << "\"\n";
+  s::MapType map_type;
+  if (!s::GetMapType(FLAGS_map_type, &map_type)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported map type "
+               << FLAGS_map_type;
     return 1;
   }
 
@@ -80,7 +55,8 @@ int main(int argc, char **argv) {
           : (FLAGS_map_type == "times" ? WeightClass::One(ifst->WeightType())
                                        : WeightClass::Zero(ifst->WeightType()));
 
-  std::unique_ptr<FstClass> ofst(s::Map(*ifst, mt, FLAGS_delta, weight_param));
+  std::unique_ptr<FstClass> ofst(s::Map(*ifst, map_type, FLAGS_delta,
+                                        weight_param));
 
   ofst->Write(out_name);
 

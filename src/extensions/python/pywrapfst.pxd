@@ -27,15 +27,15 @@ cdef string tostring(data, encoding=?) except *
 
 cdef string weighttostring(data, encoding=?) except *
 
-cdef fst.ComposeFilter _get_compose_filter(string cf) except *
+cdef fst.ComposeFilter _get_compose_filter(const string &cf) except *
 
-cdef uint32 _get_encode_mapper_flags(bool encode_labels, bool encode_weights)
+cdef fst.DeterminizeType _get_determinize_type(const string &dt) except *
 
-cdef fst.QueueType _get_queue_type(string qt) except *
+cdef fst.QueueType _get_queue_type(const string &qt) except *
 
-cdef fst.RandArcSelection _get_rand_arc_selection(string ras) except *
+cdef fst.RandArcSelection _get_rand_arc_selection(const string &ras) except *
 
-cdef fst.ReplaceLabelType _get_replace_label_type(string rlt,
+cdef fst.ReplaceLabelType _get_replace_label_type(const string &rlt,
     bool epsilon_on_replace) except *
 
 
@@ -256,7 +256,7 @@ cdef class _MutableFst(_Fst):
 
   cpdef int64 add_state(self) except *
 
-  cdef void _arcsort(self, sort_type=?) except *
+  cdef void _arcsort(self, st=?) except *
 
   cdef void _closure(self, bool closure_plus=?) except *
 
@@ -274,7 +274,7 @@ cdef class _MutableFst(_Fst):
 
   cdef void _invert(self) except *
 
-  cdef void _minimize(self, float delta=?) except *
+  cdef void _minimize(self, float delta=?, bool allow_nondet=?) except *
 
   cpdef MutableArcIterator mutable_arcs(self, int64 state)
 
@@ -416,7 +416,7 @@ cpdef _MutableFst compose(_Fst ifst1, _Fst ifst2, cf=?, bool connect=?)
 
 cpdef _Fst convert(_Fst ifst, fst_type=?)
 
-cpdef _MutableFst determinize(_Fst ifst, float delta=?, det_type=?,
+cpdef _MutableFst determinize(_Fst ifst, float delta=?, dt=?,
     int64 nstate=?, int64 subsequential_label=?,
     weight=?, bool increment_subsequential_label=?)
 

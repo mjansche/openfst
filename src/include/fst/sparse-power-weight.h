@@ -29,7 +29,7 @@ struct SparseTupleWeightTimesMapper {
 
 template <class W, class K>
 struct SparseTupleWeightDivideMapper {
-  SparseTupleWeightDivideMapper(DivideType divide_type) {
+  explicit SparseTupleWeightDivideMapper(DivideType divide_type) {
     divide_type_ = divide_type;
   }
   W Map(const K &k, const W &v1, const W &v2) const {
@@ -40,7 +40,7 @@ struct SparseTupleWeightDivideMapper {
 
 template <class W, class K>
 struct SparseTupleWeightApproxMapper {
-  SparseTupleWeightApproxMapper(float delta) { delta_ = delta; }
+  explicit SparseTupleWeightApproxMapper(float delta) { delta_ = delta; }
   W Map(const K &k, const W &v1, const W &v2) const {
     return ApproxEqual(v1, v2, delta_) ? W::One() : W::Zero();
   }
@@ -59,17 +59,11 @@ struct SparseTupleWeightApproxMapper {
 template <class W, class K = int>
 class SparsePowerWeight : public SparseTupleWeight<W, K> {
  public:
-  using SparseTupleWeight<W, K>::Zero;
-  using SparseTupleWeight<W, K>::One;
-  using SparseTupleWeight<W, K>::NoWeight;
-  using SparseTupleWeight<W, K>::Quantize;
-  using SparseTupleWeight<W, K>::Reverse;
-
   typedef SparsePowerWeight<typename W::ReverseWeight, K> ReverseWeight;
 
   SparsePowerWeight() {}
 
-  SparsePowerWeight(const SparseTupleWeight<W, K> &w)
+  explicit SparsePowerWeight(const SparseTupleWeight<W, K> &w)
       : SparseTupleWeight<W, K>(w) {}
 
   template <class Iterator>
@@ -79,18 +73,18 @@ class SparsePowerWeight : public SparseTupleWeight<W, K> {
   SparsePowerWeight(const K &key, const W &w)
       : SparseTupleWeight<W, K>(key, w) {}
 
-  static const SparsePowerWeight<W, K> &Zero() {
-    static const SparsePowerWeight<W, K> zero(SparseTupleWeight<W, K>::Zero());
+  static const SparsePowerWeight &Zero() {
+    static const SparsePowerWeight zero(SparseTupleWeight<W, K>::Zero());
     return zero;
   }
 
-  static const SparsePowerWeight<W, K> &One() {
-    static const SparsePowerWeight<W, K> one(SparseTupleWeight<W, K>::One());
+  static const SparsePowerWeight &One() {
+    static const SparsePowerWeight one(SparseTupleWeight<W, K>::One());
     return one;
   }
 
-  static const SparsePowerWeight<W, K> &NoWeight() {
-    static const SparsePowerWeight<W, K> no_weight(
+  static const SparsePowerWeight &NoWeight() {
+    static const SparsePowerWeight no_weight(
         SparseTupleWeight<W, K>::NoWeight());
     return no_weight;
   }
@@ -110,17 +104,18 @@ class SparsePowerWeight : public SparseTupleWeight<W, K> {
     return type;
   }
 
-  static uint64 Properties() {
-    uint64 props = W::Properties();
-    return props &
+  static constexpr uint64 Properties() {
+    return W::Properties() &
            (kLeftSemiring | kRightSemiring | kCommutative | kIdempotent);
   }
 
-  SparsePowerWeight<W, K> Quantize(float delta = kDelta) const {
-    return SparseTupleWeight<W, K>::Quantize(delta);
+  SparsePowerWeight Quantize(float delta = kDelta) const {
+    return SparsePowerWeight(SparseTupleWeight<W, K>::Quantize(delta));
   }
 
-  ReverseWeight Reverse() const { return SparseTupleWeight<W, K>::Reverse(); }
+  ReverseWeight Reverse() const {
+    return ReverseWeight(SparseTupleWeight<W, K>::Reverse());
+  }
 };
 
 // Semimodule plus operation
@@ -179,14 +174,16 @@ inline bool ApproxEqual(const SparsePowerWeight<W, K> &w1,
 template <class W, class K>
 inline SparsePowerWeight<W, K> Times(const W &k,
                                      const SparsePowerWeight<W, K> &w2) {
-  SparsePowerWeight<W, K> w1(k);
+  const SparseTupleWeight<W, K> t2(k);
+  const SparsePowerWeight<W, K> w1(t2);
   return Times(w1, w2);
 }
 
 template <class W, class K>
 inline SparsePowerWeight<W, K> Times(const SparsePowerWeight<W, K> &w1,
                                      const W &k) {
-  SparsePowerWeight<W, K> w2(k);
+  const SparseTupleWeight<W, K> t2(k);
+  const SparsePowerWeight<W, K> w2(t2);
   return Times(w1, w2);
 }
 
@@ -194,9 +191,33 @@ template <class W, class K>
 inline SparsePowerWeight<W, K> Divide(const SparsePowerWeight<W, K> &w1,
                                       const W &k,
                                       DivideType divide_type = DIVIDE_ANY) {
-  SparsePowerWeight<W, K> w2(k);
+  const SparseTupleWeight<W, K> t2(k);
+  const SparsePowerWeight<W, K> w2(t2);
   return Divide(w1, w2, divide_type);
 }
+
+// This function object generates weights over the Cartesian power of rank
+// n over the underlying weight. This is intended primarily for testing.
+template <class W, class K>
+class WeightGenerate<SparsePowerWeight<W, K>> {
+ public:
+  using Weight = SparsePowerWeight<W, K>;
+  using Generate = WeightGenerate<W>;
+
+  explicit WeightGenerate(bool allow_zero = true,
+                          size_t sparse_power_rank = 3)
+      : generate_(allow_zero), sparse_power_rank_(sparse_power_rank) {}
+
+  Weight operator()() const {
+    Weight w;
+    for (auto i = 1; i <= sparse_power_rank_; ++i) w.Push(i, generate_(), true);
+    return w;
+  }
+
+ private:
+  Generate generate_;
+  const size_t sparse_power_rank_;
+};
 
 }  // namespace fst
 

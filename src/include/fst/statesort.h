@@ -47,16 +47,18 @@ void StateSort(MutableFst<Arc> *fst,
     Weight final1 = fst->Final(s1), final2 = Weight::Zero();
     arcs1->clear();
     for (ArcIterator<MutableFst<Arc>> aiter(*fst, s1); !aiter.Done();
-         aiter.Next())
+         aiter.Next()) {
       arcs1->push_back(aiter.Value());
+    }
     for (; !done[s1]; s1 = s2, final1 = final2, std::swap(arcs1, arcs2)) {
       s2 = order[s1];
       if (!done[s2]) {
         final2 = fst->Final(s2);
         arcs2->clear();
         for (ArcIterator<MutableFst<Arc>> aiter(*fst, s2); !aiter.Done();
-             aiter.Next())
+             aiter.Next()) {
           arcs2->push_back(aiter.Value());
+        }
       }
       fst->SetFinal(s2, final1);
       fst->DeleteArcs(s2);

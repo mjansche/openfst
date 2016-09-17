@@ -4,6 +4,7 @@
 // Minimizes a deterministic FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/minimize.h>
 

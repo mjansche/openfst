@@ -38,10 +38,11 @@ template <class Arc, GallicType G>
 void EpsNormalize(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
                   EpsNormalizeType type) {
   VectorFst<GallicArc<Arc, G>> gfst;
-  if (type == EPS_NORM_INPUT)
+  if (type == EPS_NORM_INPUT) {
     ArcMap(ifst, &gfst, ToGallicMapper<Arc, G>());
-  else  // type == EPS_NORM_OUTPUT
+  } else {  // type == EPS_NORM_OUTPUT
     ArcMap(InvertFst<Arc>(ifst), &gfst, ToGallicMapper<Arc, G>());
+  }
   RmEpsilon(&gfst);
   FactorWeightFst<GallicArc<Arc, G>,
                   GallicFactor<typename Arc::Label, typename Arc::Weight, G>>

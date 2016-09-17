@@ -290,7 +290,6 @@ class FstInfo {
   uint64 properties_;
   string arc_filter_type_;
   bool long_info_;
-  DISALLOW_COPY_AND_ASSIGN(FstInfo);
 };
 
 template <class A>

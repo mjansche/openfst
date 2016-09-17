@@ -61,31 +61,32 @@ class ComplementFstImpl : public FstImpl<A> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~ComplementFstImpl() override { delete fst_; }
-
   StateId Start() const {
     if (Properties(kError)) return kNoStateId;
 
     StateId start = fst_->Start();
-    if (start != kNoStateId)
+    if (start != kNoStateId) {
       return start + 1;
-    else
+    } else {
       return 0;
+    }
   }
 
   // Exchange final and non-final states; make rho destination state final.
   Weight Final(StateId s) const {
-    if (s == 0 || fst_->Final(s - 1) == Weight::Zero())
+    if (s == 0 || fst_->Final(s - 1) == Weight::Zero()) {
       return Weight::One();
-    else
+    } else {
       return Weight::Zero();
+    }
   }
 
   size_t NumArcs(StateId s) const {
-    if (s == 0)
+    if (s == 0) {
       return 1;
-    else
+    } else {
       return fst_->NumArcs(s - 1) + 1;
+    }
   }
 
   size_t NumInputEpsilons(StateId s) const {
@@ -100,15 +101,14 @@ class ComplementFstImpl : public FstImpl<A> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) && fst_->Properties(kError, false))
+    if ((mask & kError) && fst_->Properties(kError, false)) {
       SetProperties(kError, kError);
+    }
     return FstImpl<Arc>::Properties(mask);
   }
 
  private:
-  const Fst<A> *fst_;
-
-  void operator=(const ComplementFstImpl<A> &fst);  // Disallow
+  std::unique_ptr<const Fst<A>> fst_;
 };
 
 // Complements an automaton. This is a library-internal operation that
@@ -160,7 +160,7 @@ class ComplementFst : public ImplToFst<ComplementFstImpl<A>> {
  private:
   using ImplToFst<Impl>::GetImpl;
 
-  void operator=(const ComplementFst<A> &fst);  // disallow
+  ComplementFst &operator=(const ComplementFst &fst) = delete;
 };
 
 template <class A>
@@ -201,8 +201,6 @@ class StateIterator<ComplementFst<A>> : public StateIteratorBase<A> {
 
   StateIterator<Fst<A>> siter_;
   StateId s_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Specialization for ComplementFst.
@@ -213,18 +211,18 @@ class ArcIterator<ComplementFst<A>> : public ArcIteratorBase<A> {
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
 
-  ArcIterator(const ComplementFst<A> &fst, StateId s)
-      : aiter_(0), s_(s), pos_(0) {
-    if (s_ != 0) aiter_ = new ArcIterator<Fst<A>>(*fst.GetImpl()->fst_, s - 1);
+  ArcIterator(const ComplementFst<A> &fst, StateId s) : s_(s), pos_(0) {
+    if (s_ != 0) {
+      aiter_.reset(new ArcIterator<Fst<A>>(*fst.GetImpl()->fst_, s - 1));
+    }
   }
 
-  ~ArcIterator() override { delete aiter_; }
-
   bool Done() const {
-    if (s_ != 0)
+    if (s_ != 0) {
       return pos_ > 0 && aiter_->Done();
-    else
+    } else {
       return pos_ > 0;
+    }
   }
 
   // Adds the rho label to the rho destination state.
@@ -280,11 +278,10 @@ class ArcIterator<ComplementFst<A>> : public ArcIteratorBase<A> {
   uint32 Flags_() const override { return Flags(); }
   void SetFlags_(uint32 f, uint32 m) override { SetFlags(f, m); }
 
-  ArcIterator<Fst<A>> *aiter_;
+  std::unique_ptr<ArcIterator<Fst<A>>> aiter_;
   StateId s_;
   size_t pos_;
   mutable A arc_;
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>

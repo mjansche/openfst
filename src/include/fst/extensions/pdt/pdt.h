@@ -171,10 +171,10 @@ class PdtStateTable
 
   PdtStateTable() {}
 
-  PdtStateTable(const PdtStateTable<S, K> &table) {}
+  PdtStateTable(const PdtStateTable &table) {}
 
  private:
-  void operator=(const PdtStateTable<S, K> &table);  // disallow
+  PdtStateTable &operator=(const PdtStateTable &table) = delete;
 };
 
 }  // namespace fst

@@ -28,11 +28,13 @@ class CcVisitor {
       : comps_(new UnionFind<StateId>(0, kNoStateId)), cc_(cc), nstates_(0) {}
 
   // comps: connected components equiv classes.
-  CcVisitor(UnionFind<StateId> *comps) : comps_(comps), cc_(0), nstates_(0) {}
+  explicit CcVisitor(UnionFind<StateId> *comps)
+      : comps_(comps), cc_(nullptr), nstates_(0) {}
 
   ~CcVisitor() {
-    if (cc_)  // own comps_?
+    if (cc_) {  // own comps_?
       delete comps_;
+    }
   }
 
   void InitVisit(const Fst<A> &fst) {}
@@ -110,8 +112,8 @@ class SccVisitor {
   SccVisitor(std::vector<StateId> *scc, std::vector<bool> *access,
              std::vector<bool> *coaccess, uint64 *props)
       : scc_(scc), access_(access), coaccess_(coaccess), props_(props) {}
-  SccVisitor(uint64 *props)
-      : scc_(0), access_(0), coaccess_(0), props_(props) {}
+  explicit SccVisitor(uint64 *props)
+      : scc_(nullptr), access_(nullptr), coaccess_(nullptr), props_(props) {}
 
   void InitVisit(const Fst<A> &fst);
 
@@ -135,8 +137,9 @@ class SccVisitor {
   bool ForwardOrCrossArc(StateId s, const A &arc) {
     StateId t = arc.nextstate;
     if ((*dfnumber_)[t] < (*dfnumber_)[s] /* cross edge */ && (*onstack_)[t] &&
-        (*dfnumber_)[t] < (*lowlink_)[s])
+        (*dfnumber_)[t] < (*lowlink_)[s]) {
       (*lowlink_)[s] = (*dfnumber_)[t];
+    }
     if ((*coaccess_)[t]) (*coaccess_)[s] = true;
     return true;
   }
@@ -145,14 +148,16 @@ class SccVisitor {
 
   void FinishVisit() {
     // Numbers SCC's in topological order when acyclic.
-    if (scc_)
-      for (StateId i = 0; i < scc_->size(); ++i)
+    if (scc_) {
+      for (StateId i = 0; i < scc_->size(); ++i) {
         (*scc_)[i] = nscc_ - 1 - (*scc_)[i];
+      }
+    }
     if (coaccess_internal_) delete coaccess_;
-    delete dfnumber_;
-    delete lowlink_;
-    delete onstack_;
-    delete scc_stack_;
+    dfnumber_.reset();
+    lowlink_.reset();
+    onstack_.reset();
+    scc_stack_.reset();
   }
 
  private:
@@ -165,10 +170,12 @@ class SccVisitor {
   StateId nstates_;  // State count
   StateId nscc_;     // SCC count
   bool coaccess_internal_;
-  std::vector<StateId> *dfnumber_;   // state discovery times
-  std::vector<StateId> *lowlink_;    // lowlink[s] == dfnumber[s] => SCC root
-  std::vector<bool> *onstack_;       // is a state on the SCC stack
-  std::vector<StateId> *scc_stack_;  // SCC stack (w/ random access)
+  std::unique_ptr<std::vector<StateId>> dfnumber_;  // state discovery times
+  std::unique_ptr<std::vector<StateId>>
+      lowlink_;  // lowlink[s] == dfnumber[s] => SCC root
+  std::unique_ptr<std::vector<bool>> onstack_;  // is a state on the SCC stack
+  std::unique_ptr<std::vector<StateId>>
+      scc_stack_;  // SCC stack (w/ random access)
 };
 
 template <class A>
@@ -188,10 +195,10 @@ inline void SccVisitor<A>::InitVisit(const Fst<A> &fst) {
   start_ = fst.Start();
   nstates_ = 0;
   nscc_ = 0;
-  dfnumber_ = new std::vector<StateId>;
-  lowlink_ = new std::vector<StateId>;
-  onstack_ = new std::vector<bool>;
-  scc_stack_ = new std::vector<StateId>;
+  dfnumber_.reset(new std::vector<StateId>());
+  lowlink_.reset(new std::vector<StateId>());
+  onstack_.reset(new std::vector<bool>());
+  scc_stack_.reset(new std::vector<StateId>());
 }
 
 template <class A>
@@ -263,11 +270,12 @@ void Connect(MutableFst<Arc> *fst) {
   std::vector<bool> access;
   std::vector<bool> coaccess;
   uint64 props = 0;
-  SccVisitor<Arc> scc_visitor(0, &access, &coaccess, &props);
+  SccVisitor<Arc> scc_visitor(nullptr, &access, &coaccess, &props);
   DfsVisit(*fst, &scc_visitor);
   std::vector<StateId> dstates;
-  for (StateId s = 0; s < access.size(); ++s)
+  for (StateId s = 0; s < access.size(); ++s) {
     if (!access[s] || !coaccess[s]) dstates.push_back(s);
+  }
   fst->DeleteStates(dstates);
   fst->SetProperties(kAccessible | kCoAccessible, kAccessible | kCoAccessible);
 }
@@ -284,14 +292,15 @@ void Condense(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
 
   ofst->DeleteStates();
   uint64 props = 0;
-  SccVisitor<Arc> scc_visitor(scc, 0, 0, &props);
+  SccVisitor<Arc> scc_visitor(scc, nullptr, nullptr, &props);
   DfsVisit(ifst, &scc_visitor);
   for (StateId s = 0; s < scc->size(); ++s) {
     StateId c = (*scc)[s];
     while (c >= ofst->NumStates()) ofst->AddState();
     if (s == ifst.Start()) ofst->SetStart(c);
-    Weight final = ifst.Final(s);
-    if (final != Weight::Zero()) ofst->SetFinal(c, Plus(ofst->Final(c), final));
+    const Weight final_weight = ifst.Final(s);
+    if (final_weight != Weight::Zero())
+      ofst->SetFinal(c, Plus(ofst->Final(c), final_weight));
     for (ArcIterator<Fst<Arc>> aiter(ifst, s); !aiter.Done(); aiter.Next()) {
       Arc arc = aiter.Value();
       StateId nextc = (*scc)[arc.nextstate];

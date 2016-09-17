@@ -58,7 +58,7 @@ class QueueBase {
  public:
   typedef S StateId;
 
-  QueueBase(QueueType type) : queue_type_(type), error_(false) {}
+  explicit QueueBase(QueueType type) : queue_type_(type), error_(false) {}
   virtual ~QueueBase() {}
   StateId Head() const { return Head_(); }
   void Enqueue(StateId s) { Enqueue_(s); }
@@ -190,7 +190,7 @@ class ShortestFirstQueue : public QueueBase<S> {
   typedef S StateId;
   typedef C Compare;
 
-  ShortestFirstQueue(C comp)
+  explicit ShortestFirstQueue(C comp)
       : QueueBase<S>(SHORTEST_FIRST_QUEUE), heap_(comp) {}
 
   StateId Head() const { return heap_.Top(); }
@@ -205,10 +205,11 @@ class ShortestFirstQueue : public QueueBase<S> {
   }
 
   void Dequeue() {
-    if (update)
+    if (update) {
       key_[heap_.Pop()] = kNoKey;
-    else
+    } else {
       heap_.Pop();
+    }
   }
 
   void Update(StateId s) {
@@ -319,12 +320,13 @@ class TopOrderQueue : public QueueBase<S> {
   StateId Head() const { return state_[front_]; }
 
   void Enqueue(StateId s) {
-    if (front_ > back_)
+    if (front_ > back_) {
       front_ = back_ = order_[s];
-    else if (order_[s] > back_)
+    } else if (order_[s] > back_) {
       back_ = order_[s];
-    else if (order_[s] < front_)
+    } else if (order_[s] < front_) {
       front_ = order_[s];
+    }
     state_[order_[s]] = s;
   }
 
@@ -373,12 +375,13 @@ class StateOrderQueue : public QueueBase<S> {
   StateId Head() const { return front_; }
 
   void Enqueue(StateId s) {
-    if (front_ > back_)
+    if (front_ > back_) {
       front_ = back_ = s;
-    else if (s > back_)
+    } else if (s > back_) {
       back_ = s;
-    else if (s < front_)
+    } else if (s < front_) {
       front_ = s;
+    }
     while (enqueued_.size() <= s) enqueued_.push_back(false);
     enqueued_[s] = true;
   }
@@ -426,7 +429,8 @@ class SccQueue : public QueueBase<S> {
 
   // Constructor takes a vector specifying the SCC number per state
   // and a vector giving the queue to use per SCC number.
-  SccQueue(const std::vector<StateId> &scc, std::vector<Queue *> *queue)
+  SccQueue(const std::vector<StateId> &scc,
+           std::vector<std::unique_ptr<Queue>> *queue)
       : QueueBase<S>(SCC_QUEUE),
         queue_(queue),
         scc_(scc),
@@ -436,37 +440,42 @@ class SccQueue : public QueueBase<S> {
   StateId Head() const {
     while ((front_ <= back_) &&
            (((*queue_)[front_] && (*queue_)[front_]->Empty()) ||
-            (((*queue_)[front_] == 0) &&
+            (((*queue_)[front_] == nullptr) &&
              ((front_ >= trivial_queue_.size()) ||
-              (trivial_queue_[front_] == kNoStateId)))))
+              (trivial_queue_[front_] == kNoStateId))))) {
       ++front_;
-    if ((*queue_)[front_])
+    }
+    if ((*queue_)[front_]) {
       return (*queue_)[front_]->Head();
-    else
+    } else {
       return trivial_queue_[front_];
+    }
   }
 
   void Enqueue(StateId s) {
-    if (front_ > back_)
+    if (front_ > back_) {
       front_ = back_ = scc_[s];
-    else if (scc_[s] > back_)
+    } else if (scc_[s] > back_) {
       back_ = scc_[s];
-    else if (scc_[s] < front_)
+    } else if (scc_[s] < front_) {
       front_ = scc_[s];
+    }
     if ((*queue_)[scc_[s]]) {
       (*queue_)[scc_[s]]->Enqueue(s);
     } else {
-      while (trivial_queue_.size() <= scc_[s])
+      while (trivial_queue_.size() <= scc_[s]) {
         trivial_queue_.push_back(kNoStateId);
+      }
       trivial_queue_[scc_[s]] = s;
     }
   }
 
   void Dequeue() {
-    if ((*queue_)[front_])
+    if ((*queue_)[front_]) {
       (*queue_)[front_]->Dequeue();
-    else if (front_ < trivial_queue_.size())
+    } else if (front_ < trivial_queue_.size()) {
       trivial_queue_[front_] = kNoStateId;
+    }
   }
 
   void Update(StateId s) {
@@ -474,29 +483,32 @@ class SccQueue : public QueueBase<S> {
   }
 
   bool Empty() const {
-    if (front_ < back_)  // Queue scc # back_ not empty unless back_==front_
+    if (front_ < back_) {  // Queue scc # back_ not empty unless back_==front_
       return false;
-    else if (front_ > back_)
+    } else if (front_ > back_) {
       return true;
-    else if ((*queue_)[front_])
+    } else if ((*queue_)[front_]) {
       return (*queue_)[front_]->Empty();
-    else
+    } else {
       return (front_ >= trivial_queue_.size()) ||
              (trivial_queue_[front_] == kNoStateId);
+    }
   }
 
   void Clear() {
-    for (StateId i = front_; i <= back_; ++i)
-      if ((*queue_)[i])
+    for (StateId i = front_; i <= back_; ++i) {
+      if ((*queue_)[i]) {
         (*queue_)[i]->Clear();
-      else if (i < trivial_queue_.size())
+      } else if (i < trivial_queue_.size()) {
         trivial_queue_[i] = kNoStateId;
+      }
+    }
     front_ = 0;
     back_ = kNoStateId;
   }
 
  private:
-  std::vector<Queue *> *queue_;
+  std::vector<std::unique_ptr<Queue>> *queue_;
   const std::vector<StateId> &scc_;
   mutable StateId front_;
   StateId back_;
@@ -511,8 +523,6 @@ class SccQueue : public QueueBase<S> {
   void Update_(StateId s) override { Update(s); }
   bool Empty_() const override { return Empty(); }
   void Clear_() override { return Clear(); }
-
-  DISALLOW_COPY_AND_ASSIGN(SccQueue);
 };
 
 // Automatic queue discipline, templated on the StateId. It selects a
@@ -536,47 +546,43 @@ class AutoQueue : public QueueBase<S> {
     uint64 props =
         fst.Properties(kAcyclic | kCyclic | kTopSorted | kUnweighted, false);
     if ((props & kTopSorted) || fst.Start() == kNoStateId) {
-      queue_ = new StateOrderQueue<StateId>();
+      queue_.reset(new StateOrderQueue<StateId>());
       VLOG(2) << "AutoQueue: using state-order discipline";
     } else if (props & kAcyclic) {
-      queue_ = new TopOrderQueue<StateId>(fst, filter);
+      queue_.reset(new TopOrderQueue<StateId>(fst, filter));
       VLOG(2) << "AutoQueue: using top-order discipline";
     } else if ((props & kUnweighted) && (Weight::Properties() & kIdempotent)) {
-      queue_ = new LifoQueue<StateId>();
+      queue_.reset(new LifoQueue<StateId>());
       VLOG(2) << "AutoQueue: using LIFO discipline";
     } else {
       uint64 properties;
       // Decompose into strongly-connected components.
-      SccVisitor<Arc> scc_visitor(&scc_, 0, 0, &properties);
+      SccVisitor<Arc> scc_visitor(&scc_, nullptr, nullptr, &properties);
       DfsVisit(fst, &scc_visitor, filter);
       StateId nscc = *std::max_element(scc_.begin(), scc_.end()) + 1;
       std::vector<QueueType> queue_types(nscc);
-      NaturalLess<Weight> *less = 0;
-      Compare *comp = 0;
+      std::unique_ptr<NaturalLess<Weight>> less;
+      std::unique_ptr<Compare> comp;
       if (distance && (Weight::Properties() & kPath)) {
-        less = new NaturalLess<Weight>;
-        comp = new Compare(*distance, *less);
+        less.reset(new NaturalLess<Weight>());
+        comp.reset(new Compare(*distance, *less));
       }
       // Find the queue type to use per SCC.
       bool unweighted;
       bool all_trivial;
-      SccQueueType(fst, scc_, &queue_types, filter, less, &all_trivial,
+      SccQueueType(fst, scc_, &queue_types, filter, less.get(), &all_trivial,
                    &unweighted);
       // If unweighted and semiring is idempotent, use lifo queue.
       if (unweighted) {
-        queue_ = new LifoQueue<StateId>();
+        queue_.reset(new LifoQueue<StateId>());
         VLOG(2) << "AutoQueue: using LIFO discipline";
-        delete comp;
-        delete less;
         return;
       }
       // If all the scc are trivial, FST is acyclic and the scc# gives
       // the topological order.
       if (all_trivial) {
-        queue_ = new TopOrderQueue<StateId>(scc_);
+        queue_.reset(new TopOrderQueue<StateId>(scc_));
         VLOG(2) << "AutoQueue: using top-order discipline";
-        delete comp;
-        delete less;
         return;
       }
       VLOG(2) << "AutoQueue: using SCC meta-discipline";
@@ -584,34 +590,28 @@ class AutoQueue : public QueueBase<S> {
       for (StateId i = 0; i < nscc; ++i) {
         switch (queue_types[i]) {
           case TRIVIAL_QUEUE:
-            queues_[i] = 0;
+            queues_[i].reset();
             VLOG(3) << "AutoQueue: SCC #" << i << ": using trivial discipline";
             break;
           case SHORTEST_FIRST_QUEUE:
-            queues_[i] = new ShortestFirstQueue<StateId, Compare, false>(*comp);
+            queues_[i].reset(
+                new ShortestFirstQueue<StateId, Compare, false>(*comp));
             VLOG(3) << "AutoQueue: SCC #" << i
                     << ": using shortest-first discipline";
             break;
           case LIFO_QUEUE:
-            queues_[i] = new LifoQueue<StateId>();
+            queues_[i].reset(new LifoQueue<StateId>());
             VLOG(3) << "AutoQueue: SCC #" << i << ": using LIFO disciplle";
             break;
           case FIFO_QUEUE:
           default:
-            queues_[i] = new FifoQueue<StateId>();
+            queues_[i].reset(new FifoQueue<StateId>());
             VLOG(3) << "AutoQueue: SCC #" << i << ": using FIFO disciplle";
             break;
         }
       }
-      queue_ = new SccQueue<StateId, QueueBase<StateId>>(scc_, &queues_);
-      delete comp;
-      delete less;
+      queue_.reset(new SccQueue<StateId, QueueBase<StateId>>(scc_, &queues_));
     }
-  }
-
-  ~AutoQueue() override {
-    for (StateId i = 0; i < queues_.size(); ++i) delete queues_[i];
-    delete queue_;
   }
 
   StateId Head() const { return queue_->Head(); }
@@ -627,8 +627,8 @@ class AutoQueue : public QueueBase<S> {
   void Clear() { queue_->Clear(); }
 
  private:
-  QueueBase<StateId> *queue_;
-  std::vector<QueueBase<StateId> *> queues_;
+  std::unique_ptr<QueueBase<StateId>> queue_;
+  std::vector<std::unique_ptr<QueueBase<StateId>>> queues_;
   std::vector<StateId> scc_;
 
   template <class Arc, class ArcFilter, class Less>
@@ -651,8 +651,6 @@ class AutoQueue : public QueueBase<S> {
   bool Empty_() const override { return Empty(); }
 
   void Clear_() override { return Clear(); }
-
-  DISALLOW_COPY_AND_ASSIGN(AutoQueue);
 };
 
 // Examines the states in an Fst's strongly connected components and
@@ -677,8 +675,9 @@ void AutoQueue<StateId>::SccQueueType(const Fst<A> &fst,
   *all_trivial = true;
   *unweighted = true;
 
-  for (StateId i = 0; i < queue_type->size(); ++i)
+  for (StateId i = 0; i < queue_type->size(); ++i) {
     (*queue_type)[i] = TRIVIAL_QUEUE;
+  }
 
   for (StateIterator<Fst<Arc>> sit(fst); !sit.Done(); sit.Next()) {
     StateId state = sit.Value();
@@ -687,20 +686,22 @@ void AutoQueue<StateId>::SccQueueType(const Fst<A> &fst,
       if (!filter(arc)) continue;
       if (scc[state] == scc[arc.nextstate]) {
         QueueType &type = (*queue_type)[scc[state]];
-        if (!less || ((*less)(arc.weight, Weight::One())))
+        if (!less || ((*less)(arc.weight, Weight::One()))) {
           type = FIFO_QUEUE;
-        else if ((type == TRIVIAL_QUEUE) || (type == LIFO_QUEUE)) {
+        } else if ((type == TRIVIAL_QUEUE) || (type == LIFO_QUEUE)) {
           if (!(Weight::Properties() & kIdempotent) ||
-              (arc.weight != Weight::Zero() && arc.weight != Weight::One()))
+              (arc.weight != Weight::Zero() && arc.weight != Weight::One())) {
             type = SHORTEST_FIRST_QUEUE;
-          else
+          } else {
             type = LIFO_QUEUE;
+          }
         }
         if (type != TRIVIAL_QUEUE) *all_trivial = false;
       }
       if (!(Weight::Properties() & kIdempotent) ||
-          (arc.weight != Weight::Zero() && arc.weight != Weight::One()))
+          (arc.weight != Weight::Zero() && arc.weight != Weight::One())) {
         *unweighted = false;
+      }
     }
   }
 }
@@ -787,16 +788,16 @@ class PruneQueue : public QueueBase<typename Q::StateId> {
         class_func_(class_func),
         threshold_(threshold) {}
 
-  ~PruneQueue() override { delete queue_; }
-
   StateId Head() const { return queue_->Head(); }
 
   void Enqueue(StateId s) {
     StateId c = class_func_(s);
-    if (c >= class_distance_.size())
+    if (c >= class_distance_.size()) {
       class_distance_.resize(c + 1, Weight::Zero());
-    if (less_(distance_[s], class_distance_[c]))
+    }
+    if (less_(distance_[s], class_distance_[c])) {
       class_distance_[c] = distance_[s];
+    }
 
     // Enqueue only if below threshold limit
     Weight limit = Times(class_distance_[c], threshold_);
@@ -807,8 +808,9 @@ class PruneQueue : public QueueBase<typename Q::StateId> {
 
   void Update(StateId s) {
     StateId c = class_func_(s);
-    if (less_(distance_[s], class_distance_[c]))
+    if (less_(distance_[s], class_distance_[c])) {
       class_distance_[c] = distance_[s];
+    }
     queue_->Update(s);
   }
 
@@ -827,13 +829,11 @@ class PruneQueue : public QueueBase<typename Q::StateId> {
   void Clear_() override { return Clear(); }
 
   const std::vector<Weight> &distance_;  // shortest distance to state
-  Q *queue_;
+  std::unique_ptr<Q> queue_;
   L less_;
   const C &class_func_;            // eqv. class function object
   Weight threshold_;               // pruning weight threshold
   std::vector<Weight> class_distance_;  // shortest distance to class
-
-  DISALLOW_COPY_AND_ASSIGN(PruneQueue);
 };
 
 // Pruning queue discipline (see above) using the weight's natural
@@ -865,8 +865,6 @@ class FilterQueue : public QueueBase<typename Q::StateId> {
         queue_(queue),
         state_filter_(state_filter) {}
 
-  ~FilterQueue() override { delete queue_; }
-
   StateId Head() const { return queue_->Head(); }
 
   // Enqueues only if allowed by state filter.
@@ -893,12 +891,10 @@ class FilterQueue : public QueueBase<typename Q::StateId> {
   bool Empty_() const override { return Empty(); }
   void Clear_() override { return Clear(); }
 
-  Q *queue_;
+  std::unique_ptr<Q> queue_;
   const F &state_filter_;  // Filter to prune states
-
-  DISALLOW_COPY_AND_ASSIGN(FilterQueue);
 };
 
 }  // namespace fst
 
-#endif
+#endif  // FST_LIB_QUEUE_H_

@@ -136,8 +136,8 @@ class LinearTaggerFstImpl : public CacheImpl<A> {
   // the input label.
   void MatchInput(StateId s, Label ilabel, std::vector<Arc> *arcs);
 
-  static LinearTaggerFstImpl<A> *Read(std::istream &strm,  // NOLINT
-                                      const FstReadOptions &opts);
+  static LinearTaggerFstImpl *Read(std::istream &strm,
+                                   const FstReadOptions &opts);
 
   bool Write(std::ostream &strm,  // NOLINT
              const FstWriteOptions &opts) const {
@@ -275,7 +275,7 @@ class LinearTaggerFstImpl : public CacheImpl<A> {
   // allocation
   std::vector<Label> state_stub_, next_stub_;
 
-  void operator=(const LinearTaggerFstImpl<A> &);  // Disallow assignment
+  LinearTaggerFstImpl &operator=(const LinearTaggerFstImpl &) = delete;
 };
 
 template <class A>
@@ -425,20 +425,18 @@ void LinearTaggerFstImpl<A>::MatchInput(StateId s, Label ilabel,
 template <class A>
 inline LinearTaggerFstImpl<A> *LinearTaggerFstImpl<A>::Read(
     std::istream &strm, const FstReadOptions &opts) {  // NOLINT
-  LinearTaggerFstImpl<A> *impl = new LinearTaggerFstImpl<A>();
+  std::unique_ptr<LinearTaggerFstImpl<A>> impl(new LinearTaggerFstImpl<A>());
   FstHeader header;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &header)) {
-    delete impl;
     return nullptr;
   }
   impl->data_ = std::shared_ptr<LinearFstData<A>>(LinearFstData<A>::Read(strm));
   if (!impl->data_) {
-    delete impl;
     return nullptr;
   }
   impl->delay_ = impl->data_->MaxFutureSize();
   impl->ReserveStubSpace();
-  return impl;
+  return impl.release();
 }
 
 // This class attaches interface to implementation and handles
@@ -535,7 +533,7 @@ class LinearTaggerFst : public ImplToFst<LinearTaggerFstImpl<A>> {
   explicit LinearTaggerFst(std::shared_ptr<Impl> impl)
       : ImplToFst<Impl>(impl) {}
 
-  void operator=(const LinearTaggerFst<A> &fst);  // Disallow assignment
+  void operator=(const LinearTaggerFst<A> &fst) = delete;
 };
 
 // Specialization for LinearTaggerFst.
@@ -558,9 +556,6 @@ class ArcIterator<LinearTaggerFst<A>>
       : CacheArcIterator<LinearTaggerFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>
@@ -753,13 +748,14 @@ class LinearClassifierFstImpl : public CacheImpl<A> {
     Label pred = Prediction(state);
     DCHECK_GT(pred, 0);
     DCHECK_LE(pred, num_classes_);
-    Weight final = Weight::One();
+    Weight final_weight = Weight::One();
     for (size_t group = 0; group < num_groups_; ++group) {
       int group_id = GroupId(pred, group);
       int trie_state = InternalAt(state, group);
-      final = Times(final, data_->GroupFinalWeight(group_id, trie_state));
+      final_weight =
+          Times(final_weight, data_->GroupFinalWeight(group_id, trie_state));
     }
-    return final;
+    return final_weight;
   }
 
   // Finds state corresponding to an n-gram. Creates new state if n-gram not
@@ -792,7 +788,7 @@ class LinearClassifierFstImpl : public CacheImpl<A> {
   // allocation
   std::vector<Label> state_stub_, next_stub_;
 
-  void operator=(const LinearClassifierFstImpl<A> &);  // Disallow assignment
+  void operator=(const LinearClassifierFstImpl<A> &) = delete;
 };
 
 template <class A>
@@ -868,20 +864,18 @@ void LinearClassifierFstImpl<A>::MatchInput(StateId s, Label ilabel,
 template <class A>
 inline LinearClassifierFstImpl<A> *LinearClassifierFstImpl<A>::Read(
     std::istream &strm, const FstReadOptions &opts) {
-  LinearClassifierFstImpl<A> *impl = new LinearClassifierFstImpl<A>();
+  std::unique_ptr<LinearClassifierFstImpl<A>> impl(
+      new LinearClassifierFstImpl<A>());
   FstHeader header;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &header)) {
-    delete impl;
     return nullptr;
   }
   impl->data_ = std::shared_ptr<LinearFstData<A>>(LinearFstData<A>::Read(strm));
   if (!impl->data_) {
-    delete impl;
     return nullptr;
   }
   ReadType(strm, &impl->num_classes_);
   if (!strm) {
-    delete impl;
     return nullptr;
   }
   impl->num_groups_ = impl->data_->NumGroups() / impl->num_classes_;
@@ -890,11 +884,10 @@ inline LinearClassifierFstImpl<A> *LinearClassifierFstImpl<A>::Read(
                   "number of classes: num groups = "
                << impl->data_->NumGroups()
                << ", num classes = " << impl->num_classes_;
-    delete impl;
     return nullptr;
   }
   impl->ReserveStubSpace();
-  return impl;
+  return impl.release();
 }
 
 // This class attaches interface to implementation and handles
@@ -994,7 +987,7 @@ class LinearClassifierFst : public ImplToFst<LinearClassifierFstImpl<A>> {
   explicit LinearClassifierFst(std::shared_ptr<Impl> impl)
       : ImplToFst<Impl>(impl) {}
 
-  void operator=(const LinearClassifierFst<A> &fst);  // Disallow assignment
+  void operator=(const LinearClassifierFst<A> &fst) = delete;
 };
 
 // Specialization for LinearClassifierFst.
@@ -1017,9 +1010,6 @@ class ArcIterator<LinearClassifierFst<A>>
       : CacheArcIterator<LinearClassifierFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>
@@ -1069,8 +1059,6 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
         loop_(matcher.loop_),
         cur_arc_(0),
         error_(matcher.error_) {}
-
-  ~LinearFstMatcherTpl() override { delete fst_; }
 
   LinearFstMatcherTpl<F> *Copy(bool safe = false) const override {
     return new LinearFstMatcherTpl<F>(*this, safe);
@@ -1134,7 +1122,7 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
   const Arc &Value_() const override { return Value(); }
   void Next_() override { Next(); }
 
-  const FST *fst_;
+  std::unique_ptr<const FST> fst_;
   MatchType match_type_;  // Type of match to perform
   StateId s_;             // Current state
   bool current_loop_;     // Current arc is the implicit loop
@@ -1144,8 +1132,6 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
                       // call
   size_t cur_arc_;    // Index to the arc that `Value()` should return
   bool error_;        // Error encountered
-
-  void operator=(const LinearFstMatcherTpl<F> &);  // Disallow assignment
 };
 }  // namespace fst
 

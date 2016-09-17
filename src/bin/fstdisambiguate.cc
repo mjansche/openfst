@@ -4,6 +4,7 @@
 // Disambiguates an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/disambiguate.h>
 

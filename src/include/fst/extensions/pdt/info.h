@@ -50,8 +50,6 @@ class PdtInfo {
   int64 nuniq_close_parens_;
   int64 nopen_paren_states_;
   int64 nclose_paren_states_;
-
-  DISALLOW_COPY_AND_ASSIGN(PdtInfo);
 };
 
 template <class A>

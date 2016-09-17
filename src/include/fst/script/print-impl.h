@@ -126,7 +126,8 @@ class FstPrinter {
   string sep_;                // separator character between fields.
   string missing_symbol_;     // symbol to print when lookup fails (default
                               // "" means raise error)
-  DISALLOW_COPY_AND_ASSIGN(FstPrinter);
+  FstPrinter(const FstPrinter &) = delete;
+  FstPrinter &operator=(const FstPrinter &) = delete;
 };
 
 }  // namespace fst

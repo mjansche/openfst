@@ -16,7 +16,6 @@ typedef args::Package<MutableFstClass *, const ClosureType> ClosureArgs;
 template <class Arc>
 void Closure(ClosureArgs *args) {
   MutableFst<Arc> *fst = args->arg1->GetMutableFst<Arc>();
-
   Closure(fst, args->arg2);
 }
 

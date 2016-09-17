@@ -45,8 +45,9 @@ class LabelReachableData {
   int NumIntervalSets() const { return isets_.size(); }
 
   std::unordered_map<L, L> *Label2Index() {
-    if (!have_relabel_data_)
+    if (!have_relabel_data_) {
       FSTERROR() << "LabelReachableData: No relabeling data";
+    }
     return &label2index_;
   }
 
@@ -85,8 +86,6 @@ class LabelReachableData {
   Label final_label_;                     // Final label
   std::unordered_map<L, L> label2index_;  // Finds index for a label.
   std::vector<LabelIntervalSet> isets_;  // Interval sets per state.
-
-  DISALLOW_COPY_AND_ASSIGN(LabelReachableData);
 };
 
 // Tests reachability of labels from a given state. If reach_input =
@@ -130,7 +129,7 @@ class LabelReachable {
   typedef typename D::LabelIntervalSet LabelIntervalSet;
   typedef typename LabelIntervalSet::Interval Interval;
 
-  LabelReachable(const Fst<A> &fst, bool reach_input, S *s = 0,
+  LabelReachable(const Fst<A> &fst, bool reach_input, S *s = nullptr,
                  bool keep_relabel_data = true)
       : fst_(new VectorFst<Arc>(fst)),
         s_(kNoStateId),
@@ -143,13 +142,12 @@ class LabelReachable {
     StateId ins = fst_->NumStates();
     TransformFst();
     FindIntervals(ins);
-    delete fst_;
+    fst_.reset();
   }
 
-  explicit LabelReachable(std::shared_ptr<D> data, S *s = 0)
-      : fst_(0),
-        s_(kNoStateId),
-        data_(data),
+  explicit LabelReachable(std::shared_ptr<D> data, S *s = nullptr)
+      : s_(kNoStateId),
+        data_(std::move(data)),
         accumulator_(s ? s : new S()),
         ncalls_(0),
         nintervals_(0),
@@ -157,8 +155,7 @@ class LabelReachable {
         error_(false) {}
 
   LabelReachable(const LabelReachable<A, S, D> &reachable, bool safe = false)
-      : fst_(0),
-        s_(kNoStateId),
+      : s_(kNoStateId),
         data_(reachable.data_),
         accumulator_(new S(*reachable.accumulator_, safe)),
         ncalls_(0),
@@ -167,7 +164,6 @@ class LabelReachable {
         error_(reachable.error_) {}
 
   ~LabelReachable() {
-    delete accumulator_;
     if (ncalls_ > 0) {
       VLOG(2) << "# of calls: " << ncalls_;
       VLOG(2) << "# of intervals/call: " << (nintervals_ / ncalls_);
@@ -179,8 +175,9 @@ class LabelReachable {
     if (label == 0 || error_) return label;
     std::unordered_map<Label, Label> &label2index = *data_->Label2Index();
     Label &relabel = label2index[label];
-    if (!relabel)  // Add new label
+    if (!relabel) {  // Add new label
       relabel = label2index.size() + 1;
+    }
     return relabel;
   }
 
@@ -192,19 +189,20 @@ class LabelReachable {
       for (MutableArcIterator<MutableFst<Arc>> aiter(fst, s); !aiter.Done();
            aiter.Next()) {
         Arc arc = aiter.Value();
-        if (relabel_input)
+        if (relabel_input) {
           arc.ilabel = Relabel(arc.ilabel);
-        else
+        } else {
           arc.olabel = Relabel(arc.olabel);
+        }
         aiter.SetValue(arc);
       }
     }
     if (relabel_input) {
       ArcSort(fst, ILabelCompare<Arc>());
-      fst->SetInputSymbols(0);
+      fst->SetInputSymbols(nullptr);
     } else {
       ArcSort(fst, OLabelCompare<Arc>());
-      fst->SetOutputSymbols(0);
+      fst->SetOutputSymbols(nullptr);
     }
   }
 
@@ -217,17 +215,20 @@ class LabelReachable {
     pairs->clear();
     const std::unordered_map<Label, Label> &label2index = *data_->Label2Index();
     // Maps labels to their new values in [1, label2index().size()]
-    for (auto it = label2index.begin(); it != label2index.end(); ++it)
-      if (it->second != data_->FinalLabel())
+    for (auto it = label2index.begin(); it != label2index.end(); ++it) {
+      if (it->second != data_->FinalLabel()) {
         pairs->push_back(std::pair<Label, Label>(it->first, it->second));
+      }
+    }
     if (avoid_collisions) {
       // Ensures any label in [1, label2index().size()] is mapped either
       // by the above step or to label2index() + 1 (to avoid collisions).
       for (int i = 1; i <= label2index.size(); ++i) {
         typename std::unordered_map<Label, Label>::const_iterator it =
             label2index.find(i);
-        if (it == label2index.end() || it->second == data_->FinalLabel())
+        if (it == label2index.end() || it->second == data_->FinalLabel()) {
           pairs->push_back(std::pair<Label, Label>(i, label2index.size() + 1));
+        }
       }
     }
   }
@@ -388,13 +389,13 @@ class LabelReachable {
 
     // Redirects labeled arcs to new final states.
     for (StateId s = 0; s < ins; ++s) {
-      for (MutableArcIterator<VectorFst<Arc>> aiter(fst_, s); !aiter.Done();
-           aiter.Next()) {
+      for (MutableArcIterator<VectorFst<Arc>> aiter(fst_.get(), s);
+           !aiter.Done(); aiter.Next()) {
         Arc arc = aiter.Value();
         Label label = data_->ReachInput() ? arc.ilabel : arc.olabel;
         if (label) {
-          if (label2state_.find(label) == label2state_.end()) {
-            label2state_[label] = ons;
+          auto insert_result = label2state_.insert(std::make_pair(label, ons));
+          if (insert_result.second) {
             indeg.push_back(0);
             ++ons;
           }
@@ -405,14 +406,14 @@ class LabelReachable {
       }
 
       // Redirects final weights to new final state.
-      Weight final = fst_->Final(s);
-      if (final != Weight::Zero()) {
-        if (label2state_.find(kNoLabel) == label2state_.end()) {
-          label2state_[kNoLabel] = ons;
+      const Weight final_weight = fst_->Final(s);
+      if (final_weight != Weight::Zero()) {
+        auto insert_result = label2state_.insert(std::make_pair(kNoLabel, ons));
+        if (insert_result.second) {
           indeg.push_back(0);
           ++ons;
         }
-        Arc arc(kNoLabel, kNoLabel, final, label2state_[kNoLabel]);
+        Arc arc(kNoLabel, kNoLabel, final_weight, label2state_[kNoLabel]);
         fst_->AddArc(s, arc);
         ++indeg[arc.nextstate];  // Finds in-degrees for next step.
 
@@ -515,7 +516,7 @@ class LabelReachable {
     return low;
   }
 
-  VectorFst<Arc> *fst_;
+  std::unique_ptr<VectorFst<Arc>> fst_;
   StateId s_;                             // Current state
   std::unordered_map<Label, StateId>
       label2state_;  // Finds final state for a label
@@ -525,14 +526,12 @@ class LabelReachable {
   Weight reach_weight_;  // Gives weight sum of arc iterator
                          // arcs with reachable labels.
   std::shared_ptr<D> data_;  // Shareable data between copies
-  S *accumulator_;       // Sums arc weights
+  std::unique_ptr<S> accumulator_;  // Sums arc weights
 
   double ncalls_;
   double nintervals_;
   bool reach_fst_input_;
   bool error_;
-
-  void operator=(const LabelReachable<A, S, D> &);  // Disallow
 };
 
 }  // namespace fst

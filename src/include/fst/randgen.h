@@ -58,21 +58,21 @@ class LogProbArcSelector {
   explicit LogProbArcSelector(time_t seed = time(nullptr)) { srand(seed); }
 
   size_t operator()(const Fst<A> &fst, StateId s) const {
-    // Find total weight leaving state
-    double sum = 0.0;
+    // Finds total weight leaving state.
+    auto sum = Log64Weight::Zero();
     for (ArcIterator<Fst<A>> aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const A &arc = aiter.Value();
-      sum += exp(-to_log_weight_(arc.weight).Value());
+      const auto &arc = aiter.Value();
+      sum = Plus(sum, to_log_weight_(arc.weight));
     }
-    sum += exp(-to_log_weight_(fst.Final(s)).Value());
-
-    double r = rand() / (RAND_MAX + 1.0);
-    double p = 0.0;
+    sum = Plus(sum, to_log_weight_(fst.Final(s)));
+    double r = rand() / (RAND_MAX + 1.0);  // NOLINT
+    double threshold = exp(-sum.Value()) * r;
+    auto p = Log64Weight::Zero();
     size_t n = 0;
     for (ArcIterator<Fst<A>> aiter(fst, s); !aiter.Done(); aiter.Next(), ++n) {
-      const A &arc = aiter.Value();
-      p += exp(-to_log_weight_(arc.weight).Value());
-      if (p > r * sum) return n;
+      const auto &arc = aiter.Value();
+      p = Plus(p, to_log_weight_(arc.weight));
+      if (exp(-p.Value()) > threshold) return n;
     }
     return n;
   }
@@ -174,8 +174,9 @@ class ArcSampler {
       return false;
     }
 
-    for (auto i = 0; i < rstate.nsamples; ++i)
+    for (auto i = 0; i < rstate.nsamples; ++i) {
       ++sample_map_[arc_selector_(fst_, rstate.state_id)];
+    }
     Reset();
     return true;
   }
@@ -206,8 +207,7 @@ class ArcSampler {
   std::map<size_t, size_t> sample_map_;
   std::map<size_t, size_t>::const_iterator sample_iter_;
 
-  // disallow
-  ArcSampler<A, S> &operator=(const ArcSampler<A, S> &s);
+  ArcSampler<A, S> &operator=(const ArcSampler<A, S> &s) = delete;
 };
 
 // Samples one sample of num_to_sample dimensions from a multinomial
@@ -263,15 +263,11 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
         arc_selector_(sampler.arc_selector_),
         max_length_(sampler.max_length_) {
     if (fst) {
-      accumulator_ = new C();
+      accumulator_.reset(new C());
       accumulator_->Init(*fst);
     } else {  // shallow copy
-      accumulator_ = new C(*sampler.accumulator_);
+      accumulator_.reset(new C(*sampler.accumulator_));
     }
-  }
-
-  ~ArcSampler() {
-    delete accumulator_;
   }
 
   bool Sample(const RandState<A> &rstate) {
@@ -289,8 +285,9 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
       return true;
     }
 
-    for (size_t i = 0; i < rstate.nsamples; ++i)
-      ++sample_map_[arc_selector_(fst_, rstate.state_id, accumulator_)];
+    for (size_t i = 0; i < rstate.nsamples; ++i) {
+      ++sample_map_[arc_selector_(fst_, rstate.state_id, accumulator_.get())];
+    }
     Reset();
     return true;
   }
@@ -310,15 +307,18 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
   void MultinomialSample(const RandState<A> &rstate) {
     p_.clear();
     for (ArcIterator<Fst<A>> aiter(fst_, rstate.state_id); !aiter.Done();
-         aiter.Next())
+         aiter.Next()) {
       p_.push_back(exp(-to_log_weight_(aiter.Value().weight).Value()));
-    if (fst_.Final(rstate.state_id) != Weight::Zero())
+    }
+    if (fst_.Final(rstate.state_id) != Weight::Zero()) {
       p_.push_back(exp(-to_log_weight_(fst_.Final(rstate.state_id)).Value()));
+    }
     if (rstate.nsamples < std::numeric_limits<RNG::result_type>::max()) {
       OneMultinomialSample(p_, rstate.nsamples, &sample_map_, &rng_);
     } else {
-      for (auto i = 0; i < p_.size(); ++i)
+      for (auto i = 0; i < p_.size(); ++i) {
         sample_map_[i] = ceil(p_[i] * rstate.nsamples);
+      }
     }
   }
 
@@ -329,14 +329,11 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
   // Stores (N, K) as described for Value().
   std::map<size_t, size_t> sample_map_;
   std::map<size_t, size_t>::const_iterator sample_iter_;
-  C *accumulator_;
+  std::unique_ptr<C> accumulator_;
 
   RNG rng_;                // Random number generator
   std::vector<double> p_;  // multinomial parameters
   WeightConvert<Weight, Log64Weight> to_log_weight_;
-
-  // disallow
-  ArcSampler<A, S> &operator=(const ArcSampler<A, S> &s);
 };
 
 // Options for random path generation with RandGenFst. The template argument
@@ -378,8 +375,9 @@ class RandGenFstImpl : public CacheImpl<B> {
 
   typedef B Arc;
   typedef typename A::Label Label;
-  typedef typename A::Weight Weight;
+  typedef typename A::Weight AWeight;
   typedef typename A::StateId StateId;
+  typedef typename B::Weight BWeight;
 
   RandGenFstImpl(const Fst<A> &fst, const RandGenFstOptions<S> &opts)
       : CacheImpl<B>(opts),
@@ -401,7 +399,7 @@ class RandGenFstImpl : public CacheImpl<B> {
   RandGenFstImpl(const RandGenFstImpl &impl)
       : CacheImpl<B>(impl),
         fst_(impl.fst_->Copy(true)),
-        arc_sampler_(new S(*impl.arc_sampler_, fst_)),
+        arc_sampler_(new S(*impl.arc_sampler_, fst_.get())),
         npath_(impl.npath_),
         weighted_(impl.weighted_),
         superfinal_(kNoLabel) {
@@ -411,25 +409,18 @@ class RandGenFstImpl : public CacheImpl<B> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~RandGenFstImpl() override {
-    for (auto i = 0; i < state_table_.size(); ++i) delete state_table_[i];
-    delete fst_;
-    delete arc_sampler_;
-  }
-
   StateId Start() {
     if (!HasStart()) {
       StateId s = fst_->Start();
       if (s == kNoStateId) return kNoStateId;
       StateId start = state_table_.size();
       SetStart(start);
-      RandState<A> *rstate = new RandState<A>(s, npath_, 0, 0, 0);
-      state_table_.push_back(rstate);
+      state_table_.emplace_back(new RandState<A>(s, npath_, 0, 0, nullptr));
     }
     return CacheImpl<B>::Start();
   }
 
-  Weight Final(StateId s) {
+  BWeight Final(StateId s) {
     if (!HasFinal(s)) {
       Expand(s);
     }
@@ -473,12 +464,12 @@ class RandGenFstImpl : public CacheImpl<B> {
   // states as needed.
   void Expand(StateId s) {
     if (s == superfinal_) {
-      SetFinal(s, Weight::One());
+      SetFinal(s, BWeight::One());
       SetArcs(s);
       return;
     }
 
-    SetFinal(s, Weight::Zero());
+    SetFinal(s, BWeight::Zero());
     const RandState<A> &rstate = *state_table_[s];
     arc_sampler_->Sample(rstate);
     ArcIterator<Fst<A>> aiter(*fst_, rstate.state_id);
@@ -491,26 +482,28 @@ class RandGenFstImpl : public CacheImpl<B> {
       if (pos < narcs) {  // regular transition
         aiter.Seek(sample_pair.first);
         const A &aarc = aiter.Value();
-        Weight weight = weighted_ ? to_weight_(-log(prob)) : Weight::One();
+        const BWeight weight =
+            weighted_ ? to_weight_(Log64Weight(-log(prob))) : BWeight::One();
         B barc(aarc.ilabel, aarc.olabel, weight, state_table_.size());
         PushArc(s, barc);
         RandState<A> *nrstate = new RandState<A>(
             aarc.nextstate, count, rstate.length + 1, pos, &rstate);
-        state_table_.push_back(nrstate);
+        state_table_.emplace_back(nrstate);
       } else {  // super-final transition
         if (weighted_) {
-          Weight weight = remove_total_weight_
-                              ? to_weight_(-log(prob))
-                              : to_weight_(-log(prob * npath_));
+          const BWeight weight =
+              remove_total_weight_
+                  ? to_weight_(Log64Weight(-log(prob)))
+                  : to_weight_(Log64Weight(-log(prob * npath_)));
           SetFinal(s, weight);
         } else {
           if (superfinal_ == kNoLabel) {
             superfinal_ = state_table_.size();
-            RandState<A> *nrstate = new RandState<A>(kNoStateId, 0, 0, 0, 0);
-            state_table_.push_back(nrstate);
+            state_table_.emplace_back(
+                new RandState<A>(kNoStateId, 0, 0, 0, nullptr));
           }
           for (size_t n = 0; n < count; ++n) {
-            B barc(0, 0, Weight::One(), superfinal_);
+            B barc(0, 0, BWeight::One(), superfinal_);
             PushArc(s, barc);
           }
         }
@@ -520,16 +513,14 @@ class RandGenFstImpl : public CacheImpl<B> {
   }
 
  private:
-  Fst<A> *fst_;
-  S *arc_sampler_;
+  std::unique_ptr<Fst<A>> fst_;
+  std::unique_ptr<S> arc_sampler_;
   int32 npath_;
-  std::vector<RandState<A> *> state_table_;
+  std::vector<std::unique_ptr<RandState<A>>> state_table_;
   bool weighted_;
   bool remove_total_weight_;
   StateId superfinal_;
-  WeightConvert<Log64Weight, Weight> to_weight_;
-
-  void operator=(const RandGenFstImpl<A, B, S> &);  // disallow
+  WeightConvert<Log64Weight, BWeight> to_weight_;
 };
 
 // Fst class to randomly generate paths through an FST; details controlled
@@ -571,7 +562,7 @@ class RandGenFst : public ImplToFst<RandGenFstImpl<A, B, S>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const RandGenFst<A, B, S> &fst);  // Disallow
+  RandGenFst &operator=(const RandGenFst &fst) = delete;
 };
 
 // Specialization for RandGenFst.
@@ -581,9 +572,6 @@ class StateIterator<RandGenFst<A, B, S>>
  public:
   explicit StateIterator(const RandGenFst<A, B, S> &fst)
       : CacheStateIterator<RandGenFst<A, B, S>>(fst, fst.GetMutableImpl()) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Specialization for RandGenFst.
@@ -597,9 +585,6 @@ class ArcIterator<RandGenFst<A, B, S>>
       : CacheArcIterator<RandGenFst<A, B, S>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A, class B, class S>
@@ -634,7 +619,7 @@ class RandGenVisitor {
   typedef typename IArc::Weight Weight;
   typedef typename IArc::StateId StateId;
 
-  RandGenVisitor(MutableFst<OArc> *ofst) : ofst_(ofst) {}
+  explicit RandGenVisitor(MutableFst<OArc> *ofst) : ofst_(ofst) {}
 
   void InitVisit(const Fst<IArc> &ifst) {
     ifst_ = &ifst;
@@ -695,7 +680,8 @@ class RandGenVisitor {
   MutableFst<OArc> *ofst_;
   std::vector<OArc> path_;
 
-  DISALLOW_COPY_AND_ASSIGN(RandGenVisitor);
+  RandGenVisitor(const RandGenVisitor &) = delete;
+  RandGenVisitor &operator=(const RandGenVisitor &) = delete;
 };
 
 // Randomly generate paths through an FST; details controlled by

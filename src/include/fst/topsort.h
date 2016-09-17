@@ -31,7 +31,7 @@ class TopOrderVisitor {
       : order_(order), acyclic_(acyclic) {}
 
   void InitVisit(const Fst<A> &fst) {
-    finish_ = new std::vector<StateId>;
+    finish_.reset(new std::vector<StateId>());
     *acyclic_ = true;
   }
 
@@ -48,18 +48,21 @@ class TopOrderVisitor {
   void FinishVisit() {
     if (*acyclic_) {
       order_->clear();
-      for (StateId s = 0; s < finish_->size(); ++s)
+      for (StateId s = 0; s < finish_->size(); ++s) {
         order_->push_back(kNoStateId);
-      for (StateId s = 0; s < finish_->size(); ++s)
+      }
+      for (StateId s = 0; s < finish_->size(); ++s) {
         (*order_)[(*finish_)[finish_->size() - s - 1]] = s;
+      }
     }
-    delete finish_;
+    finish_.reset();
   }
 
  private:
   std::vector<StateId> *order_;
   bool *acyclic_;
-  std::vector<StateId> *finish_;  // states in finishing-time order
+  std::unique_ptr<std::vector<StateId>>
+      finish_;  // states in finishing-time order
 };
 
 // Topologically sorts its input if acyclic, modifying it.  Otherwise,

@@ -116,7 +116,7 @@ class ReplaceUtil {
               const ReplaceUtilOptions &opts);
 
   // Constructs from ReplaceFst internals; ownership retained by caller.
-  ReplaceUtil(const std::vector<const Fst<Arc> *> &fst_array,
+  ReplaceUtil(const std::vector<std::unique_ptr<const Fst<Arc>>> &fst_array,
               const NonTerminalHash &nonterminal_hash,
               const ReplaceUtilOptions &opts);
 
@@ -136,8 +136,9 @@ class ReplaceUtil {
   StateId SCC(Label label) const {
     GetDependencies(false);
     auto it = nonterminal_hash_.find(label);
-    if (it == nonterminal_hash_.end())
+    if (it == nonterminal_hash_.end()) {
       return kNoStateId;
+    }
     return depscc_[it->second];
   }
 
@@ -157,8 +158,9 @@ class ReplaceUtil {
     uint64 props = kAccessible | kCoAccessible;
     for (Label i = 0; i < fst_array_.size(); ++i) {
       if (!fst_array_[i]) continue;
-      if (fst_array_[i]->Properties(props, true) != props || !depaccess_[i])
+      if (fst_array_[i]->Properties(props, true) != props || !depaccess_[i]) {
         return false;
+      }
     }
     return true;
   }
@@ -252,7 +254,8 @@ class ReplaceUtil {
   mutable bool have_stats_;                      // have dependency statistics
   mutable std::vector<ReplaceStats> stats_;      // Per Fst statistics
   mutable std::vector<uint32> depsccprops_;            // SCC properties
-  DISALLOW_COPY_AND_ASSIGN(ReplaceUtil);
+  ReplaceUtil(const ReplaceUtil &) = delete;
+  ReplaceUtil &operator=(const ReplaceUtil &) = delete;
 };
 
 template <class Arc>
@@ -276,8 +279,9 @@ ReplaceUtil<Arc>::ReplaceUtil(const std::vector<MutableFstPair> &fst_pairs,
     mutable_fst_array_.push_back(fst);
   }
   root_fst_ = nonterminal_hash_[root_label_];
-  if (!root_fst_)
+  if (!root_fst_) {
     FSTERROR() << "ReplaceUtil: No root Fst for label: " << root_label_;
+  }
 }
 
 template <class Arc>
@@ -299,14 +303,15 @@ ReplaceUtil<Arc>::ReplaceUtil(const std::vector<FstPair> &fst_pairs,
     fst_array_.push_back(fst->Copy());
   }
   root_fst_ = nonterminal_hash_[root_label_];
-  if (!root_fst_)
+  if (!root_fst_) {
     FSTERROR() << "ReplaceUtil: No root Fst for label: " << root_label_;
+  }
 }
 
 template <class Arc>
-ReplaceUtil<Arc>::ReplaceUtil(const std::vector<const Fst<Arc> *> &fst_array,
-                              const NonTerminalHash &nonterminal_hash,
-                              const ReplaceUtilOptions &opts)
+ReplaceUtil<Arc>::ReplaceUtil(
+    const std::vector<std::unique_ptr<const Fst<Arc>>> &fst_array,
+    const NonTerminalHash &nonterminal_hash, const ReplaceUtilOptions &opts)
     : root_fst_(opts.root),
       call_label_type_(opts.call_label_type),
       return_label_type_(opts.return_label_type),
@@ -316,21 +321,23 @@ ReplaceUtil<Arc>::ReplaceUtil(const std::vector<const Fst<Arc> *> &fst_array,
       depprops_(0),
       have_stats_(false) {
   fst_array_.push_back(nullptr);
-  for (Label i = 1; i < fst_array.size(); ++i)
+  for (Label i = 1; i < fst_array.size(); ++i) {
     fst_array_.push_back(fst_array[i]->Copy());
-  for (auto it = nonterminal_hash.begin();
-       it != nonterminal_hash.end(); ++it)
+  }
+  for (auto it = nonterminal_hash.begin(); it != nonterminal_hash.end(); ++it) {
     nonterminal_array_[it->second] = it->first;
+  }
   root_label_ = nonterminal_array_[root_fst_];
 }
 
 template <class Arc>
 void ReplaceUtil<Arc>::GetDependencies(bool stats) const {
   if (depfst_.NumStates() > 0) {
-    if (stats && !have_stats_)
+    if (stats && !have_stats_) {
       ClearDependencies();
-    else
+    } else {
       return;
+    }
   }
 
   have_stats_ = stats;
@@ -386,8 +393,9 @@ void ReplaceUtil<Arc>::UpdateStats(Label j) {
     return;
   }
 
-  if (j == root_fst_)  // can't replace root
+  if (j == root_fst_) {  // can't replace root
     return;
+  }
 
   for (auto in = stats_[j].inref.begin(); in != stats_[j].inref.end(); ++in) {
     Label i = in->first;
@@ -395,7 +403,7 @@ void ReplaceUtil<Arc>::UpdateStats(Label j) {
     stats_[i].nstates += stats_[j].nstates * ni;
     stats_[i].narcs += (stats_[j].narcs + 1) * ni;  // narcs - 1 + 2 (eps)
     stats_[i].nnonterms += (stats_[j].nnonterms - 1) * ni;
-    stats_[i].outref.erase(stats_[i].outref.find(j));
+    stats_[i].outref.erase(j);
     for (auto out = stats_[j].outref.begin(); out != stats_[j].outref.end();
          ++out) {
       Label k = out->first;
@@ -409,7 +417,7 @@ void ReplaceUtil<Arc>::UpdateStats(Label j) {
     Label k = out->first;
     size_t nk = out->second;
     stats_[k].nref -= nk;
-    stats_[k].inref.erase(stats_[k].inref.find(j));
+    stats_[k].inref.erase(j);
     for (auto in = stats_[j].inref.begin(); in != stats_[j].inref.end(); ++in) {
       Label i = in->first;
       size_t ni = in->second;
@@ -421,7 +429,7 @@ void ReplaceUtil<Arc>::UpdateStats(Label j) {
 
 template <class Arc>
 void ReplaceUtil<Arc>::CheckMutableFsts() {
-  if (mutable_fst_array_.size() == 0) {
+  if (mutable_fst_array_.empty()) {
     for (Label i = 0; i < fst_array_.size(); ++i) {
       if (!fst_array_[i]) {
         mutable_fst_array_.push_back(nullptr);
@@ -440,16 +448,17 @@ void ReplaceUtil<Arc>::Connect() {
   uint64 props = kAccessible | kCoAccessible;
   for (Label i = 0; i < mutable_fst_array_.size(); ++i) {
     if (!mutable_fst_array_[i]) continue;
-    if (mutable_fst_array_[i]->Properties(props, false) != props)
+    if (mutable_fst_array_[i]->Properties(props, false) != props) {
       fst::Connect(mutable_fst_array_[i]);
+    }
   }
   GetDependencies(false);
   for (Label i = 0; i < mutable_fst_array_.size(); ++i) {
     MutableFst<Arc> *fst = mutable_fst_array_[i];
     if (fst && !depaccess_[i]) {
       delete fst;
-      fst_array_[i] = 0;
-      mutable_fst_array_[i] = 0;
+      fst_array_[i] = nullptr;
+      mutable_fst_array_[i] = nullptr;
     }
   }
   ClearDependencies();
@@ -479,9 +488,11 @@ template <class Arc>
 void ReplaceUtil<Arc>::ReplaceLabels(const std::vector<Label> &labels) {
   CheckMutableFsts();
   std::unordered_set<Label> label_set;
-  for (Label i = 0; i < labels.size(); ++i)
-    if (labels[i] != root_label_)  // can't replace root
+  for (Label i = 0; i < labels.size(); ++i) {
+    if (labels[i] != root_label_) {  // can't replace root
       label_set.insert(labels[i]);
+    }
+  }
 
   // Finds Fst dependencies restricted to the labels requested.
   GetDependencies(false);
@@ -598,36 +609,43 @@ void ReplaceUtil<Arc>::GetMutableFstPairs(
 
 template <class Arc>
 void ReplaceUtil<Arc>::GetSCCProperties() const {
-  if (!depsccprops_.empty())
+  if (!depsccprops_.empty()) {
     return;
+  }
   GetDependencies(false);
-  if (depscc_.empty())
+  if (depscc_.empty()) {
     return;
-  for (StateId scc = 0; scc < depscc_.size(); ++scc)
+  }
+  for (StateId scc = 0; scc < depscc_.size(); ++scc) {
     depsccprops_.push_back(kReplaceSCCLeftLinear | kReplaceSCCRightLinear);
+  }
 
-  if (!(depprops_ & kCyclic))   // no cyclic dependencies, done
+  if (!(depprops_ & kCyclic)) {  // no cyclic dependencies, done
     return;
+  }
 
   // Checks for self-loops in the dependency graph
   for (StateId scc = 0; scc < depscc_.size(); ++scc) {
     for (ArcIterator<Fst<Arc> > aiter(depfst_, scc);
          !aiter.Done(); aiter.Next()) {
       const Arc &arc = aiter.Value();
-      if (arc.nextstate == scc)  // SCC has a self loop
+      if (arc.nextstate == scc) {  // SCC has a self loop
         depsccprops_[scc] |= kReplaceSCCNonTrivial;
+      }
     }
   }
 
   std::vector<bool> depscc_visited(depscc_.size(), false);
   for (Label i = 0; i < fst_array_.size(); ++i) {
     const Fst<Arc> *fst = fst_array_[i];
-    if (!fst)
+    if (!fst) {
       continue;
+    }
 
     StateId depscc = depscc_[i];
-    if (depscc_visited[depscc])  // SCC has more than one state
+    if (depscc_visited[depscc]) {  // SCC has more than one state
       depsccprops_[depscc] |= kReplaceSCCNonTrivial;
+    }
     depscc_visited[depscc] = true;
 
     std::vector<StateId> fstscc;  // SCCs of the current FST
@@ -641,15 +659,18 @@ void ReplaceUtil<Arc>::GetSCCProperties() const {
            !aiter.Done(); aiter.Next()) {
         const Arc &arc = aiter.Value();
         auto it = nonterminal_hash_.find(arc.olabel);
-        if (it == nonterminal_hash_.end() || depscc_[it->second] != depscc)
+        if (it == nonterminal_hash_.end() || depscc_[it->second] != depscc) {
           continue;  // skips if a terminal or a non-terminal not in SCC.
+        }
         bool arc_in_cycle = fstscc[s] == fstscc[arc.nextstate];
         // Left linear iff all non-terminals are initial
-        if (s != fst->Start() || arc_in_cycle)
+        if (s != fst->Start() || arc_in_cycle) {
           depsccprops_[depscc] &= ~kReplaceSCCLeftLinear;
+        }
         // Right linear iff all non-terminals are final
-        if (fst->Final(arc.nextstate) == Weight::Zero() || arc_in_cycle)
+        if (fst->Final(arc.nextstate) == Weight::Zero() || arc_in_cycle) {
           depsccprops_[depscc] &= ~kReplaceSCCRightLinear;
+        }
       }
     }
   }

@@ -3,11 +3,11 @@
 //
 // FST utility definitions.
 
+#include <fst/util.h>
 #include <cctype>
 #include <sstream>
 #include <string>
 #include <fst/mapped-file.h>
-#include <fst/util.h>
 
 // Utility flag definitions
 
@@ -21,7 +21,9 @@ void SplitToVector(char *full, const char *delim, std::vector<char *> *vec,
                    bool omit_empty_strings) {
   char *p = full;
   while (p) {
-    if ((p = strpbrk(full, delim))) p[0] = '\0';
+    if ((p = strpbrk(full, delim))) {
+      p[0] = '\0';
+    }
     if (!omit_empty_strings || full[0] != '\0') vec->push_back(full);
     if (p) full = p + 1;
   }
@@ -50,8 +52,11 @@ void Int64ToStr(int64 n, string *s) {
 }
 
 void ConvertToLegalCSymbol(string *s) {
-  for (auto it = s->begin(); it != s->end(); ++it)
-    if (!isalnum(*it)) *it = '_';
+  for (auto it = s->begin(); it != s->end(); ++it) {
+    if (!isalnum(*it)) {
+      *it = '_';
+    }
+  }
 }
 
 // Skips over input characters to align to 'align' bytes. Returns

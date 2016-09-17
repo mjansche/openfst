@@ -58,26 +58,31 @@ void Reweight(MutableFst<Arc> *fst,
         if (arc.nextstate >= potential.size()) continue;
         typename Arc::Weight nextweight = potential[arc.nextstate];
         if (nextweight == Weight::Zero()) continue;
-        if (type == REWEIGHT_TO_INITIAL)
+        if (type == REWEIGHT_TO_INITIAL) {
           arc.weight =
               Divide(Times(arc.weight, nextweight), weight, DIVIDE_LEFT);
-        if (type == REWEIGHT_TO_FINAL)
+        }
+        if (type == REWEIGHT_TO_FINAL) {
           arc.weight =
               Divide(Times(weight, arc.weight), nextweight, DIVIDE_RIGHT);
+        }
         ait.SetValue(arc);
       }
-      if (type == REWEIGHT_TO_INITIAL)
+      if (type == REWEIGHT_TO_INITIAL) {
         fst->SetFinal(state, Divide(fst->Final(state), weight, DIVIDE_LEFT));
+      }
     }
-    if (type == REWEIGHT_TO_FINAL)
+    if (type == REWEIGHT_TO_FINAL) {
       fst->SetFinal(state, Times(weight, fst->Final(state)));
+    }
   }
 
   // This handles elements past the end of the potentials array.
   for (; !sit.Done(); sit.Next()) {
     typename Arc::StateId state = sit.Value();
-    if (type == REWEIGHT_TO_FINAL)
+    if (type == REWEIGHT_TO_FINAL) {
       fst->SetFinal(state, Times(Weight::Zero(), fst->Final(state)));
+    }
   }
 
   typename Arc::Weight startweight = fst->Start() < potential.size()
@@ -89,19 +94,21 @@ void Reweight(MutableFst<Arc> *fst,
       for (MutableArcIterator<MutableFst<Arc>> ait(fst, state); !ait.Done();
            ait.Next()) {
         Arc arc = ait.Value();
-        if (type == REWEIGHT_TO_INITIAL)
+        if (type == REWEIGHT_TO_INITIAL) {
           arc.weight = Times(startweight, arc.weight);
-        else
+        } else {
           arc.weight = Times(Divide(Weight::One(), startweight, DIVIDE_RIGHT),
                              arc.weight);
+        }
         ait.SetValue(arc);
       }
-      if (type == REWEIGHT_TO_INITIAL)
+      if (type == REWEIGHT_TO_INITIAL) {
         fst->SetFinal(state, Times(startweight, fst->Final(state)));
-      else
+      } else {
         fst->SetFinal(state,
                       Times(Divide(Weight::One(), startweight, DIVIDE_RIGHT),
                             fst->Final(state)));
+      }
     } else {
       typename Arc::StateId state = fst->AddState();
       Weight w = type == REWEIGHT_TO_INITIAL

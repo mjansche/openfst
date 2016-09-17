@@ -4,6 +4,7 @@
 // Prints out various information about a PDT such as number of states, arcs,
 // and parentheses.
 
+#include <string>
 #include <vector>
 
 #include <fst/extensions/pdt/pdtscript.h>

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <memory>
 #include <ostream>
+#include <string>
 
 #include <fst/script/print.h>
 

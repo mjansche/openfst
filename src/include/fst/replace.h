@@ -195,8 +195,9 @@ inline bool operator==(const ReplaceStackPrefix<L, S>& x,
   if (x.prefix_.size() != y.prefix_.size()) return false;
   for (size_t i = 0; i < x.prefix_.size(); ++i) {
     if (x.prefix_[i].fst_id != y.prefix_[i].fst_id ||
-        x.prefix_[i].nextstate != y.prefix_[i].nextstate)
+        x.prefix_[i].nextstate != y.prefix_[i].nextstate) {
       return false;
+    }
   }
   return true;
 }
@@ -261,25 +262,23 @@ class VectorHashReplaceStateTable {
                                          CountStates(*(fst_tuples[i].second)));
       }
     }
-    state_table_ = new StateTable(
+    state_table_.reset(new StateTable(
         new ReplaceRootSelector<StateId, P>,
         new ReplaceFstStateFingerprint<StateId, P>,
         new ReplaceFingerprint<StateId, P>(&cumulative_size_array_), root_size_,
-        root_size_ + cumulative_size_array_.back());
+        root_size_ + cumulative_size_array_.back()));
   }
 
   VectorHashReplaceStateTable(const VectorHashReplaceStateTable<A, P>& table)
       : root_size_(table.root_size_),
         cumulative_size_array_(table.cumulative_size_array_),
         prefix_table_(table.prefix_table_) {
-    state_table_ = new StateTable(
+    state_table_.reset(new StateTable(
         new ReplaceRootSelector<StateId, P>,
         new ReplaceFstStateFingerprint<StateId, P>,
         new ReplaceFingerprint<StateId, P>(&cumulative_size_array_), root_size_,
-        root_size_ + cumulative_size_array_.back());
+        root_size_ + cumulative_size_array_.back()));
   }
-
-  ~VectorHashReplaceStateTable() { delete state_table_; }
 
   StateId FindState(const StateTuple& tuple) {
     return state_table_->FindState(tuple);
@@ -298,7 +297,7 @@ class VectorHashReplaceStateTable {
  private:
   StateId root_size_;
   std::vector<uint64> cumulative_size_array_;
-  StateTable* state_table_;
+  std::unique_ptr<StateTable> state_table_;
   StackPrefixTable prefix_table_;
 };
 
@@ -382,7 +381,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label(kNoLabel),
         return_label(0),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 
   explicit ReplaceFstOptions(const fst::ReplaceUtilOptions& opts)
       : root(opts.root),
@@ -391,7 +390,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label(kNoLabel),
         return_label(opts.return_label),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 
   explicit ReplaceFstOptions(int64 r)
       : root(r),
@@ -400,7 +399,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label(kNoLabel),
         return_label(0),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 
   ReplaceFstOptions(int64 r, ReplaceLabelType call_label_type,
                     ReplaceLabelType return_label_type, int64 return_label)
@@ -410,7 +409,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label(kNoLabel),
         return_label(return_label),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 
   ReplaceFstOptions(int64 r, ReplaceLabelType call_label_type,
                     ReplaceLabelType return_label_type, int64 call_output_label,
@@ -421,7 +420,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label(call_output_label),
         return_label(return_label),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 
   ReplaceFstOptions(int64 r, bool epsilon_replace_arc)  // b/w compatibility
       : root(r),
@@ -431,7 +430,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label((epsilon_replace_arc) ? 0 : kNoLabel),
         return_label(0),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 
   ReplaceFstOptions()
       : root(kNoLabel),
@@ -440,12 +439,89 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         call_output_label(kNoLabel),
         return_label(0),
         take_ownership(false),
-        state_table(0) {}
+        state_table(nullptr) {}
 };
 
 // Forward declaration
 template <class A, class T, class C>
 class ReplaceFstMatcher;
+
+template <class Arc>
+using FstList = std::vector<std::pair<typename Arc::Label, const Fst<Arc>*>>;
+
+// Returns true if label type on arc results in epsilon input label.
+inline bool EpsilonOnInput(ReplaceLabelType label_type) {
+  return label_type == REPLACE_LABEL_NEITHER ||
+         label_type == REPLACE_LABEL_OUTPUT;
+}
+
+// Returns true if label type on arc results in epsilon input label.
+inline bool EpsilonOnOutput(ReplaceLabelType label_type) {
+  return label_type == REPLACE_LABEL_NEITHER ||
+         label_type == REPLACE_LABEL_INPUT;
+}
+
+// Returns true if for either the call or return arc ilabel != olabel.
+template <class Label>
+bool ReplaceTransducer(ReplaceLabelType call_label_type,
+                       ReplaceLabelType return_label_type,
+                       Label call_output_label) {
+  return call_label_type == REPLACE_LABEL_INPUT ||
+         call_label_type == REPLACE_LABEL_OUTPUT ||
+         (call_label_type == REPLACE_LABEL_BOTH &&
+          call_output_label != kNoLabel) ||
+         return_label_type == REPLACE_LABEL_INPUT ||
+         return_label_type == REPLACE_LABEL_OUTPUT;
+}
+
+
+template <class Arc>
+uint64 ReplaceFstProperties(typename Arc::Label root_label,
+                            const FstList<Arc>& fst_tuples,
+                            ReplaceLabelType call_label_type,
+                            ReplaceLabelType return_label_type,
+                            typename Arc::Label call_output_label,
+                            bool* sorted_and_non_empty) {
+  using Label = typename Arc::Label;
+
+  std::vector<uint64> inprops;
+  bool all_ilabel_sorted = true;
+  bool all_olabel_sorted = true;
+  bool all_non_empty = true;
+  bool all_negative = true;  // all nonterminals are negative?
+  bool dense_range = true;   // all nonterminals are positive
+                             // and form a dense range containing 1?
+  ssize_t root_fst_idx = 0;
+
+  for (size_t i = 0; i < fst_tuples.size(); ++i) {
+    Label label = fst_tuples[i].first;
+    if (label >= 0) all_negative = false;
+    if (label > fst_tuples.size() || label <= 0) dense_range = false;
+    if (label == root_label) root_fst_idx = i;
+
+    const Fst<Arc>* fst = fst_tuples[i].second;
+    if (fst->Start() == kNoStateId) all_non_empty = false;
+    if (!fst->Properties(kILabelSorted, false)) all_ilabel_sorted = false;
+    if (!fst->Properties(kOLabelSorted, false)) all_olabel_sorted = false;
+    inprops.push_back(fst->Properties(kCopyProperties, false));
+  }
+
+  uint64 props = ReplaceProperties(inprops, root_fst_idx,
+                                   EpsilonOnInput(call_label_type),
+                                   EpsilonOnInput(return_label_type),
+                                   EpsilonOnOutput(call_label_type),
+                                   EpsilonOnOutput(return_label_type),
+                                   ReplaceTransducer(call_label_type,
+                                                     return_label_type,
+                                                     call_output_label),
+                                   all_non_empty, all_ilabel_sorted,
+                                   all_olabel_sorted,
+                                   all_negative || dense_range);
+
+  bool sorted = props & (kILabelSorted | kOLabelSorted);
+  *sorted_and_non_empty = all_non_empty && sorted;
+  return props;
+}
 
 // \class ReplaceFstImpl
 // \brief Implementation class for replace class Fst
@@ -505,36 +581,18 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
     if (call_output_label_ == 0) call_label_type_ = REPLACE_LABEL_NEITHER;
     if (return_label_ == 0) return_label_type_ = REPLACE_LABEL_NEITHER;
 
-    if (fst_tuples.size() > 0) {
+    if (!fst_tuples.empty()) {
       SetInputSymbols(fst_tuples[0].second->InputSymbols());
       SetOutputSymbols(fst_tuples[0].second->OutputSymbols());
     }
 
-    bool all_negative = true;  // all nonterminals are negative?
-    bool dense_range = true;   // all nonterminals are positive
-                               // and form a dense range containing 1?
-    for (size_t i = 0; i < fst_tuples.size(); ++i) {
-      Label nonterminal = fst_tuples[i].first;
-      if (nonterminal >= 0) all_negative = false;
-      if (nonterminal > fst_tuples.size() || nonterminal <= 0)
-        dense_range = false;
-    }
-
-    std::vector<uint64> inprops;
-    bool all_ilabel_sorted = true;
-    bool all_olabel_sorted = true;
-    bool all_non_empty = true;
-    fst_array_.push_back(0);
+    fst_array_.push_back(nullptr);
     for (size_t i = 0; i < fst_tuples.size(); ++i) {
       Label label = fst_tuples[i].first;
       const Fst<A>* fst = fst_tuples[i].second;
       nonterminal_hash_[label] = fst_array_.size();
       nonterminal_set_.insert(label);
-      fst_array_.push_back(opts.take_ownership ? fst : fst->Copy());
-      if (fst->Start() == kNoStateId) all_non_empty = false;
-      if (!fst->Properties(kILabelSorted, false)) all_ilabel_sorted = false;
-      if (!fst->Properties(kOLabelSorted, false)) all_olabel_sorted = false;
-      inprops.push_back(fst->Properties(kCopyProperties, false));
+      fst_array_.emplace_back(opts.take_ownership ? fst : fst->Copy());
       if (i) {
         if (!CompatSymbols(InputSymbols(), fst->InputSymbols())) {
           FSTERROR() << "ReplaceFstImpl: Input symbols of Fst " << i
@@ -557,37 +615,14 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
     }
     root_ = (nonterminal > 0) ? nonterminal : 1;
 
-    SetProperties(ReplaceProperties(inprops, root_ - 1,
-                                    EpsilonOnInput(call_label_type_),
-                                    EpsilonOnInput(return_label_type_),
-                                    ReplaceTransducer(), all_non_empty));
-    // We assume that all terminals are positive.  The resulting
-    // ReplaceFst is known to be kILabelSorted when: (1) all sub-FSTs are
-    // kILabelSorted, (2) the input label of the return arc is epsilon,
-    // and (3) one of the 3 following conditions is satisfied:
-    //  1. the input label of the call arc is not epsilon
-    //  2. all non-terminals are negative, or
-    //  3. all non-terninals are positive and form a dense range containing 1.
-    if (all_ilabel_sorted && EpsilonOnInput(return_label_type_) &&
-        (!EpsilonOnInput(call_label_type_) || all_negative || dense_range)) {
-      SetProperties(kILabelSorted, kILabelSorted);
-    }
-    // Similarly, the resulting ReplaceFst is known to be
-    // kOLabelSorted when: (1) all sub-FSTs are kOLabelSorted, (2) the output
-    // label of the return arc is epsilon, and (3) one of the 3 following
-    // conditions is satisfied:
-    //  1. the output label of the call arc is not epsilon
-    //  2. all non-terminals are negative, or
-    //  3. all non-terninals are positive and form a dense range containing 1.
-    if (all_olabel_sorted && EpsilonOnOutput(return_label_type_) &&
-        (!EpsilonOnOutput(call_label_type_) || all_negative || dense_range))
-      SetProperties(kOLabelSorted, kOLabelSorted);
+    bool all_non_empty_and_sorted = false;
+    SetProperties(
+        ReplaceFstProperties(opts.root, fst_tuples,
+                             call_label_type_, return_label_type_,
+                             call_output_label_, &all_non_empty_and_sorted));
 
     // Enable optional caching as long as sorted and all non empty.
-    if (Properties(kILabelSorted | kOLabelSorted) && all_non_empty)
-      always_cache_ = false;
-    else
-      always_cache_ = true;
+    always_cache_ = !all_non_empty_and_sorted;
     VLOG(2) << "ReplaceFstImpl::ReplaceFstImpl: always_cache = "
             << (always_cache_ ? "true" : "false");
   }
@@ -608,16 +643,9 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
     SetInputSymbols(impl.InputSymbols());
     SetOutputSymbols(impl.OutputSymbols());
     fst_array_.reserve(impl.fst_array_.size());
-    fst_array_.push_back(0);
+    fst_array_.emplace_back(nullptr);
     for (size_t i = 1; i < impl.fst_array_.size(); ++i) {
-      fst_array_.push_back(impl.fst_array_[i]->Copy(true));
-    }
-  }
-
-  ~ReplaceFstImpl() override {
-    delete state_table_;
-    for (size_t i = 1; i < fst_array_.size(); ++i) {
-      delete fst_array_[i];
+      fst_array_.emplace_back(impl.fst_array_[i]->Copy(true));
     }
   }
 
@@ -637,10 +665,10 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
         SetStart(kNoStateId);
         return kNoStateId;
       } else {
-        const Fst<A>* fst = fst_array_[root_];
-        StateId fst_start = fst->Start();
-        if (fst_start == kNoStateId)  // root Fst is empty
+        StateId fst_start = fst_array_[root_]->Start();
+        if (fst_start == kNoStateId) {  // root Fst is empty
           return kNoStateId;
+        }
 
         PrefixId prefix = GetPrefixId(StackPrefix());
         StateId start =
@@ -659,16 +687,15 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
       return CImpl::Final(s);
     } else {
       const StateTuple& tuple = state_table_->Tuple(s);
-      Weight final = Weight::Zero();
+      Weight final_weight = Weight::Zero();
 
       if (tuple.prefix_id == 0) {
-        const Fst<A>* fst = fst_array_[tuple.fst_id];
         StateId fst_state = tuple.fst_state;
-        final = fst->Final(fst_state);
+        final_weight = fst_array_[tuple.fst_id]->Final(fst_state);
       }
 
-      if (always_cache_ || HasArcs(s)) SetFinal(s, final);
-      return final;
+      if (always_cache_ || HasArcs(s)) SetFinal(s, final_weight);
+      return final_weight;
     }
   }
 
@@ -682,9 +709,8 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
       StateTuple tuple = state_table_->Tuple(s);
       if (tuple.fst_state == kNoStateId) return 0;
 
-      const Fst<A>* fst = fst_array_[tuple.fst_id];
-      size_t num_arcs = fst->NumArcs(tuple.fst_state);
-      if (ComputeFinalArc(tuple, 0)) num_arcs++;
+      size_t num_arcs = fst_array_[tuple.fst_id]->NumArcs(tuple.fst_state);
+      if (ComputeFinalArc(tuple, nullptr)) num_arcs++;
 
       return num_arcs;
     }
@@ -692,16 +718,16 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
 
   // Returns whether a given label is a non terminal
   bool IsNonTerminal(Label l) const {
-    if (l < *nonterminal_set_.begin() || l > *nonterminal_set_.rbegin())
+    if (l < *nonterminal_set_.begin() || l > *nonterminal_set_.rbegin()) {
       return false;
+    }
     // TODO(allauzen): be smarter and take advantage of
     // all_dense or all_negative.
     // Use also in ComputeArc, this would require changes to replace
     // so that recursing into an empty fst lead to a non co-accessible
     // state instead of deleting the arc as done currently.
     // Current use correct, since i/olabel sorted iff all_non_empty.
-    typename NonTerminalHash::const_iterator it = nonterminal_hash_.find(l);
-    return it != nonterminal_hash_.end();
+    return nonterminal_hash_.count(l);
   }
 
   size_t NumInputEpsilons(StateId s) {
@@ -718,23 +744,25 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
       // Otherwise, compute the number of input epsilons without caching.
       StateTuple tuple = state_table_->Tuple(s);
       if (tuple.fst_state == kNoStateId) return 0;
-      const Fst<A>* fst = fst_array_[tuple.fst_id];
       size_t num = 0;
       if (!EpsilonOnInput(call_label_type_)) {
         // If EpsilonOnInput(c) is false, all input epsilon arcs
         // are also input epsilons arcs in the underlying machine.
-        num = fst->NumInputEpsilons(tuple.fst_state);
+        num = fst_array_[tuple.fst_id]->NumInputEpsilons(tuple.fst_state);
       } else {
         // Otherwise, one need to consider that all non-terminal arcs
         // in the underlying machine also become input epsilon arc.
-        ArcIterator<Fst<A>> aiter(*fst, tuple.fst_state);
+        ArcIterator<Fst<A>> aiter(*fst_array_[tuple.fst_id], tuple.fst_state);
         for (; !aiter.Done() && ((aiter.Value().ilabel == 0) ||
                                  IsNonTerminal(aiter.Value().olabel));
-             aiter.Next())
+             aiter.Next()) {
           ++num;
+        }
       }
-      if (EpsilonOnInput(return_label_type_) && ComputeFinalArc(tuple, 0))
+      if (EpsilonOnInput(return_label_type_) &&
+          ComputeFinalArc(tuple, nullptr)) {
         num++;
+      }
       return num;
     }
   }
@@ -753,23 +781,25 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
       // Otherwise, compute the number of output epsilons without caching.
       StateTuple tuple = state_table_->Tuple(s);
       if (tuple.fst_state == kNoStateId) return 0;
-      const Fst<A>* fst = fst_array_[tuple.fst_id];
       size_t num = 0;
       if (!EpsilonOnOutput(call_label_type_)) {
         // If EpsilonOnOutput(c) is false, all output epsilon arcs
         // are also output epsilons arcs in the underlying machine.
-        num = fst->NumOutputEpsilons(tuple.fst_state);
+        num = fst_array_[tuple.fst_id]->NumOutputEpsilons(tuple.fst_state);
       } else {
         // Otherwise, one need to consider that all non-terminal arcs
         // in the underlying machine also become output epsilon arc.
-        ArcIterator<Fst<A>> aiter(*fst, tuple.fst_state);
+        ArcIterator<Fst<A>> aiter(*fst_array_[tuple.fst_id], tuple.fst_state);
         for (; !aiter.Done() && ((aiter.Value().olabel == 0) ||
                                  IsNonTerminal(aiter.Value().olabel));
-             aiter.Next())
+             aiter.Next()) {
           ++num;
+        }
       }
-      if (EpsilonOnOutput(return_label_type_) && ComputeFinalArc(tuple, 0))
+      if (EpsilonOnOutput(return_label_type_) &&
+          ComputeFinalArc(tuple, nullptr)) {
         num++;
+      }
       return num;
     }
   }
@@ -780,8 +810,9 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
   uint64 Properties(uint64 mask) const override {
     if (mask & kError) {
       for (size_t i = 1; i < fst_array_.size(); ++i) {
-        if (fst_array_[i]->Properties(kError, false))
+        if (fst_array_[i]->Properties(kError, false)) {
           SetProperties(kError, kError);
+        }
       }
     }
     return FstImpl<Arc>::Properties(mask);
@@ -807,7 +838,7 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
       return;
     }
 
-    ArcIterator<Fst<A>> aiter(*(fst_array_[tuple.fst_id]), tuple.fst_state);
+    ArcIterator<Fst<A>> aiter(*fst_array_[tuple.fst_id], tuple.fst_state);
     Arc arc;
 
     // Create a final arc when needed
@@ -847,12 +878,12 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
   // actually compute it.
   bool ComputeFinalArc(const StateTuple& tuple, A* arcp,
                        uint32 flags = kArcValueFlags) {
-    const Fst<A>* fst = fst_array_[tuple.fst_id];
     StateId fst_state = tuple.fst_state;
     if (fst_state == kNoStateId) return false;
 
     // if state is final, pop up stack
-    if (fst->Final(fst_state) != Weight::Zero() && tuple.prefix_id) {
+    if (fst_array_[tuple.fst_id]->Final(fst_state) != Weight::Zero() &&
+        tuple.prefix_id) {
       if (arcp) {
         arcp->ilabel = (EpsilonOnInput(return_label_type_)) ? 0 : return_label_;
         arcp->olabel =
@@ -865,7 +896,9 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
           arcp->nextstate = state_table_->FindState(
               StateTuple(prefix_id, top.fst_id, top.nextstate));
         }
-        if (flags & kArcWeightValue) arcp->weight = fst->Final(fst_state);
+        if (flags & kArcWeightValue) {
+          arcp->weight = fst_array_[tuple.fst_id]->Final(fst_state);
+        }
       }
       return true;
     } else {
@@ -898,14 +931,13 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
           nonterminal_hash_.find(arc.olabel);
       if (it != nonterminal_hash_.end()) {  // recurse into non terminal
         Label nonterminal = it->second;
-        const Fst<A>* nt_fst = fst_array_[nonterminal];
         PrefixId nt_prefix =
             PushPrefix(state_table_->GetStackPrefix(tuple.prefix_id),
                        tuple.fst_id, arc.nextstate);
 
         // if start state is valid replace, else arc is implicitly
         // deleted
-        StateId nt_start = nt_fst->Start();
+        StateId nt_start = fst_array_[nonterminal]->Start();
         if (nt_start != kNoStateId) {
           StateId nt_nextstate = flags & kArcNextStateValue
                                      ? state_table_->FindState(StateTuple(
@@ -940,9 +972,9 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
     return flags;
   }
 
-  T* GetStateTable() const { return state_table_; }
+  T* GetStateTable() const { return state_table_.get(); }
 
-  const Fst<A>* GetFst(Label fst_id) const { return fst_array_[fst_id]; }
+  const Fst<A>* GetFst(Label fst_id) const { return fst_array_[fst_id].get(); }
 
   Label GetFstId(Label nonterminal) const {
     typename NonTerminalHash::const_iterator it =
@@ -976,34 +1008,6 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
     return GetPrefixId(prefix);
   }
 
-  // returns true if label type on arc results in epsilon input label
-  bool EpsilonOnInput(ReplaceLabelType label_type) {
-    if (label_type == REPLACE_LABEL_NEITHER ||
-        label_type == REPLACE_LABEL_OUTPUT)
-      return true;
-    return false;
-  }
-
-  // returns true if label type on arc results in epsilon input label
-  bool EpsilonOnOutput(ReplaceLabelType label_type) {
-    if (label_type == REPLACE_LABEL_NEITHER ||
-        label_type == REPLACE_LABEL_INPUT)
-      return true;
-    return false;
-  }
-
-  // returns true if for either the call or return arc ilabel != olabel
-  bool ReplaceTransducer() {
-    if (call_label_type_ == REPLACE_LABEL_INPUT ||
-        call_label_type_ == REPLACE_LABEL_OUTPUT ||
-        (call_label_type_ == REPLACE_LABEL_BOTH &&
-         call_output_label_ != kNoLabel) ||
-        return_label_type_ == REPLACE_LABEL_INPUT ||
-        return_label_type_ == REPLACE_LABEL_OUTPUT)
-      return true;
-    return false;
-  }
-
   // private data
  private:
   // runtime options
@@ -1014,15 +1018,13 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
   bool always_cache_;  // Optionally caching arc iterator disabled when true
 
   // state table
-  StateTable* state_table_;
+  std::unique_ptr<StateTable> state_table_;
 
   // replace components
   std::set<Label> nonterminal_set_;
   NonTerminalHash nonterminal_hash_;
-  std::vector<const Fst<A>*> fst_array_;
+  std::vector<std::unique_ptr<const Fst<A>>> fst_array_;
   Label root_;
-
-  void operator=(const ReplaceFstImpl<A, T, C>&);  // disallow
 };
 
 //
@@ -1116,7 +1118,7 @@ class ReplaceFst : public ImplToFst<ReplaceFstImpl<A, T, C>> {
       return new ReplaceFstMatcher<A, T, C>(*this, match_type);
     } else {
       VLOG(2) << "Not using replace matcher";
-      return 0;
+      return nullptr;
     }
   }
 
@@ -1134,7 +1136,7 @@ class ReplaceFst : public ImplToFst<ReplaceFstImpl<A, T, C>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const ReplaceFst<A, T, C>& fst);  // disallow
+  ReplaceFst& operator=(const ReplaceFst& fst) = delete;
 };
 
 // Specialization for ReplaceFst.
@@ -1144,9 +1146,6 @@ class StateIterator<ReplaceFst<A, T, C>>
  public:
   explicit StateIterator(const ReplaceFst<A, T, C>& fst)
       : CacheStateIterator<ReplaceFst<A, T, C>>(fst, fst.GetMutableImpl()) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Specialization for ReplaceFst.
@@ -1181,16 +1180,17 @@ class ArcIterator<ReplaceFst<A, T, C>> {
         pos_(0),
         offset_(0),
         flags_(kArcValueFlags),
-        arcs_(0),
+        arcs_(nullptr),
         data_flags_(0),
         final_flags_(0) {
-    cache_data_.ref_count = 0;
-    local_data_.ref_count = 0;
+    cache_data_.ref_count = nullptr;
+    local_data_.ref_count = nullptr;
 
     // If FST does not support optional caching, force caching.
     if (!(fst_.GetImpl()->ArcIteratorFlags() & kArcNoCache) &&
-        !(fst_.GetImpl()->HasArcs(state_)))
+        !(fst_.GetImpl()->HasArcs(state_))) {
       fst_.GetMutableImpl()->Expand(state_);
+    }
 
     // If state is already cached, use cached arcs array.
     if (fst_.GetImpl()->HasArcs(state_)) {
@@ -1255,8 +1255,9 @@ class ArcIterator<ReplaceFst<A, T, C>> {
       arcs_ = local_data_.arcs;
       // Set the arcs value flags that hold for 'arcs_'.
       data_flags_ = kArcWeightValue;
-      if (!fst_.GetMutableImpl()->EpsilonOnCallInput())
+      if (!fst_.GetMutableImpl()->EpsilonOnCallInput()) {
         data_flags_ |= kArcILabelValue;
+      }
       // Set the offset between the underlying arc positions and
       // the positions in the arc iterator.
       offset_ = num_arcs_ - local_data_.narcs;
@@ -1348,7 +1349,8 @@ class ArcIterator<ReplaceFst<A, T, C>> {
   mutable Arc final_arc_;       // Final arc (when required)
   mutable uint32 final_flags_;  // Arc value flags valid for final_arc_
 
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
+  ArcIterator(const ArcIterator&) = delete;
+  ArcIterator& operator=(const ArcIterator&) = delete;
 };
 
 template <class A, class T, class C>
@@ -1369,8 +1371,9 @@ class ReplaceFstMatcher : public MatcherBase<A> {
         current_loop_(false),
         final_arc_(false),
         loop_(fst::kNoLabel, 0, A::Weight::One(), fst::kNoStateId) {
-    if (match_type_ == fst::MATCH_OUTPUT)
+    if (match_type_ == fst::MATCH_OUTPUT) {
       std::swap(loop_.ilabel, loop_.olabel);
+    }
     InitMatchers();
   }
 
@@ -1383,8 +1386,9 @@ class ReplaceFstMatcher : public MatcherBase<A> {
         current_loop_(false),
         final_arc_(false),
         loop_(fst::kNoLabel, 0, A::Weight::One(), fst::kNoStateId) {
-    if (match_type_ == fst::MATCH_OUTPUT)
+    if (match_type_ == fst::MATCH_OUTPUT) {
       std::swap(loop_.ilabel, loop_.olabel);
+    }
     InitMatchers();
   }
 
@@ -1393,12 +1397,13 @@ class ReplaceFstMatcher : public MatcherBase<A> {
   // is used to match each non-terminal arc, since these non-terminal
   // turn into epsilons on recursion.
   void InitMatchers() {
-    const std::vector<const Fst<A>*>& fst_array = impl_->fst_array_;
-    matcher_.resize(fst_array.size(), 0);
+    const std::vector<std::unique_ptr<const Fst<A>>>& fst_array =
+        impl_->fst_array_;
+    matcher_.resize(fst_array.size());
     for (size_t i = 0; i < fst_array.size(); ++i) {
       if (fst_array[i]) {
-        matcher_[i] =
-            new LocalMatcher(*fst_array[i], match_type_, kMultiEpsList);
+        matcher_[i].reset(
+            new LocalMatcher(*fst_array[i], match_type_, kMultiEpsList));
 
         auto it = impl_->nonterminal_set_.begin();
         for (; it != impl_->nonterminal_set_.end(); ++it) {
@@ -1412,10 +1417,6 @@ class ReplaceFstMatcher : public MatcherBase<A> {
     return new ReplaceFstMatcher<A, T, C>(*this, safe);
   }
 
-  ~ReplaceFstMatcher() override {
-    for (size_t i = 0; i < matcher_.size(); ++i) delete matcher_[i];
-  }
-
   MatchType Type(bool test) const override {
     if (match_type_ == MATCH_NONE) return match_type_;
 
@@ -1425,12 +1426,13 @@ class ReplaceFstMatcher : public MatcherBase<A> {
         match_type_ == MATCH_INPUT ? kNotILabelSorted : kNotOLabelSorted;
     uint64 props = fst_.Properties(true_prop | false_prop, test);
 
-    if (props & true_prop)
+    if (props & true_prop) {
       return match_type_;
-    else if (props & false_prop)
+    } else if (props & false_prop) {
       return MATCH_NONE;
-    else
+    } else {
       return MATCH_UNKNOWN;
+    }
   }
 
   const Fst<A>& GetFst() const override { return fst_; }
@@ -1449,7 +1451,7 @@ class ReplaceFstMatcher : public MatcherBase<A> {
       return;
     }
     // Get current matcher. Used for non epsilon matching
-    current_matcher_ = matcher_[tuple_.fst_id];
+    current_matcher_ = matcher_[tuple_.fst_id].get();
     current_matcher_->SetState(tuple_.fst_state);
     loop_.nextstate = s_;
 
@@ -1474,7 +1476,7 @@ class ReplaceFstMatcher : public MatcherBase<A> {
         found = true;
       }
       // Search for matching multi epsilons
-      final_arc_ = impl_->ComputeFinalArc(tuple_, 0);
+      final_arc_ = impl_->ComputeFinalArc(tuple_, nullptr);
       found = current_matcher_->Find(kNoLabel) || final_arc_ || found;
     } else {
       // Search on sub machine directly using sub machine matcher.
@@ -1517,7 +1519,7 @@ class ReplaceFstMatcher : public MatcherBase<A> {
   const ReplaceFst<A, T, C>& fst_;
   ReplaceFstImpl<A, T, C>* impl_;
   LocalMatcher* current_matcher_;
-  std::vector<LocalMatcher*> matcher_;
+  std::vector<std::unique_ptr<LocalMatcher>> matcher_;
 
   StateId s_;    // Current state
   Label label_;  // Current label
@@ -1530,7 +1532,7 @@ class ReplaceFstMatcher : public MatcherBase<A> {
   mutable Arc arc_;
   Arc loop_;
 
-  void operator=(const ReplaceFstMatcher<A, T, C>& matcher);  // disallow
+  ReplaceFstMatcher& operator=(const ReplaceFstMatcher& matcher) = delete;
 };
 
 template <class A, class T, class C>

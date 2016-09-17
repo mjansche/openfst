@@ -3,6 +3,7 @@
 //
 // Reverses a PDT.
 
+#include <string>
 #include <vector>
 
 #include <fst/extensions/pdt/pdtscript.h>

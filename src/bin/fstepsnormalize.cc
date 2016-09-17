@@ -4,8 +4,10 @@
 // Epsilon-normalizes an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/epsnormalize.h>
+#include <fst/script/getters.h>
 
 DEFINE_bool(eps_norm_output, false, "Normalize output epsilons");
 
@@ -31,12 +33,10 @@ int main(int argc, char **argv) {
   std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
-  fst::EpsNormalizeType eps_norm_type = FLAGS_eps_norm_output
-                                                ? fst::EPS_NORM_OUTPUT
-                                                : fst::EPS_NORM_INPUT;
-
   VectorFstClass ofst(ifst->ArcType());
-  s::EpsNormalize(*ifst, &ofst, eps_norm_type);
+
+  s::EpsNormalize(*ifst, &ofst, s::GetEpsNormalizeType(FLAGS_eps_norm_output));
+
   ofst.Write(out_name);
 
   return 0;

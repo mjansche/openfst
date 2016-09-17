@@ -4,10 +4,11 @@
 // Definitions and functions for invoking and using Far main functions that
 // support multiple and extensible arc types.
 
+#include <fst/extensions/far/util.h>
+
 #include <string>
 #include <vector>
 
-#include <fst/extensions/far/main.h>
 #include <fstream>
 
 namespace fst {
@@ -67,35 +68,6 @@ FarTokenType StringToFarTokenType(const string &s) {
 }
 
 void ExpandArgs(int argc, char **argv, int *argcp, char ***argvp) {
-}
-
-string LoadArcTypeFromFar(const string &far_fname) {
-  FarHeader hdr;
-
-  if (!hdr.Read(far_fname)) {
-    LOG(ERROR) << "Error reading FAR: " << far_fname;
-    return "";
-  }
-
-  string atype = hdr.ArcType();
-  if (atype == "unknown") {
-    LOG(ERROR) << "Empty FST archive: " << far_fname;
-    return "";
-  }
-
-  return atype;
-}
-
-string LoadArcTypeFromFst(const string &fst_fname) {
-  FstHeader hdr;
-  std::ifstream in(fst_fname.c_str(),
-                        std::ios_base::in | std::ios_base::binary);
-  if (!hdr.Read(in, fst_fname)) {
-    LOG(ERROR) << "Error reading FST: " << fst_fname;
-    return "";
-  }
-
-  return hdr.ArcType();
 }
 
 }  // namespace fst

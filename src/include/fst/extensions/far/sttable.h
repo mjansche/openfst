@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <istream>
+#include <memory>
 
 #include <fstream>
 #include <fst/util.h>
@@ -84,7 +85,8 @@ class STTableWriter {
   string last_key_;               // Last key
   bool error_;
 
-  DISALLOW_COPY_AND_ASSIGN(STTableWriter);
+  STTableWriter(const STTableWriter &) = delete;
+  STTableWriter &operator=(const STTableWriter &) = delete;
 };
 
 // String-to-type table reading class for object of type 'T' using functor 'R'
@@ -102,8 +104,8 @@ class STTableReader {
   typedef R EntryReader;
 
   explicit STTableReader(const std::vector<string> &filenames)
-      : sources_(filenames), entry_(nullptr), error_(false) {
-    compare_ = new Compare(&keys_);
+      : sources_(filenames), error_(false) {
+    compare_.reset(new Compare(&keys_));
     keys_.resize(filenames.size());
     streams_.resize(filenames.size(), 0);
     positions_.resize(filenames.size());
@@ -148,8 +150,6 @@ class STTableReader {
 
   ~STTableReader() {
     for (size_t i = 0; i < streams_.size(); ++i) delete streams_[i];
-    delete compare_;
-    if (entry_) delete entry_;
   }
 
   static STTableReader<T, R> *Open(const string &filename) {
@@ -202,7 +202,7 @@ class STTableReader {
 
   const string &GetKey() const { return keys_[current_]; }
 
-  const EntryType *GetEntry() const { return entry_; }
+  const EntryType *GetEntry() const { return entry_.get(); }
 
   bool Error() const { return error_; }
 
@@ -224,7 +224,7 @@ class STTableReader {
   void LowerBound(size_t id, const string &find_key) {
     std::istream *strm = streams_[id];
     const std::vector<int64> &positions = positions_[id];
-    if (positions.size() == 0) return;
+    if (positions.empty()) return;
     size_t low = 0;
     size_t high = positions.size() - 1;
 
@@ -257,7 +257,7 @@ class STTableReader {
   void MakeHeap() {
     heap_.clear();
     for (size_t i = 0; i < streams_.size(); ++i) {
-      if (positions_[i].size() == 0) continue;
+      if (positions_[i].empty()) continue;
       ReadType(*streams_[i], &(keys_[i]));
       if (streams_[i]->fail()) {
         FSTERROR() << "STTableReader: Error reading file: " << sources_[i];
@@ -277,8 +277,7 @@ class STTableReader {
   void PopHeap() {
     std::pop_heap(heap_.begin(), heap_.end(), *compare_);
     current_ = heap_.back();
-    if (entry_) delete entry_;
-    entry_ = entry_reader_(*streams_[current_]);
+    entry_.reset(entry_reader_(*streams_[current_]));
     if (!entry_) error_ = true;
     if (streams_[current_]->fail()) {
       FSTERROR() << "STTableReader: Error reading entry for key: "
@@ -294,11 +293,9 @@ class STTableReader {
   std::vector<string> keys_;  // Lowest unread key for each stream
   std::vector<int64> heap_;   // Heap containing ID of streams with unread keys
   int64 current_;             // Id of current stream to be read
-  Compare *compare_;          // Functor comparing stream IDs for the heap
-  mutable EntryType *entry_;  // Pointer to the currently read entry
+  std::unique_ptr<Compare> compare_;          // Functor comparing stream IDs
+  mutable std::unique_ptr<EntryType> entry_;  // the currently read entry
   bool error_;
-
-  DISALLOW_COPY_AND_ASSIGN(STTableReader);
 };
 
 // String-to-type table header reading function template on the entry header

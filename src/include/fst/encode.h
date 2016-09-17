@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <fstream>
@@ -47,7 +48,7 @@ class EncodeTable {
   struct Tuple {
     Tuple() {}
     Tuple(Label ilabel_, Label olabel_, Weight weight_)
-        : ilabel(ilabel_), olabel(olabel_), weight(weight_) {}
+        : ilabel(ilabel_), olabel(olabel_), weight(std::move(weight_)) {}
     Tuple(const Tuple &tuple)
         : ilabel(tuple.ilabel), olabel(tuple.olabel), weight(tuple.weight) {}
 
@@ -79,10 +80,12 @@ class EncodeTable {
       size_t hash = x->ilabel;
       const int lshift = 5;
       const int rshift = CHAR_BIT * sizeof(size_t) - 5;
-      if (encode_flags_ & kEncodeLabels)
+      if (encode_flags_ & kEncodeLabels) {
         hash = hash << lshift ^ hash >> rshift ^ x->olabel;
-      if (encode_flags_ & kEncodeWeights)
+      }
+      if (encode_flags_ & kEncodeWeights) {
         hash = hash << lshift ^ hash >> rshift ^ x->weight.Hash();
+      }
       return hash;
     }
 
@@ -94,31 +97,19 @@ class EncodeTable {
       EncodeHash;
 
   explicit EncodeTable(uint32 encode_flags)
-      : flags_(encode_flags),
-        encode_hash_(1024, TupleKey(encode_flags)),
-        isymbols_(0),
-        osymbols_(0) {}
-
-  ~EncodeTable() {
-    for (size_t i = 0; i < encode_tuples_.size(); ++i) {
-      delete encode_tuples_[i];
-    }
-    delete isymbols_;
-    delete osymbols_;
-  }
+      : flags_(encode_flags), encode_hash_(1024, TupleKey(encode_flags)) {}
 
   // Given an arc encode either input/ouptut labels or input/costs or both
   Label Encode(const A &arc) {
-    const Tuple tuple(arc.ilabel, flags_ & kEncodeLabels ? arc.olabel : 0,
-                      flags_ & kEncodeWeights ? arc.weight : Weight::One());
-    typename EncodeHash::const_iterator it = encode_hash_.find(&tuple);
-    if (it == encode_hash_.end()) {
-      encode_tuples_.push_back(new Tuple(tuple));
-      encode_hash_[encode_tuples_.back()] = encode_tuples_.size();
-      return encode_tuples_.size();
-    } else {
-      return it->second;
+    std::unique_ptr<Tuple> tuple(
+        new Tuple(arc.ilabel, flags_ & kEncodeLabels ? arc.olabel : 0,
+                  flags_ & kEncodeWeights ? arc.weight : Weight::One()));
+    auto insert_result = encode_hash_.insert(
+        std::make_pair(tuple.get(), encode_tuples_.size() + 1));
+    if (insert_result.second) {
+      encode_tuples_.push_back(std::move(tuple));
     }
+    return insert_result.first->second;
   }
 
   // Given an arc, look up its encoded label. Returns kNoLabel if not found.
@@ -139,7 +130,7 @@ class EncodeTable {
       LOG(ERROR) << "EncodeTable::Decode: Unknown decode key: " << key;
       return nullptr;
     }
-    return encode_tuples_[key - 1];
+    return encode_tuples_[key - 1].get();
   }
 
   size_t Size() const { return encode_tuples_.size(); }
@@ -150,40 +141,39 @@ class EncodeTable {
 
   uint32 Flags() const { return flags_ & kEncodeFlags; }
 
-  const SymbolTable *InputSymbols() const { return isymbols_; }
+  const SymbolTable *InputSymbols() const { return isymbols_.get(); }
 
-  const SymbolTable *OutputSymbols() const { return osymbols_; }
+  const SymbolTable *OutputSymbols() const { return osymbols_.get(); }
 
   void SetInputSymbols(const SymbolTable *syms) {
-    if (isymbols_) delete isymbols_;
     if (syms) {
-      isymbols_ = syms->Copy();
+      isymbols_.reset(syms->Copy());
       flags_ |= kEncodeHasISymbols;
     } else {
-      isymbols_ = 0;
+      isymbols_.reset();
       flags_ &= ~kEncodeHasISymbols;
     }
   }
 
   void SetOutputSymbols(const SymbolTable *syms) {
-    if (osymbols_) delete osymbols_;
     if (syms) {
-      osymbols_ = syms->Copy();
+      osymbols_.reset(syms->Copy());
       flags_ |= kEncodeHasOSymbols;
     } else {
-      osymbols_ = 0;
+      osymbols_.reset();
       flags_ &= ~kEncodeHasOSymbols;
     }
   }
 
  private:
   uint32 flags_;
-  std::vector<Tuple *> encode_tuples_;
+  std::vector<std::unique_ptr<Tuple>> encode_tuples_;
   EncodeHash encode_hash_;
-  SymbolTable *isymbols_;  // Pre-encoded ilabel symbol table
-  SymbolTable *osymbols_;  // Pre-encoded olabel symbol table
+  std::unique_ptr<SymbolTable> isymbols_;  // Pre-encoded ilabel symbol table
+  std::unique_ptr<SymbolTable> osymbols_;  // Pre-encoded olabel symbol table
 
-  DISALLOW_COPY_AND_ASSIGN(EncodeTable);
+  EncodeTable(const EncodeTable &) = delete;
+  EncodeTable &operator=(const EncodeTable &) = delete;
 };
 
 template <class A>
@@ -194,10 +184,9 @@ inline bool EncodeTable<A>::Write(std::ostream &strm,
   int64 size = encode_tuples_.size();
   WriteType(strm, size);
   for (size_t i = 0; i < size; ++i) {
-    const Tuple *tuple = encode_tuples_[i];
-    WriteType(strm, tuple->ilabel);
-    WriteType(strm, tuple->olabel);
-    tuple->weight.Write(strm);
+    WriteType(strm, encode_tuples_[i]->ilabel);
+    WriteType(strm, encode_tuples_[i]->olabel);
+    encode_tuples_[i]->weight.Write(strm);
   }
 
   if (flags_ & kEncodeHasISymbols) isymbols_->Write(strm);
@@ -241,16 +230,18 @@ inline EncodeTable<A> *EncodeTable<A>::Read(std::istream &strm,
       LOG(ERROR) << "EncodeTable::Read: Read failed: " << source;
       return nullptr;
     }
-    table->encode_tuples_.push_back(tuple);
-    table->encode_hash_[table->encode_tuples_.back()] =
+    table->encode_tuples_.emplace_back(tuple);
+    table->encode_hash_[table->encode_tuples_.back().get()] =
         table->encode_tuples_.size();
   }
 
-  if (flags & kEncodeHasISymbols)
-    table->isymbols_ = SymbolTable::Read(strm, source);
+  if (flags & kEncodeHasISymbols) {
+    table->isymbols_.reset(SymbolTable::Read(strm, source));
+  }
 
-  if (flags & kEncodeHasOSymbols)
-    table->osymbols_ = SymbolTable::Read(strm, source);
+  if (flags & kEncodeHasOSymbols) {
+    table->osymbols_.reset(SymbolTable::Read(strm, source));
+  }
 
   return table;
 }
@@ -315,12 +306,14 @@ class EncodeMapper {
     if (error_) outprops |= kError;
 
     uint64 mask = kFstProperties;
-    if (flags_ & kEncodeLabels)
+    if (flags_ & kEncodeLabels) {
       mask &= kILabelInvariantProperties & kOLabelInvariantProperties;
-    if (flags_ & kEncodeWeights)
+    }
+    if (flags_ & kEncodeWeights) {
       mask &= kILabelInvariantProperties & kWeightInvariantProperties &
               (type_ == ENCODE ? kAddSuperFinalProperties
                                : kRmSuperFinalProperties);
+    }
 
     return outprops & mask;
   }
@@ -346,7 +339,7 @@ class EncodeMapper {
   static EncodeMapper<A> *Read(std::istream &strm, const string &source,
                                EncodeType type = ENCODE) {
     EncodeTable<A> *table = EncodeTable<A>::Read(strm, source);
-    return table ? new EncodeMapper(table->Flags(), type, table) : 0;
+    return table ? new EncodeMapper(table->Flags(), type, table) : nullptr;
   }
 
   static EncodeMapper<A> *Read(const string &filename,
@@ -355,7 +348,7 @@ class EncodeMapper {
                             std::ios_base::in | std::ios_base::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
-      return NULL;
+      return nullptr;
     }
     return Read(strm, filename, type);
   }
@@ -380,7 +373,8 @@ class EncodeMapper {
 
   explicit EncodeMapper(uint32 flags, EncodeType type, EncodeTable<A> *table)
       : flags_(flags), type_(type), table_(table), error_(false) {}
-  void operator=(const EncodeMapper &);  // Disallow.
+
+  EncodeMapper &operator=(const EncodeMapper &) = delete;
 };
 
 template <class A>

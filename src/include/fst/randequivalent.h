@@ -69,8 +69,9 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
     Compose(cfst1, opath, &pfst1);
     // Give up if there are epsilon cycles in a non-idempotent semiring
     if (!(Weight::Properties() & kIdempotent) &&
-        pfst1.Properties(kCyclic, true))
+        pfst1.Properties(kCyclic, true)) {
       continue;
+    }
     Weight sum1 = ShortestDistance(pfst1);
 
     VectorFst<Arc> cfst2, pfst2;
@@ -79,8 +80,9 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
     Compose(cfst2, opath, &pfst2);
     // Give up if there are epsilon cycles in a non-idempotent semiring
     if (!(Weight::Properties() & kIdempotent) &&
-        pfst2.Properties(kCyclic, true))
+        pfst2.Properties(kCyclic, true)) {
       continue;
+    }
     Weight sum2 = ShortestDistance(pfst2);
 
     if (!ApproxEqual(sum1, sum2, delta)) {

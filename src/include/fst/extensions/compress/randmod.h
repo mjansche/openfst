@@ -20,17 +20,17 @@ class RandMod {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  // Generate random FST with 'nstates' with 'nclasses' in
-  // the probability generation model, and 'nlabels' in the alphabet.
-  // If 'trans' = true, then generate a transducer.
-  // If 'weight_gen' is non-NULL, output a weighted FST.
+  // Generates random FST with 'nstates' with 'nclasses' in the probability
+  // generation model, and 'nlabels' in the alphabet. If 'trans' = true, then
+  // a transducer is generated; iff 'generate_' is non-null, the output is
+  // randomly weighted.
   RandMod(StateId nstates, StateId nclasses, Label nlabels, bool trans,
-          const G *weight_gen)
+          const G *generate)
       : nstates_(nstates),
         nclasses_(nclasses),
         nlabels_(nlabels),
         trans_(trans),
-        weight_gen_(weight_gen) {
+        generate_(generate) {
     for (StateId s = 0; s < nstates; ++s) {
       classes_.push_back(rand() % nclasses);  // NOLINT
     }
@@ -47,7 +47,7 @@ class RandMod {
         Arc arc;
         StateId d = n == nstates_ ? kNoStateId : n;
         if (!RandArc(s, d, &arc)) continue;
-        if (d == kNoStateId) {  // a super-final transition?
+        if (d == kNoStateId) {  // A super-final transition?
           fst->SetFinal(s, arc.weight);
         } else {
           fst->AddArc(s, arc);
@@ -57,9 +57,8 @@ class RandMod {
   }
 
  private:
-  // Generates a transition from s to d.
-  // If d == kNoStateId, generate a super-final transition.
-  // Returns false if no transition generated.
+  // Generates a transition from s to d. If d == kNoStateId, a superfinal
+  // transition is generated. Returns false if no transition generated.
   bool RandArc(StateId s, StateId d, Arc *arc) {
     StateId sclass = classes_[s];
     StateId dclass = d != kNoStateId ? classes_[d] : 0;
@@ -81,7 +80,7 @@ class RandMod {
     }
 
     Weight weight = Weight::One();
-    if (weight_gen_) weight = (*weight_gen_)();
+    if (generate_) weight = (*generate_)();
 
     arc->ilabel = ilabel;
     arc->olabel = olabel;
@@ -93,7 +92,7 @@ class RandMod {
   StateId nclasses_;
   Label nlabels_;
   bool trans_;
-  const G *weight_gen_;
+  const G *generate_;
   std::vector<StateId> classes_;
 };
 

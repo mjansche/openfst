@@ -150,7 +150,7 @@ class ParenMatcher {
   mutable Arc loop_;       // For non-consuming symbols
   bool done_;              // Matching done
 
-  void operator=(const ParenMatcher<F> &);  // Disallow
+  ParenMatcher &operator=(const ParenMatcher &) = delete;
 };
 
 template <class M>

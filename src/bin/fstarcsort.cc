@@ -8,6 +8,7 @@
 
 #include <fst/compat.h>
 #include <fst/script/arcsort.h>
+#include <fst/script/getters.h>
 
 DEFINE_string(sort_type, "ilabel",
               "Comparison method, one of: \"ilabel\", \"olabel\"");
@@ -36,12 +37,9 @@ int main(int argc, char **argv) {
   if (!fst) return 1;
 
   s::ArcSortType sort_type;
-  if (FLAGS_sort_type == "ilabel") {
-    sort_type = fst::script::ILABEL_COMPARE;
-  } else if (FLAGS_sort_type == "olabel") {
-    sort_type = fst::script::OLABEL_COMPARE;
-  } else {
-    LOG(ERROR) << argv[0] << ": Unknown sort type \"" << FLAGS_sort_type;
+  if (!s::GetArcSortType(FLAGS_sort_type, &sort_type)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported sort type: "
+               << FLAGS_sort_type;
     return 1;
   }
 

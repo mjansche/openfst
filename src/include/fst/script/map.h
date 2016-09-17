@@ -51,6 +51,7 @@ enum MapType {
 
 typedef args::Package<const FstClass &, MapType, float, const WeightClass &>
     MapInnerArgs;
+
 typedef args::WithReturnValue<FstClass *, MapInnerArgs> MapArgs;
 
 template <class Arc>

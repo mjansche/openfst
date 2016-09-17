@@ -256,7 +256,7 @@ class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
       std::shared_ptr<MatcherData> data = std::shared_ptr<MatcherData>())
       : matcher_(fst, match_type),
         fst_(matcher_.GetFst()),
-        lfst_(0),
+        lfst_(nullptr),
         s_(kNoStateId) {}
 
   ArcLookAheadMatcher(const ArcLookAheadMatcher<M, F> &lmatcher,
@@ -344,17 +344,20 @@ bool ArcLookAheadMatcher<M, F>::LookAheadFst(const Fst<Arc> &fst, StateId s) {
   if (fst_.Final(s_) != Weight::Zero() && lfst_->Final(s) != Weight::Zero()) {
     if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
     ++nprefix;
-    if (F & kLookAheadWeight)
+    if (F & kLookAheadWeight) {
       SetLookAheadWeight(
           Plus(LookAheadWeight(), Times(fst_.Final(s_), lfst_->Final(s))));
+    }
     ret = true;
   }
   if (matcher_.Find(kNoLabel)) {
     if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
     ++nprefix;
-    if (F & kLookAheadWeight)
-      for (; !matcher_.Done(); matcher_.Next())
+    if (F & kLookAheadWeight) {
+      for (; !matcher_.Done(); matcher_.Next()) {
         SetLookAheadWeight(Plus(LookAheadWeight(), matcher_.Value().weight));
+      }
+    }
     ret = true;
   }
   for (ArcIterator<Fst<Arc>> aiter(*lfst_, s); !aiter.Done(); aiter.Next()) {
@@ -374,26 +377,29 @@ bool ArcLookAheadMatcher<M, F>::LookAheadFst(const Fst<Arc> &fst, StateId s) {
     if (label == 0) {
       if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
       if (!(F & kLookAheadNonEpsilonPrefix)) ++nprefix;
-      if (F & kLookAheadWeight)
+      if (F & kLookAheadWeight) {
         SetLookAheadWeight(Plus(LookAheadWeight(), arc.weight));
+      }
       ret = true;
     } else if (matcher_.Find(label)) {
       if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
       for (; !matcher_.Done(); matcher_.Next()) {
         ++nprefix;
-        if (F & kLookAheadWeight)
+        if (F & kLookAheadWeight) {
           SetLookAheadWeight(Plus(LookAheadWeight(),
                                   Times(arc.weight, matcher_.Value().weight)));
+        }
         if ((F & kLookAheadPrefix) && nprefix == 1) SetLookAheadPrefix(arc);
       }
       ret = true;
     }
   }
   if (F & kLookAheadPrefix) {
-    if (nprefix == 1)
+    if (nprefix == 1) {
       SetLookAheadWeight(Weight::One());  // Avoids double counting.
-    else
+    } else {
       ClearLookAheadPrefix();
+    }
   }
   return ret;
 }
@@ -424,10 +430,9 @@ class LabelLookAheadMatcher
   LabelLookAheadMatcher(
       const FST &fst, MatchType match_type,
       std::shared_ptr<MatcherData> data = std::shared_ptr<MatcherData>(),
-      S *s = 0)
+      S *s = nullptr)
       : matcher_(fst, match_type),
-        lfst_(0),
-        label_reachable_(0),
+        lfst_(nullptr),
         s_(kNoStateId),
         error_(false) {
     if (!(F & (kInputLookAheadMatcher | kOutputLookAheadMatcher))) {
@@ -436,11 +441,13 @@ class LabelLookAheadMatcher
     }
     bool reach_input = match_type == MATCH_INPUT;
     if (data) {
-      if (reach_input == data->ReachInput()) label_reachable_ = new R(data, s);
+      if (reach_input == data->ReachInput()) {
+        label_reachable_.reset(new R(data, s));
+      }
     } else if ((reach_input && (F & kInputLookAheadMatcher)) ||
                (!reach_input && (F & kOutputLookAheadMatcher))) {
-      label_reachable_ =
-          new R(fst, reach_input, s, F & kLookAheadKeepRelabelData);
+      label_reachable_.reset(
+          new R(fst, reach_input, s, F & kLookAheadKeepRelabelData));
     }
   }
 
@@ -450,11 +457,9 @@ class LabelLookAheadMatcher
         lfst_(lmatcher.lfst_),
         label_reachable_(lmatcher.label_reachable_
                              ? new R(*lmatcher.label_reachable_, safe)
-                             : 0),
+                             : nullptr),
         s_(kNoStateId),
         error_(lmatcher.error_) {}
-
-  ~LabelLookAheadMatcher() override { delete label_reachable_; }
 
   // General matcher methods
   LabelLookAheadMatcher<M, F, S, R> *Copy(bool safe = false) const override {
@@ -487,22 +492,24 @@ class LabelLookAheadMatcher
 
   uint64 Properties(uint64 inprops) const override {
     uint64 outprops = matcher_.Properties(inprops);
-    if (error_ || (label_reachable_ && label_reachable_->Error()))
+    if (error_ || (label_reachable_ && label_reachable_->Error())) {
       outprops |= kError;
+    }
     return outprops;
   }
 
   uint32 Flags() const override {
-    if (label_reachable_ && label_reachable_->GetData()->ReachInput())
+    if (label_reachable_ && label_reachable_->GetData()->ReachInput()) {
       return matcher_.Flags() | F | kInputLookAheadMatcher;
-    else if (label_reachable_ && !label_reachable_->GetData()->ReachInput())
+    } else if (label_reachable_ && !label_reachable_->GetData()->ReachInput()) {
       return matcher_.Flags() | F | kOutputLookAheadMatcher;
-    else
+    } else {
       return matcher_.Flags();
+    }
   }
 
   const MatcherData *GetData() const {
-    return label_reachable_ ? label_reachable_->GetData() : 0;
+    return label_reachable_ ? label_reachable_->GetData() : nullptr;
   };
 
   std::shared_ptr<MatcherData> GetSharedData() const {
@@ -566,7 +573,7 @@ class LabelLookAheadMatcher
 
   mutable M matcher_;
   const Fst<Arc> *lfst_;          // Look-ahead FST
-  R *label_reachable_;            // Label reachability info
+  std::unique_ptr<R> label_reachable_;  // Label reachability info
   StateId s_;                     // Matcher state
   bool match_set_state_;          // matcher_.SetState called?
   mutable bool reach_set_state_;  // reachable_.SetState called?
@@ -607,8 +614,9 @@ inline bool LabelLookAheadMatcher<M, F, S, R>::LookAheadFst(const L &fst,
       SetLookAheadWeight(label_reachable_->ReachWeight());
     }
   }
-  if (reach_final && compute_weight)
+  if (reach_final && compute_weight) {
     SetLookAheadWeight(reach_arc ? Plus(LookAheadWeight(), lfinal) : lfinal);
+  }
 
   return reach_arc || reach_final;
 }
@@ -700,9 +708,9 @@ class LookAheadMatcher {
   typedef typename Arc::Weight Weight;
   typedef LookAheadMatcherBase<Arc> LBase;
 
-  LookAheadMatcher(const F &fst, MatchType match_type) {
-    base_ = fst.InitMatcher(match_type);
-    if (!base_) base_ = new SortedMatcher<F>(fst, match_type);
+  LookAheadMatcher(const F &fst, MatchType match_type)
+      : base_(fst.InitMatcher(match_type)) {
+    if (!base_) base_.reset(new SortedMatcher<F>(fst, match_type));
     lookahead_ = false;
   }
 
@@ -710,12 +718,10 @@ class LookAheadMatcher {
   explicit LookAheadMatcher(MatcherBase<Arc> *base)
       : base_(base), lookahead_(false) {}
 
-  LookAheadMatcher(const LookAheadMatcher<F> &matcher, bool safe = false) {
-    base_ = matcher.base_->Copy(safe);
+  LookAheadMatcher(const LookAheadMatcher<F> &matcher, bool safe = false)
+      : base_(matcher.base_->Copy(safe)) {
     lookahead_ = matcher.lookahead_;
   }
-
-  ~LookAheadMatcher() { delete base_; }
 
   // General matcher methods
   LookAheadMatcher<F> *Copy(bool safe = false) const {
@@ -739,7 +745,7 @@ class LookAheadMatcher {
   // Look-ahead methods
   bool LookAheadLabel(Label label) const {
     if (LookAheadCheck()) {
-      LBase *lbase = static_cast<LBase *>(base_);
+      LBase *lbase = static_cast<LBase *>(base_.get());
       return lbase->LookAheadLabel(label);
     } else {
       return true;
@@ -748,7 +754,7 @@ class LookAheadMatcher {
 
   bool LookAheadFst(const Fst<Arc> &fst, StateId s) {
     if (LookAheadCheck()) {
-      LBase *lbase = static_cast<LBase *>(base_);
+      LBase *lbase = static_cast<LBase *>(base_.get());
       return lbase->LookAheadFst(fst, s);
     } else {
       return true;
@@ -757,7 +763,7 @@ class LookAheadMatcher {
 
   Weight LookAheadWeight() const {
     if (LookAheadCheck()) {
-      LBase *lbase = static_cast<LBase *>(base_);
+      LBase *lbase = static_cast<LBase *>(base_.get());
       return lbase->LookAheadWeight();
     } else {
       return Weight::One();
@@ -766,7 +772,7 @@ class LookAheadMatcher {
 
   bool LookAheadPrefix(Arc *arc) const {
     if (LookAheadCheck()) {
-      LBase *lbase = static_cast<LBase *>(base_);
+      LBase *lbase = static_cast<LBase *>(base_.get());
       return lbase->LookAheadPrefix(arc);
     } else {
       return false;
@@ -775,7 +781,7 @@ class LookAheadMatcher {
 
   void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false) {
     if (LookAheadCheck()) {
-      LBase *lbase = static_cast<LBase *>(base_);
+      LBase *lbase = static_cast<LBase *>(base_.get());
       lbase->InitLookAheadFst(fst, copy);
     }
   }
@@ -792,10 +798,10 @@ class LookAheadMatcher {
     return lookahead_;
   }
 
-  MatcherBase<Arc> *base_;
+  std::unique_ptr<MatcherBase<Arc>> base_;
   mutable bool lookahead_;
 
-  void operator=(const LookAheadMatcher<Arc> &);  // disallow
+  LookAheadMatcher &operator=(const LookAheadMatcher &) = delete;
 };
 
 }  // namespace fst

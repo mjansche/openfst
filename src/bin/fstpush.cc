@@ -5,7 +5,9 @@
 // states.
 
 #include <memory>
+#include <string>
 
+#include <fst/script/getters.h>
 #include <fst/script/push.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
@@ -39,19 +41,14 @@ int main(int argc, char **argv) {
   std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
-  uint32 flags = 0;
-  if (FLAGS_push_weights) flags |= fst::kPushWeights;
-  if (FLAGS_push_labels) flags |= fst::kPushLabels;
-  if (FLAGS_remove_total_weight) flags |= fst::kPushRemoveTotalWeight;
-  if (FLAGS_remove_common_affix) flags |= fst::kPushRemoveCommonAffix;
+  uint32 flags = s::GetPushFlags(FLAGS_push_weights, FLAGS_push_labels,
+                                 FLAGS_remove_total_weight,
+                                 FLAGS_remove_common_affix);
 
   VectorFstClass ofst(ifst->ArcType());
 
-  if (FLAGS_to_final) {
-    s::Push(*ifst, &ofst, flags, fst::REWEIGHT_TO_FINAL, FLAGS_delta);
-  } else {
-    s::Push(*ifst, &ofst, flags, fst::REWEIGHT_TO_INITIAL, FLAGS_delta);
-  }
+  s::Push(*ifst, &ofst, flags, s::GetReweightType(FLAGS_to_final),
+          FLAGS_delta);
 
   ofst.Write(out_name);
 

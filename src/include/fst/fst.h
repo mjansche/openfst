@@ -13,6 +13,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include <fst/compat.h>
 #include <fst/types.h>
@@ -58,11 +59,12 @@ struct FstReadOptions {
   bool read_osymbols;           // Read osymbols, if any, default true
 
   explicit FstReadOptions(const string &src = "<unspecified>",
-                          const FstHeader *hdr = 0, const SymbolTable *isym = 0,
-                          const SymbolTable *osym = 0);
+                          const FstHeader *hdr = nullptr,
+                          const SymbolTable *isym = nullptr,
+                          const SymbolTable *osym = nullptr);
 
   explicit FstReadOptions(const string &src, const SymbolTable *isym,
-                          const SymbolTable *osym = 0);
+                          const SymbolTable *osym = nullptr);
 
   // Helper function to convert strings FileReadModes into their enum value.
   static FileReadMode ReadMode(const string &mode);
@@ -210,9 +212,9 @@ class Fst {
                       const FstReadOptions &opts) {
     FstReadOptions ropts(opts);
     FstHeader hdr;
-    if (ropts.header)
+    if (ropts.header) {
       hdr = *opts.header;
-    else {
+    } else {
       if (!hdr.Read(strm, opts.source)) return nullptr;
       ropts.header = &hdr;
     }
@@ -331,6 +333,9 @@ template <class A>
 struct StateIteratorData {
   StateIteratorBase<A> *base;   // Specialized iterator if non-zero
   typename A::StateId nstates;  // O.w. total # of states
+  StateIteratorData() : base(nullptr), nstates(0) {}
+  StateIteratorData(const StateIteratorData &) = delete;
+  StateIteratorData &operator=(const StateIteratorData &) = delete;
 };
 
 // Generic state iterator, templated on the FST definition
@@ -353,9 +358,7 @@ class StateIterator {
     fst.InitStateIterator(&data_);
   }
 
-  ~StateIterator() {
-    if (data_.base) delete data_.base;
-  }
+  ~StateIterator() { delete data_.base; }
 
   bool Done() const {
     return data_.base ? data_.base->Done() : s_ >= data_.nstates;
@@ -364,24 +367,24 @@ class StateIterator {
   StateId Value() const { return data_.base ? data_.base->Value() : s_; }
 
   void Next() {
-    if (data_.base)
+    if (data_.base) {
       data_.base->Next();
-    else
+    } else {
       ++s_;
+    }
   }
 
   void Reset() {
-    if (data_.base)
+    if (data_.base) {
       data_.base->Reset();
-    else
+    } else {
       s_ = 0;
+    }
   }
 
  private:
   StateIteratorData<Arc> data_;
   StateId s_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Flags to control the behavior on an arc iterator:
@@ -439,6 +442,10 @@ struct ArcIteratorData {
   const A *arcs;             // O.w. arcs pointer
   size_t narcs;              // ... and arc count
   int *ref_count;            // ... and reference count if non-zero
+  ArcIteratorData()
+      : base(nullptr), arcs(nullptr), narcs(0), ref_count(nullptr) {}
+  ArcIteratorData(const ArcIteratorData &) = delete;
+  ArcIteratorData &operator=(const ArcIteratorData &) = delete;
 };
 
 // Generic arc iterator, templated on the FST definition
@@ -466,10 +473,11 @@ class ArcIterator {
   }
 
   ~ArcIterator() {
-    if (data_.base)
+    if (data_.base) {
       delete data_.base;
-    else if (data_.ref_count)
+    } else if (data_.ref_count) {
       --(*data_.ref_count);
+    }
   }
 
   bool Done() const {
@@ -481,33 +489,37 @@ class ArcIterator {
   }
 
   void Next() {
-    if (data_.base)
+    if (data_.base) {
       data_.base->Next();
-    else
+    } else {
       ++i_;
+    }
   }
 
   void Reset() {
-    if (data_.base)
+    if (data_.base) {
       data_.base->Reset();
-    else
+    } else {
       i_ = 0;
+    }
   }
 
   void Seek(size_t a) {
-    if (data_.base)
+    if (data_.base) {
       data_.base->Seek(a);
-    else
+    } else {
       i_ = a;
+    }
   }
 
   size_t Position() const { return data_.base ? data_.base->Position() : i_; }
 
   uint32 Flags() const {
-    if (data_.base)
+    if (data_.base) {
       return data_.base->Flags();
-    else
+    } else {
       return kArcValueFlags;
+    }
   }
 
   void SetFlags(uint32 flags, uint32 mask) {
@@ -517,7 +529,6 @@ class ArcIterator {
  private:
   ArcIteratorData<Arc> data_;
   size_t i_;
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 }  // namespace fst
@@ -548,7 +559,7 @@ inline void Destroy(fst::ArcIterator<F> *aiter,
 
 template <class A>
 MatcherBase<A> *Fst<A>::InitMatcher(MatchType match_type) const {
-  return 0;  // Use the default matcher
+  return nullptr;  // Use the default matcher
 }
 
 //
@@ -624,18 +635,15 @@ class FstImpl {
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
 
-  FstImpl() : properties_(0), type_("null"), isymbols_(0), osymbols_(0) {}
+  FstImpl() : properties_(0), type_("null") {}
 
   FstImpl(const FstImpl<A> &impl)
       : properties_(impl.properties_),
         type_(impl.type_),
-        isymbols_(impl.isymbols_ ? impl.isymbols_->Copy() : 0),
-        osymbols_(impl.osymbols_ ? impl.osymbols_->Copy() : 0) {}
+        isymbols_(impl.isymbols_ ? impl.isymbols_->Copy() : nullptr),
+        osymbols_(impl.osymbols_ ? impl.osymbols_->Copy() : nullptr) {}
 
-  virtual ~FstImpl() {
-    delete isymbols_;
-    delete osymbols_;
-  }
+  virtual ~FstImpl() {}
 
   const string &Type() const { return type_; }
 
@@ -657,27 +665,26 @@ class FstImpl {
 
   // Allows (only) setting error bit on const FST impls
   void SetProperties(uint64 props, uint64 mask) const {
-    if (mask != kError)
+    if (mask != kError) {
       FSTERROR() << "FstImpl::SetProperties() const: Can only set kError";
+    }
     properties_ |= kError;
   }
 
-  const SymbolTable *InputSymbols() const { return isymbols_; }
+  const SymbolTable *InputSymbols() const { return isymbols_.get(); }
 
-  const SymbolTable *OutputSymbols() const { return osymbols_; }
+  const SymbolTable *OutputSymbols() const { return osymbols_.get(); }
 
-  SymbolTable *InputSymbols() { return isymbols_; }
+  SymbolTable *InputSymbols() { return isymbols_.get(); }
 
-  SymbolTable *OutputSymbols() { return osymbols_; }
+  SymbolTable *OutputSymbols() { return osymbols_.get(); }
 
   void SetInputSymbols(const SymbolTable *isyms) {
-    if (isymbols_) delete isymbols_;
-    isymbols_ = isyms ? isyms->Copy() : 0;
+    isymbols_.reset(isyms ? isyms->Copy() : nullptr);
   }
 
   void SetOutputSymbols(const SymbolTable *osyms) {
-    if (osymbols_) delete osymbols_;
-    osymbols_ = osyms ? osyms->Copy() : 0;
+    osymbols_.reset(osyms ? osyms->Copy() : nullptr);
   }
 
   // Read-in header and symbols from input stream, initialize Fst, and
@@ -699,10 +706,12 @@ class FstImpl {
       hdr->SetVersion(version);
       hdr->SetProperties(properties_);
       int32 file_flags = 0;
-      if (isymbols_ && opts.write_isymbols)
+      if (isymbols_ && opts.write_isymbols) {
         file_flags |= FstHeader::HAS_ISYMBOLS;
-      if (osymbols_ && opts.write_osymbols)
+      }
+      if (osymbols_ && opts.write_osymbols) {
         file_flags |= FstHeader::HAS_OSYMBOLS;
+      }
       if (opts.align) file_flags |= FstHeader::IS_ALIGNED;
       hdr->SetFlags(file_flags);
       hdr->Write(strm, opts.source);
@@ -726,10 +735,12 @@ class FstImpl {
       hdr->SetVersion(version);
       hdr->SetProperties(properties);
       int32 file_flags = 0;
-      if (fst.InputSymbols() && opts.write_isymbols)
+      if (fst.InputSymbols() && opts.write_isymbols) {
         file_flags |= FstHeader::HAS_ISYMBOLS;
-      if (fst.OutputSymbols() && opts.write_osymbols)
+      }
+      if (fst.OutputSymbols() && opts.write_osymbols) {
         file_flags |= FstHeader::HAS_OSYMBOLS;
+      }
       if (opts.align) file_flags |= FstHeader::IS_ALIGNED;
       hdr->SetFlags(file_flags);
       hdr->Write(strm, opts.source);
@@ -774,20 +785,19 @@ class FstImpl {
 
  private:
   string type_;            // Unique name of Fst class
-  SymbolTable *isymbols_;  // Ilabel symbol table
-  SymbolTable *osymbols_;  // Olabel symbol table
-
-  void operator=(const FstImpl<A> &impl);  // disallow
+  std::unique_ptr<SymbolTable> isymbols_;  // Ilabel symbol table
+  std::unique_ptr<SymbolTable> osymbols_;  // Olabel symbol table
 };
 
 template <class A>
 inline bool FstImpl<A>::ReadHeader(std::istream &strm,  // NOLINT
                                    const FstReadOptions &opts, int min_version,
                                    FstHeader *hdr) {
-  if (opts.header)
+  if (opts.header) {
     *hdr = *opts.header;
-  else if (!hdr->Read(strm, opts.source))
+  } else if (!hdr->Read(strm, opts.source)) {
     return false;
+  }
 
   if (FLAGS_v >= 2) {
     LOG(INFO) << "FstImpl::ReadHeader: source: " << opts.source
@@ -812,21 +822,21 @@ inline bool FstImpl<A>::ReadHeader(std::istream &strm,  // NOLINT
     return false;
   }
   properties_ = hdr->Properties();
-  if (hdr->GetFlags() & FstHeader::HAS_ISYMBOLS)
-    isymbols_ = SymbolTable::Read(strm, opts.source);
+  if (hdr->GetFlags() & FstHeader::HAS_ISYMBOLS) {
+    isymbols_.reset(SymbolTable::Read(strm, opts.source));
+  }
   // Input symbol table not wanted; delete
-  if (!opts.read_isymbols) SetInputSymbols(0);
-  if (hdr->GetFlags() & FstHeader::HAS_OSYMBOLS)
-    osymbols_ = SymbolTable::Read(strm, opts.source);
+  if (!opts.read_isymbols) SetInputSymbols(nullptr);
+  if (hdr->GetFlags() & FstHeader::HAS_OSYMBOLS) {
+    osymbols_.reset(SymbolTable::Read(strm, opts.source));
+  }
   // Output symbol table not wanted; delete
-  if (!opts.read_osymbols) SetOutputSymbols(0);
+  if (!opts.read_osymbols) SetOutputSymbols(nullptr);
   if (opts.isymbols) {
-    delete isymbols_;
-    isymbols_ = opts.isymbols->Copy();
+    isymbols_.reset(opts.isymbols->Copy());
   }
   if (opts.osymbols) {
-    delete osymbols_;
-    osymbols_ = opts.osymbols->Copy();
+    osymbols_.reset(opts.osymbols->Copy());
   }
   return true;
 }
@@ -878,7 +888,7 @@ class ImplToFst : public F {
   }
 
  protected:
-  explicit ImplToFst(std::shared_ptr<I> impl) : impl_(impl) {}
+  explicit ImplToFst(std::shared_ptr<I> impl) : impl_(std::move(impl)) {}
 
   // This constructor presumes there is a copy constructor for the
   // implementation.

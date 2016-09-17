@@ -88,8 +88,6 @@ class HashBiTable {
   std::unique_ptr<E> hash_equal_;
   std::unordered_map<T, I, H, E> entry2id_;
   std::vector<T> id2entry_;
-
-  void operator=(const HashBiTable<I, T, H, E> &table);  // disallow
 };
 
 // Enables alternative hash set representations below.
@@ -98,7 +96,7 @@ typedef enum { HS_STL = 0, HS_DENSE = 1, HS_SPARSE = 2 } HSType;
 // Default hash set is STL hash_set
 template <class K, class H, class E, HSType>
 struct HashSet : public std::unordered_set<K, H, E, PoolAllocator<K>> {
-  HashSet(size_t n = 0, const H &h = H(), const E &e = E())
+  explicit HashSet(size_t n = 0, const H &h = H(), const E &e = E())
       : std::unordered_set<K, H, E, PoolAllocator<K>>(n, h, e) {}
 
   void rehash(size_t n) {}
@@ -185,7 +183,7 @@ class CompactHashBiTable {
 
   class HashFunc {
    public:
-    HashFunc(const CompactHashBiTable &ht) : ht_(&ht) {}
+    explicit HashFunc(const CompactHashBiTable &ht) : ht_(&ht) {}
 
     size_t operator()(I k) const {
       if (k >= kCurrentKey) {
@@ -201,7 +199,7 @@ class CompactHashBiTable {
 
   class HashEqual {
    public:
-    HashEqual(const CompactHashBiTable &ht) : ht_(&ht) {}
+    explicit HashEqual(const CompactHashBiTable &ht) : ht_(&ht) {}
 
     bool operator()(I k1, I k2) const {
       if (k1 >= kCurrentKey && k2 >= kCurrentKey) {
@@ -218,10 +216,11 @@ class CompactHashBiTable {
   typedef HashSet<I, HashFunc, HashEqual, HS> KeyHashSet;
 
   const T &Key2Entry(I k) const {
-    if (k == kCurrentKey)
+    if (k == kCurrentKey) {
       return *current_entry_;
-    else
+    } else {
       return id2entry_[k];
+    }
   }
 
   std::unique_ptr<H> hash_func_;
@@ -231,8 +230,6 @@ class CompactHashBiTable {
   KeyHashSet keys_;
   std::vector<T> id2entry_;
   const T *current_entry_;
-
-  void operator=(const CompactHashBiTable<I, T, H, E, HS> &table);  // disallow
 };
 
 template <class I, class T, class H, class E, HSType HS>
@@ -289,8 +286,6 @@ class VectorBiTable {
   std::unique_ptr<FP> fp_;
   std::vector<I> fp2id_;
   std::vector<T> id2entry_;
-
-  void operator=(const VectorBiTable<I, T, FP> &table);  // disallow
 };
 
 // An implementation using a vector and a compact hash table. The
@@ -369,7 +364,7 @@ class VectorHashBiTable {
 
   class HashFunc {
    public:
-    HashFunc(const VectorHashBiTable &ht) : ht_(&ht) {}
+    explicit HashFunc(const VectorHashBiTable &ht) : ht_(&ht) {}
 
     size_t operator()(I k) const {
       if (k >= kCurrentKey) {
@@ -385,7 +380,7 @@ class VectorHashBiTable {
 
   class HashEqual {
    public:
-    HashEqual(const VectorHashBiTable &ht) : ht_(&ht) {}
+    explicit HashEqual(const VectorHashBiTable &ht) : ht_(&ht) {}
 
     bool operator()(I k1, I k2) const {
       if (k1 >= kCurrentKey && k2 >= kCurrentKey) {
@@ -402,10 +397,11 @@ class VectorHashBiTable {
   typedef HashSet<I, HashFunc, HashEqual, HS> KeyHashSet;
 
   const T &Key2Entry(I k) const {
-    if (k == kCurrentKey)
+    if (k == kCurrentKey) {
       return *current_entry_;
-    else
+    } else {
       return id2entry_[k];
+    }
   }
 
   std::unique_ptr<S> selector_;  // Returns true if entry hashed into vector.
@@ -421,9 +417,6 @@ class VectorHashBiTable {
   HashEqual hash_equal_;
   KeyHashSet keys_;
   const T *current_entry_;
-
-  // disallow
-  void operator=(const VectorHashBiTable<I, T, S, FP, H, HS> &table);
 };
 
 template <class I, class T, class S, class FP, class H, HSType HS>
@@ -459,10 +452,9 @@ class ErasableBiTable {
   I Size() const { return id2entry_.size(); }
 
   void Erase(I s) {
-    T &entry = id2entry_[s - first_];
-    const auto it = entry2id_.find(entry);
-    entry2id_.erase(it);
-    id2entry_[s - first_] = empty_entry_;
+    auto &ref = id2entry_[s - first_];
+    entry2id_.erase(ref);
+    ref = empty_entry_;
     while (!id2entry_.empty() && id2entry_.front() == empty_entry_) {
       id2entry_.pop_front();
       ++first_;
@@ -474,11 +466,8 @@ class ErasableBiTable {
   std::deque<T> id2entry_;
   const T empty_entry_;
   I first_;  // I of first element in the deque;
-
-  // disallow
-  void operator=(const ErasableBiTable<I, T, F> &table);  // disallow
 };
 
 }  // namespace fst
 
-#endif  // FST_LIB_BI_TABLE_H__
+#endif  // FST_LIB_BI_TABLE_H_

@@ -3,8 +3,10 @@
 //
 // Converts an RTN represented by FSTs and non-terminal labels into a PDT.
 
-#include <utility>
+#include <string>
 #include <vector>
+
+#include <fst/extensions/pdt/getters.h>
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
 #include <fst/vector-fst.h>
@@ -43,13 +45,9 @@ int main(int argc, char **argv) {
   if (!ifst) return 1;
 
   fst::PdtParserType parser_type;
-  if (FLAGS_pdt_parser_type == "left") {
-    parser_type = fst::PDT_LEFT_PARSER;
-  } else if (FLAGS_pdt_parser_type == "left_sr") {
-    parser_type = fst::PDT_LEFT_SR_PARSER;
-  } else {
-    LOG(ERROR) << argv[0]
-               << "Unknown PDT parser type: " << FLAGS_pdt_parser_type;
+  if (!s::GetPdtParserType(FLAGS_pdt_parser_type, &parser_type)) {
+    LOG(ERROR) << argv[0] << ": Unknown PDT parser type: "
+               << FLAGS_pdt_parser_type;
     return 1;
   }
 

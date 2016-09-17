@@ -6,6 +6,7 @@
 #ifndef FST_EXTENSIONS_FAR_PRINT_STRINGS_H__
 #define FST_EXTENSIONS_FAR_PRINT_STRINGS_H__
 
+#include <iomanip>
 #include <string>
 #include <vector>
 
@@ -27,24 +28,24 @@ void FarPrintStrings(const std::vector<string> &ifilenames,
                      const bool initial_symbols, const int32 generate_filenames,
                      const string &filename_prefix,
                      const string &filename_suffix) {
-  typename StringPrinter<Arc>::TokenType token_type;
+  StringTokenType token_type;
   if (far_token_type == FTT_SYMBOL) {
-    token_type = StringPrinter<Arc>::SYMBOL;
+    token_type = StringTokenType::SYMBOL;
   } else if (far_token_type == FTT_BYTE) {
-    token_type = StringPrinter<Arc>::BYTE;
+    token_type = StringTokenType::BYTE;
   } else if (far_token_type == FTT_UTF8) {
-    token_type = StringPrinter<Arc>::UTF8;
+    token_type = StringTokenType::UTF8;
   } else {
     FSTERROR() << "FarPrintStrings: Unknown token type";
     return;
   }
 
-  const SymbolTable *syms = nullptr;
+  std::unique_ptr<const SymbolTable> syms;
   if (!symbols_fname.empty()) {
     // allow negative flag?
     SymbolTableTextOptions opts;
     opts.allow_negative = true;
-    syms = SymbolTable::ReadText(symbols_fname, opts);
+    syms.reset(SymbolTable::ReadText(symbols_fname, opts));
     if (!syms) {
       LOG(ERROR) << "FarPrintStrings: Error reading symbol table: "
                  << symbols_fname;
@@ -52,7 +53,7 @@ void FarPrintStrings(const std::vector<string> &ifilenames,
     }
   }
 
-  FarReader<Arc> *far_reader = FarReader<Arc>::Open(ifilenames);
+  std::unique_ptr<FarReader<Arc>> far_reader(FarReader<Arc>::Open(ifilenames));
   if (!far_reader) return;
 
   if (!begin_key.empty()) far_reader->Find(begin_key);
@@ -69,12 +70,12 @@ void FarPrintStrings(const std::vector<string> &ifilenames,
     okey = key;
 
     const Fst<Arc> *fst = far_reader->GetFst();
-    if (i == 1 && initial_symbols && syms == nullptr && fst->InputSymbols())
-      syms = fst->InputSymbols()->Copy();
+    if (i == 1 && initial_symbols && !syms && fst->InputSymbols())
+      syms.reset(fst->InputSymbols()->Copy());
     string str;
     VLOG(2) << "Handling key: " << key;
     StringPrinter<Arc> string_printer(token_type,
-                                      syms ? syms : fst->InputSymbols());
+                                      syms ? syms.get() : fst->InputSymbols());
     string_printer(*fst, &str);
 
     if (entry_type == FET_LINE) {
@@ -96,18 +97,15 @@ void FarPrintStrings(const std::vector<string> &ifilenames,
       string filename;
       filename = filename_prefix + sstrm.str() + filename_suffix;
 
-      std::ofstream ostrm(filename.c_str());
+      std::ofstream ostrm(filename);
       if (!ostrm) {
         LOG(ERROR) << "FarPrintStrings: Can't open file: " << filename;
-        delete syms;
-        delete far_reader;
         return;
       }
       ostrm << str;
-      if (token_type == StringPrinter<Arc>::SYMBOL) ostrm << "\n";
+      if (token_type == StringTokenType::SYMBOL) ostrm << "\n";
     }
   }
-  delete syms;
 }
 
 }  // namespace fst

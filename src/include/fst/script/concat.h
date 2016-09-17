@@ -12,25 +12,25 @@ namespace fst {
 namespace script {
 
 typedef args::Package<MutableFstClass *, const FstClass &> ConcatArgs1;
-typedef args::Package<const FstClass &, MutableFstClass *> ConcatArgs2;
 
 template <class Arc>
 void Concat(ConcatArgs1 *args) {
   MutableFst<Arc> *ofst = args->arg1->GetMutableFst<Arc>();
   const Fst<Arc> &ifst = *(args->arg2.GetFst<Arc>());
-
   Concat(ofst, ifst);
 }
+
+typedef args::Package<const FstClass &, MutableFstClass *> ConcatArgs2;
 
 template <class Arc>
 void Concat(ConcatArgs2 *args) {
   const Fst<Arc> &ifst = *(args->arg1.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
-
   Concat(ifst, ofst);
 }
 
 void Concat(MutableFstClass *ofst, const FstClass &ifst);
+
 void Concat(const FstClass &ifst, MutableFstClass *ofst);
 
 }  // namespace script

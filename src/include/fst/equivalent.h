@@ -102,7 +102,7 @@ const typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
 //
 template <class Arc>
 bool Equivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                double delta = kDelta, bool *error = 0) {
+                double delta = kDelta, bool *error = nullptr) {
   typedef typename Arc::Weight Weight;
   if (error) *error = false;
 

@@ -74,7 +74,7 @@ class MultiLabelArcFilter {
  public:
   typedef typename A::Label Label;
 
-  MultiLabelArcFilter(bool match_input = true, bool keep_match = true)
+  explicit MultiLabelArcFilter(bool match_input = true, bool keep_match = true)
       : match_input_(match_input), keep_match_(keep_match) {}
 
   bool operator()(const A &arc) const {

@@ -109,7 +109,7 @@ class CacheState {
   const A &GetArc(size_t n) const { return arcs_[n]; }
 
   // Used by the ArcIterator<Fst<A>> efficient implementation.
-  const A *Arcs() const { return arcs_.size() > 0 ? &arcs_[0] : nullptr; }
+  const A *Arcs() const { return !arcs_.empty() ? &arcs_[0] : nullptr; }
 
   // Accesses flags; used by the caller
   uint32 Flags() const { return flags_; }
@@ -197,8 +197,6 @@ class CacheState {
   std::vector<A, ArcAllocator> arcs_;  // Arcs represenation
   mutable uint32 flags_;
   mutable int ref_count_;  // if 0, avail. for GC; used by arc iterators
-
-  DISALLOW_COPY_AND_ASSIGN(CacheState);
 };
 
 // CACHE STORE - these allocate and store states, provide a mapping
@@ -227,8 +225,6 @@ class CacheState {
 //
 //   // Required constructors/assignment operators
 //   explicit CacheStore(const CacheOptions &opts);
-//   CacheStore(const CacheStore &store);
-//   CacheStore<State> &operator=(const CacheStore<State> &store);
 //
 //   // Returns nullptr if state is not stored
 //   const State *GetState(StateId s);
@@ -303,7 +299,7 @@ class VectorCacheStore {
   State *GetMutableState(StateId s) {
     State *state = nullptr;
     if (s >= state_vec_.size()) {
-      state_vec_.resize(s + 1, 0);
+      state_vec_.resize(s + 1, nullptr);
     } else {
       state = state_vec_[s];
     }
@@ -330,8 +326,9 @@ class VectorCacheStore {
 
   // Deletes all cached states
   void Clear() {
-    for (StateId s = 0; s < state_vec_.size(); ++s)
+    for (StateId s = 0; s < state_vec_.size(); ++s) {
       State::Destroy(state_vec_[s], &state_alloc_);
+    }
     state_vec_.clear();
     state_list_.clear();
   }
@@ -499,7 +496,7 @@ class FirstCacheStore {
       : store_(opts),
         cache_gc_(opts.gc_limit == 0),  // opts.gc ignored historically
         cache_first_state_id_(kNoStateId),
-        cache_first_state_(0) {}
+        cache_first_state_(nullptr) {}
 
   FirstCacheStore(const FirstCacheStore<C> &store)
       : store_(store.store_),
@@ -507,7 +504,7 @@ class FirstCacheStore {
         cache_first_state_id_(store.cache_first_state_id_),
         cache_first_state_(store.cache_first_state_id_ != kNoStateId
                                ? store_.GetMutableState(0)
-                               : 0) {}
+                               : nullptr) {}
 
   FirstCacheStore<C> &operator=(const FirstCacheStore<C> &store) {
     if (this != &store) {
@@ -516,7 +513,7 @@ class FirstCacheStore {
       cache_first_state_id_ = store.cache_first_state_id_;
       cache_first_state_ = store.cache_first_state_id_ != kNoStateId
                                ? store_.GetMutableState(0)
-                               : 0;
+                               : nullptr;
     }
     return *this;
   }
@@ -531,8 +528,9 @@ class FirstCacheStore {
   // Creates state if state is not stored
   State *GetMutableState(StateId s) {
     // store_ state 0 used to hold first cached state; rest shifted + 1
-    if (cache_first_state_id_ == s)
+    if (cache_first_state_id_ == s) {
       return cache_first_state_;  // request for first cached state
+    }
 
     if (cache_gc_) {
       if (cache_first_state_id_ == kNoStateId) {
@@ -666,15 +664,17 @@ class GCCacheStore {
 
   // Deletes all arcs
   void DeleteArcs(State *state) {
-    if (cache_gc_ && (state->Flags() & kCacheInit))
+    if (cache_gc_ && (state->Flags() & kCacheInit)) {
       cache_size_ -= state->NumArcs() * sizeof(Arc);
+    }
     store_.DeleteArcs(state);
   }
 
   // Deletes some arcs
   void DeleteArcs(State *state, size_t n) {
-    if (cache_gc_ && (state->Flags() & kCacheInit))
+    if (cache_gc_ && (state->Flags() & kCacheInit)) {
       cache_size_ -= n * sizeof(Arc);
+    }
     store_.DeleteArcs(state, n);
   }
 
@@ -696,8 +696,9 @@ class GCCacheStore {
   void Delete() {
     if (cache_gc_) {
       const State *state = store_.GetState(Value());
-      if (state->Flags() & kCacheInit)
+      if (state->Flags() & kCacheInit) {
         cache_size_ -= sizeof(State) + state->NumArcs() * sizeof(Arc);
+      }
     }
     store_.Delete();
   }
@@ -1008,7 +1009,7 @@ class CacheBaseImpl : public FstImpl<typename S::Arc> {
   // Provides information needed for generic arc iterator.
   void InitArcIterator(StateId s, ArcIteratorData<Arc> *data) const {
     const S *state = cache_store_->GetState(s);
-    data->base = 0;
+    data->base = nullptr;
     data->narcs = state->NumArcs();
     data->arcs = state->Arcs();
     data->ref_count = state->MutableRefCount();
@@ -1026,8 +1027,9 @@ class CacheBaseImpl : public FstImpl<typename S::Arc> {
   // Finds the mininum never-expanded state Id
   StateId MinUnexpandedState() const {
     while (min_unexpanded_state_id_ <= max_expanded_state_id_ &&
-           ExpandedState(min_unexpanded_state_id_))
+           ExpandedState(min_unexpanded_state_id_)) {
       ++min_unexpanded_state_id_;
+    }
     return min_unexpanded_state_id_;
   }
 
@@ -1048,7 +1050,7 @@ class CacheBaseImpl : public FstImpl<typename S::Arc> {
     if (cache_gc_ || cache_limit_ == 0) {
       return expanded_states_[s];
     } else if (new_cache_store_) {
-      return cache_store_->GetState(s) != 0;
+      return cache_store_->GetState(s) != nullptr;
     } else {
       // If the cache was not created by this class (but provided as opt),
       // then the cached state needs to be inspected to update nknown_states_.
@@ -1076,7 +1078,7 @@ class CacheBaseImpl : public FstImpl<typename S::Arc> {
   bool new_cache_store_;                     // store was created by class
   bool own_cache_store_;                     // store owned by class
 
-  void operator=(const CacheBaseImpl<S, C> &impl);  // disallow
+  CacheBaseImpl &operator=(const CacheBaseImpl &impl) = delete;
 };
 
 // A CacheBaseImpl with the default cache state type.
@@ -1094,7 +1096,7 @@ class CacheImpl : public CacheBaseImpl<CacheState<A>> {
       : CacheBaseImpl<State>(impl, preserve_cache) {}
 
  private:
-  void operator=(const CacheImpl<State> &impl);  // disallow
+  CacheImpl &operator=(const CacheImpl &impl) = delete;
 };
 
 // Use this to make a state iterator for a CacheBaseImpl-derived Fst,
@@ -1121,8 +1123,9 @@ class CacheStateIterator : public StateIteratorBase<typename F::Arc> {
       // force state expansion
       ArcIterator<F> aiter(fst_, u);
       aiter.SetFlags(kArcValueFlags, kArcValueFlags | kArcNoCache);
-      for (; !aiter.Done(); aiter.Next())
+      for (; !aiter.Done(); aiter.Next()) {
         impl_->UpdateNumKnownStates(aiter.Value().nextstate);
+      }
       impl_->SetExpandedState(u);
       if (s_ < impl_->NumKnownStates()) return false;
     }
@@ -1187,7 +1190,8 @@ class CacheArcIterator {
   const State *state_;
   size_t i_;
 
-  DISALLOW_COPY_AND_ASSIGN(CacheArcIterator);
+  CacheArcIterator(const CacheArcIterator &) = delete;
+  CacheArcIterator &operator=(const CacheArcIterator &) = delete;
 };
 
 // Use this to make a mutable arc iterator for a CacheBaseImpl-derived Fst,
@@ -1244,7 +1248,44 @@ class CacheMutableArcIterator : public MutableArcIteratorBase<typename F::Arc> {
   Impl *impl_;
   State *state_;
 
-  DISALLOW_COPY_AND_ASSIGN(CacheMutableArcIterator);
+  CacheMutableArcIterator(const CacheMutableArcIterator &) = delete;
+  CacheMutableArcIterator &operator=(const CacheMutableArcIterator &) = delete;
+};
+
+// Wrap existing CacheStore implementation to use with ExpanderFst.
+template <class CacheStore>
+class ExpanderCacheStore {
+ public:
+  using State = typename CacheStore::State;
+  using Arc = typename CacheStore::Arc;
+  using StateId = typename CacheStore::StateId;
+  using Weight = typename Arc::StateId;
+
+  ExpanderCacheStore() : store_(CacheOptions()) {}
+  explicit ExpanderCacheStore(const CacheOptions& opts) : store_(opts) {}
+
+  template <class Expander>
+  State* FindOrExpand(Expander& expander, StateId state_id) {  // NOLINT
+    State* state = store_.GetMutableState(state_id);
+    if (state->Flags()) {
+      state->SetFlags(kCacheRecent, kCacheRecent);
+    } else {
+      StateBuilder builder{state};
+      expander.Expand(state_id, &builder);
+      state->SetFlags(kCacheFlags, kCacheFlags);
+      store_.SetArcs(state);
+    }
+    return state;
+  }
+
+ private:
+  CacheStore store_;
+
+  struct StateBuilder {
+    void AddArc(const Arc& arc) { state->PushArc(arc); }
+    void SetFinal(Weight final) { state->SetFinal(final); }
+    State* state;
+  };
 };
 
 }  // namespace fst

@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/extensions/far/compile-strings.h>
 #include <fst/extensions/far/create.h>
 #include <fst/extensions/far/equal.h>
@@ -19,9 +20,8 @@
 #include <fst/extensions/far/info.h>
 #include <fst/extensions/far/isomorphic.h>
 #include <fst/extensions/far/print-strings.h>
+#include <fst/extensions/far/script-impl.h>
 #include <fst/script/arg-packs.h>
-
-#include <fst/types.h>
 
 namespace fst {
 namespace script {

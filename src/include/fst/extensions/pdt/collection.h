@@ -93,8 +93,6 @@ class Collection {
   static std::hash<T> hash_;
 
   NodeTable node_table_;
-
-  DISALLOW_COPY_AND_ASSIGN(Collection);
 };
 
 template <class I, class T>

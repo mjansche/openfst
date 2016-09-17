@@ -94,9 +94,6 @@ class FarWriter {
 
  protected:
   FarWriter() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FarWriter);
 };
 
 // This class iterates through an existing archive of FSTs.
@@ -141,9 +138,6 @@ class FarReader {
 
  protected:
   FarReader() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FarReader);
 };
 
 template <class A>
@@ -173,16 +167,11 @@ class STTableFarWriter : public FarWriter<A> {
 
   bool Error() const override { return writer_->Error(); }
 
-  ~STTableFarWriter() override { delete writer_; }
-
  private:
   explicit STTableFarWriter(STTableWriter<Fst<A>, FstWriter<A>> *writer)
       : writer_(writer) {}
 
- private:
-  STTableWriter<Fst<A>, FstWriter<A>> *writer_;
-
-  DISALLOW_COPY_AND_ASSIGN(STTableFarWriter);
+  std::unique_ptr<STTableWriter<Fst<A>, FstWriter<A>>> writer_;
 };
 
 template <class A>
@@ -204,16 +193,11 @@ class STListFarWriter : public FarWriter<A> {
 
   bool Error() const override { return writer_->Error(); }
 
-  ~STListFarWriter() override { delete writer_; }
-
  private:
   explicit STListFarWriter(STListWriter<Fst<A>, FstWriter<A>> *writer)
       : writer_(writer) {}
 
- private:
-  STListWriter<Fst<A>, FstWriter<A>> *writer_;
-
-  DISALLOW_COPY_AND_ASSIGN(STListFarWriter);
+  std::unique_ptr<STListWriter<Fst<A>, FstWriter<A>>> writer_;
 };
 
 template <class A>
@@ -248,8 +232,6 @@ class FstFarWriter : public FarWriter<A> {
   string filename_;
   bool error_;
   bool written_;
-
-  DISALLOW_COPY_AND_ASSIGN(FstFarWriter);
 };
 
 template <class A>
@@ -312,16 +294,11 @@ class STTableFarReader : public FarReader<A> {
 
   bool Error() const override { return reader_->Error(); }
 
-  ~STTableFarReader() override { delete reader_; }
-
  private:
   explicit STTableFarReader(STTableReader<Fst<A>, FstReader<A>> *reader)
       : reader_(reader) {}
 
- private:
-  STTableReader<Fst<A>, FstReader<A>> *reader_;
-
-  DISALLOW_COPY_AND_ASSIGN(STTableFarReader);
+  std::unique_ptr<STTableReader<Fst<A>, FstReader<A>>> reader_;
 };
 
 template <class A>
@@ -359,16 +336,11 @@ class STListFarReader : public FarReader<A> {
 
   bool Error() const override { return reader_->Error(); }
 
-  ~STListFarReader() override { delete reader_; }
-
  private:
   explicit STListFarReader(STListReader<Fst<A>, FstReader<A>> *reader)
       : reader_(reader) {}
 
- private:
-  STListReader<Fst<A>, FstReader<A>> *reader_;
-
-  DISALLOW_COPY_AND_ASSIGN(STListFarReader);
+  std::unique_ptr<STListReader<Fst<A>, FstReader<A>>> reader_;
 };
 
 template <class A>
@@ -387,8 +359,7 @@ class FstFarReader : public FarReader<A> {
   }
 
   explicit FstFarReader(const std::vector<string> &filenames)
-      : keys_(filenames), has_stdin_(false), pos_(0), fst_(nullptr),
-        error_(false) {
+      : keys_(filenames), has_stdin_(false), pos_(0), error_(false) {
     std::sort(keys_.begin(), keys_.end());
     streams_.resize(keys_.size(), 0);
     for (size_t i = 0; i < keys_.size(); ++i) {
@@ -442,41 +413,38 @@ class FstFarReader : public FarReader<A> {
 
   const string &GetKey() const override { return keys_[pos_]; }
 
-  const Fst<A> *GetFst() const override { return fst_; }
+  const Fst<A> *GetFst() const override { return fst_.get(); }
 
   FarType Type() const override { return FAR_FST; }
 
   bool Error() const override { return error_; }
 
   ~FstFarReader() override {
-    if (fst_) delete fst_;
-    for (size_t i = 0; i < keys_.size(); ++i) delete streams_[i];
+    for (size_t i = 0; i < keys_.size(); ++i) {
+      if (streams_[i] != &std::cin) {
+        delete streams_[i];
+      }
+    }
   }
 
  private:
   void ReadFst() {
-    if (fst_) {
-      delete fst_;
-      fst_ = nullptr;
-    }
+    fst_.reset();
     if (pos_ >= keys_.size()) return;
     streams_[pos_]->seekg(0);
-    fst_ = Fst<A>::Read(*streams_[pos_], FstReadOptions());
+    fst_.reset(Fst<A>::Read(*streams_[pos_], FstReadOptions()));
     if (!fst_) {
       FSTERROR() << "FstFarReader: Error reading Fst from: " << keys_[pos_];
       error_ = true;
     }
   }
 
- private:
   std::vector<string> keys_;
   std::vector<std::istream *> streams_;
   bool has_stdin_;
   size_t pos_;
-  mutable Fst<A> *fst_;
+  mutable std::unique_ptr<Fst<A>> fst_;
   mutable bool error_;
-
-  DISALLOW_COPY_AND_ASSIGN(FstFarReader);
 };
 
 template <class A>

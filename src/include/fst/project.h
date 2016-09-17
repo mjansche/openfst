@@ -60,8 +60,9 @@ template <class Arc>
 inline void Project(MutableFst<Arc> *fst, ProjectType project_type) {
   ArcMap(fst, ProjectMapper<Arc>(project_type));
   if (project_type == PROJECT_INPUT) fst->SetOutputSymbols(fst->InputSymbols());
-  if (project_type == PROJECT_OUTPUT)
+  if (project_type == PROJECT_OUTPUT) {
     fst->SetInputSymbols(fst->OutputSymbols());
+  }
 }
 
 // Projects an FST onto its domain or range by either copying each arc's
@@ -83,10 +84,12 @@ class ProjectFst : public ArcMapFst<A, A, ProjectMapper<A>> {
 
   ProjectFst(const Fst<A> &fst, ProjectType project_type)
       : ArcMapFst<A, A, C>(fst, C(project_type)) {
-    if (project_type == PROJECT_INPUT)
+    if (project_type == PROJECT_INPUT) {
       GetMutableImpl()->SetOutputSymbols(fst.InputSymbols());
-    if (project_type == PROJECT_OUTPUT)
+    }
+    if (project_type == PROJECT_OUTPUT) {
       GetMutableImpl()->SetInputSymbols(fst.OutputSymbols());
+    }
   }
 
   // See Fst<>::Copy() for doc.

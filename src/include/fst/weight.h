@@ -95,6 +95,10 @@ const uint64 kIdempotent = 0x0000000000000008ULL;
 // For all a,b: Plus(a,b) = a or Plus(a,b) = b
 const uint64 kPath = 0x0000000000000010ULL;
 
+// For random weight generation: default number of distinct weights.
+// This is also used for a few other weight generation defaults.
+const size_t kNumRandomWeights = 5;
+
 // Determines direction of division.
 enum DivideType {
   DIVIDE_LEFT,   // left division
@@ -160,6 +164,15 @@ struct WeightConvert<W, W> {
   W operator()(W w) const { return w; }
 };
 
+// General random weight generator - raises error.
+template <class W>
+struct WeightGenerate {
+  W operator()() const {
+    FSTERROR() << "WeightGenerate: No random generator for " << W::Type();
+    return W::NoWeight();
+  }
+};
+
 // Helper class for writing textual composite weights.
 class CompositeWeightWriter {
  public:
@@ -184,8 +197,9 @@ class CompositeWeightWriter {
 
   // Writes open parenthesis to a stream if option selected.
   void WriteBegin() {
-    if (!FLAGS_fst_weight_parentheses.empty())
+    if (!FLAGS_fst_weight_parentheses.empty()) {
       strm_ << FLAGS_fst_weight_parentheses[0];
+    }
   }
 
   // Writes element to a stream
@@ -197,14 +211,16 @@ class CompositeWeightWriter {
 
   // Writes close parenthesis to a stream if option selected.
   void WriteEnd() {
-    if (!FLAGS_fst_weight_parentheses.empty())
+    if (!FLAGS_fst_weight_parentheses.empty()) {
       strm_ << FLAGS_fst_weight_parentheses[1];
+    }
   }
 
  private:
   std::ostream &strm_;
   int i_;  // Element position.
-  DISALLOW_COPY_AND_ASSIGN(CompositeWeightWriter);
+  CompositeWeightWriter(const CompositeWeightWriter &) = delete;
+  CompositeWeightWriter &operator=(const CompositeWeightWriter &) = delete;
 };
 
 // Helper class for reading textual composite weights. Elements are
@@ -278,13 +294,14 @@ class CompositeWeightReader {
 
  private:
   std::istream &strm_;  // input stream
-  int c_;          // last character read
+  int c_;               // last character read
   char separator_;
   bool has_parens_;
   int depth_;  // paren depth
   char open_paren_;
   char close_paren_;
-  DISALLOW_COPY_AND_ASSIGN(CompositeWeightReader);
+  CompositeWeightReader(const CompositeWeightReader &) = delete;
+  CompositeWeightReader &operator=(const CompositeWeightReader &) = delete;
 };
 
 template <class T>

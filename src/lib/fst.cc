@@ -156,7 +156,7 @@ FstReadOptions::FstReadOptions(const string &src, const FstHeader *hdr,
 FstReadOptions::FstReadOptions(const string &src, const SymbolTable *isym,
                                const SymbolTable *osym)
     : source(src),
-      header(0),
+      header(nullptr),
       isymbols(isym),
       osymbols(osym),
       read_isymbols(true),

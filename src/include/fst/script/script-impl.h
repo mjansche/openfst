@@ -94,12 +94,16 @@
 namespace fst {
 namespace script {
 
-//
+enum RandArcSelection {
+  UNIFORM_ARC_SELECTOR,
+  LOG_PROB_ARC_SELECTOR,
+  FAST_LOG_PROB_ARC_SELECTOR
+};
+
 // A generic register for operations with various kinds of signatures.
 // Needed since every function signature requires a new registration class.
 // The std::pair<string, string> is understood to be the operation name and arc
 // type; subclasses (or typedefs) need only provide the operation signature.
-//
 
 template <class OperationSignature>
 class GenericOperationRegister
@@ -127,8 +131,7 @@ class GenericOperationRegister
   }
 };
 
-// Operation package - everything you need to register a new type of operation
-
+// Operation package - everything you need to register a new type of operation.
 // The ArgPack should be the type that's passed into each wrapped function -
 // for instance, it might be a struct containing all the args.
 // It's always passed by pointer, so const members should be used to enforce
@@ -154,7 +157,7 @@ struct Operation {
       arc_dispatched_operation_##ArgPack##Op##Arc##_registerer \
       (std::make_pair(#Op, Arc::Type()), Op<Arc>)
 
-// Template function to apply an operation by name
+// Template function to apply an operation by name.
 
 template <class OpReg>
 void Apply(const string &op_name, const string &arc_type,
@@ -169,9 +172,17 @@ void Apply(const string &op_name, const string &arc_type,
   op(args);
 }
 
-// Helper that logs to ERROR if the arc types of a and b don't match. The
-// op_name is also printed.
-bool ArcTypesMatch(const FstClass &a, const FstClass &b, const string &op_name);
+// Helper that logs to ERROR if the arc types of m and n don't match. The
+// op_name is used to construct the error message.
+template <class M, class N>
+bool ArcTypesMatch(const M &m, const N &n, const string &op_name) {
+  if (m.ArcType() != n.ArcType()) {
+    FSTERROR() << "Arguments with non-matching arc types passed to "
+               << op_name << ":\t" << m.ArcType() << " and " << n.ArcType();
+    return false;
+  }
+  return true;
+}
 
 }  // namespace script
 }  // namespace fst

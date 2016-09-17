@@ -30,7 +30,6 @@ namespace script {
 
 // PDT COMPOSE
 
-
 typedef args::Package<const FstClass &, const FstClass &,
                       const std::vector<LabelPair> &, MutableFstClass *,
                       const PdtComposeOptions &, bool> PdtComposeArgs;

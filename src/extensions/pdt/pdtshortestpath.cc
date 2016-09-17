@@ -3,6 +3,7 @@
 //
 // Returns the shortest path in a (bounded-stack) PDT.
 
+#include <string>
 #include <vector>
 
 #include <fst/extensions/pdt/pdtscript.h>

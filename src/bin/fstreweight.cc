@@ -4,7 +4,9 @@
 // Reweights an FST.
 
 #include <memory>
+#include <string>
 
+#include <fst/script/getters.h>
 #include <fst/script/reweight.h>
 #include <fst/script/text-io.h>
 
@@ -37,11 +39,7 @@ int main(int argc, char **argv) {
   if (!s::ReadPotentials(fst->WeightType(), potentials_fname, &potential))
     return 1;
 
-  fst::ReweightType reweight_type = FLAGS_to_final
-                                            ? fst::REWEIGHT_TO_FINAL
-                                            : fst::REWEIGHT_TO_INITIAL;
-
-  s::Reweight(fst.get(), potential, reweight_type);
+  s::Reweight(fst.get(), potential, s::GetReweightType(FLAGS_to_final));
 
   fst->Write(out_fname);
 

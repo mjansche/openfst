@@ -11,24 +11,23 @@
 namespace fst {
 namespace script {
 
-enum ArcSortType { ILABEL_COMPARE, OLABEL_COMPARE };
+enum ArcSortType { ILABEL_SORT, OLABEL_SORT };
 
 typedef args::Package<MutableFstClass *, ArcSortType> ArcSortArgs;
 
 template <class Arc>
 void ArcSort(ArcSortArgs *args) {
   MutableFst<Arc> *fst = args->arg1->GetMutableFst<Arc>();
-
-  if (args->arg2 == ILABEL_COMPARE) {
+  if (args->arg2 == ILABEL_SORT) {
     ILabelCompare<Arc> icomp;
     ArcSort(fst, icomp);
-  } else {  // OLABEL_COMPARE
+  } else {  // args->arg2 == OLABEL_SORT
     OLabelCompare<Arc> ocomp;
     ArcSort(fst, ocomp);
   }
 }
 
-void ArcSort(MutableFstClass *ofst, ArcSortType sort_type);
+void ArcSort(MutableFstClass *ofst, ArcSortType);
 
 }  // namespace script
 }  // namespace fst

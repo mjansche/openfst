@@ -105,13 +105,15 @@ void Visit(const F &fst, V *visitor, Q *queue, ArcFilter filter,
         arc_iterator.resize(nstates);
       }
       // Creates arc iterator if needed.
-      if (arc_iterator[s] == 0 && !(state_status[s] & kArcIterDone) && visit)
+      if (arc_iterator[s] == nullptr && !(state_status[s] & kArcIterDone) &&
+          visit) {
         arc_iterator[s] = new (&aiter_pool) AIterator(fst, s);
+      }
       // Deletes arc iterator if done.
       AIterator *aiter = arc_iterator[s];
       if ((aiter && aiter->Done()) || !visit) {
         Destroy(aiter, &aiter_pool);
-        arc_iterator[s] = 0;
+        arc_iterator[s] = nullptr;
         state_status[s] |= kArcIterDone;
       }
       // Dequeues state and marks black if done
@@ -147,7 +149,7 @@ void Visit(const F &fst, V *visitor, Q *queue, ArcFilter filter,
       // Destroys an iterator ASAP for efficiency.
       if (aiter->Done()) {
         Destroy(aiter, &aiter_pool);
-        arc_iterator[s] = 0;
+        arc_iterator[s] = nullptr;
         state_status[s] |= kArcIterDone;
       }
     }
@@ -165,7 +167,7 @@ void Visit(const F &fst, V *visitor, Q *queue, ArcFilter filter,
         if (siter.Value() == nstates) {
           ++nstates;
           state_status.push_back(kWhiteState);
-          arc_iterator.push_back(0);
+          arc_iterator.push_back(nullptr);
           break;
         }
       }
@@ -186,7 +188,7 @@ class CopyVisitor {
   typedef A Arc;
   typedef typename A::StateId StateId;
 
-  CopyVisitor(MutableFst<Arc> *ofst) : ifst_(0), ofst_(ofst) {}
+  explicit CopyVisitor(MutableFst<Arc> *ofst) : ifst_(nullptr), ofst_(ofst) {}
 
   void InitVisit(const Fst<A> &ifst) {
     ifst_ = &ifst;
@@ -231,7 +233,7 @@ class PartialVisitor {
   typedef typename A::StateId StateId;
 
   explicit PartialVisitor(StateId maxvisit)
-      : fst_(0), maxvisit_(maxvisit) {}
+      : fst_(nullptr), maxvisit_(maxvisit) {}
 
   void InitVisit(const Fst<A> &ifst) {
     fst_ = &ifst;

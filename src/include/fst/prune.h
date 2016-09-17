@@ -6,6 +6,7 @@
 #ifndef FST_LIB_PRUNE_H_
 #define FST_LIB_PRUNE_H_
 
+#include <utility>
 #include <vector>
 
 #include <fst/arcfilter.h>
@@ -34,15 +35,12 @@ class PruneOptions {
   float delta;
 
   explicit PruneOptions(const Weight &w, StateId s, ArcFilter f,
-                        std::vector<Weight> *d = 0, float e = kDelta)
+                        std::vector<Weight> *d = nullptr, float e = kDelta)
       : weight_threshold(w),
         state_threshold(s),
-        filter(f),
+        filter(std::move(f)),
         distance(d),
         delta(e) {}
-
- private:
-  PruneOptions();  // disallow
 };
 
 template <class S, class W>
@@ -128,8 +126,9 @@ void Prune(MutableFst<Arc> *fst, const PruneOptions<Arc, ArcFilter> &opts) {
     heap.Pop();
     enqueued[s] = StateHeap::kNoKey;
     visited[s] = true;
-    if (less(limit, Times(idistance[s], fst->Final(s))))
+    if (less(limit, Times(idistance[s], fst->Final(s)))) {
       fst->SetFinal(s, Weight::Zero());
+    }
     for (MutableArcIterator<MutableFst<Arc>> ait(fst, s); !ait.Done();
          ait.Next()) {
       Arc arc = ait.Value();
@@ -143,12 +142,14 @@ void Prune(MutableFst<Arc> *fst, const PruneOptions<Arc, ArcFilter> &opts) {
         ait.SetValue(arc);
         continue;
       }
-      if (less(Times(idistance[s], arc.weight), idistance[arc.nextstate]))
+      if (less(Times(idistance[s], arc.weight), idistance[arc.nextstate])) {
         idistance[arc.nextstate] = Times(idistance[s], arc.weight);
+      }
       if (visited[arc.nextstate]) continue;
       if ((opts.state_threshold != kNoStateId) &&
-          (num_visited >= opts.state_threshold))
+          (num_visited >= opts.state_threshold)) {
         continue;
+      }
       if (enqueued[arc.nextstate] == StateHeap::kNoKey) {
         enqueued[arc.nextstate] = heap.Insert(arc.nextstate);
         ++num_visited;
@@ -157,8 +158,9 @@ void Prune(MutableFst<Arc> *fst, const PruneOptions<Arc, ArcFilter> &opts) {
       }
     }
   }
-  for (size_t i = 0; i < visited.size(); ++i)
+  for (size_t i = 0; i < visited.size(); ++i) {
     if (!visited[i]) dead.push_back(i);
+  }
   fst->DeleteStates(dead);
 }
 
@@ -175,8 +177,8 @@ template <class Arc>
 void Prune(MutableFst<Arc> *fst, typename Arc::Weight weight_threshold,
            typename Arc::StateId state_threshold = kNoStateId,
            double delta = kDelta) {
-  PruneOptions<Arc, AnyArcFilter<Arc>> opts(weight_threshold, state_threshold,
-                                             AnyArcFilter<Arc>(), 0, delta);
+  PruneOptions<Arc, AnyArcFilter<Arc>> opts(
+      weight_threshold, state_threshold, AnyArcFilter<Arc>(), nullptr, delta);
   Prune(fst, opts);
 }
 
@@ -207,8 +209,10 @@ void Prune(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
   ofst->SetOutputSymbols(ifst.OutputSymbols());
   if (ifst.Start() == kNoStateId) return;
   NaturalLess<Weight> less;
-  if (less(opts.weight_threshold, Weight::One()) || (opts.state_threshold == 0))
+  if (less(opts.weight_threshold, Weight::One()) ||
+      (opts.state_threshold == 0)) {
     return;
+  }
   std::vector<Weight> idistance;
   std::vector<Weight> tmp;
   if (!opts.distance) ShortestDistance(ifst, &tmp, true, opts.delta);
@@ -244,8 +248,9 @@ void Prune(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
     heap.Pop();
     enqueued[s] = StateHeap::kNoKey;
     visited[s] = true;
-    if (!less(limit, Times(idistance[s], ifst.Final(s))))
+    if (!less(limit, Times(idistance[s], ifst.Final(s)))) {
       ofst->SetFinal(copy[s], ifst.Final(s));
+    }
     for (ArcIterator<Fst<Arc>> ait(ifst, s); !ait.Done(); ait.Next()) {
       const Arc &arc = ait.Value();
       if (!opts.filter(arc)) continue;
@@ -255,15 +260,19 @@ void Prune(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
                                                   : Weight::Zero());
       if (less(limit, weight)) continue;
       if ((opts.state_threshold != kNoStateId) &&
-          (ofst->NumStates() >= opts.state_threshold))
+          (ofst->NumStates() >= opts.state_threshold)) {
         continue;
-      while (idistance.size() <= arc.nextstate)
+      }
+      while (idistance.size() <= arc.nextstate) {
         idistance.push_back(Weight::Zero());
-      if (less(Times(idistance[s], arc.weight), idistance[arc.nextstate]))
+      }
+      if (less(Times(idistance[s], arc.weight), idistance[arc.nextstate])) {
         idistance[arc.nextstate] = Times(idistance[s], arc.weight);
+      }
       while (copy.size() <= arc.nextstate) copy.push_back(kNoStateId);
-      if (copy[arc.nextstate] == kNoStateId)
+      if (copy[arc.nextstate] == kNoStateId) {
         copy[arc.nextstate] = ofst->AddState();
+      }
       ofst->AddArc(copy[s], Arc(arc.ilabel, arc.olabel, arc.weight,
                                 copy[arc.nextstate]));
       while (enqueued.size() <= arc.nextstate) {
@@ -271,10 +280,11 @@ void Prune(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
         visited.push_back(false);
       }
       if (visited[arc.nextstate]) continue;
-      if (enqueued[arc.nextstate] == StateHeap::kNoKey)
+      if (enqueued[arc.nextstate] == StateHeap::kNoKey) {
         enqueued[arc.nextstate] = heap.Insert(arc.nextstate);
-      else
+      } else {
         heap.Update(enqueued[arc.nextstate], arc.nextstate);
+      }
     }
   }
 }
@@ -293,8 +303,8 @@ void Prune(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
            typename Arc::Weight weight_threshold,
            typename Arc::StateId state_threshold = kNoStateId,
            float delta = kDelta) {
-  PruneOptions<Arc, AnyArcFilter<Arc>> opts(weight_threshold, state_threshold,
-                                             AnyArcFilter<Arc>(), 0, delta);
+  PruneOptions<Arc, AnyArcFilter<Arc>> opts(
+      weight_threshold, state_threshold, AnyArcFilter<Arc>(), nullptr, delta);
   Prune(ifst, ofst, opts);
 }
 

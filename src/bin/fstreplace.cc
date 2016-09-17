@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include <fst/script/getters.h>
 #include <fst/script/replace.h>
 
 DEFINE_string(call_arc_labeling, "input",
@@ -19,34 +20,13 @@ DEFINE_int64(return_label, 0, "Label to put on return arc");
 DEFINE_bool(epsilon_on_replace, false,
             "For backwards compatibility: call/return arcs are epsilon arcs");
 
-// Assigns replace_label_type from enum values based on command line switches.
-fst::ReplaceLabelType replace_type(string *arc_labeling, char *binname,
-                                       string errmsg, bool epsilon_on_replace) {
-  fst::ReplaceLabelType replace_label_type;
-  if ((*arc_labeling) == "neither" || epsilon_on_replace) {
-    replace_label_type = fst::REPLACE_LABEL_NEITHER;
-  } else if ((*arc_labeling) == "input") {
-    replace_label_type = fst::REPLACE_LABEL_INPUT;
-  } else if ((*arc_labeling) == "output") {
-    replace_label_type = fst::REPLACE_LABEL_OUTPUT;
-  } else if ((*arc_labeling) == "both") {
-    replace_label_type = fst::REPLACE_LABEL_BOTH;
-  } else {
-    LOG(ERROR) << binname << errmsg
-               << "arc labeling option: " << (*arc_labeling);
-    exit(1);
-  }
-  return replace_label_type;
-}
-
 int main(int argc, char **argv) {
   namespace s = fst::script;
   using fst::script::FstClass;
   using fst::script::VectorFstClass;
 
-  string usage =
-      "Recursively replaces FST arcs with other FST(s).\n\n"
-      "  Usage: ";
+  string usage = "Recursively replaces FST arcs with other FST(s).\n\n"
+                 "  Usage: ";
   usage += argv[0];
   usage += " root.fst rootlabel [rule1.fst label1 ...] [out.fst]\n";
 
@@ -66,7 +46,7 @@ int main(int argc, char **argv) {
   if (!ifst) return 1;
 
   std::vector<s::LabelFstClassPair> pairs;
-  // Warning: if the root label is beyond the range of the underlying FST's
+  // Note that if the root label is beyond the range of the underlying FST's
   // labels, truncation will occur.
   int64 root = atoll(argv[2]);
   pairs.emplace_back(root, ifst);
@@ -74,18 +54,24 @@ int main(int argc, char **argv) {
   for (auto i = 3; i < argc - 1; i += 2) {
     ifst = FstClass::Read(argv[i]);
     if (!ifst) return 1;
-    // Warning: if the root label is beyond the range of the underlying FST's
+    // Note that if the root label is beyond the range of the underlying FST's
     // labels, truncation will occur.
     int64 lab = atoll(argv[i + 1]);
     pairs.emplace_back(lab, ifst);
   }
 
-  fst::ReplaceLabelType call_label_type =
-      replace_type(&FLAGS_call_arc_labeling, argv[0], ": bad call ",
-                   FLAGS_epsilon_on_replace);
-  fst::ReplaceLabelType return_label_type =
-      replace_type(&FLAGS_return_arc_labeling, argv[0], ": bad return ",
-                   FLAGS_epsilon_on_replace);
+  fst::ReplaceLabelType call_label_type;
+  if (!s::GetReplaceLabelType(FLAGS_call_arc_labeling, FLAGS_epsilon_on_replace,
+                              &call_label_type)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported call arc replace "
+               << "label type: " << FLAGS_call_arc_labeling;
+  }
+  fst::ReplaceLabelType return_label_type;
+  if (!s::GetReplaceLabelType(FLAGS_return_arc_labeling,
+                              FLAGS_epsilon_on_replace, &return_label_type)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported return arc replace "
+               << "label type: " << FLAGS_return_arc_labeling;
+  }
 
   s::ReplaceOptions opts(root, call_label_type, return_label_type,
                          FLAGS_return_label);

@@ -33,7 +33,7 @@ struct SymbolTableReadOptions {
   SymbolTableReadOptions(
       std::vector<std::pair<int64, int64> > string_hash_ranges_,
       const string& source_)
-      : string_hash_ranges(string_hash_ranges_), source(source_) {}
+      : string_hash_ranges(std::move(string_hash_ranges_)), source(source_) {}
 
   std::vector<std::pair<int64, int64> > string_hash_ranges;
   string source;
@@ -69,9 +69,11 @@ class DenseSymbolMap {
   const string GetSymbol(size_t idx) const {
     return string(symbols_[idx], strlen(symbols_[idx]));
   }
+  void RemoveSymbol(size_t idx);
 
  private:
-  void Rehash();
+  // num_buckets must be power of 2.
+  void Rehash(size_t num_buckets);
   const char* NewSymbol(const string& sym);
 
   int64 empty_;
@@ -86,13 +88,13 @@ class DenseSymbolMap {
 
 class SymbolTableImpl {
  public:
-  SymbolTableImpl(const string& name)
+  explicit SymbolTableImpl(const string& name)
       : name_(name),
         available_key_(0),
         dense_key_limit_(0),
         check_sum_finalized_(false) {}
 
-  explicit SymbolTableImpl(const SymbolTableImpl& impl)
+  SymbolTableImpl(const SymbolTableImpl& impl)
       : name_(impl.name_),
         available_key_(impl.available_key_),
         dense_key_limit_(impl.dense_key_limit_),
@@ -106,6 +108,11 @@ class SymbolTableImpl {
   int64 AddSymbol(const string& symbol) {
     return AddSymbol(symbol, available_key_);
   }
+
+  // Removes the symbol with the given key. The removal is costly
+  // (O(NumSymbols)) and may reduce the efficiency of Find() because of a
+  // potentially reduced size of the dense key interval.
+  void RemoveSymbol(int64 key);
 
   static SymbolTableImpl* ReadText(
       std::istream& strm, const string& name,  // NOLINT
@@ -123,10 +130,14 @@ class SymbolTableImpl {
     if (key < 0 || key >= dense_key_limit_) {
       map<int64, int64>::const_iterator iter =
           key_map_.find(key);
-      if (iter == key_map_.end()) return "";
+      if (iter == key_map_.end()) {
+        return "";
+      }
       idx = iter->second;
     }
-    if (idx < 0 || idx >= symbols_.size()) return "";
+    if (idx < 0 || idx >= symbols_.size()) {
+      return "";
+    }
     return symbols_.GetSymbol(idx);
   }
 
@@ -140,7 +151,10 @@ class SymbolTableImpl {
 
   // Return the key associated with the symbol. If the symbol
   // does not exists, return SymbolTable::kNoSymbol.
-  int64 Find(const char* symbol) const { return Find(string(symbol)); }
+  int64 Find(const char* symbol) const {
+    const string str(symbol);
+    return Find(str);
+  }
 
   int64 GetNthKey(ssize_t pos) const {
     if (pos < 0 || pos >= symbols_.size()) return -1;
@@ -178,7 +192,11 @@ class SymbolTableImpl {
   int64 dense_key_limit_;
 
   internal::DenseSymbolMap symbols_;
+  // Maps index to key for index >= dense_key_limit:
+  //   key = idx_key_[index - dense_key_limit]
   std::vector<int64> idx_key_;
+  // Maps key to index for key >= dense_key_limit_.
+  //  index = key_map_[key]
   map<int64, int64> key_map_;
 
   mutable bool check_sum_finalized_;
@@ -211,13 +229,7 @@ class SymbolTable {
   explicit SymbolTable(const string& name)
       : impl_(std::make_shared<SymbolTableImpl>(name)) {}
 
-  // Create a reference counted copy.
-  SymbolTable(const SymbolTable& table) : impl_(table.impl_) {}
-
   virtual ~SymbolTable() {}
-
-  // Copys the implemenation from one symbol table to another.
-  void operator=(const SymbolTable& st) { impl_ = st.impl_; }
 
   // Read an ascii representation of the symbol table from an istream. Pass a
   // name to give the resulting SymbolTable.
@@ -225,10 +237,11 @@ class SymbolTable {
       std::istream& strm, const string& name,  // NOLINT
       const SymbolTableTextOptions& opts = SymbolTableTextOptions()) {
     SymbolTableImpl* impl = SymbolTableImpl::ReadText(strm, name, opts);
-    if (!impl)
-      return 0;
-    else
+    if (!impl) {
+      return nullptr;
+    } else {
       return new SymbolTable(impl);
+    }
   }
 
   // read an ascii representation of the symbol table
@@ -238,7 +251,7 @@ class SymbolTable {
     std::ifstream strm(filename.c_str(), std::ios_base::in);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::ReadText: Can't open file " << filename;
-      return 0;
+      return nullptr;
     }
     return ReadText(strm, filename, opts);
   }
@@ -248,10 +261,11 @@ class SymbolTable {
   static SymbolTable* Read(std::istream& strm,  // NOLINT
                            const SymbolTableReadOptions& opts) {
     SymbolTableImpl* impl = SymbolTableImpl::Read(strm, opts);
-    if (!impl)
-      return 0;
-    else
+    if (!impl) {
+      return nullptr;
+    } else {
       return new SymbolTable(impl);
+    }
   }
 
   // read a binary dump of the symbol table from a stream
@@ -268,7 +282,7 @@ class SymbolTable {
                             std::ios_base::in | std::ios_base::binary);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::Read: Can't open file " << filename;
-      return 0;
+      return nullptr;
     }
     return Read(strm, filename);
   }
@@ -300,6 +314,11 @@ class SymbolTable {
   // key value after the symbol table has been merged, but a different
   // value. Adding symbol tables do not result in changes in the base table.
   virtual void AddTable(const SymbolTable& table);
+
+  virtual void RemoveSymbol(int64 key) {
+    MutateCheck();
+    return impl_->RemoveSymbol(key);
+  }
 
   // Returns the name of the symbol table.
   virtual const string& Name() const { return impl_->Name(); }
@@ -339,7 +358,7 @@ class SymbolTable {
 
   // Dump an ascii text representation of the symbol table
   bool WriteText(const string& filename) const {
-    std::ofstream strm(filename.c_str());
+    std::ofstream strm(filename);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::WriteText: Can't open file " << filename;
       return false;
@@ -361,11 +380,11 @@ class SymbolTable {
 
   // Return the current available key (i.e highest key number+1) in
   // the symbol table
-  virtual int64 AvailableKey(void) const { return impl_->AvailableKey(); }
+  virtual int64 AvailableKey() const { return impl_->AvailableKey(); }
 
   // Return the current number of symbols in table (not necessarily
   // equal to AvailableKey())
-  virtual size_t NumSymbols(void) const { return impl_->NumSymbols(); }
+  virtual size_t NumSymbols() const { return impl_->NumSymbols(); }
 
   virtual int64 GetNthKey(ssize_t pos) const { return impl_->GetNthKey(pos); }
 
@@ -389,7 +408,7 @@ class SymbolTable {
 // \brief Iterator class for symbols in a symbol table
 class SymbolTableIterator {
  public:
-  SymbolTableIterator(const SymbolTable& table)
+  explicit SymbolTableIterator(const SymbolTable& table)
       : table_(table),
         pos_(0),
         nsymbols_(table.NumSymbols()),
@@ -398,22 +417,22 @@ class SymbolTableIterator {
   ~SymbolTableIterator() {}
 
   // is iterator done
-  bool Done(void) const { return (pos_ == nsymbols_); }
+  bool Done() const { return (pos_ == nsymbols_); }
 
   // return the Value() of the current symbol (int64 key)
-  int64 Value(void) const { return key_; }
+  int64 Value() const { return key_; }
 
   // return the string of the current symbol
-  string Symbol(void) const { return table_.Find(key_); }
+  string Symbol() const { return table_.Find(key_); }
 
   // advance iterator forward
-  void Next(void) {
+  void Next() {
     ++pos_;
     if (pos_ < nsymbols_) key_ = table_.GetNthKey(pos_);
   }
 
   // reset iterator
-  void Reset(void) {
+  void Reset() {
     pos_ = 0;
     key_ = table_.GetNthKey(0);
   }
@@ -460,8 +479,9 @@ SymbolTable* RelabelSymbolTable(
       new SymbolTable(table->Name().empty() ? string() : (string("relabeled_") +
                                                           table->Name()));
 
-  for (size_t i = 0; i < pairs.size(); ++i)
+  for (size_t i = 0; i < pairs.size(); ++i) {
     new_table->AddSymbol(table->Find(pairs[i].first), pairs[i].second);
+  }
 
   return new_table;
 }

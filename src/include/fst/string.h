@@ -32,15 +32,18 @@ class StringCompiler {
 
   enum TokenType { SYMBOL = 1, BYTE = 2, UTF8 = 3 };
 
-  StringCompiler(TokenType type, const SymbolTable *syms = 0,
-                 Label unknown_label = kNoLabel, bool allow_negative = false)
+  explicit StringCompiler(TokenType type, const SymbolTable *syms = nullptr,
+                          Label unknown_label = kNoLabel,
+                          bool allow_negative = false)
       : token_type_(type),
         syms_(syms),
         unknown_label_(unknown_label),
         allow_negative_(allow_negative) {}
 
-  StringCompiler(StringTokenType type, const SymbolTable *syms = 0,
-                 Label unknown_label = kNoLabel, bool allow_negative = false)
+  explicit StringCompiler(StringTokenType type,
+                          const SymbolTable *syms = nullptr,
+                          Label unknown_label = kNoLabel,
+                          bool allow_negative = false)
       : StringCompiler(static_cast<TokenType>(type), syms, unknown_label,
                        allow_negative) {}
 
@@ -66,8 +69,9 @@ class StringCompiler {
                              std::vector<Label> *labels) const {
     labels->clear();
     if (token_type_ == BYTE) {
-      for (size_t i = 0; i < str.size(); ++i)
+      for (size_t i = 0; i < str.size(); ++i) {
         labels->push_back(static_cast<unsigned char>(str[i]));
+      }
     } else if (token_type_ == UTF8) {
       return UTF8StringToLabels(str, labels);
     } else {
@@ -94,8 +98,9 @@ class StringCompiler {
                const Weight &weight = Weight::One()) const {
     fst->DeleteStates();
     while (fst->NumStates() <= labels.size()) fst->AddState();
-    for (size_t i = 0; i < labels.size(); ++i)
+    for (size_t i = 0; i < labels.size(); ++i) {
       fst->AddArc(i, Arc(labels[i], labels[i], Weight::One(), i + 1));
+    }
     fst->SetStart(0);
     fst->SetFinal(labels.size(), weight);
   }
@@ -112,10 +117,11 @@ class StringCompiler {
                const Weight &weight = Weight::One()) const {
     std::vector<std::pair<Label, Weight>> compacts;
     compacts.reserve(labels.size() + 1);
-    for (int i = 0; i < static_cast<int>(labels.size()) - 1; ++i)
+    for (int i = 0; i < static_cast<int>(labels.size()) - 1; ++i) {
       compacts.push_back(std::make_pair(labels[i], Weight::One()));
+    }
     compacts.push_back(
-        std::make_pair(labels.size() > 0 ? labels.back() : kNoLabel, weight));
+        std::make_pair(!labels.empty() ? labels.back() : kNoLabel, weight));
     fst->SetCompactElements(compacts.begin(), compacts.end());
   }
 
@@ -148,7 +154,8 @@ class StringCompiler {
   Label unknown_label_;      // Label for token missing from symbol table
   bool allow_negative_;      // Negative labels allowed?
 
-  DISALLOW_COPY_AND_ASSIGN(StringCompiler);
+  StringCompiler(const StringCompiler &) = delete;
+  StringCompiler &operator=(const StringCompiler &) = delete;
 };
 
 // Functor to print a string FST as a string.
@@ -162,11 +169,12 @@ class StringPrinter {
 
   enum TokenType { SYMBOL = 1, BYTE = 2, UTF8 = 3 };
 
-  explicit StringPrinter(TokenType token_type, const SymbolTable *syms = 0)
+  explicit StringPrinter(TokenType token_type,
+                         const SymbolTable *syms = nullptr)
       : token_type_(token_type), syms_(syms) {}
 
   explicit StringPrinter(StringTokenType token_type,
-                         const SymbolTable *syms = 0)
+                         const SymbolTable *syms = nullptr)
       : StringPrinter(static_cast<TokenType>(token_type), syms) {}
 
   // Convert the FST 'fst' into the string 'output'
@@ -261,7 +269,8 @@ class StringPrinter {
   const SymbolTable *syms_;  // Symbol table used when token type is symbol
   std::vector<Label> labels_;  // Input FST labels.
 
-  DISALLOW_COPY_AND_ASSIGN(StringPrinter);
+  StringPrinter(const StringPrinter &) = delete;
+  StringPrinter &operator=(const StringPrinter &) = delete;
 };
 
 }  // namespace fst

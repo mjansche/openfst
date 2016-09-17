@@ -78,13 +78,7 @@ class SynchronizeFstImpl : public CacheImpl<A> {
   }
 
   ~SynchronizeFstImpl() override {
-    delete fst_;
-    // Extract pointers from the hash set
-    std::vector<const String *> strings;
-    auto it = string_set_.begin();
-    for (; it != string_set_.end(); ++it) strings.push_back(*it);
-    // Free the extracted pointers
-    for (size_t i = 0; i < strings.size(); ++i) delete strings[i];
+    for (const String *ptr : string_set_) delete ptr;
   }
 
   StateId Start() {
@@ -102,10 +96,12 @@ class SynchronizeFstImpl : public CacheImpl<A> {
     if (!HasFinal(s)) {
       const Element &e = elements_[s];
       Weight w = e.state == kNoStateId ? Weight::One() : fst_->Final(e.state);
-      if ((w != Weight::Zero()) && (e.istring)->empty() && (e.ostring)->empty())
+      if ((w != Weight::Zero()) && (e.istring)->empty() &&
+          (e.ostring)->empty()) {
         SetFinal(s, w);
-      else
+      } else {
         SetFinal(s, Weight::Zero());
+      }
     }
     return CacheImpl<A>::Final(s);
   }
@@ -129,8 +125,9 @@ class SynchronizeFstImpl : public CacheImpl<A> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) && fst_->Properties(kError, false))
+    if ((mask & kError) && fst_->Properties(kError, false)) {
       SetProperties(kError, kError);
+    }
     return FstImpl<Arc>::Properties(mask);
   }
 
@@ -142,10 +139,11 @@ class SynchronizeFstImpl : public CacheImpl<A> {
   // Returns the first character of the string obtained by
   // concatenating s and l.
   Label Car(const String *s, Label l = 0) const {
-    if (!s->empty())
+    if (!s->empty()) {
       return (*s)[0];
-    else
+    } else {
       return l;
+    }
   }
 
   // Computes the residual string obtained by removing the first
@@ -167,37 +165,32 @@ class SynchronizeFstImpl : public CacheImpl<A> {
 
   // Tests if the concatenation of s and l is empty
   bool Empty(const String *s, Label l = 0) const {
-    if (s->empty())
+    if (s->empty()) {
       return l == 0;
-    else
+    } else {
       return false;
+    }
   }
 
   // Finds the string pointed by s in the hash set. Transfers the
   // pointer ownership to the hash set.
   const String *FindString(const String *s) {
-    auto it = string_set_.find(s);
-    if (it != string_set_.end()) {
+    auto insert_result = string_set_.insert(s);
+    if (!insert_result.second) {
       delete s;
-      return (*it);
-    } else {
-      string_set_.insert(s);
-      return s;
     }
+    return *insert_result.first;
   }
 
   // Finds state corresponding to an element. Creates new state
   // if element not found.
   StateId FindState(const Element &e) {
-    auto eit = element_map_.find(e);
-    if (eit != element_map_.end()) {
-      return (*eit).second;
-    } else {
-      StateId s = elements_.size();
+    auto insert_result =
+        element_map_.insert(std::make_pair(e, elements_.size()));
+    if (insert_result.second) {
       elements_.push_back(e);
-      element_map_.insert(std::pair<const Element, StateId>(e, s));
-      return s;
     }
+    return insert_result.first->second;
   }
 
   // Computes the outgoing transitions from a state, creating new destination
@@ -205,7 +198,7 @@ class SynchronizeFstImpl : public CacheImpl<A> {
   void Expand(StateId s) {
     Element e = elements_[s];
 
-    if (e.state != kNoStateId)
+    if (e.state != kNoStateId) {
       for (ArcIterator<Fst<A>> ait(*fst_, e.state); !ait.Done(); ait.Next()) {
         const A &arc = ait.Value();
         if (!Empty(e.istring, arc.ilabel) && !Empty(e.ostring, arc.olabel)) {
@@ -221,6 +214,7 @@ class SynchronizeFstImpl : public CacheImpl<A> {
           PushArc(s, Arc(0, 0, arc.weight, d));
         }
       }
+    }
 
     Weight w = e.state == kNoStateId ? Weight::One() : fst_->Final(e.state);
     if ((w != Weight::Zero()) &&
@@ -249,11 +243,13 @@ class SynchronizeFstImpl : public CacheImpl<A> {
     size_t operator()(const Element &x) const {
       size_t key = x.state;
       key = (key << 1) ^ (x.istring)->size();
-      for (size_t i = 0; i < (x.istring)->size(); ++i)
+      for (size_t i = 0; i < (x.istring)->size(); ++i) {
         key = (key << 1) ^ (*x.istring)[i];
+      }
       key = (key << 1) ^ (x.ostring)->size();
-      for (size_t i = 0; i < (x.ostring)->size(); ++i)
+      for (size_t i = 0; i < (x.ostring)->size(); ++i) {
         key = (key << 1) ^ (*x.ostring)[i];
+      }
       return key;
     }
   };
@@ -263,8 +259,9 @@ class SynchronizeFstImpl : public CacheImpl<A> {
    public:
     bool operator()(const String *const &x, const String *const &y) const {
       if (x->size() != y->size()) return false;
-      for (size_t i = 0; i < x->size(); ++i)
+      for (size_t i = 0; i < x->size(); ++i) {
         if ((*x)[i] != (*y)[i]) return false;
+      }
       return true;
     }
   };
@@ -283,12 +280,10 @@ class SynchronizeFstImpl : public CacheImpl<A> {
       ElementMap;
   typedef std::unordered_set<const String *, StringKey, StringEqual> StringSet;
 
-  const Fst<A> *fst_;
+  std::unique_ptr<const Fst<A>> fst_;
   std::vector<Element> elements_;  // mapping Fst state to Elements
   ElementMap element_map_;    // mapping Elements to Fst state
   StringSet string_set_;
-
-  void operator=(const SynchronizeFstImpl<A> &);  // disallow
 };
 
 // Synchronizes a transducer. This version is a delayed Fst.  The
@@ -349,7 +344,7 @@ class SynchronizeFst : public ImplToFst<SynchronizeFstImpl<A>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const SynchronizeFst<A> &fst);  // Disallow
+  SynchronizeFst &operator=(const SynchronizeFst &fst) = delete;
 };
 
 // Specialization for SynchronizeFst.
@@ -372,9 +367,6 @@ class ArcIterator<SynchronizeFst<A>>
       : CacheArcIterator<SynchronizeFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>
