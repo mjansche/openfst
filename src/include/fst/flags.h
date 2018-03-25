@@ -1,5 +1,3 @@
-// flags.h
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,9 +10,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: riley@google.com (Michael Riley)
-//
-// \file
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+// 
 // Google-style flag handling declarations and inline definitions.
 
 #ifndef FST_LIB_FLAGS_H_
@@ -33,7 +31,6 @@
 
 using std::string;
 
-//
 // FLAGS USAGE:
 //
 // Definition example:
@@ -50,7 +47,6 @@ using std::string;
 // using, for example, '--length=2'.
 //
 // ShowUsage() can be used to print out command and flag usage.
-//
 
 #define DECLARE_bool(name) extern bool FLAGS_ ## name
 #define DECLARE_string(name) extern string FLAGS_ ## name
@@ -107,20 +103,24 @@ class FlagRegister {
       return false;
     }
   }
+
   bool SetFlag(const string &val, string *address) const {
     *address = val;
     return true;
   }
+
   bool SetFlag(const string &val, int32 *address) const {
     char *p = 0;
     *address = strtol(val.c_str(), &p, 0);
     return !val.empty() && *p == '\0';
   }
+
   bool SetFlag(const string &val, int64 *address) const {
     char *p = 0;
     *address = strtoll(val.c_str(), &p, 0);
     return !val.empty() && *p == '\0';
   }
+
   bool SetFlag(const string &val, double *address) const {
     char *p = 0;
     *address = strtod(val.c_str(), &p);
@@ -183,7 +183,8 @@ class FlagRegisterer {
   }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(FlagRegisterer);
+  FlagRegisterer(const FlagRegisterer &) = delete;
+  FlagRegisterer &operator=(const FlagRegisterer &) = delete;
 };
 
 
