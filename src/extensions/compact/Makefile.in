@@ -502,10 +502,8 @@ AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 libfst_LTLIBRARIES = compact8_acceptor-fst.la compact8_string-fst.la compact8_unweighted-fst.la compact8_unweighted_acceptor-fst.la compact8_weighted_string-fst.la compact16_acceptor-fst.la compact16_string-fst.la compact16_unweighted-fst.la compact16_unweighted_acceptor-fst.la compact16_weighted_string-fst.la compact64_acceptor-fst.la compact64_string-fst.la compact64_unweighted-fst.la compact64_unweighted_acceptor-fst.la compact64_weighted_string-fst.la
 lib_LTLIBRARIES = libfstcompact.la
 libfstcompact_la_SOURCES = compact8_acceptor-fst.cc compact8_string-fst.cc compact8_unweighted-fst.cc compact8_unweighted_acceptor-fst.cc compact8_weighted_string-fst.cc compact16_acceptor-fst.cc compact16_string-fst.cc compact16_unweighted-fst.cc compact16_unweighted_acceptor-fst.cc compact16_weighted_string-fst.cc compact64_acceptor-fst.cc compact64_string-fst.cc compact64_unweighted-fst.cc compact64_unweighted_acceptor-fst.cc compact64_weighted_string-fst.cc
-libfstcompact_la_LDFLAGS = -version-info 5:0:0
-libfstcompact_la_LIBADD = \
-    ../../lib/libfst.la -lm $(DL_LIBS)
-
+libfstcompact_la_LDFLAGS = -version-info 6:0:0
+libfstcompact_la_LIBADD = ../../lib/libfst.la -lm $(DL_LIBS)
 compact8_acceptor_fst_la_SOURCES = compact8_acceptor-fst.cc
 compact8_acceptor_fst_la_LDFLAGS = -module
 compact8_string_fst_la_SOURCES = compact8_string-fst.cc
@@ -712,22 +710,25 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/compact8_weighted_string-fst.Plo@am__quote@
 
 .cc.o:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
 
 .cc.obj:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .cc.lo:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+@am__fastdepCXX_TRUE@	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
