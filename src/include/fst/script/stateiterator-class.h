@@ -31,13 +31,13 @@ class StateIteratorClassImpl : public StateIteratorImplBase {
  public:
   explicit StateIteratorClassImpl(const Fst<Arc> &fst) : siter_(fst) {}
 
-  bool Done() const override { return siter_.Done(); }
+  bool Done() const final { return siter_.Done(); }
 
-  int64 Value() const override { return siter_.Value(); }
+  int64 Value() const final { return siter_.Value(); }
 
-  void Next() override { siter_.Next(); }
+  void Next() final { siter_.Next(); }
 
-  void Reset() override { siter_.Reset(); }
+  void Reset() final { siter_.Reset(); }
 
   ~StateIteratorClassImpl() override {}
 

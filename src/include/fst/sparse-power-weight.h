@@ -217,7 +217,7 @@ class WeightGenerate<SparsePowerWeight<W, K>> {
 
   Weight operator()() const {
     Weight weight;
-    for (auto i = 1; i <= sparse_power_rank_; ++i) {
+    for (size_t i = 1; i <= sparse_power_rank_; ++i) {
       weight.Push(i, generate_(), true);
     }
     return weight;

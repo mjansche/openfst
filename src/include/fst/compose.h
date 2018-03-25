@@ -112,10 +112,12 @@ namespace internal {
 
 // Implementation of delayed composition. This base class is common to the
 // variants with different matchers, composition filters and state tables.
-template <class Arc, class CacheStore = DefaultCacheStore<Arc>>
+template <class Arc, class CacheStore = DefaultCacheStore<Arc>,
+          class F = ComposeFst<Arc, CacheStore>>
 class ComposeFstImplBase
     : public CacheBaseImpl<typename CacheStore::State, CacheStore> {
  public:
+  using FST = F;
   using Label = typename Arc::Label;
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
@@ -135,27 +137,19 @@ class ComposeFstImplBase
   using CacheImpl::SetFinal;
   using CacheImpl::SetStart;
 
-  ComposeFstImplBase(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                     const CacheImplOptions<CacheStore> &opts)
-      : CacheImpl(opts) {
-    InitBase(fst1, fst2);
-  }
+  ComposeFstImplBase(const CacheImplOptions<CacheStore> &opts)
+      : CacheImpl(opts) {}
 
-  ComposeFstImplBase(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                     const CacheOptions &opts)
-      : CacheImpl(opts) {
-    InitBase(fst1, fst2);
-  }
+  ComposeFstImplBase(const CacheOptions &opts) : CacheImpl(opts) {}
 
-  ComposeFstImplBase(const ComposeFstImplBase<Arc, CacheStore> &impl)
-      : CacheImpl(impl, true) {
+  ComposeFstImplBase(const ComposeFstImplBase &impl) : CacheImpl(impl, true) {
     SetType(impl.Type());
     SetProperties(impl.Properties(), kCopyProperties);
     SetInputSymbols(impl.InputSymbols());
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  virtual ComposeFstImplBase<Arc, CacheStore> *Copy() const = 0;
+  virtual ComposeFstImplBase *Copy() const = 0;
 
   ~ComposeFstImplBase() override {}
 
@@ -194,7 +188,7 @@ class ComposeFstImplBase
     CacheImpl::InitArcIterator(s, data);
   }
 
-  virtual MatcherBase<Arc> *InitMatcher(const ComposeFst<Arc, CacheStore> &fst,
+  virtual MatcherBase<Arc> *InitMatcher(const F &fst,
                                         MatchType match_type) const {
     // Use the default matcher if no override is provided.
     return nullptr;
@@ -203,17 +197,6 @@ class ComposeFstImplBase
  protected:
   virtual StateId ComputeStart() = 0;
   virtual Weight ComputeFinal(StateId s) = 0;
-
-  void InitBase(const Fst<Arc> &fst1, const Fst<Arc> &fst2) {
-    SetType("compose");
-    if (!CompatSymbols(fst2.InputSymbols(), fst1.OutputSymbols())) {
-      FSTERROR() << "ComposeFst: Output symbol table of 1st argument "
-                 << "does not match input symbol table of 2nd argument";
-      SetProperties(kError, kError);
-    }
-    SetInputSymbols(fst1.InputSymbols());
-    SetOutputSymbols(fst2.OutputSymbols());
-  }
 };
 
 // Implementation of delayed composition templated on the matchers (see
@@ -229,7 +212,7 @@ class ComposeFstImpl
   using FST1 = typename Matcher1::FST;
   using FST2 = typename Matcher2::FST;
 
-  using Arc = typename Matcher1::Arc;
+  using Arc = typename CacheStore::Arc;
   using Label = typename Arc::Label;
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
@@ -243,6 +226,8 @@ class ComposeFstImpl
 
   friend class ComposeFstMatcher<CacheStore, Filter, StateTable>;
 
+  using FstImpl<Arc>::SetInputSymbols;
+  using FstImpl<Arc>::SetOutputSymbols;
   using FstImpl<Arc>::SetType;
   using FstImpl<Arc>::SetProperties;
 
@@ -251,7 +236,7 @@ class ComposeFstImpl
                  const ComposeFstImplOptions<M1, M2, Filter, StateTable,
                                              CacheStore> &opts);
 
-  ComposeFstImpl(const ComposeFstImpl<CacheStore, Filter, StateTable> &impl)
+  ComposeFstImpl(const ComposeFstImpl &impl)
       : ComposeFstImplBase<Arc, CacheStore>(impl),
         filter_(new Filter(*impl.filter_, true)),
         matcher1_(filter_->GetMatcher1()),
@@ -266,9 +251,7 @@ class ComposeFstImpl
     if (own_state_table_) delete state_table_;
   }
 
-  ComposeFstImpl<CacheStore, Filter, StateTable> *Copy() const override {
-    return new ComposeFstImpl<CacheStore, Filter, StateTable>(*this);
-  }
+  ComposeFstImpl *Copy() const override { return new ComposeFstImpl(*this); }
 
   uint64 Properties() const override { return Properties(kFstProperties); }
 
@@ -452,9 +435,10 @@ template <class M1, class M2>
 ComposeFstImpl<CacheStore, Filter, StateTable>::ComposeFstImpl(
     const FST1 &fst1, const FST2 &fst2,
     const ComposeFstImplOptions<M1, M2, Filter, StateTable, CacheStore> &opts)
-    : ComposeFstImplBase<Arc, CacheStore>(fst1, fst2, opts),
-      filter_(opts.filter ? opts.filter : new Filter(fst1, fst2, opts.matcher1,
-                                                     opts.matcher2)),
+    : ComposeFstImplBase<Arc, CacheStore>(opts),
+      filter_(opts.filter
+                  ? opts.filter
+                  : new Filter(fst1, fst2, opts.matcher1, opts.matcher2)),
       matcher1_(filter_->GetMatcher1()),
       matcher2_(filter_->GetMatcher2()),
       fst1_(matcher1_->GetFst()),
@@ -462,6 +446,14 @@ ComposeFstImpl<CacheStore, Filter, StateTable>::ComposeFstImpl(
       state_table_(opts.state_table ? opts.state_table
                                     : new StateTable(fst1_, fst2_)),
       own_state_table_(opts.state_table ? opts.own_state_table : true) {
+  SetType("compose");
+  if (!CompatSymbols(fst2.InputSymbols(), fst1.OutputSymbols())) {
+    FSTERROR() << "ComposeFst: Output symbol table of 1st argument "
+               << "does not match input symbol table of 2nd argument";
+    SetProperties(kError, kError);
+  }
+  SetInputSymbols(fst1_.InputSymbols());
+  SetOutputSymbols(fst2_.OutputSymbols());
   SetMatchType();
   VLOG(2) << "ComposeFstImpl: Match type: " << match_type_;
   if (match_type_ == MATCH_NONE) SetProperties(kError, kError);

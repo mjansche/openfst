@@ -121,7 +121,7 @@ class GenericOperationRegister
 
  protected:
   string ConvertKeyToSoFilename(
-      const std::pair<string, string> &key) const override {
+      const std::pair<string, string> &key) const final {
     // Uses the old-style FST for now.
     string legal_type(key.second);  // The arc type.
     ConvertToLegalCSymbol(&legal_type);

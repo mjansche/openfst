@@ -41,12 +41,11 @@ class DefaultAccumulator {
 
   template <class ArcIter>
   Weight Sum(Weight w, ArcIter *aiter, ssize_t begin, ssize_t end) {
-    auto sum = w;
+    Adder<Weight> adder(w);  // maintains cumulative sum accurately
     aiter->Seek(begin);
-    for (auto pos = begin; pos < end; aiter->Next(), ++pos) {
-      sum = Plus(sum, aiter->Value().weight);
-    }
-    return sum;
+    for (auto pos = begin; pos < end; aiter->Next(), ++pos)
+      adder.Add(aiter->Value().weight);
+    return adder.Sum();
   }
 
   constexpr bool Error() const { return false; }
@@ -87,15 +86,13 @@ class LogAccumulator {
   constexpr bool Error() const { return false; }
 
  private:
-  double LogPosExp(double x) { return log(1.0F + exp(-x)); }
-
   Weight LogPlus(Weight w, Weight v) {
     const auto f1 = to_log_weight_(w).Value();
     const auto f2 = to_log_weight_(v).Value();
     if (f1 > f2) {
-      return to_weight_(Log64Weight(f2 - LogPosExp(f1 - f2)));
+      return to_weight_(Log64Weight(f2 - internal::LogPosExp(f1 - f2)));
     } else {
-      return to_weight_(Log64Weight(f1 - LogPosExp(f2 - f1)));
+      return to_weight_(Log64Weight(f1 - internal::LogPosExp(f2 - f1)));
     }
   }
 
@@ -246,10 +243,10 @@ class FastLogAccumulator {
     if (error_) return Weight::NoWeight();
     auto sum = w;
     // Finds begin and end of pre-stored weights.
-    auto index_begin = -1;
-    auto index_end = -1;
-    auto stored_begin = end;
-    auto stored_end = end;
+    ssize_t index_begin = -1;
+    ssize_t index_end = -1;
+    ssize_t stored_begin = end;
+    ssize_t stored_end = end;
     if (state_weights_) {
       index_begin = begin > 0 ? (begin - 1) / arc_period_ + 1 : 0;
       index_end = end / arc_period_;
@@ -308,7 +305,7 @@ class FastLogAccumulator {
         if (weight_positions.size() <= s) weight_positions.resize(s + 1, -1);
         weight_positions[s] = weights.size();
         weights.push_back(sum);
-        auto narcs = 0;
+        size_t narcs = 0;
         ArcIterator<FST> aiter(fst, s);
         aiter.SetFlags(kArcWeightValue | kArcNoCache, kArcFlags);
         for (; !aiter.Done(); aiter.Next()) {
@@ -369,8 +366,8 @@ class FastLogAccumulator {
 
   const WeightConvert<Weight, Log64Weight> to_log_weight_;
   const WeightConvert<Log64Weight, Weight> to_weight_;
-  const ssize_t arc_limit_;   // Minimum # of arcs to pre-compute state.
-  const ssize_t arc_period_;  // Save cumulative weights per 'arc_period_'.
+  const ssize_t arc_limit_;   // Minimum number of arcs to pre-compute state.
+  const ssize_t arc_period_;  // Saves cumulative weights per arc_period_.
   std::shared_ptr<FastLogAccumulatorData> data_;
   const double *state_weights_;
   bool error_;
@@ -430,7 +427,7 @@ class CacheLogAccumulatorData {
     auto cache_target = (2 * cache_limit_) / 3 + 1;
     auto it = cache_.begin();
     while (it != cache_.end() && cache_size_ > cache_target) {
-      CacheState &cs = it->second;
+      auto &cs = it->second;
       if (free_recent || !cs.recent) {
         cache_size_ -= cs.weights->capacity() * sizeof(double);
         cache_.erase(it++);
@@ -476,7 +473,7 @@ class CacheLogAccumulator {
         s_(kNoStateId),
         error_(acc.error_) {}
 
-  // Arg 'arc_limit' specifies minimum # of arcs to pre-compute.
+  // Argument arc_limit specifies the minimum number of arcs to pre-compute.
   void Init(const Fst<Arc> &fst, bool copy = false) {
     if (!copy && fst_) {
       FSTERROR() << "CacheLogAccumulator: Initialization error";
@@ -554,7 +551,7 @@ class CacheLogAccumulator {
                               f, std::greater<double>()) -
           weights_->begin() - 1;
     } else {
-      auto n = 0;
+      size_t n = 0;
       auto x = FloatLimits<double>::PosInfinity();
       for (aiter->Reset(); !aiter->Done(); aiter->Next(), ++n) {
         x = LogPlus(x, aiter->Value().weight);
@@ -740,7 +737,7 @@ class ReplaceAccumulator {
       return;
     }
     auto tuple = data_->GetTuple(s);
-    fst_id_ = tuple.fst_id - 1;  // Replace FST ID is 1-based
+    fst_id_ = tuple.fst_id - 1;  // Replace FST ID is 1-based.
     data_->GetAccumulator(fst_id_)->SetState(tuple.fst_state);
     if ((tuple.prefix_id != 0) &&
         (data_->GetFst(fst_id_)->Final(tuple.fst_state) != Weight::Zero())) {
@@ -833,7 +830,7 @@ class SafeReplaceAccumulator {
     GetAccumulator(fst_id_)->SetState(tuple.fst_state);
     offset_ = 0;
     offset_weight_ = Weight::Zero();
-    const auto &final_weight = GetFst(fst_id_)->Final(tuple.fst_state);
+    const auto final_weight = GetFst(fst_id_)->Final(tuple.fst_state);
     if ((tuple.prefix_id != 0) && (final_weight != Weight::Zero())) {
       offset_ = 1;
       offset_weight_ = final_weight;

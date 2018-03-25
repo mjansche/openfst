@@ -90,10 +90,11 @@ class ShortestDistanceState {
   const bool first_path_;
   const bool retain_;  // Retain and reuse information across calls.
 
-  std::vector<Weight> rdistance_;  // Relaxation distance.
+  std::vector<Adder<Weight>> adder_;   // Sums distance_ accurately.
+  std::vector<Adder<Weight>> radder_;  // Relaxation distance.
   std::vector<bool> enqueued_;     // Is state enqueued?
   std::vector<StateId> sources_;   // Source ID for ith state in distance_,
-                                   // rdistance_, and enqueued_ if retained.
+                                   // (r)adder_, and enqueued_ if retained.
   StateId source_id_;              // Unique ID characterizing each call.
   bool error_;
 };
@@ -122,13 +123,15 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
   state_queue_->Clear();
   if (!retain_) {
     distance_->clear();
-    rdistance_.clear();
+    adder_.clear();
+    radder_.clear();
     enqueued_.clear();
   }
   if (source == kNoStateId) source = fst_.Start();
   while (distance_->size() <= source) {
     distance_->push_back(Weight::Zero());
-    rdistance_.push_back(Weight::Zero());
+    adder_.push_back(Adder<Weight>());
+    radder_.push_back(Adder<Weight>());
     enqueued_.push_back(false);
   }
   if (retain_) {
@@ -136,7 +139,8 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     sources_[source] = source_id_;
   }
   (*distance_)[source] = Weight::One();
-  rdistance_[source] = Weight::One();
+  adder_[source].Reset(Weight::One());
+  radder_[source].Reset(Weight::One());
   enqueued_[source] = true;
   state_queue_->Enqueue(source);
   while (!state_queue_->Empty()) {
@@ -144,38 +148,42 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     state_queue_->Dequeue();
     while (distance_->size() <= state) {
       distance_->push_back(Weight::Zero());
-      rdistance_.push_back(Weight::Zero());
+      adder_.push_back(Adder<Weight>());
+      radder_.push_back(Adder<Weight>());
       enqueued_.push_back(false);
     }
     if (first_path_ && (fst_.Final(state) != Weight::Zero())) break;
     enqueued_[state] = false;
-    const auto r = rdistance_[state];
-    rdistance_[state] = Weight::Zero();
+    const auto r = radder_[state].Sum();
+    radder_[state].Reset();
     for (ArcIterator<Fst<Arc>> aiter(fst_, state); !aiter.Done();
          aiter.Next()) {
       const auto &arc = aiter.Value();
       if (!arc_filter_(arc)) continue;
       while (distance_->size() <= arc.nextstate) {
         distance_->push_back(Weight::Zero());
-        rdistance_.push_back(Weight::Zero());
+        adder_.push_back(Adder<Weight>());
+        radder_.push_back(Adder<Weight>());
         enqueued_.push_back(false);
       }
       if (retain_) {
         while (sources_.size() <= arc.nextstate) sources_.push_back(kNoStateId);
         if (sources_[arc.nextstate] != source_id_) {
           (*distance_)[arc.nextstate] = Weight::Zero();
-          rdistance_[arc.nextstate] = Weight::Zero();
+          adder_[arc.nextstate].Reset();
+          radder_[arc.nextstate].Reset();
           enqueued_[arc.nextstate] = false;
           sources_[arc.nextstate] = source_id_;
         }
       }
       auto &nd = (*distance_)[arc.nextstate];
-      auto &nr = rdistance_[arc.nextstate];
+      auto &na = adder_[arc.nextstate];
+      auto &nr = radder_[arc.nextstate];
       auto weight = Times(r, arc.weight);
       if (!ApproxEqual(nd, Plus(nd, weight), delta_)) {
-        nd = Plus(nd, weight);
-        nr = Plus(nr, weight);
-        if (!nd.Member() || !nr.Member()) {
+        nd = na.Add(weight);
+        nr.Add(weight);
+        if (!nd.Member() || !nr.Sum().Member()) {
           error_ = true;
           return;
         }
@@ -307,11 +315,11 @@ typename Arc::Weight ShortestDistance(const Fst<Arc> &fst,
     if (distance.size() == 1 && !distance[0].Member()) {
       return Arc::Weight::NoWeight();
     }
-    auto sum = Weight::Zero();
+    Adder<Weight> adder;  // maintains cumulative sum accurately
     for (StateId state = 0; state < distance.size(); ++state) {
-      sum = Plus(sum, Times(distance[state], fst.Final(state)));
+      adder.Add(Times(distance[state], fst.Final(state)));
     }
-    return sum;
+    return adder.Sum();
   } else {
     ShortestDistance(fst, &distance, true, delta);
     const auto state = fst.Start();

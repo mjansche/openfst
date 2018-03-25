@@ -64,7 +64,7 @@ void Concat(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
     }
   }
   const auto start2 = fst2.Start();
-  for (auto s1 = 0; s1 < numstates1; ++s1) {
+  for (StateId s1 = 0; s1 < numstates1; ++s1) {
     const auto weight = fst1->Final(s1);
     if (weight != Weight::Zero()) {
       fst1->SetFinal(s1, Weight::Zero());

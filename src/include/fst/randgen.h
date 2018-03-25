@@ -182,7 +182,7 @@ class ArcSampler {
       Reset();
       return false;
     }
-    for (auto i = 0; i < rstate.nsamples; ++i) {
+    for (size_t i = 0; i < rstate.nsamples; ++i) {
       ++sample_map_[selector_(fst_, rstate.state_id)];
     }
     Reset();

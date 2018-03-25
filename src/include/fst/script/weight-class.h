@@ -39,48 +39,48 @@ class WeightClassImpl : public WeightImplBase {
  public:
   explicit WeightClassImpl(const W &weight) : weight_(weight) {}
 
-  WeightClassImpl<W> *Copy() const override {
+  WeightClassImpl<W> *Copy() const final {
     return new WeightClassImpl<W>(weight_);
   }
 
-  const string &Type() const override { return W::Type(); }
+  const string &Type() const final { return W::Type(); }
 
-  void Print(std::ostream *ostrm) const override { *ostrm << weight_; }
+  void Print(std::ostream *ostrm) const final { *ostrm << weight_; }
 
-  string ToString() const override {
+  string ToString() const final {
     string str;
     WeightToStr(weight_, &str);
     return str;
   }
 
-  bool operator==(const WeightImplBase &other) const override {
+  bool operator==(const WeightImplBase &other) const final {
     const auto *typed_other = static_cast<const WeightClassImpl<W> *>(&other);
     return weight_ == typed_other->weight_;
   }
 
-  bool operator!=(const WeightImplBase &other) const override {
+  bool operator!=(const WeightImplBase &other) const final {
     return !(*this == other);
   }
 
-  WeightClassImpl<W> &PlusEq(const WeightImplBase &other) override {
+  WeightClassImpl<W> &PlusEq(const WeightImplBase &other) final {
     const auto *typed_other = static_cast<const WeightClassImpl<W> *>(&other);
     weight_ = Plus(weight_, typed_other->weight_);
     return *this;
   }
 
-  WeightClassImpl<W> &TimesEq(const WeightImplBase &other) override {
+  WeightClassImpl<W> &TimesEq(const WeightImplBase &other) final {
     const auto *typed_other = static_cast<const WeightClassImpl<W> *>(&other);
     weight_ = Times(weight_, typed_other->weight_);
     return *this;
   }
 
-  WeightClassImpl<W> &DivideEq(const WeightImplBase &other) override {
+  WeightClassImpl<W> &DivideEq(const WeightImplBase &other) final {
     const auto *typed_other = static_cast<const WeightClassImpl<W> *>(&other);
     weight_ = Divide(weight_, typed_other->weight_);
     return *this;
   }
 
-  WeightClassImpl<W> &PowerEq(size_t n) override {
+  WeightClassImpl<W> &PowerEq(size_t n) final {
     weight_ = Power(weight_, n);
     return *this;
   }
@@ -201,7 +201,7 @@ WeightImplBase *StrToWeightImplBase(const string &str, const string &src,
 class WeightClassRegister : public GenericRegister<string, StrToWeightImplBaseT,
                                                    WeightClassRegister> {
  protected:
-  string ConvertKeyToSoFilename(const string &key) const override {
+  string ConvertKeyToSoFilename(const string &key) const final {
     string legal_type(key);
     ConvertToLegalCSymbol(&legal_type);
     return legal_type + ".so";

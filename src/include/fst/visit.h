@@ -74,7 +74,7 @@ void Visit(const FST &fst, Visitor *visitor, Queue *queue, ArcFilter filter,
   std::vector<uint8> state_status;
   std::vector<ArcIterator<FST> *> arc_iterator;
   MemoryPool<ArcIterator<FST>> aiter_pool;
-  auto nstates = start + 1;  // Number of known states in general case.
+  StateId nstates = start + 1;  // Number of known states in general case.
   bool expanded = false;
   if (fst.Properties(kExpanded, false)) {  // Tests if expanded, then uses
     nstates = CountStates(fst);            // ExpandedFst::NumStates().

@@ -42,12 +42,12 @@ namespace fst {
 // };
 
 // An implementation using a hash map for the entry to ID mapping. H is the
-// hash function and E is the equality function. If passed to the
-// constructor, ownership is given to this class.
+// hash function and E is the equality function. If passed to the constructor,
+// ownership is given to this class.
 template <class I, class T, class H, class E = std::equal_to<T>>
 class HashBiTable {
  public:
-  // Reserves space for 'table_size' elements. If passing H and E to the
+  // Reserves space for table_size elements. If passing H and E to the
   // constructor, this class owns them.
   explicit HashBiTable(size_t table_size = 0, H *h = nullptr, E *e = nullptr) :
       hash_func_(h ? h : new H()), hash_equal_(e ? e : new E()),
@@ -117,7 +117,7 @@ class CompactHashBiTable {
   friend class HashFunc;
   friend class HashEqual;
 
-  // Reserves space for 'table_size' elements. If passing H and E to the
+  // Reserves space for table_size elements. If passing H and E to the
   // constructor, this class owns them.
   explicit CompactHashBiTable(size_t table_size = 0, H *h = nullptr,
                               E *e = nullptr) :
@@ -138,19 +138,18 @@ class CompactHashBiTable {
 
   I FindId(const T &entry, bool insert = true) {
     current_entry_ = &entry;
-    const auto it = keys_.find(kCurrentKey);
-    if (it == keys_.end()) {  // T not found.
-      if (insert) {           // Stores and assigns a new ID.
-        I key = id2entry_.size();
-        id2entry_.push_back(entry);
-        keys_.insert(key);
-        return key;
-      } else {
-        return -1;
-      }
-    } else {
-      return *it;
+    if (insert) {
+      auto result = keys_.insert(kCurrentKey);
+      if (!result.second) return *result.first;  // Already exists.
+      // Overwrites kCurrentKey with a new key value; this is safe because it
+      // doesn't affect hashing or equality testing.
+      I key = id2entry_.size();
+      const_cast<I &>(*result.first) = key;
+      id2entry_.push_back(entry);
+      return key;
     }
+    const auto it = keys_.find(kCurrentKey);
+    return it == keys_.end() ? -1 : *it;
   }
 
   const T &FindEntry(I s) const { return id2entry_[s]; }
@@ -178,9 +177,9 @@ class CompactHashBiTable {
   }
 
  private:
-  static const I kCurrentKey;  // -1.
-  static const I kEmptyKey;    // -2.
-  static const I kDeletedKey;  // -3.
+  static constexpr I kCurrentKey = -1;
+  static constexpr I kEmptyKey = -2;
+  static constexpr I kDeletedKey = -3;
 
   class HashFunc {
    public:
@@ -203,10 +202,12 @@ class CompactHashBiTable {
     explicit HashEqual(const CompactHashBiTable &ht) : ht_(&ht) {}
 
     bool operator()(I k1, I k2) const {
-      if (k1 >= kCurrentKey && k2 >= kCurrentKey) {
+      if (k1 == k2) {
+        return true;
+      } else if (k1 >= kCurrentKey && k2 >= kCurrentKey) {
         return (*ht_->hash_equal_)(ht_->Key2Entry(k1), ht_->Key2Entry(k2));
       } else {
-        return k1 == k2;
+        return false;
       }
     }
 
@@ -234,13 +235,13 @@ class CompactHashBiTable {
 };
 
 template <class I, class T, class H, class E, HSType HS>
-const I CompactHashBiTable<I, T, H, E, HS>::kCurrentKey = -1;
+constexpr I CompactHashBiTable<I, T, H, E, HS>::kCurrentKey;
 
 template <class I, class T, class H, class E, HSType HS>
-const I CompactHashBiTable<I, T, H, E, HS>::kEmptyKey = -2;
+constexpr I CompactHashBiTable<I, T, H, E, HS>::kEmptyKey;
 
 template <class I, class T, class H, class E, HSType HS>
-const I CompactHashBiTable<I, T, H, E, HS>::kDeletedKey = -3;
+constexpr I CompactHashBiTable<I, T, H, E, HS>::kDeletedKey;
 
 // An implementation using a vector for the entry to ID mapping. It is passed a
 // function object FP that should fingerprint entries uniquely to an integer
@@ -358,8 +359,8 @@ class VectorHashBiTable {
   const H &Hash() const { return *h_; }
 
  private:
-  static const I kCurrentKey;  // -1.
-  static const I kEmptyKey;    // -2.
+  static constexpr I kCurrentKey = -1;
+  static constexpr I kEmptyKey = -2;
 
   class HashFunc {
    public:
@@ -404,14 +405,14 @@ class VectorHashBiTable {
   }
 
   std::unique_ptr<S> selector_;  // True if entry hashed into vector.
-  std::unique_ptr<FP> fp_;       // Fingerprint used when hashing into vector.
-  std::unique_ptr<H> h_;         // Hash fnc used when hashing into hash_set.
+  std::unique_ptr<FP> fp_;       // Fingerprint used for hashing into vector.
+  std::unique_ptr<H> h_;         // Hash funcion used for hashing into hash_set.
 
   std::vector<T> id2entry_;  // Maps state IDs to entry.
   std::vector<I> fp2id_;     // Maps entry fingerprints to IDs.
 
   // Compact implementation of the hash table mapping entries to state IDs
-  // using the hash function 'h_'
+  // using the hash function h_.
   HashFunc hash_func_;
   HashEqual hash_equal_;
   KeyHashSet keys_;
@@ -419,10 +420,10 @@ class VectorHashBiTable {
 };
 
 template <class I, class T, class S, class FP, class H, HSType HS>
-const I VectorHashBiTable<I, T, S, FP, H, HS>::kCurrentKey = -1;
+constexpr I VectorHashBiTable<I, T, S, FP, H, HS>::kCurrentKey;
 
 template <class I, class T, class S, class FP, class H, HSType HS>
-const I VectorHashBiTable<I, T, S, FP, H, HS>::kEmptyKey = -3;
+constexpr I VectorHashBiTable<I, T, S, FP, H, HS>::kEmptyKey;
 
 // An implementation using a hash map for the entry to ID mapping. This version
 // permits erasing of arbitrary states. The entry T must have == defined and

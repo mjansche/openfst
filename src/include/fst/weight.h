@@ -171,9 +171,28 @@ class NaturalLess {
 template <class Weight>
 Weight Power(Weight w, size_t n) {
   auto result = Weight::One();
-  for (auto i = 0; i < n; ++i) result = Times(result, w);
+  for (size_t i = 0; i < n; ++i) result = Times(result, w);
   return result;
 }
+
+// Simple default adder class. Specializations might be more complex.
+template <class Weight>
+class Adder {
+ public:
+  explicit Adder(Weight w = Weight::Zero()) : sum_(w) { }
+
+  Weight Add(const Weight &w) {
+    sum_ = Plus(sum_, w);
+    return sum_;
+  }
+
+  Weight Sum() { return sum_; }
+
+  void Reset(Weight w = Weight::Zero()) { sum_ = w; }
+
+ private:
+  Weight sum_;
+};
 
 // General weight converter: raises error.
 template <class W1, class W2>

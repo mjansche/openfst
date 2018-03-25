@@ -195,7 +195,7 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
       size_t narcs = 0;
       auto nieps = states_[state]->NumInputEpsilons();
       auto noeps = states_[state]->NumOutputEpsilons();
-      for (auto i = 0; i < states_[state]->NumArcs(); ++i) {
+      for (size_t i = 0; i < states_[state]->NumArcs(); ++i) {
         const auto t = newid[arcs[i].nextstate];
         if (t != kNoStateId) {
           arcs[i].nextstate = t;

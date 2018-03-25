@@ -7,6 +7,7 @@
 #define FST_LIB_FLOAT_WEIGHT_H_
 
 #include <climits>
+#include <cmath>
 #include <cstdlib>
 
 #include <limits>
@@ -359,10 +360,73 @@ using LogWeight = LogWeightTpl<float>;
 // Double-precision log weight.
 using Log64Weight = LogWeightTpl<double>;
 
-template <class T>
-inline T LogExp(T x) {
-  return log(1.0F + exp(-x));
+namespace internal {
+
+// -log(e^-x + e^-y) = x - LogPosExp(y - x)
+// Assumes x >= 0.0.
+inline double LogPosExp(double x) {
+  return std::log(1.0 + std::exp(-x));
 }
+
+// -log(e^-x - e^-y) = x - LogNegExp(y - x)
+// Assumes x >= 0.0.
+inline double LogNegExp(double x) {
+  return std::log(1.0 - std::exp(-x));
+}
+
+// Alternative LogPosExp that is more accurate for large x.
+// Assumes x >= 0.0.
+inline double AltLogPosExp(double x) {
+  double y = std::exp(-x);
+  if (y > kDelta) {
+    return std::log(1.0 + y);
+  } else {
+    // Mercator series
+    double y2 = y * y;
+    double y3 = y2 * y;
+    double y4 = y2 * y2;
+    return y - y2/2.0 + y3/3.0 - y4/4.0;
+  }
+}
+
+// Alternative LogNegExp that is more accurate for large x.
+// Assumes x > 0.0.
+inline double AltLogNegExp(double x) {
+  double y = std::exp(-x);
+  if (y > kDelta) {
+    return std::log(1.0 - y);
+  } else {
+    // Mercator series
+    double y2 = y * y;
+    double y3 = y2 * y;
+    double y4 = y2 * y2;
+    return -y - y2/2.0 - y3/3.0 - y4/4.0;
+  }
+}
+
+// a +_log b = -log(e^-a + e^-b) = KahanLogSum(a, b, ...).
+// Kahan compensated summation provides an error bound that is
+// independent of the number of addends. Assumes b >= a;
+// c is the compensation.
+inline double KahanLogSum(double a, double b, double *c) {
+  double y = -AltLogPosExp(b - a) - *c;
+  double t = a + y;
+  *c = (t - a) - y;
+  return t;
+}
+
+// a -_log b = -log(e^-a - e^-b) = KahanLogDiff(a, b, ...).
+// Kahan compensated summation provides an error bound that is
+// independent of the number of addends. Assumes b > a;
+// c is the compensation.
+inline double KahanLogDiff(double a, double b, double *c) {
+  double y = -AltLogNegExp(b - a) - *c;
+  double t = a + y;
+  *c = (t - a) - y;
+  return t;
+}
+
+}  // namespace internal
 
 template <class T>
 inline LogWeightTpl<T> Plus(const LogWeightTpl<T> &w1,
@@ -373,9 +437,9 @@ inline LogWeightTpl<T> Plus(const LogWeightTpl<T> &w1,
   } else if (f2 == FloatLimits<T>::PosInfinity()) {
     return w1;
   } else if (f1 > f2) {
-    return LogWeightTpl<T>(f2 - LogExp(f1 - f2));
+    return LogWeightTpl<T>(f2 - internal::LogPosExp(f1 - f2));
   } else {
-    return LogWeightTpl<T>(f1 - LogExp(f2 - f1));
+    return LogWeightTpl<T>(f1 - internal::LogPosExp(f2 - f1));
   }
 }
 
@@ -444,6 +508,43 @@ template <class T>
 inline LogWeightTpl<T> Power(const LogWeightTpl<T> &weight, T scalar) {
   return LogWeightTpl<T>(weight.Value() * scalar);
 }
+
+// Specialization using the Kahan compensated summation
+template <class T>
+class Adder<LogWeightTpl<T>> {
+ public:
+  using Weight = LogWeightTpl<T>;
+
+  explicit Adder(Weight w = Weight::Zero())
+      : sum_(w.Value()),
+        c_(0.0) { }
+
+  Weight Add(const Weight &w) {
+    T f = w.Value();
+    if (f == FloatLimits<T>::PosInfinity()) {
+      return Sum();
+    } else if (sum_ == FloatLimits<T>::PosInfinity()) {
+      sum_ = f;
+      c_ = 0.0;
+    } else if (f > sum_) {
+      sum_ = internal::KahanLogSum(sum_, f, &c_);
+    } else {
+      sum_ = internal::KahanLogSum(f, sum_, &c_);
+    }
+    return Sum();
+  }
+
+  Weight Sum() { return Weight(sum_); }
+
+  void Reset(Weight w = Weight::Zero()) {
+    sum_ = w.Value();
+    c_ = 0.0;
+  }
+
+ private:
+  double sum_;
+  double c_;   // Kahan compensation
+};
 
 // MinMax semiring: (min, max, inf, -inf).
 template <class T>

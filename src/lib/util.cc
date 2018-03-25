@@ -14,7 +14,7 @@
 
 DEFINE_bool(fst_error_fatal, true,
             "FST errors are fatal; o.w. return objects flagged as bad: "
-            " e.g., FSTs - kError prop. true, FST weights - not  a Member()");
+            "e.g., FSTs: kError property set, FST weights: not a Member()");
 
 namespace fst {
 

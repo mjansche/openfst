@@ -25,7 +25,7 @@ DEFINE_int32(npath, 1, "Number of paths to generate");
 DEFINE_int32(seed, time(nullptr) + getpid(), "Random seed");
 DEFINE_string(select, "uniform",
               "Selection type: one of: "
-              " \"uniform\", \"log_prob (when appropriate),"
+              " \"uniform\", \"log_prob\" (when appropriate),"
               " \"fast_log_prob\" (when appropriate)");
 
 int main(int argc, char **argv) {

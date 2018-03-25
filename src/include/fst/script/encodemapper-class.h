@@ -42,35 +42,35 @@ class EncodeMapperClassImpl : public EncodeMapperImplBase {
   EncodeMapperClassImpl(uint32 flags, EncodeType type)
       : encoder_(flags, type) {}
 
-  ArcClass operator()(const ArcClass &a) override;
+  ArcClass operator()(const ArcClass &a) final;
 
-  const string &ArcType() const override { return Arc::Type(); }
+  const string &ArcType() const final { return Arc::Type(); }
 
-  uint32 Flags() const override { return encoder_.Flags(); }
+  uint32 Flags() const final { return encoder_.Flags(); }
 
-  uint64 Properties(uint64 inprops) override {
+  uint64 Properties(uint64 inprops) final {
     return encoder_.Properties(inprops);
   }
 
-  EncodeType Type() const override { return encoder_.Type(); }
+  EncodeType Type() const final { return encoder_.Type(); }
 
-  const SymbolTable *InputSymbols() const override {
+  const SymbolTable *InputSymbols() const final {
     return encoder_.InputSymbols();
   }
 
-  const SymbolTable *OutputSymbols() const override {
+  const SymbolTable *OutputSymbols() const final {
     return encoder_.OutputSymbols();
   }
 
-  void SetInputSymbols(const SymbolTable *syms) override {
+  void SetInputSymbols(const SymbolTable *syms) final {
     encoder_.SetInputSymbols(syms);
   }
 
-  void SetOutputSymbols(const SymbolTable *syms) override {
+  void SetOutputSymbols(const SymbolTable *syms) final {
     encoder_.SetOutputSymbols(syms);
   }
 
-  const string &WeightType() const override { return Arc::Weight::Type(); }
+  const string &WeightType() const final { return Arc::Weight::Type(); }
 
   ~EncodeMapperClassImpl() override {}
 

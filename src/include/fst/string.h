@@ -216,14 +216,14 @@ class StringPrinter {
     result->clear();
     if (token_type_ == StringTokenType::SYMBOL) {
       std::stringstream sstrm;
-      for (auto i = 0; i < labels_.size(); ++i) {
+      for (size_t i = 0; i < labels_.size(); ++i) {
         if (i) sstrm << *(FLAGS_fst_field_separator.rbegin());
         if (!PrintLabel(labels_[i], sstrm)) return false;
       }
       *result = sstrm.str();
     } else if (token_type_ == StringTokenType::BYTE) {
       result->reserve(labels_.size());
-      for (auto i = 0; i < labels_.size(); ++i) result->push_back(labels_[i]);
+      for (size_t i = 0; i < labels_.size(); ++i) result->push_back(labels_[i]);
     } else if (token_type_ == StringTokenType::UTF8) {
       return LabelsToUTF8String(labels_, result);
     } else {
