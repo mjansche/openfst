@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/mutable-fst.h>
 
 

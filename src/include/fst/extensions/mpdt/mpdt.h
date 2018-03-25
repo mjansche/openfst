@@ -7,6 +7,7 @@
 #define FST_EXTENSIONS_MPDT_MPDT_H_
 
 #include <array>
+#include <functional>
 #include <map>
 #include <vector>
 
@@ -92,7 +93,7 @@ template <typename Level>
 struct KeyPairHasher {
   inline size_t operator()(const KeyPair<Level> &keypair) const {
     return std::hash<Level>()(keypair.level) ^
-           (hash<size_t>()(keypair.underlying_id) << 1);
+           (std::hash<size_t>()(keypair.underlying_id) << 1);
   }
 };
 

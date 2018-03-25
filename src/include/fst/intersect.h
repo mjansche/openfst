@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/compose.h>
 

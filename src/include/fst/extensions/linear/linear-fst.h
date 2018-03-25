@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 #include <fst/extensions/pdt/collection.h>
 #include <fst/bi-table.h>
 #include <fst/cache.h>
@@ -1079,7 +1080,7 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
     return match_type_ == MATCH_INPUT ? match_type_ : MATCH_NONE;
   }
 
-  void SetState(StateId s) {
+  void SetState(StateId s) final {
     if (s_ == s) return;
     s_ = s;
     // `MATCH_INPUT` is the only valid type
@@ -1090,7 +1091,7 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
     loop_.nextstate = s;
   }
 
-  bool Find(Label label) {
+  bool Find(Label label) final {
     if (error_) {
       current_loop_ = false;
       return false;
@@ -1103,18 +1104,22 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
     return current_loop_ || !arcs_.empty();
   }
 
-  bool Done() const { return !(current_loop_ || cur_arc_ < arcs_.size()); }
+  bool Done() const final {
+    return !(current_loop_ || cur_arc_ < arcs_.size());
+  }
 
-  const Arc &Value() const { return current_loop_ ? loop_ : arcs_[cur_arc_]; }
+  const Arc &Value() const final {
+    return current_loop_ ? loop_ : arcs_[cur_arc_];
+  }
 
-  void Next() {
+  void Next() final {
     if (current_loop_)
       current_loop_ = false;
     else
       ++cur_arc_;
   }
 
-  ssize_t Priority_(StateId s) override { return kRequirePriority; }
+  ssize_t Priority(StateId s) final { return kRequirePriority; }
 
   const FST &GetFst() const override { return *fst_; }
 
@@ -1126,16 +1131,6 @@ class LinearFstMatcherTpl : public MatcherBase<typename F::Arc> {
   uint32 Flags() const override { return kRequireMatch; }
 
  private:
-  void SetState_(StateId s) override { SetState(s); }
-
-  bool Find_(Label label) override { return Find(label); }
-
-  bool Done_() const override { return Done(); }
-
-  const Arc &Value_() const override { return Value(); }
-
-  void Next_() override { Next(); }
-
   std::unique_ptr<const FST> fst_;
   MatchType match_type_;  // Type of match to perform.
   StateId s_;             // Current state.

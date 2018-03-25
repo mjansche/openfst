@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arc-map.h>
 #include <fst/bi-table.h>
 #include <fst/cache.h>

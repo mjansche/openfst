@@ -17,6 +17,8 @@
 
 #include <string>
 
+#include <fst/log.h>
+
 #include <fst/pair-weight.h>
 #include <fst/weight.h>
 

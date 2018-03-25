@@ -6,6 +6,8 @@
 #ifndef FST_LIB_EQUAL_H_
 #define FST_LIB_EQUAL_H_
 
+#include <fst/log.h>
+
 #include <fst/fst.h>
 #include <fst/test-properties.h>
 

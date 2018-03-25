@@ -7,6 +7,7 @@
 #include <cctype>
 #include <sstream>
 #include <string>
+#include <fst/log.h>
 #include <fst/mapped-file.h>
 
 // Utility flag definitions

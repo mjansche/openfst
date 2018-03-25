@@ -67,7 +67,7 @@ class RhoFstMatcherData {
 constexpr uint8 kRhoFstMatchInput = 0x01;   // Input matcher is RhoMatcher.
 constexpr uint8 kRhoFstMatchOutput = 0x02;  // Output matcher is RhoMatcher.
 
-template <class M, uint8 F = kRhoFstMatchInput | kRhoFstMatchOutput>
+template <class M, uint8 flags = kRhoFstMatchInput | kRhoFstMatchOutput>
 class RhoFstMatcher : public RhoMatcher<M> {
  public:
   using FST = typename M::FST;
@@ -76,6 +76,8 @@ class RhoFstMatcher : public RhoMatcher<M> {
   using Label = typename Arc::Label;
   using Weight = typename Arc::Weight;
   using MatcherData = internal::RhoFstMatcherData<Label>;
+
+  enum : uint8 { kFlags = flags };
 
   RhoFstMatcher(
       const FST &fst, MatchType match_type,
@@ -86,11 +88,11 @@ class RhoFstMatcher : public RhoMatcher<M> {
                       data ? data->RewriteMode() : MatcherData().RewriteMode()),
         data_(data) {}
 
-  RhoFstMatcher(const RhoFstMatcher<M, F> &matcher, bool safe = false)
+  RhoFstMatcher(const RhoFstMatcher<M, flags> &matcher, bool safe = false)
       : RhoMatcher<M>(matcher, false), data_(matcher.data_) {}
 
-  RhoFstMatcher<M, F> *Copy(bool safe = false) const override {
-    return new RhoFstMatcher<M, F>(*this, safe);
+  RhoFstMatcher<M, flags> *Copy(bool safe = false) const override {
+    return new RhoFstMatcher<M, flags>(*this, safe);
   }
 
   const MatcherData *GetData() const { return data_.get(); }
@@ -99,8 +101,8 @@ class RhoFstMatcher : public RhoMatcher<M> {
 
  private:
   static Label RhoLabel(MatchType match_type, Label label) {
-    if (match_type == MATCH_INPUT && F & kRhoFstMatchInput) return label;
-    if (match_type == MATCH_OUTPUT && F & kRhoFstMatchOutput) return label;
+    if (match_type == MATCH_INPUT && flags & kRhoFstMatchInput) return label;
+    if (match_type == MATCH_OUTPUT && flags & kRhoFstMatchOutput) return label;
     return kNoLabel;
   }
 

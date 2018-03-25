@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arcfilter.h>
 #include <fst/heap.h>
 #include <fst/shortest-distance.h>

@@ -13,6 +13,8 @@
 #include <ios>
 #include <memory>
 
+#include <fst/log.h>
+
 namespace fst {
 
 MappedFile::MappedFile(const MemoryRegion &region) : region_(region) {}

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 #include <fst/fst.h>
 #include <fst/symbol-table.h>
 #include <fst/util.h>

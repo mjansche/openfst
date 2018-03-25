@@ -29,6 +29,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 
 

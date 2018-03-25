@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <fst/types.h>
+#include <fst/log.h>
 #include <fstream>
 #include <fst/util.h>
 

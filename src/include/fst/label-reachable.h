@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/accumulator.h>
 #include <fst/arcsort.h>
 #include <fst/interval-set.h>

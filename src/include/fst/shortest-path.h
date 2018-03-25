@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/determinize.h>
 #include <fst/queue.h>

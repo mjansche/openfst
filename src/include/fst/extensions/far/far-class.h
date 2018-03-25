@@ -80,12 +80,11 @@ class FarReaderClassImpl : public FarReaderImplBase {
 
 class FarReaderClass;
 
-typedef args::WithReturnValue<FarReaderClass *, const string &>
-    OpenFarReaderClassArgs1;
+using OpenFarReaderClassArgs1 =
+    args::WithReturnValue<FarReaderClass *, const string &>;
 
-typedef args::WithReturnValue<FarReaderClass *, const std::vector<string> &>
-    OpenFarReaderClassArgs2;
-
+using OpenFarReaderClassArgs2 =
+    args::WithReturnValue<FarReaderClass *, const std::vector<string> &>;
 
 // Untemplated user-facing class holding a templated pimpl.
 class FarReaderClass {
@@ -208,11 +207,10 @@ class FarWriterClassImpl : public FarWriterImplBase {
 
 class FarWriterClass;
 
-typedef args::Package<const string &, FarType> CreateFarWriterClassInnerArgs;
+using CreateFarWriterClassInnerArgs = args::Package<const string &, FarType>;
 
-typedef args::WithReturnValue<FarWriterClass *, CreateFarWriterClassInnerArgs>
-    CreateFarWriterClassArgs;
-
+using CreateFarWriterClassArgs =
+    args::WithReturnValue<FarWriterClass *, CreateFarWriterClassInnerArgs>;
 
 // Untemplated user-facing class holding a templated pimpl.
 class FarWriterClass {

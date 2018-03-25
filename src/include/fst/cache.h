@@ -13,6 +13,8 @@ using std::unordered_multimap;
 #include <list>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/vector-fst.h>
 
 
@@ -1106,7 +1108,7 @@ class CacheStateIterator : public StateIteratorBase<typename FST::Arc> {
     fst_.Start();  // Forces start state.
   }
 
-  bool Done() const override {
+  bool Done() const final {
     if (s_ < impl_->NumKnownStates()) return false;
     for (StateId u = impl_->MinUnexpandedState(); u < impl_->NumKnownStates();
          u = impl_->MinUnexpandedState()) {
@@ -1122,11 +1124,11 @@ class CacheStateIterator : public StateIteratorBase<typename FST::Arc> {
     return true;
   }
 
-  StateId Value() const override { return s_; }
+  StateId Value() const final { return s_; }
 
-  void Next() override { ++s_; }
+  void Next() final { ++s_; }
 
-  void Reset() override { s_ = 0; }
+  void Reset() final { s_ = 0; }
 
  private:
   const FST &fst_;
@@ -1179,7 +1181,7 @@ class CacheArcIterator {
 };
 
 // Use this to make a mutable arc iterator for a CacheBaseImpl-derived FST,
-// which must have types 'Arc' and 'Store' defined.
+// which must have types Arc and Store defined.
 template <class FST>
 class CacheMutableArcIterator
     : public MutableArcIteratorBase<typename FST::Arc> {
@@ -1200,23 +1202,23 @@ class CacheMutableArcIterator
 
   ~CacheMutableArcIterator() override { state_->DecrRefCount(); }
 
-  bool Done() const override { return i_ >= state_->NumArcs(); }
+  bool Done() const final { return i_ >= state_->NumArcs(); }
 
-  const Arc &Value() const override { return state_->GetArc(i_); }
+  const Arc &Value() const final { return state_->GetArc(i_); }
 
-  void Next() override { ++i_; }
+  void Next() final { ++i_; }
 
-  size_t Position() const override { return i_; }
+  size_t Position() const final { return i_; }
 
-  void Reset() override { i_ = 0; }
+  void Reset() final { i_ = 0; }
 
-  void Seek(size_t a) override { i_ = a; }
+  void Seek(size_t a) final { i_ = a; }
 
-  void SetValue(const Arc &arc) override { state_->SetArc(arc, i_); }
+  void SetValue(const Arc &arc) final { state_->SetArc(arc, i_); }
 
-  constexpr uint32 Flags() const override { return kArcValueFlags; }
+  constexpr uint32 Flags() const final { return kArcValueFlags; }
 
-  void SetFlags(uint32, uint32) override {}
+  void SetFlags(uint32, uint32) final {}
 
  private:
   size_t i_;

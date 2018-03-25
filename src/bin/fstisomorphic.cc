@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/isomorphic.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");

@@ -32,6 +32,7 @@ struct FstDrawerArgs {
   const float nodesep;
   const int fontsize;
   const int precision;
+  const string &float_format;  // NOLINT
   const bool show_weight_one;
   std::ostream *ostrm;
   const string &dest;
@@ -40,8 +41,8 @@ struct FstDrawerArgs {
                 const SymbolTable *osyms, const SymbolTable *ssyms, bool accep,
                 const string &title, float width, float height, bool portrait,
                 bool vertical, float ranksep, float nodesep, int fontsize,
-                int precision, bool show_weight_one, std::ostream *ostrm,
-                const string &dest)
+                int precision, const string &float_format,
+                bool show_weight_one, std::ostream *ostrm,  const string &dest)
       : fst(fst),
         isyms(isyms),
         osyms(osyms),
@@ -56,6 +57,7 @@ struct FstDrawerArgs {
         nodesep(nodesep),
         fontsize(fontsize),
         precision(precision),
+        float_format(float_format),
         show_weight_one(show_weight_one),
         ostrm(ostrm),
         dest(dest) {}
@@ -67,7 +69,8 @@ void DrawFst(FstDrawerArgs *args) {
   FstDrawer<Arc> fstdrawer(
       fst, args->isyms, args->osyms, args->ssyms, args->accep, args->title,
       args->width, args->height, args->portrait, args->vertical, args->ranksep,
-      args->nodesep, args->fontsize, args->precision, args->show_weight_one);
+      args->nodesep, args->fontsize, args->precision, args->float_format,
+      args->show_weight_one);
   fstdrawer.Draw(args->ostrm, args->dest);
 }
 
@@ -75,8 +78,8 @@ void DrawFst(const FstClass &fst, const SymbolTable *isyms,
              const SymbolTable *osyms, const SymbolTable *ssyms, bool accep,
              const string &title, float width, float height, bool portrait,
              bool vertical, float ranksep, float nodesep, int fontsize,
-             int precision, bool show_weight_one, std::ostream *ostrm,
-             const string &dest);
+             int precision, const string &float_format, bool show_weight_one,
+             std::ostream *ostrm, const string &dest);
 
 }  // namespace script
 }  // namespace fst

@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/test-properties.h>
 

@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/union.h>
 
 int main(int argc, char **argv) {

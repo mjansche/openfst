@@ -44,7 +44,7 @@ using MinMaxWeight = MinMaxWeightTpl<float>;
 // Arc templates and arcs.
 
 template <class Weight>
-class ArcTpl;
+struct ArcTpl;
 
 using StdArc = ArcTpl<TropicalWeight>;
 

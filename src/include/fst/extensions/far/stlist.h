@@ -23,11 +23,11 @@
 
 namespace fst {
 
-static const int32 kSTListMagicNumber = 5656924;
-static const int32 kSTListFileVersion = 1;
+static constexpr int32 kSTListMagicNumber = 5656924;
+static constexpr int32 kSTListFileVersion = 1;
 
 // String-type list writing class for object of type T using a functor Writer.
-// Write must provide at least the following interface:
+// The Writer functor must provide at least the following interface:
 //
 //   struct Writer {
 //     void operator()(std::ostream &, const T &) const;
@@ -37,7 +37,7 @@ class STListWriter {
  public:
   explicit STListWriter(const string &filename)
       : stream_(filename.empty() ? &std::cout : new std::ofstream(
-                                                    filename.c_str(),
+                                                    filename,
                                                     std::ios_base::out |
                                                         std::ios_base::binary)),
         error_(false) {
@@ -76,7 +76,7 @@ class STListWriter {
   }
 
  private:
-  Writer entry_writer_;   // Write functor.
+  Writer entry_writer_;
   std::ostream *stream_;  // Output stream.
   string last_key_;       // Last key.
   bool error_;
@@ -112,10 +112,11 @@ class STListReader {
         }
       } else {
         streams_[i] = new std::ifstream(
-            filenames[i].c_str(), std::ios_base::in | std::ios_base::binary);
+            filenames[i], std::ios_base::in | std::ios_base::binary);
       }
-      int32 magic_number = 0, file_version = 0;
+      int32 magic_number = 0;
       ReadType(*streams_[i], &magic_number);
+      int32 file_version = 0;
       ReadType(*streams_[i], &file_version);
       if (magic_number != kSTListMagicNumber) {
         FSTERROR() << "STListReader::STListReader: Wrong file type: "
@@ -165,13 +166,12 @@ class STListReader {
   }
 
   void Reset() {
-    FSTERROR()
-        << "STListReader::Reset: stlist does not support reset operation";
+    FSTERROR() << "STListReader::Reset: Operation not supported";
     error_ = true;
   }
 
   bool Find(const string &key) {
-    FSTERROR() << "STListReader::Find: stlist does not support find operation";
+    FSTERROR() << "STListReader::Find: Operation not supported";
     error_ = true;
     return false;
   }
@@ -221,25 +221,26 @@ class STListReader {
   STListReader &operator=(const STListReader &) = delete;
 };
 
-// String-type list header reading function template on the entry header
-// type Header having a member function:
+// String-type list header reading function, templated on the entry header type.
+// The Header type must provide at least the following interface:
 //
-//   Read(std::istream &strm, const string &filename);
-//
-// Checks that the input filename is an STList and calls Header::Read() on the
-// last
-// entry in the STList. Reading from standard input is not supported.
+//  struct Header {
+//    void Read(std::istream &strm, const string &filename);
+//  };
 template <class Header>
 bool ReadSTListHeader(const string &filename, Header *header) {
   if (filename.empty()) {
     LOG(ERROR) << "ReadSTListHeader: Can't read header from standard input";
     return false;
   }
-  std::ifstream strm(filename.c_str(),
-                          std::ios_base::in | std::ios_base::binary);
+  std::ifstream strm(filename, std::ios_base::in | std::ios_base::binary);
+  if (!strm) {
+    LOG(ERROR) << "ReadSTListHeader: Could not open file: " << filename;
+    return false;
+  }
   int32 magic_number = 0;
-  int32 file_version = 0;
   ReadType(strm, &magic_number);
+  int32 file_version = 0;
   ReadType(strm, &file_version);
   if (magic_number != kSTListMagicNumber) {
     LOG(ERROR) << "ReadSTListHeader: Wrong file type: " << filename;

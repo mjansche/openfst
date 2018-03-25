@@ -1,6 +1,7 @@
 #ifndef FST_TEST_RAND_FST_H_
 #define FST_TEST_RAND_FST_H_
 
+#include <fst/log.h>
 #include <fst/mutable-fst.h>
 #include <fst/verify.h>
 

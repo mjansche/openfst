@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 #include <fst/fst.h>
 #include <fst/state-table.h>
 

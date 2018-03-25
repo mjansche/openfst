@@ -12,6 +12,7 @@
 #include <string>
 
 #include <fst/types.h>
+#include <fst/log.h>
 
 // Generic class representing a globally-stored correspondence between
 // objects of KeyType and EntryType.

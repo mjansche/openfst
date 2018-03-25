@@ -10,6 +10,7 @@
 #include <ostream>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/draw.h>
 
 DEFINE_bool(acceptor, false, "Input in acceptor format");
@@ -18,6 +19,8 @@ DEFINE_string(osymbols, "", "Output label symbol table");
 DEFINE_string(ssymbols, "", "State label symbol table");
 DEFINE_bool(numeric, false, "Print numeric labels");
 DEFINE_int32(precision, 5, "Set precision (number of char/float)");
+DEFINE_string(float_format, "g",
+              "Floating-point format, one of: \"e\", \"f\", or \"g\"");
 DEFINE_bool(show_weight_one, false,
             "Print/draw arc weights and final weights equal to Weight::One()");
 DEFINE_string(title, "", "Set figure title");
@@ -98,7 +101,8 @@ int main(int argc, char **argv) {
   s::DrawFst(*fst, isyms.get(), osyms.get(), ssyms.get(), FLAGS_acceptor,
              FLAGS_title, FLAGS_width, FLAGS_height, FLAGS_portrait,
              FLAGS_vertical, FLAGS_ranksep, FLAGS_nodesep, FLAGS_fontsize,
-             FLAGS_precision, FLAGS_show_weight_one, &ostrm, dest);
+             FLAGS_precision, FLAGS_float_format, FLAGS_show_weight_one,
+             &ostrm, dest);
 
   return 0;
 }

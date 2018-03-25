@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 #include <fstream>
 #include <fst/extensions/ngram/bitmap-index.h>
 #include <fst/fstlib.h>
@@ -829,13 +830,12 @@ class NGramFstMatcher : public MatcherBase<A> {
 
   uint64 Properties(uint64 props) const override { return props; }
 
- private:
-  void SetState_(StateId s) override {
+  void SetState(StateId s) final {
     fst_.GetImpl()->SetInstFuture(s, &inst_);
     current_loop_ = false;
   }
 
-  bool Find_(Label label) override {
+  bool Find(Label label) final {
     const Label nolabel = kNoLabel;
     done_ = true;
     if (label == 0 || label == nolabel) {
@@ -867,14 +867,14 @@ class NGramFstMatcher : public MatcherBase<A> {
         done_ = false;
       }
     }
-    return !Done_();
+    return !Done();
   }
 
-  bool Done_() const override { return !current_loop_ && done_; }
+  bool Done() const final { return !current_loop_ && done_; }
 
-  const Arc &Value_() const override { return (current_loop_) ? loop_ : arc_; }
+  const Arc &Value() const final { return (current_loop_) ? loop_ : arc_; }
 
-  void Next_() override {
+  void Next() final {
     if (current_loop_) {
       current_loop_ = false;
     } else {
@@ -882,8 +882,9 @@ class NGramFstMatcher : public MatcherBase<A> {
     }
   }
 
-  ssize_t Priority_(StateId s) override { return fst_.NumArcs(s); }
+  ssize_t Priority(StateId s) final { return fst_.NumArcs(s); }
 
+ private:
   const NGramFst<A> &fst_;
   NGramFstInst<A> inst_;
   MatchType match_type_;  // Supplied by caller
@@ -898,20 +899,20 @@ class NGramFstMatcher : public MatcherBase<A> {
 // for sample usage (but use the ProdLmFst type!). This version
 // should inline.
 template <class A>
-class StateIterator<NGramFst<A>> final : public StateIteratorBase<A> {
+class StateIterator<NGramFst<A>> : public StateIteratorBase<A> {
  public:
   typedef typename A::StateId StateId;
 
   explicit StateIterator(const NGramFst<A> &fst)
       : s_(0), num_states_(fst.NumStates()) {}
 
-  bool Done() const override { return s_ >= num_states_; }
+  bool Done() const final { return s_ >= num_states_; }
 
-  StateId Value() const override { return s_; }
+  StateId Value() const final { return s_; }
 
-  void Next() override { ++s_; }
+  void Next() final { ++s_; }
 
-  void Reset() override { s_ = 0; }
+  void Reset() final { s_ = 0; }
 
  private:
   StateId s_;
@@ -920,7 +921,7 @@ class StateIterator<NGramFst<A>> final : public StateIteratorBase<A> {
 
 /*****************************************************************************/
 template <class A>
-class ArcIterator<NGramFst<A>> final : public ArcIteratorBase<A> {
+class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
  public:
   typedef A Arc;
   typedef typename A::Label Label;
@@ -934,12 +935,12 @@ class ArcIterator<NGramFst<A>> final : public ArcIteratorBase<A> {
     impl_->SetInstNode(&inst_);
   }
 
-  bool Done() const override {
+  bool Done() const final {
     return i_ >=
            ((inst_.node_ == 0) ? inst_.num_futures_ : inst_.num_futures_ + 1);
   }
 
-  const Arc &Value() const override {
+  const Arc &Value() const final {
     bool eps = (inst_.node_ != 0 && i_ == 0);
     StateId state = (inst_.node_ == 0) ? i_ : i_ - 1;
     if (flags_ & lazy_ & (kArcILabelValue | kArcOLabelValue)) {
@@ -969,28 +970,28 @@ class ArcIterator<NGramFst<A>> final : public ArcIteratorBase<A> {
     return arc_;
   }
 
-  void Next() override {
+  void Next() final {
     ++i_;
     lazy_ = ~0;
   }
 
-  size_t Position() const override { return i_; }
+  size_t Position() const final { return i_; }
 
-  void Reset() override {
+  void Reset() final {
     i_ = 0;
     lazy_ = ~0;
   }
 
-  void Seek(size_t a) override {
+  void Seek(size_t a) final {
     if (i_ != a) {
       i_ = a;
       lazy_ = ~0;
     }
   }
 
-  uint32 Flags() const override { return flags_; }
+  uint32 Flags() const final { return flags_; }
 
-  void SetFlags(uint32 flags, uint32 mask) override {
+  void SetFlags(uint32 flags, uint32 mask) final {
     flags_ &= ~mask;
     flags_ |= (flags & kArcValueFlags);
   }

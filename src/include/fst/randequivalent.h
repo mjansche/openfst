@@ -7,6 +7,8 @@
 #ifndef FST_LIB_RANDEQUIVALENT_H_
 #define FST_LIB_RANDEQUIVALENT_H_
 
+#include <fst/log.h>
+
 #include <fst/arcsort.h>
 #include <fst/compose.h>
 #include <fst/project.h>

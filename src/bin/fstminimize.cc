@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/minimize.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");

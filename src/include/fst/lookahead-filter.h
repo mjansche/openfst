@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/filter-state.h>
 #include <fst/fst.h>
 #include <fst/lookahead-matcher.h>

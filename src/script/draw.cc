@@ -15,11 +15,11 @@ void DrawFst(const FstClass &fst, const SymbolTable *isyms,
              const SymbolTable *osyms, const SymbolTable *ssyms, bool accep,
              const string &title, float width, float height, bool portrait,
              bool vertical, float ranksep, float nodesep, int fontsize,
-             int precision, bool show_weight_one, std::ostream *ostrm,
-             const string &dest) {
+             int precision, const string &float_format, bool show_weight_one,
+             std::ostream *ostrm, const string &dest) {
   FstDrawerArgs args(fst, isyms, osyms, ssyms, accep, title, width, height,
                      portrait, vertical, ranksep, nodesep, fontsize, precision,
-                     show_weight_one, ostrm, dest);
+                     float_format, show_weight_one, ostrm, dest);
   Apply<Operation<FstDrawerArgs>>("DrawFst", fst.ArcType(), &args);
 }
 

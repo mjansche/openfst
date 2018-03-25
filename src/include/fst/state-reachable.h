@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/connect.h>
 #include <fst/dfs-visit.h>
 #include <fst/fst.h>

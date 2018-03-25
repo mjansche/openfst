@@ -12,6 +12,8 @@
 #include <sstream>
 #include <vector>
 
+#include <fst/log.h>
+
 namespace fst {
 
 // This function writes UTF-8 codepoints into a vector of Labels, truncating if

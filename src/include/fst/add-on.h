@@ -13,6 +13,8 @@
 #include <string>
 #include <utility>
 
+#include <fst/log.h>
+
 #include <fst/fst.h>
 
 

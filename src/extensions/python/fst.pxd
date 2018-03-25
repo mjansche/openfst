@@ -527,7 +527,7 @@ cdef extern from "<fst/script/fstscript.h>" namespace "fst::script" nogil:
   cdef void DrawFst(const FstClass &fst, const SymbolTable *,
                     const SymbolTable *, const SymbolTable *, bool,
                     const string &, float, float, bool, bool, float, float, int,
-                    int, bool, ostream *, const string &)
+                    int, const string &, bool, ostream *, const string &)
 
   cdef void Encode(MutableFstClass *, EncodeMapperClass *)
 
@@ -596,13 +596,11 @@ cdef extern from "<fst/script/fstscript.h>" namespace "fst::script" nogil:
                     const RandGenOptions[RandArcSelection] &)
 
   cdef void Relabel(MutableFstClass *,
-      const SymbolTable *, const SymbolTable *, bool,
-      const SymbolTable *, const SymbolTable *, bool)
+      const SymbolTable *, const SymbolTable *, const string &, bool,
+      const SymbolTable *, const SymbolTable *, const string &, bool)
 
   cdef void Relabel(MutableFstClass *, const vector[LabelPair] &,
                     const vector[LabelPair] &)
-
-  cdef void Relabel(MutableFstClass *, const SymbolTable *, const SymbolTable *)
 
   cdef cppclass ReplaceOptions:
 

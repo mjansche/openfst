@@ -9,6 +9,8 @@
 #include <deque>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arcfilter.h>
 #include <fst/cache.h>
 #include <fst/queue.h>

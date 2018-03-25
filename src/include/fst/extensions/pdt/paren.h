@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <fst/log.h>
+
 #include <fst/extensions/pdt/collection.h>
 #include <fst/extensions/pdt/pdt.h>
 #include <fst/dfs-visit.h>

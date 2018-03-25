@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/compose.h>
 #include <fst/script/getters.h>
 

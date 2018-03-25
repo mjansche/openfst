@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/compile.h>
 
 DEFINE_bool(acceptor, false, "Input in acceptor format");

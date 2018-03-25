@@ -8,6 +8,8 @@
 
 #include <algorithm>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/compose-filter.h>
 #include <fst/fst-decl.h>  // For optional argument declarations
@@ -710,7 +712,7 @@ inline void ComposeFst<Arc, CacheStore>::InitStateIterator(
 // iff the underlying matchers for the two FSTS being composed support
 // MATCH_INPUT or MATCH_OUTPUT, respectively.
 template <class CacheStore, class Filter, class StateTable>
-class ComposeFstMatcher final : public MatcherBase<typename CacheStore::Arc> {
+class ComposeFstMatcher : public MatcherBase<typename CacheStore::Arc> {
  public:
   using Arc = typename CacheStore::Arc;
   using Label = typename Arc::Label;
@@ -791,12 +793,55 @@ class ComposeFstMatcher final : public MatcherBase<typename CacheStore::Arc> {
     return outprops;
   }
 
+  void SetState(StateId s) final {
+    if (s_ == s) return;
+    s_ = s;
+    const auto &tuple = impl_->state_table_->Tuple(s);
+    matcher1_->SetState(tuple.StateId1());
+    matcher2_->SetState(tuple.StateId2());
+    loop_.nextstate = s_;
+  }
+
+  bool Find(Label label) final {
+    bool found = false;
+    current_loop_ = false;
+    if (label == 0) {
+      current_loop_ = true;
+      found = true;
+    }
+    if (match_type_ == MATCH_INPUT) {
+      found = found || FindLabel(label, matcher1_.get(), matcher2_.get());
+    } else {  // match_type_ == MATCH_OUTPUT
+      found = found || FindLabel(label, matcher2_.get(), matcher1_.get());
+    }
+    return found;
+  }
+
+  bool Done() const final {
+    return !current_loop_ && matcher1_->Done() && matcher2_->Done();
+  }
+
+  const Arc &Value() const final { return current_loop_ ? loop_ : arc_; }
+
+  void Next() final {
+    if (current_loop_) {
+      current_loop_ = false;
+    } else if (match_type_ == MATCH_INPUT) {
+      FindNext(matcher1_.get(), matcher2_.get());
+    } else {  // match_type_ == MATCH_OUTPUT
+      FindNext(matcher2_.get(), matcher1_.get());
+    }
+  }
+
+  ssize_t Priority(StateId s) final { return fst_.NumArcs(s); }
+
  private:
   // Processes a match with the filter and creates resulting arc.
-  bool MatchArc(StateId s, Arc arc1, Arc arc2) {
+  bool MatchArc(StateId s, Arc arc1,
+                Arc arc2) {  // FIXME(kbg): copy but not assignment.
     const auto &fs = impl_->filter_->FilterArc(&arc1, &arc2);
     if (fs == FilterState::NoState()) return false;
-    StateTuple tuple(arc1.nextstate, arc2.nextstate, fs);
+    const StateTuple tuple(arc1.nextstate, arc2.nextstate, fs);
     arc_.ilabel = arc1.ilabel;
     arc_.olabel = arc2.olabel;
     arc_.weight = Times(arc1.weight, arc2.weight);
@@ -857,49 +902,6 @@ class ComposeFstMatcher final : public MatcherBase<typename CacheStore::Arc> {
     // Both 'matchera' and 'matcherb' are done, no more match to analyse.
     return false;
   }
-
-  void SetState_(StateId s) override {
-    if (s_ == s) return;
-    s_ = s;
-    const auto tuple = impl_->state_table_->Tuple(s);
-    matcher1_->SetState(tuple.StateId1());
-    matcher2_->SetState(tuple.StateId2());
-    loop_.nextstate = s_;
-  }
-
-  bool Find_(Label label) override {
-    bool found = false;
-    current_loop_ = false;
-    if (label == 0) {
-      current_loop_ = true;
-      found = true;
-    }
-    if (match_type_ == MATCH_INPUT) {
-      found = found || FindLabel(label, matcher1_.get(), matcher2_.get());
-    } else {  // match_type_ == MATCH_OUTPUT
-      found = found || FindLabel(label, matcher2_.get(), matcher1_.get());
-    }
-    return found;
-  }
-
-  bool Done_() const override {
-    return !current_loop_ && matcher1_->Done() && matcher2_->Done();
-  }
-
-  const Arc &Value_() const override { return current_loop_ ? loop_ : arc_; }
-
-  void Next_() override {
-    if (current_loop_) {
-      current_loop_ = false;
-    } else if (match_type_ == MATCH_INPUT) {
-      FindNext(matcher1_.get(), matcher2_.get());
-    } else {  // match_type_ == MATCH_OUTPUT
-      FindNext(matcher2_.get(), matcher1_.get());
-    }
-  }
-
-  ssize_t Priority_(StateId s) override { return fst_.NumArcs(s); }
-
   const ComposeFst<Arc, CacheStore> &fst_;
   const internal::ComposeFstImpl<CacheStore, Filter, StateTable> *impl_;
   StateId s_;

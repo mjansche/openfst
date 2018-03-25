@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/expanded-fst.h>
 #include <fst/fst-decl.h>
 #include <fst/mapped-file.h>

@@ -10,6 +10,7 @@
 #include <ostream>
 #include <string>
 
+#include <fst/log.h>
 #include <fst/script/print.h>
 
 DEFINE_bool(acceptor, false, "Input in acceptor format?");

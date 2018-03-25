@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/test-properties.h>
 
@@ -73,26 +75,42 @@ void Relabel(
 // Relabels either the input labels or output labels. The old to
 // new labels are specified using pairs of old and new symbol tables.
 // The tables must contain (at least) all labels on the appropriate side of the
-// FST.
+// FST. If the 'unknown_i(o)symbol' is non-empty, it is used to label any
+// missing symbol in new_i(o)symbols table.
 template <class Arc>
-void Relabel(MutableFst<Arc> *fst, const SymbolTable *old_isymbols,
-             const SymbolTable *new_isymbols, bool attach_new_isymbols,
+void Relabel(MutableFst<Arc> *fst,
+             const SymbolTable *old_isymbols, const SymbolTable *new_isymbols,
+             const string &unknown_isymbol, bool attach_new_isymbols,
              const SymbolTable *old_osymbols, const SymbolTable *new_osymbols,
-             bool attach_new_osymbols) {
+             const string &unknown_osymbol, bool attach_new_osymbols) {
   using Label = typename Arc::Label;
   // Constructs vectors of input-side label pairs.
   std::vector<std::pair<Label, Label>> ipairs;
   if (old_isymbols && new_isymbols) {
     size_t num_missing_syms = 0;
+    Label unknown_ilabel = kNoLabel;
+    if (!unknown_isymbol.empty()) {
+      unknown_ilabel = new_isymbols->Find(unknown_isymbol);
+      if (unknown_ilabel == kNoLabel) {
+        VLOG(1) << "Input symbol '" << unknown_isymbol
+                << "' missing from target symbol table";
+        ++num_missing_syms;
+      }
+    }
+
     for (SymbolTableIterator siter(*old_isymbols); !siter.Done();
          siter.Next()) {
       const auto old_index = siter.Value();
       const auto symbol = siter.Symbol();
-      const auto new_index = new_isymbols->Find(siter.Symbol());
+      auto new_index = new_isymbols->Find(siter.Symbol());
       if (new_index == kNoLabel) {
-        VLOG(1) << "Input symbol ID " << new_index << " symbol '" << symbol
-                << "' missing from target symbol table";
-        ++num_missing_syms;
+        if (unknown_ilabel != kNoLabel) {
+          new_index = unknown_ilabel;
+        } else {
+          VLOG(1) << "Input symbol ID " << old_index << " symbol '" << symbol
+                  << "' missing from target symbol table";
+          ++num_missing_syms;
+        }
       }
       ipairs.push_back(std::make_pair(old_index, new_index));
     }
@@ -106,15 +124,29 @@ void Relabel(MutableFst<Arc> *fst, const SymbolTable *old_isymbols,
   std::vector<std::pair<Label, Label>> opairs;
   if (old_osymbols && new_osymbols) {
     size_t num_missing_syms = 0;
+    Label unknown_olabel = kNoLabel;
+    if (!unknown_osymbol.empty()) {
+      unknown_olabel = new_osymbols->Find(unknown_osymbol);
+      if (unknown_olabel == kNoLabel) {
+        VLOG(1) << "Output symbol '" << unknown_osymbol
+                << "' missing from target symbol table";
+        ++num_missing_syms;
+      }
+    }
+
     for (SymbolTableIterator siter(*old_osymbols); !siter.Done();
          siter.Next()) {
       const auto old_index = siter.Value();
       const auto symbol = siter.Symbol();
-      const auto new_index = new_osymbols->Find(siter.Symbol());
+      auto new_index = new_osymbols->Find(siter.Symbol());
       if (new_index == kNoLabel) {
-        VLOG(1) << "Output symbol ID " << new_index << " symbol '" << symbol
-                << "' missing from target symbol table";
-        ++num_missing_syms;
+        if (unknown_olabel != kNoLabel) {
+          new_index = unknown_olabel;
+        } else {
+          VLOG(1) << "Output symbol ID " << old_index << " symbol '" << symbol
+                  << "' missing from target symbol table";
+          ++num_missing_syms;
+        }
       }
       opairs.push_back(std::make_pair(old_index, new_index));
     }
@@ -127,6 +159,21 @@ void Relabel(MutableFst<Arc> *fst, const SymbolTable *old_isymbols,
   // Calls relabel using vector of relabel pairs.
   Relabel(fst, ipairs, opairs);
 }
+
+// Same as previous but no special allowance for unknown symbols. Kept
+// for backward compat.
+template <class Arc>
+void Relabel(MutableFst<Arc> *fst, const SymbolTable *old_isymbols,
+             const SymbolTable *new_isymbols, bool attach_new_isymbols,
+             const SymbolTable *old_osymbols, const SymbolTable *new_osymbols,
+             bool attach_new_osymbols) {
+  Relabel(fst,
+          old_isymbols, new_isymbols, "" /* no unknown isymbol */,
+          attach_new_isymbols,
+          old_osymbols, new_osymbols, "" /* no unknown ioymbol */,
+          attach_new_osymbols);
+}
+
 
 // Relabels either the input labels or output labels. The old to
 // new labels are specified using symbol tables. Any label associations not
@@ -373,25 +420,25 @@ class RelabelFst : public ImplToFst<internal::RelabelFstImpl<A>> {
 
 // Specialization for RelabelFst.
 template <class Arc>
-class StateIterator<RelabelFst<Arc>> final : public StateIteratorBase<Arc> {
+class StateIterator<RelabelFst<Arc>> : public StateIteratorBase<Arc> {
  public:
   using StateId = typename Arc::StateId;
 
   explicit StateIterator(const RelabelFst<Arc> &fst)
       : impl_(fst.GetImpl()), siter_(*impl_->fst_), s_(0) {}
 
-  bool Done() const override { return siter_.Done(); }
+  bool Done() const final { return siter_.Done(); }
 
-  StateId Value() const override { return s_; }
+  StateId Value() const final { return s_; }
 
-  void Next() override {
+  void Next() final {
     if (!siter_.Done()) {
       ++s_;
       siter_.Next();
     }
   }
 
-  void Reset() override {
+  void Reset() final {
     s_ = 0;
     siter_.Reset();
   }

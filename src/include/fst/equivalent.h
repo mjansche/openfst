@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <fst/log.h>
 
 #include <fst/encode.h>
 #include <fst/push.h>

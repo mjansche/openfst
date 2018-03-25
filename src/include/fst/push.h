@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arc-map.h>
 #include <fst/factor-weight.h>
 #include <fst/fst.h>
