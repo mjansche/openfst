@@ -744,8 +744,9 @@ void GCCacheStore<CacheStore>::GC(const State *current, bool free_recent,
         (free_recent || !(state->Flags() & kCacheRecent)) && state != current) {
       if (state->Flags() & kCacheInit) {
         size_t size = sizeof(State) + state->NumArcs() * sizeof(Arc);
-        CHECK_LE(size, cache_size_);
-        cache_size_ -= size;
+        if (size < cache_size_) {
+          cache_size_ -= size;
+        }
       }
       store_.Delete();
     } else {

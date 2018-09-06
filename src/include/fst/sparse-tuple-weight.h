@@ -37,6 +37,7 @@ class SparseTupleWeight {
  public:
   using ReverseWeight = SparseTupleWeight<typename W::ReverseWeight, K>;
 
+  using Iterator = SparseTupleWeightIterator<W, K>;
   using Pair = std::pair<K, W>;
 
   constexpr static K kNoKey = -1;
@@ -60,7 +61,7 @@ class SparseTupleWeight {
   SparseTupleWeight(const SparseTupleWeight &weight) {
     Init(weight.DefaultValue());
     SetDefaultValue(weight.DefaultValue());
-    for (SparseTupleWeightIterator<W, K> it(weight); !it.Done(); it.Next()) {
+    for (Iterator it(weight); !it.Done(); it.Next()) {
       Push(it.Value());
     }
   }
@@ -95,7 +96,7 @@ class SparseTupleWeight {
   SparseTupleWeight &operator=(const SparseTupleWeight &weight) {
     if (this == &weight) return *this;  // Checks for identity.
     Init(weight.DefaultValue());
-    for (SparseTupleWeightIterator<W, K> it(weight); !it.Done(); it.Next()) {
+    for (Iterator it(weight); !it.Done(); it.Next()) {
       Push(it.Value());
     }
     return *this;
@@ -103,7 +104,7 @@ class SparseTupleWeight {
 
   bool Member() const {
     if (!DefaultValue().Member()) return false;
-    for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
+    for (Iterator it(*this); !it.Done(); it.Next()) {
       if (!it.Value().second.Member()) return false;
     }
     return true;
@@ -113,7 +114,7 @@ class SparseTupleWeight {
   size_t Hash() const {
     size_t h = 0;
     static const std::hash<K> H;
-    for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
+    for (Iterator it(*this); !it.Done(); it.Next()) {
       h = 5 * h + H(it.Value().first);
       h = 13 * h + it.Value().second.Hash();
     }
@@ -122,7 +123,7 @@ class SparseTupleWeight {
 
   SparseTupleWeight Quantize(float delta = kDelta) const {
     SparseTupleWeight weight;
-    for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
+    for (Iterator it(*this); !it.Done(); it.Next()) {
       weight.Push(it.Value().first, it.Value().second.Quantize(delta));
     }
     return weight;
@@ -130,7 +131,7 @@ class SparseTupleWeight {
 
   ReverseWeight Reverse() const {
     SparseTupleWeight weight;
-    for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
+    for (Iterator it(*this); !it.Done(); it.Next()) {
       weight.Push(it.Value().first, it.Value().second.Reverse());
     }
     return ReverseWeight(weight);

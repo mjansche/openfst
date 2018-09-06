@@ -177,7 +177,6 @@ void AddModel(const string &model, SymbolTable *fsyms, SymbolTable *osyms,
   }
   size_t num_line = 1, num_added = 0;
   const int group = builder->AddGroup(future_size);
-  CHECK_GE(group, 0);
   VLOG(1) << "Group " << group << ": from " << model << "; future size is "
           << future_size << ".";
   // Add the rest of lines as a single feature group
@@ -233,7 +232,6 @@ void AddModel(const string &model, SymbolTable *fsyms, SymbolTable *osyms,
                << future_size << " from " << model;
   size_t num_line = 1, num_added = 0;
   const int group = builder->AddGroup();
-  CHECK_GE(group, 0);
   VLOG(1) << "Group " << group << ": from " << model << "; future size is "
           << future_size << ".";
   // Add the rest of lines as a single feature group

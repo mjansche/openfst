@@ -70,7 +70,7 @@ bool ExpandLZCode(const std::vector<std::pair<Var, Edge>> &code,
 template <class Var, class Edge, class EdgeLessThan, class EdgeEquals>
 class LempelZiv {
  public:
-  LempelZiv() : dict_number_(0) {
+  LempelZiv() : dict_number_(0), default_edge_() {
     root_.current_number = dict_number_++;
     root_.current_edge = default_edge_;
     decode_vector_.push_back(std::make_pair(0, default_edge_));

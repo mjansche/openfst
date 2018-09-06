@@ -252,7 +252,9 @@ class DefaultComposeStateTuple {
   }
 
   size_t Hash() const {
-    return StateId1() + StateId2() * 7853 + GetFilterState().Hash() * 7867;
+    return static_cast<size_t>(StateId1()) +
+           static_cast<size_t>(StateId2()) * 7853u +
+           GetFilterState().Hash() * 7867u;
   }
 
  private:

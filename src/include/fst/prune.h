@@ -95,11 +95,9 @@ void Prune(MutableFst<Arc> *fst, const PruneOptions<Arc, ArcFilter> &opts) {
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
   using StateHeap = Heap<StateId, internal::PruneCompare<StateId, Weight>>;
-  // TODO(kbg): Make this a compile-time static_assert once:
-  // 1) All weight properties are made constexpr for all weight types.
-  // 2) We have a pleasant way to "deregister" this operation for non-path
-  //    semirings so an informative error message is produced. The best
-  //    solution will probably involve some kind of SFINAE magic.
+  // TODO(kbg): Make this a compile-time static_assert once we have a pleasant
+  // way to "deregister" this operation for non-path semirings so an informative
+  // error message is produced.
   if ((Weight::Properties() & kPath) != kPath) {
     FSTERROR() << "Prune: Weight needs to have the path property: "
                << Weight::Type();
@@ -216,11 +214,9 @@ void Prune(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
   using StateHeap = Heap<StateId, internal::PruneCompare<StateId, Weight>>;
-  // TODO(kbg): Make this a compile-time static_assert once:
-  // 1) All weight properties are made constexpr for all weight types.
-  // 2) We have a pleasant way to "deregister" this operation for non-path
-  //    semirings so an informative error message is produced. The best
-  //    solution will probably involve some kind of SFINAE magic.
+  // TODO(kbg): Make this a compile-time static_assert once we have a pleasant
+  // way to "deregister" this operation for non-path semirings so an informative
+  // error message is produced.
   if ((Weight::Properties() & kPath) != kPath) {
     FSTERROR() << "Prune: Weight needs to have the path property: "
                << Weight::Type();

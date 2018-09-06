@@ -718,8 +718,21 @@ class SuperFinalMapper {
  public:
   using FromArc = A;
   using ToArc = A;
+  using Label = typename FromArc::Label;
+  using Weight = typename FromArc::Weight;;
 
-  ToArc operator()(const FromArc &arc) const { return arc; }
+  // Arg allows setting super-final label.
+  explicit SuperFinalMapper(Label final_label = 0)
+      : final_label_(final_label) {}
+
+  ToArc operator()(const FromArc &arc) const {
+    // Super-final arc.
+    if (arc.nextstate == kNoStateId && arc.weight != Weight::Zero()) {
+      return ToArc(final_label_, final_label_, arc.weight, kNoStateId);
+    } else {
+      return arc;
+    }
+  }
 
   constexpr MapFinalAction FinalAction() const {
     return MAP_REQUIRE_SUPERFINAL;
@@ -734,8 +747,16 @@ class SuperFinalMapper {
   }
 
   uint64 Properties(uint64 props) const {
-    return props & kAddSuperFinalProperties;
+    if (final_label_ == 0) {
+      return props & kAddSuperFinalProperties;
+    } else {
+      return props & kAddSuperFinalProperties &
+          kILabelInvariantProperties & kOLabelInvariantProperties;
+    }
   }
+
+ private:
+  Label final_label_;
 };
 
 // Mapper that leaves labels and nextstate unchanged and constructs a new weight

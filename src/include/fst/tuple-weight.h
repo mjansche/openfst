@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -18,7 +19,7 @@
 
 namespace fst {
 
-// n-tuple weight, element of the n-th catersian power of W.
+// n-tuple weight, element of the n-th Cartesian power of W.
 template <class W, size_t n>
 class TupleWeight {
  public:
@@ -35,9 +36,7 @@ class TupleWeight {
 
   template <class Iterator>
   TupleWeight(Iterator begin, Iterator end) {
-    for (auto it = begin; it != end; ++it) {
-      values_[it - begin] = *it;
-    }
+    std::copy(begin, end, values_.begin());
   }
 
   explicit TupleWeight(const W &weight) { values_.fill(weight); }
@@ -70,8 +69,8 @@ class TupleWeight {
   }
 
   bool Member() const {
-    auto member_test = [](const W &weight) { return weight.Member(); };
-    return std::all_of(values_.begin(), values_.end(), member_test);
+    return std::all_of(values_.begin(), values_.end(),
+                       std::mem_fn(&W::Member));
   }
 
   size_t Hash() const {
@@ -145,6 +144,7 @@ inline std::istream &operator>>(std::istream &strm, TupleWeight<W, n> &w) {
   reader.ReadBegin();
   W v;
   // Reads first n-1 elements.
+  static_assert(n > 0, "Size must be positive.");
   for (size_t i = 0; i < n - 1; ++i) {
     reader.ReadElement(&v);
     w.SetValue(i, v);

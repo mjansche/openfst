@@ -20,7 +20,14 @@ from ios cimport stringstream
 from libcpp.string cimport string
 
 
-# Exportable helper functions
+# Constants not imported from elsewhere.
+# TODO(kbg): Figure out how to access static class variables so I don't have
+# to do it this way.
+
+cdef int64 kNoSymbol
+
+
+# Exportable helper functions.
 
 
 cdef string tostring(data, encoding=?) except *
