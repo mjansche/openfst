@@ -1,0 +1,30 @@
+sudo: required
+dist: trusty
+language: cpp
+
+matrix:
+  fast_finish: true
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - MATRIX_EVAL="export CC=gcc-7 CXX=g++-7"
+    - os: osx
+      env:
+        - MATRIX_EVAL=""
+  allow_failures:
+    - os: osx
+      env:
+        - MATRIX_EVAL=""
+
+script:
+  - mkdir build && cd build
+  - eval "${MATRIX_EVAL}"
+  - ../configure --enable-{compact,const,linear,lookahead,ngram}-fsts --enable-{compress,far,mpdt,pdt,special,bin}
+  - make
+  - make check
