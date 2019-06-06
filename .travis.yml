@@ -23,8 +23,9 @@ matrix:
         - MATRIX_EVAL=""
 
 script:
-  - mkdir build && cd build
   - eval "${MATRIX_EVAL}"
+  - autoreconf
+  - mkdir build && cd build
   - ../configure --enable-{compact,const,linear,lookahead,ngram}-fsts --enable-{compress,far,mpdt,pdt,special,bin}
   - make
   - make check
