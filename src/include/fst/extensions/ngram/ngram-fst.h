@@ -97,7 +97,7 @@ class NGramFstImpl : public FstImpl<A> {
 
   static NGramFstImpl<A> *Read(std::istream &strm,  // NOLINT
                                const FstReadOptions &opts) {
-    auto impl = std::make_unique<NGramFstImpl<A>>();
+    auto impl = std::unique_ptr<NGramFstImpl<A>>(new NGramFstImpl<A>());
     FstHeader hdr;
     if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return 0;
     uint64 num_states, num_futures, num_final;
