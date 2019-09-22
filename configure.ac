@@ -2,13 +2,11 @@ AC_INIT([OpenFst], [1.7.3], [help@www.openfst.org])
 AM_INIT_AUTOMAKE([foreign nostdinc -Wall -Werror subdir-objects])
 AM_PROG_AR
 
+AC_PROG_CXX
 # OpenFst does not throw exceptions, so we do not generate exception handling
 # code. However, users are free to re-enable exception handling.
-# OpenFst assumes char is unsigned; -fsigned-char is likely unsafe.
-CPPFLAGS="$CPPFLAGS -fno-exceptions -funsigned-char"
-CXXFLAGS="$CXXFLAGS -std=c++11"
+CXX="$CXX -std=c++11 -fno-exceptions"
 
-AC_PROG_CXX
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
