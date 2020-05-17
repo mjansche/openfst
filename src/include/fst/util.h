@@ -6,6 +6,7 @@
 #ifndef FST_UTIL_H_
 #define FST_UTIL_H_
 
+#include <array>
 #include <iostream>
 #include <iterator>
 #include <list>
@@ -59,7 +60,7 @@ inline std::istream &ReadType(std::istream &strm, T *t) {
 inline std::istream &ReadType(std::istream &strm, std::string *s) {  // NOLINT
   s->clear();
   int32 ns = 0;
-  strm.read(reinterpret_cast<char *>(&ns), sizeof(ns));
+  ReadType(strm, &ns);
   for (int32 i = 0; i < ns; ++i) {
     char c;
     strm.read(&c, 1);
@@ -113,6 +114,12 @@ std::istream &ReadContainerType(std::istream &strm, C *c, ReserveFn reserve) {
   return strm;
 }
 }  // namespace internal
+
+template <class T, size_t N>
+std::istream &ReadType(std::istream &strm, std::array<T, N> *c) {
+  for (auto &v : *c) ReadType(strm, &v);
+  return strm;
+}
 
 template <class... T>
 std::istream &ReadType(std::istream &strm, std::vector<T...> *c) {
@@ -168,7 +175,7 @@ inline std::ostream &WriteType(std::ostream &strm, const T t) {
 inline std::ostream &WriteType(std::ostream &strm,  // NOLINT
                                const std::string &s) {
   int32 ns = s.size();
-  strm.write(reinterpret_cast<const char *>(&ns), sizeof(ns));
+  WriteType(strm, ns);
   return strm.write(s.data(), ns);
 }
 
@@ -176,14 +183,19 @@ inline std::ostream &WriteType(std::ostream &strm,  // NOLINT
 
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::vector<T...> &c);
+
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::list<T...> &c);
+
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::set<T...> &c);
+
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::map<T...> &c);
+
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::unordered_map<T...> &c);
+
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::unordered_set<T...> &c);
 
@@ -198,15 +210,26 @@ inline std::ostream &WriteType(std::ostream &strm,
 
 namespace internal {
 template <class C>
-std::ostream &WriteContainer(std::ostream &strm, const C &c) {
-  const int64 n = c.size();
-  WriteType(strm, n);
+std::ostream &WriteSequence(std::ostream &strm, const C &c) {
   for (const auto &e : c) {
     WriteType(strm, e);
   }
   return strm;
 }
+
+template <class C>
+std::ostream &WriteContainer(std::ostream &strm, const C &c) {
+  const int64 n = c.size();
+  WriteType(strm, n);
+  WriteSequence(strm, c);
+  return strm;
+}
 }  // namespace internal
+
+template <class T, size_t N>
+std::ostream &WriteType(std::ostream &strm, const std::array<T, N> &c) {
+  return internal::WriteSequence(strm, c);
+}
 
 template <typename... T>
 std::ostream &WriteType(std::ostream &strm, const std::vector<T...> &c) {
@@ -240,17 +263,16 @@ std::ostream &WriteType(std::ostream &strm, const std::unordered_set<T...> &c) {
 
 // Utilities for converting between int64 or Weight and string.
 
-int64 StrToInt64(const std::string &s, const std::string &src, size_t nline,
+int64 StrToInt64(const std::string &s, const std::string &source, size_t nline,
                  bool allow_negative, bool *error = nullptr);
 
 template <typename Weight>
-Weight StrToWeight(const std::string &s, const std::string &src, size_t nline) {
+Weight StrToWeight(const std::string &s) {
   Weight w;
   std::istringstream strm(s);
   strm >> w;
   if (!strm) {
-    FSTERROR() << "StrToWeight: Bad weight = \"" << s << "\", source = " << src
-               << ", line = " << nline;
+    FSTERROR() << "StrToWeight: Bad weight: " << s;
     return Weight::NoWeight();
   }
   return w;
@@ -264,19 +286,19 @@ void WeightToStr(Weight w, std::string *s) {
   s->append(strm.str().data(), strm.str().size());
 }
 
-// Utilities for reading/writing integer pairs (typically labels)
+// Utilities for reading/writing integer pairs (typically labels).
 
 // Modifies line using a vector of pointers to a buffer beginning with line.
 void SplitString(char *line, const char *delim, std::vector<char *> *vec,
                  bool omit_empty_strings);
 
 template <typename I>
-bool ReadIntPairs(const std::string &filename,
+bool ReadIntPairs(const std::string &source,
                   std::vector<std::pair<I, I>> *pairs,
                   bool allow_negative = false) {
-  std::ifstream strm(filename, std::ios_base::in);
+  std::ifstream strm(source, std::ios_base::in);
   if (!strm) {
-    LOG(ERROR) << "ReadIntPairs: Can't open file: " << filename;
+    LOG(ERROR) << "ReadIntPairs: Can't open file: " << source;
     return false;
   }
   const int kLineLen = 8096;
@@ -291,13 +313,13 @@ bool ReadIntPairs(const std::string &filename,
     if (col.empty() || col[0][0] == '\0' || col[0][0] == '#') continue;
     if (col.size() != 2) {
       LOG(ERROR) << "ReadIntPairs: Bad number of columns, "
-                 << "file = " << filename << ", line = " << nline;
+                 << "file = " << source << ", line = " << nline;
       return false;
     }
     bool err;
-    I i1 = StrToInt64(col[0], filename, nline, allow_negative, &err);
+    I i1 = StrToInt64(col[0], source, nline, allow_negative, &err);
     if (err) return false;
-    I i2 = StrToInt64(col[1], filename, nline, allow_negative, &err);
+    I i2 = StrToInt64(col[1], source, nline, allow_negative, &err);
     if (err) return false;
     pairs->emplace_back(i1, i2);
   }
@@ -305,41 +327,36 @@ bool ReadIntPairs(const std::string &filename,
 }
 
 template <typename I>
-bool WriteIntPairs(const std::string &filename,
+bool WriteIntPairs(const std::string &source,
                    const std::vector<std::pair<I, I>> &pairs) {
-  std::ostream *strm = &std::cout;
-  if (!filename.empty()) {
-    strm = new std::ofstream(filename);
-    if (!*strm) {
-      LOG(ERROR) << "WriteIntPairs: Can't open file: " << filename;
+  std::ofstream fstrm;
+  if (!source.empty()) {
+    fstrm.open(source);
+    if (!fstrm) {
+      LOG(ERROR) << "WriteIntPairs: Can't open file: " << source;
       return false;
     }
   }
-  for (ssize_t n = 0; n < pairs.size(); ++n) {
-    *strm << pairs[n].first << "\t" << pairs[n].second << "\n";
+  std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
+  for (const auto &pair : pairs) {
+    ostrm << pair.first << "\t" << pair.second << "\n";
   }
-  if (!*strm) {
-    LOG(ERROR) << "WriteIntPairs: Write failed: "
-               << (filename.empty() ? "standard output" : filename);
-    return false;
-  }
-  if (strm != &std::cout) delete strm;
-  return true;
+  return !!ostrm;
 }
 
 // Utilities for reading/writing label pairs.
 
 template <typename Label>
-bool ReadLabelPairs(const std::string &filename,
+bool ReadLabelPairs(const std::string &source,
                     std::vector<std::pair<Label, Label>> *pairs,
                     bool allow_negative = false) {
-  return ReadIntPairs(filename, pairs, allow_negative);
+  return ReadIntPairs(source, pairs, allow_negative);
 }
 
 template <typename Label>
-bool WriteLabelPairs(const std::string &filename,
+bool WriteLabelPairs(const std::string &source,
                      const std::vector<std::pair<Label, Label>> &pairs) {
-  return WriteIntPairs(filename, pairs);
+  return WriteIntPairs(source, pairs);
 }
 
 // Utilities for converting a type name to a legal C symbol.

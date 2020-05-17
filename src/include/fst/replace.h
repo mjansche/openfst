@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/cache.h>
@@ -224,9 +225,9 @@ class VectorHashReplaceStateTable {
       }
     }
     state_table_.reset(
-        new StateTable(new ReplaceRootSelector<StateId, PrefixId>,
-                       new ReplaceFstStateFingerprint<StateId, PrefixId>,
-                       new ReplaceFingerprint<StateId, PrefixId>(&size_array_),
+        new StateTable(ReplaceRootSelector<StateId, PrefixId>(),
+                       ReplaceFstStateFingerprint<StateId, PrefixId>(),
+                       ReplaceFingerprint<StateId, PrefixId>(&size_array_),
                        root_size_, root_size_ + size_array_.back()));
   }
 
@@ -236,9 +237,9 @@ class VectorHashReplaceStateTable {
         size_array_(table.size_array_),
         prefix_table_(table.prefix_table_) {
     state_table_.reset(
-        new StateTable(new ReplaceRootSelector<StateId, PrefixId>,
-                       new ReplaceFstStateFingerprint<StateId, PrefixId>,
-                       new ReplaceFingerprint<StateId, PrefixId>(&size_array_),
+        new StateTable(ReplaceRootSelector<StateId, PrefixId>(),
+                       ReplaceFstStateFingerprint<StateId, PrefixId>(),
+                       ReplaceFingerprint<StateId, PrefixId>(&size_array_),
                        root_size_, root_size_ + size_array_.back()));
   }
 
@@ -764,7 +765,7 @@ class ReplaceFstImpl
   // If acpp is null, only returns true if a final arcp is required, but does
   // not actually compute it.
   bool ComputeFinalArc(const StateTuple &tuple, Arc *arcp,
-                       uint32 flags = kArcValueFlags) {
+                       uint8 flags = kArcValueFlags) {
     const auto fst_state = tuple.fst_state;
     if (fst_state == kNoStateId) return false;
     // If state is final, pops the stack.
@@ -795,7 +796,7 @@ class ReplaceFstImpl
   // Returns false if the underlying arc corresponds to no arc in the resulting
   // FST.
   bool ComputeArc(const StateTuple &tuple, const Arc &arc, Arc *arcp,
-                  uint32 flags = kArcValueFlags) {
+                  uint8 flags = kArcValueFlags) {
     if (!EpsilonOnInput(call_label_type_) &&
         (flags == (flags & (kArcILabelValue | kArcWeightValue)))) {
       *arcp = arc;
@@ -849,8 +850,8 @@ class ReplaceFstImpl
   }
 
   // Returns the arc iterator flags supported by this FST.
-  uint32 ArcIteratorFlags() const {
-    uint32 flags = kArcValueFlags;
+  uint8 ArcIteratorFlags() const {
+    uint8 flags = kArcValueFlags;
     if (!always_cache_) flags |= kArcNoCache;
     return flags;
   }
@@ -975,14 +976,12 @@ class ReplaceFst
       : ImplToFst<Impl>(std::make_shared<Impl>(fst_array, opts)) {}
 
   // See Fst<>::Copy() for doc.
-  ReplaceFst(const ReplaceFst<Arc, StateTable, CacheStore> &fst,
-             bool safe = false)
+  ReplaceFst(const ReplaceFst &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
   // Get a copy of this ReplaceFst. See Fst<>::Copy() for further doc.
-  ReplaceFst<Arc, StateTable, CacheStore> *Copy(
-      bool safe = false) const override {
-    return new ReplaceFst<Arc, StateTable, CacheStore>(*this, safe);
+  ReplaceFst *Copy(bool safe = false) const override {
+    return new ReplaceFst(*this, safe);
   }
 
   inline void InitStateIterator(StateIteratorData<Arc> *data) const override;
@@ -1194,9 +1193,9 @@ class ArcIterator<ReplaceFst<Arc, StateTable, CacheStore>> {
 
   void Seek(size_t pos) { pos_ = pos; }
 
-  uint32 Flags() const { return flags_; }
+  uint8 Flags() const { return flags_; }
 
-  void SetFlags(uint32 flags, uint32 mask) {
+  void SetFlags(uint8 flags, uint8 mask) {
     // Updates the flags taking into account what flags are supported
     // by the FST.
     flags_ &= ~mask;
@@ -1220,16 +1219,16 @@ class ArcIterator<ReplaceFst<Arc, StateTable, CacheStore>> {
   ssize_t pos_;             // Current position.
   mutable ssize_t offset_;  // Offset between position in iterator and in arcs_.
   ssize_t num_arcs_;        // Number of arcs at state_.
-  uint32 flags_;            // Behavorial flags for the arc iterator
+  uint8 flags_;             // Behavorial flags for the arc iterator
   mutable Arc arc_;         // Memory to temporarily store computed arcs.
 
   mutable ArcIteratorData<Arc> cache_data_;  // Arc iterator data in cache.
   mutable ArcIteratorData<Arc> local_data_;  // Arc iterator data in local FST.
 
-  mutable const Arc *arcs_;     // Array of arcs.
-  mutable uint32 data_flags_;   // Arc value flags valid for data in arcs_.
-  mutable Arc final_arc_;       // Final arc (when required).
-  mutable uint32 final_flags_;  // Arc value flags valid for final_arc_.
+  mutable const Arc *arcs_;    // Array of arcs.
+  mutable uint8 data_flags_;   // Arc value flags valid for data in arcs_.
+  mutable Arc final_arc_;      // Final arc (when required).
+  mutable uint8 final_flags_;  // Arc value flags valid for final_arc_.
 
   ArcIterator(const ArcIterator &) = delete;
   ArcIterator &operator=(const ArcIterator &) = delete;
@@ -1281,9 +1280,7 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
   }
 
   // This makes a copy of the FST.
-  ReplaceFstMatcher(
-      const ReplaceFstMatcher<Arc, StateTable, CacheStore> &matcher,
-      bool safe = false)
+  ReplaceFstMatcher(const ReplaceFstMatcher &matcher, bool safe = false)
       : owned_fst_(matcher.fst_.Copy(safe)),
         fst_(*owned_fst_),
         impl_(fst_.GetMutableImpl()),
@@ -1317,9 +1314,8 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
     }
   }
 
-  ReplaceFstMatcher<Arc, StateTable, CacheStore> *Copy(
-      bool safe = false) const override {
-    return new ReplaceFstMatcher<Arc, StateTable, CacheStore>(*this, safe);
+  ReplaceFstMatcher *Copy(bool safe = false) const override {
+    return new ReplaceFstMatcher(*this, safe);
   }
 
   MatchType Type(bool test) const override {

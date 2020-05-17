@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/log.h>
 #include <fstream>
 
@@ -37,7 +38,7 @@ class MutableFst : public ExpandedFst<A> {
 
   virtual MutableFst<Arc> &operator=(const Fst<Arc> &fst) = 0;
 
-  MutableFst<Arc> &operator=(const MutableFst<Arc> &fst) {
+  MutableFst &operator=(const MutableFst &fst) {
     return operator=(static_cast<const Fst<Arc> &>(fst));
   }
 
@@ -100,10 +101,10 @@ class MutableFst : public ExpandedFst<A> {
   virtual void SetOutputSymbols(const SymbolTable *osyms) = 0;
 
   // Gets a copy of this MutableFst. See Fst<>::Copy() for further doc.
-  MutableFst<A> *Copy(bool safe = false) const override = 0;
+  MutableFst *Copy(bool safe = false) const override = 0;
 
   // Reads a MutableFst from an input stream, returning nullptr on error.
-  static MutableFst<Arc> *Read(std::istream &strm, const FstReadOptions &opts) {
+  static MutableFst *Read(std::istream &strm, const FstReadOptions &opts) {
     FstReadOptions ropts(opts);
     FstHeader hdr;
     if (ropts.header) {
@@ -125,33 +126,32 @@ class MutableFst : public ExpandedFst<A> {
     }
     auto *fst = reader(strm, ropts);
     if (!fst) return nullptr;
-    return static_cast<MutableFst<Arc> *>(fst);
+    return static_cast<MutableFst *>(fst);
   }
 
   // Reads a MutableFst from a file; returns nullptr on error. An empty
-  // filename results in reading from standard input. If convert is true,
+  // source results in reading from standard input. If convert is true,
   // convert to a mutable FST subclass (given by convert_type) in the case
   // that the input FST is non-mutable.
-  static MutableFst<Arc> *Read(const std::string &filename,
-                               bool convert = false,
-                               const std::string &convert_type = "vector") {
+  static MutableFst *Read(const std::string &source, bool convert = false,
+                          const std::string &convert_type = "vector") {
     if (convert == false) {
-      if (!filename.empty()) {
-        std::ifstream strm(filename,
+      if (!source.empty()) {
+        std::ifstream strm(source,
                                 std::ios_base::in | std::ios_base::binary);
         if (!strm) {
-          LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
+          LOG(ERROR) << "MutableFst::Read: Can't open file: " << source;
           return nullptr;
         }
-        return Read(strm, FstReadOptions(filename));
+        return Read(strm, FstReadOptions(source));
       } else {
         return Read(std::cin, FstReadOptions("standard input"));
       }
     } else {  // Converts to 'convert_type' if not mutable.
-      std::unique_ptr<Fst<Arc>> ifst(Fst<Arc>::Read(filename));
+      std::unique_ptr<Fst<Arc>> ifst(Fst<Arc>::Read(source));
       if (!ifst) return nullptr;
       if (ifst->Properties(kMutable, false)) {
-        return static_cast<MutableFst<Arc> *>(ifst.release());
+        return static_cast<MutableFst *>(ifst.release());
       } else {
         std::unique_ptr<Fst<Arc>> ofst(Convert(*ifst, convert_type));
         ifst.reset();
@@ -159,7 +159,7 @@ class MutableFst : public ExpandedFst<A> {
         if (!ofst->Properties(kMutable, false)) {
           LOG(ERROR) << "MutableFst: Bad convert type: " << convert_type;
         }
-        return static_cast<MutableFst<Arc> *>(ofst.release());
+        return static_cast<MutableFst *>(ofst.release());
       }
     }
   }
@@ -226,9 +226,9 @@ class MutableArcIterator {
 
   void SetValue(const Arc &arc) { data_.base->SetValue(arc); }
 
-  uint32 Flags() const { return data_.base->Flags(); }
+  uint8 Flags() const { return data_.base->Flags(); }
 
-  void SetFlags(uint32 flags, uint32 mask) {
+  void SetFlags(uint8 flags, uint8 mask) {
     return data_.base->SetFlags(flags, mask);
   }
 
@@ -394,7 +394,7 @@ class ImplToMutableFst : public ImplToExpandedFst<Impl, FST> {
   explicit ImplToMutableFst(std::shared_ptr<Impl> impl)
       : ImplToExpandedFst<Impl, FST>(impl) {}
 
-  ImplToMutableFst(const ImplToMutableFst<Impl, FST> &fst, bool safe)
+  ImplToMutableFst(const ImplToMutableFst &fst, bool safe)
       : ImplToExpandedFst<Impl, FST>(fst, safe) {}
 
   void MutateCheck() {

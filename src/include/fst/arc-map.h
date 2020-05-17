@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/cache.h>
@@ -47,8 +48,8 @@ enum MapSymbolsAction {
 };
 
 // The ArcMapper interfaces defines how arcs and final weights are mapped.
-// This is useful for implementing operations that do not change the number of
-// arcs (except possibly superfinal arcs).
+// This is useful for implementing operations that apply to each arc separately
+// and do not change the number of arcs (except possibly superfinal arcs).
 //
 // template <class A, class B>
 // class ArcMapper {
@@ -540,12 +541,12 @@ class ArcMapFst : public ImplToFst<internal::ArcMapFstImpl<A, B, C>> {
             std::make_shared<Impl>(fst, mapper, ArcMapFstOptions())) {}
 
   // See Fst<>::Copy() for doc.
-  ArcMapFst(const ArcMapFst<A, B, C> &fst, bool safe = false)
+  ArcMapFst(const ArcMapFst &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
   // Get a copy of this ArcMapFst. See Fst<>::Copy() for further doc.
-  ArcMapFst<A, B, C> *Copy(bool safe = false) const override {
-    return new ArcMapFst<A, B, C>(*this, safe);
+  ArcMapFst *Copy(bool safe = false) const override {
+    return new ArcMapFst(*this, safe);
   }
 
   inline void InitStateIterator(StateIteratorData<B> *data) const override;
@@ -632,6 +633,26 @@ template <class A, class B, class C>
 inline void ArcMapFst<A, B, C>::InitStateIterator(
     StateIteratorData<B> *data) const {
   data->base = new StateIterator<ArcMapFst<A, B, C>>(*this);
+}
+
+// Constructs and returns an ArcMapFst.  This allows constructing ArcMapFsts
+// without specifying all the types. The template argument is typically
+// not specified, so a call looks like: MakeArcMapFst(fst, Mapper(...)).
+template <class ArcMapper>
+ArcMapFst<typename ArcMapper::FromArc, typename ArcMapper::ToArc, ArcMapper>
+MakeArcMapFst(const Fst<typename ArcMapper::FromArc> &fst,
+              const ArcMapper &mapper) {
+  return ArcMapFst<typename ArcMapper::FromArc, typename ArcMapper::ToArc,
+                   ArcMapper>(fst, mapper);
+}
+
+// Constructs and returns an ArcMapFst.  As above, but using the
+// ArcMapFst(..., ArcMapper *) constructor.
+template <class ArcMapper>
+ArcMapFst<typename ArcMapper::FromArc, typename ArcMapper::ToArc, ArcMapper>
+MakeArcMapFst(const Fst<typename ArcMapper::FromArc> &fst, ArcMapper *mapper) {
+  return ArcMapFst<typename ArcMapper::FromArc, typename ArcMapper::ToArc,
+                   ArcMapper>(fst, mapper);
 }
 
 // Utility Mappers.
@@ -877,7 +898,7 @@ class FromGallicMapper {
       return A(arc.ilabel, 0, AW::Zero(), kNoStateId);
     }
     Label l = kNoLabel;
-    AW weight;
+    AW weight = AW::Zero();
     if (!Extract(arc.weight, &weight, &l) || arc.ilabel != arc.olabel) {
       FSTERROR() << "FromGallicMapper: Unrepresentable weight: " << arc.weight
                  << " for arc with ilabel = " << arc.ilabel

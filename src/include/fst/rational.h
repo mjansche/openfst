@@ -11,10 +11,11 @@
 #include <string>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/mutable-fst.h>
 #include <fst/replace.h>
 #include <fst/test-properties.h>
-
 
 namespace fst {
 
@@ -225,7 +226,8 @@ class RationalFstImpl : public FstImpl<A> {
   ReplaceFst<Arc> *Replace() const {
     if (!replace_) {
       fst_tuples_[0].second = rfst_.Copy();
-      replace_.reset(new ReplaceFst<Arc>(fst_tuples_, replace_options_));
+      replace_ =
+          fst::make_unique<ReplaceFst<Arc>>(fst_tuples_, replace_options_);
     }
     return replace_.get();
   }
@@ -277,7 +279,7 @@ class RationalFst : public ImplToFst<internal::RationalFstImpl<A>> {
       : ImplToFst<Impl>(std::make_shared<Impl>(opts)) {}
 
   // See Fst<>::Copy() for doc.
-  RationalFst(const RationalFst<Arc> &fst, bool safe = false)
+  RationalFst(const RationalFst &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
  private:

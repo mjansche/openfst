@@ -157,7 +157,6 @@ am__nobase_include_HEADERS_DIST = fst/accumulator.h fst/add-on.h \
 	fst/verify.h fst/visit.h fst/weight.h \
 	fst/extensions/compress/compress.h \
 	fst/extensions/compress/compressscript.h \
-	fst/extensions/compress/gzfile.h \
 	fst/extensions/compress/elias.h \
 	fst/extensions/far/compile-strings.h \
 	fst/extensions/far/create.h fst/extensions/far/equal.h \
@@ -205,8 +204,7 @@ am__nobase_include_HEADERS_DIST = fst/accumulator.h fst/add-on.h \
 	fst/script/print-impl.h fst/script/print.h \
 	fst/script/project.h fst/script/prune.h fst/script/push.h \
 	fst/script/randequivalent.h fst/script/randgen.h \
-	fst/script/register.h fst/script/relabel.h \
-	fst/script/replace.h fst/script/reverse.h \
+	fst/script/relabel.h fst/script/replace.h fst/script/reverse.h \
 	fst/script/reweight.h fst/script/rmepsilon.h \
 	fst/script/script-impl.h fst/script/shortest-distance.h \
 	fst/script/shortest-path.h fst/script/stateiterator-class.h \
@@ -216,7 +214,7 @@ am__nobase_include_HEADERS_DIST = fst/accumulator.h fst/add-on.h \
 	fst/script/verify.h fst/extensions/special/phi-fst.h \
 	fst/extensions/special/rho-fst.h \
 	fst/extensions/special/sigma-fst.h fst/test/algo_test.h \
-	fst/test/fst_test.h fst/test/rand-fst.h \
+	fst/test/compactors.h fst/test/fst_test.h fst/test/rand-fst.h \
 	fst/test/weight-tester.h
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -405,8 +403,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 @HAVE_COMPRESS_TRUE@compress_include_headers = fst/extensions/compress/compress.h \
-@HAVE_COMPRESS_TRUE@fst/extensions/compress/compressscript.h fst/extensions/compress/gzfile.h \
-@HAVE_COMPRESS_TRUE@fst/extensions/compress/elias.h
+@HAVE_COMPRESS_TRUE@fst/extensions/compress/compressscript.h fst/extensions/compress/elias.h
 
 @HAVE_FAR_TRUE@far_include_headers = fst/extensions/far/compile-strings.h \
 @HAVE_FAR_TRUE@fst/extensions/far/create.h fst/extensions/far/equal.h \
@@ -479,16 +476,15 @@ fst/script/intersect.h fst/script/invert.h fst/script/isomorphic.h \
 fst/script/map.h fst/script/minimize.h fst/script/print-impl.h \
 fst/script/print.h fst/script/project.h fst/script/prune.h \
 fst/script/push.h fst/script/randequivalent.h fst/script/randgen.h \
-fst/script/register.h fst/script/relabel.h fst/script/replace.h \
-fst/script/reverse.h fst/script/reweight.h fst/script/rmepsilon.h \
-fst/script/script-impl.h fst/script/shortest-distance.h \
-fst/script/shortest-path.h fst/script/stateiterator-class.h \
-fst/script/synchronize.h fst/script/text-io.h fst/script/topsort.h \
-fst/script/union.h fst/script/weight-class.h fst/script/fstscript-decl.h \
-fst/script/verify.h
+fst/script/relabel.h fst/script/replace.h fst/script/reverse.h \
+fst/script/reweight.h fst/script/rmepsilon.h fst/script/script-impl.h \
+fst/script/shortest-distance.h fst/script/shortest-path.h \
+fst/script/stateiterator-class.h fst/script/synchronize.h \
+fst/script/text-io.h fst/script/topsort.h fst/script/union.h \
+fst/script/weight-class.h fst/script/fstscript-decl.h fst/script/verify.h
 
-test_include_headers = fst/test/algo_test.h fst/test/fst_test.h \
-fst/test/rand-fst.h fst/test/weight-tester.h
+test_include_headers = fst/test/algo_test.h fst/test/compactors.h \
+fst/test/fst_test.h fst/test/rand-fst.h fst/test/weight-tester.h
 
 nobase_include_HEADERS = fst/accumulator.h fst/add-on.h fst/arc-arena.h \
 fst/arc-map.h fst/arc.h fst/arcfilter.h fst/arcsort.h fst/bi-table.h \

@@ -5,9 +5,11 @@
 
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fst/flags.h>
+#include <fst/types.h>
 #include <fst/extensions/pdt/getters.h>
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
@@ -21,14 +23,14 @@ DECLARE_string(right_paren_prefix);
 
 namespace fst {
 namespace script {
+namespace {
 
-void Cleanup(std::vector<LabelFstClassPair> *pairs) {
-  for (const auto &pair : *pairs) {
-    delete pair.second;
-  }
+void Cleanup(std::vector<std::pair<int64, const FstClass *>> *pairs) {
+  for (const auto &pair : *pairs) delete pair.second;
   pairs->clear();
 }
 
+}  // namespace
 }  // namespace script
 }  // namespace fst
 
@@ -65,7 +67,7 @@ int pdtreplace_main(int argc, char **argv) {
     return 1;
   }
 
-  std::vector<s::LabelFstClassPair> pairs;
+  std::vector<std::pair<int64, const FstClass *>> pairs;
   // Note that if the root label is beyond the range of the underlying FST's
   // labels, truncation will occur.
   const auto root = atoll(argv[2]);
@@ -84,7 +86,7 @@ int pdtreplace_main(int argc, char **argv) {
   }
 
   VectorFstClass ofst(ifst->ArcType());
-  std::vector<s::LabelPair> parens;
+  std::vector<std::pair<int64, int64>> parens;
   s::PdtReplace(pairs, &ofst, &parens, root, parser_type,
                 FLAGS_start_paren_labels, FLAGS_left_paren_prefix,
                 FLAGS_right_paren_prefix);

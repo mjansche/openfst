@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <vector>
 
+#include <fst/types.h>
+
+#include <fst/expanded-fst.h>
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
 
@@ -77,6 +80,13 @@ void Concat(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
   }
 }
 
+// Computes the concatentation of two FSTs. This version modifies its
+// RationalFst input (in first position).
+template <class Arc>
+void Concat(RationalFst<Arc> *fst1, const Fst<Arc> &fst2) {
+  fst1->GetMutableImpl()->AddConcat(fst2, true);
+}
+
 // Computes the concatentation of two FSTs.  This version modifies its
 // MutableFst argument (in second position).
 //
@@ -134,11 +144,12 @@ void Concat(const Fst<Arc> &fst1, MutableFst<Arc> *fst2) {
   }
 }
 
-// Computes the concatentation of two FSTs. This version modifies its
-// RationalFst input (in first position).
+// Same as the above but can handle arbitrarily many left-hand-side FSTs,
+// preallocating the states.
 template <class Arc>
-void Concat(RationalFst<Arc> *fst1, const Fst<Arc> &fst2) {
-  fst1->GetMutableImpl()->AddConcat(fst2, true);
+void Concat(const std::vector<const Fst<Arc> *> &fsts1, MutableFst<Arc> *fst2) {
+  fst2->ReserveStates(CountStates(fsts1) + fst2->NumStates());
+  for (const auto *fst1 : fsts1) Concat(*fst1, fst2);
 }
 
 // Computes the concatentation of two FSTs. This version modifies its
@@ -181,12 +192,12 @@ class ConcatFst : public RationalFst<A> {
   }
 
   // See Fst<>::Copy() for doc.
-  ConcatFst(const ConcatFst<Arc> &fst, bool safe = false)
+  ConcatFst(const ConcatFst &fst, bool safe = false)
       : RationalFst<Arc>(fst, safe) {}
 
   // Get a copy of this ConcatFst. See Fst<>::Copy() for further doc.
-  ConcatFst<Arc> *Copy(bool safe = false) const override {
-    return new ConcatFst<Arc>(*this, safe);
+  ConcatFst *Copy(bool safe = false) const override {
+    return new ConcatFst(*this, safe);
   }
 
  private:

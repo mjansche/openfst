@@ -6,9 +6,11 @@
 
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fst/flags.h>
+#include <fst/types.h>
 #include <fst/script/getters.h>
 #include <fst/script/replace.h>
 
@@ -17,12 +19,18 @@ DECLARE_string(return_arc_labeling);
 DECLARE_int64(return_label);
 DECLARE_bool(epsilon_on_replace);
 
-void Cleanup(std::vector<fst::script::LabelFstClassPair> *pairs) {
-  for (const auto &pair : *pairs) {
-    delete pair.second;
-  }
+namespace fst {
+namespace script {
+namespace {
+
+void Cleanup(std::vector<std::pair<int64, const FstClass *>> *pairs) {
+  for (const auto &pair : *pairs) delete pair.second;
   pairs->clear();
 }
+
+}  // namespace
+}  // namespace script
+}  // namespace fst
 
 int fstreplace_main(int argc, char **argv) {
   namespace s = fst::script;
@@ -49,7 +57,7 @@ int fstreplace_main(int argc, char **argv) {
   auto *ifst = FstClass::Read(in_name);
   if (!ifst) return 1;
 
-  std::vector<s::LabelFstClassPair> pairs;
+  std::vector<std::pair<int64, const FstClass *>> pairs;
   // Note that if the root label is beyond the range of the underlying FST's
   // labels, truncation will occur.
   const auto root = atoll(argv[2]);
@@ -58,7 +66,7 @@ int fstreplace_main(int argc, char **argv) {
   for (auto i = 3; i < argc - 1; i += 2) {
     ifst = FstClass::Read(argv[i]);
     if (!ifst) {
-      Cleanup(&pairs);
+      s::Cleanup(&pairs);
       return 1;
     }
     // Note that if the root label is beyond the range of the underlying FST's
@@ -85,7 +93,7 @@ int fstreplace_main(int argc, char **argv) {
 
   VectorFstClass ofst(ifst->ArcType());
   s::Replace(pairs, &ofst, opts);
-  Cleanup(&pairs);
+  s::Cleanup(&pairs);
 
   return !ofst.Write(out_name);
 }

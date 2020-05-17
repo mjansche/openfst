@@ -11,30 +11,29 @@
 #include <utility>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/log.h>
-#include <fst/compose.h>  // for ComposeOptions
-#include <fst/util.h>
-
-#include <fst/script/arg-packs.h>
-#include <fst/script/fst-class.h>
-#include <fst/script/shortest-path.h>
-
 #include <fst/extensions/mpdt/compose.h>
 #include <fst/extensions/mpdt/expand.h>
 #include <fst/extensions/mpdt/info.h>
 #include <fst/extensions/mpdt/reverse.h>
-
 #include <fst/extensions/pdt/pdtscript.h>  // For LabelClassPair,
-                                               // FstClassPair, and to detect
-                                               // any collisions.
+#include <fst/compose.h>               // for ComposeOptions
+#include <fst/util.h>
+#include <fst/script/arg-packs.h>
+#include <fst/script/fst-class.h>
+#include <fst/script/shortest-path.h>
+// FstClassPair, and to detect
+// any collisions.
 
 namespace fst {
 namespace script {
 
 using MPdtComposeArgs =
     std::tuple<const FstClass &, const FstClass &,
-               const std::vector<LabelPair> &, const std::vector<int64> &,
-               MutableFstClass *, const MPdtComposeOptions &, bool>;
+               const std::vector<std::pair<int64, int64>> &,
+               const std::vector<int64> &, MutableFstClass *,
+               const MPdtComposeOptions &, bool>;
 
 template <class Arc>
 void MPdtCompose(MPdtComposeArgs *args) {
@@ -59,12 +58,12 @@ void MPdtCompose(MPdtComposeArgs *args) {
 }
 
 void MPdtCompose(const FstClass &ifst1, const FstClass &ifst2,
-                 const std::vector<LabelPair> &parens,
+                 const std::vector<std::pair<int64, int64>> &parens,
                  const std::vector<int64> &assignments, MutableFstClass *ofst,
                  const MPdtComposeOptions &copts, bool left_pdt);
 
 using MPdtExpandArgs =
-    std::tuple<const FstClass &, const std::vector<LabelPair> &,
+    std::tuple<const FstClass &, const std::vector<std::pair<int64, int64>> &,
                const std::vector<int64> &, MutableFstClass *,
                const MPdtExpandOptions &>;
 
@@ -88,12 +87,13 @@ void MPdtExpand(MPdtExpandArgs *args) {
                            std::get<4>(*args).keep_parentheses));
 }
 
-void MPdtExpand(const FstClass &ifst, const std::vector<LabelPair> &parens,
+void MPdtExpand(const FstClass &ifst,
+                const std::vector<std::pair<int64, int64>> &parens,
                 const std::vector<int64> &assignments, MutableFstClass *ofst,
                 const MPdtExpandOptions &opts);
 
 using MPdtReverseArgs =
-    std::tuple<const FstClass &, const std::vector<LabelPair> &,
+    std::tuple<const FstClass &, const std::vector<std::pair<int64, int64>> &,
                std::vector<int64> *, MutableFstClass *>;
 
 template <class Arc>
@@ -117,11 +117,12 @@ void MPdtReverse(MPdtReverseArgs *args) {
             std::get<2>(*args)->begin());
 }
 
-void MPdtReverse(const FstClass &ifst, const std::vector<LabelPair> &parens,
+void MPdtReverse(const FstClass &ifst,
+                 const std::vector<std::pair<int64, int64>> &parens,
                  std::vector<int64> *assignments, MutableFstClass *ofst);
 
 using PrintMPdtInfoArgs =
-    std::tuple<const FstClass &, const std::vector<LabelPair> &,
+    std::tuple<const FstClass &, const std::vector<std::pair<int64, int64>> &,
                const std::vector<int64> &>;
 
 template <class Arc>
@@ -142,15 +143,11 @@ void PrintMPdtInfo(PrintMPdtInfoArgs *args) {
   mpdtinfo.Print();
 }
 
-void PrintMPdtInfo(const FstClass &ifst, const std::vector<LabelPair> &parens,
+void PrintMPdtInfo(const FstClass &ifst,
+                   const std::vector<std::pair<int64, int64>> &parens,
                    const std::vector<int64> &assignments);
 
 }  // namespace script
 }  // namespace fst
 
-#define REGISTER_FST_MPDT_OPERATIONS(ArcType)                    \
-  REGISTER_FST_OPERATION(MPdtCompose, ArcType, MPdtComposeArgs); \
-  REGISTER_FST_OPERATION(MPdtExpand, ArcType, MPdtExpandArgs);   \
-  REGISTER_FST_OPERATION(MPdtReverse, ArcType, MPdtReverseArgs); \
-  REGISTER_FST_OPERATION(PrintMPdtInfo, ArcType, PrintMPdtInfoArgs)
 #endif  // FST_EXTENSIONS_MPDT_MPDTSCRIPT_H_

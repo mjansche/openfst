@@ -1,5 +1,22 @@
 OpenFst: Release 1.7
-   * Overloads Arc templatse with default weight argument (1.7.3)
+   * Property testing is now thread-safe (1.7.7)
+   * Modernizes random generation (1.7.7)
+   * Adds MakeArcMapFst (1.7.6)
+   * Adds RealWeight and Real64Weight (1.7.6)
+   * Adds a new, idiomatic SymbolTable iterator interface (1.7.6)
+   * Improves symbol table lifetime management in pywrapfst (1.7.6)
+   * Improves the design of the FST class hierarchy in pywrapfst (1.7.6)
+   * Removes unnecessary template parameters in constructors (1.7.5)
+   * Converts RmEpsilonFstOptions from class to struct (1.7.5)
+   * Eliminates redundant checks in Minimize (1.7.5)
+   * CompactFst is now templated on Compactor rather than ArcCompactor (1.7.4)
+   * Removes harmful constexpr specifications in the FAR extension (1.7.4)
+   * Improved script API support for EncodeMapper (1.7.4)
+   * New header format for the EncodeMapper (1.7.4)
+   * Many cleanups to the n-gram extension (1.7.4)
+   * Improved C++17 compatibility shims (1.7.4)
+   * Overloads Arc constructors with default weight argument (1.7.3)
+   * Fixes RmEpsilon and Union property checking bugs (1.7.3)
    * Makes Isomorphic more robust to nondeterminism (1.7.3)
    * Adds default weight argument to SetFinal (1.7.3)
    * Cleans up low-level logging (1.7.3)
@@ -25,7 +42,7 @@ OpenFst: Release 1.6
    * Fixed PROGRAM_FLAGS documentation string in binaries (1.6.8)
    * Fixed handling of symbol tables in EpsNormalize (1.6.8)
    * Fixed error reporting when FST arc type unknown (1.6.8)
-   * The `first_path` option to ShortestPath is now optimal for A* (1.6.7)
+   * The first_path option to ShortestPath is now optimal for A* (1.6.7)
    * Renames SymbolTable::kNoSymbol to kNoSymbol (1.6.7)
    * Exposes PowerMapper to the scripting API (1.6.7)
    * Fixes linking of the special SOs (1.6.7)
@@ -86,8 +103,8 @@ OpenFst: Release 1.5
      pointers where possible, and fixed reference-counting bugs (1.5.1)
    * When calling DeleteStates on a MutableFst with a shared impl, the impl
      is set to a new empty impl rather than copying and deleting (1.5.1)
-   * Prepended `Pdt` to the Expand libraries and classes in the PDT
-     extension, and prepended `MPdt` to the Expand libraries and classes
+   * Prepended Pdt to the Expand libraries and classes in the PDT
+     extension, and prepended MPdt to the Expand libraries and classes
      in the MPDT extension, so that both can be used in the same compilation
      unit (1.5.1)
    * Added option to PDT Replace for compiling a strongly-regular RTN into a

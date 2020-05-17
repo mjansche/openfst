@@ -10,10 +10,11 @@
 #include <memory>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/dfs-visit.h>
 #include <fst/mutable-fst.h>
 #include <fst/union-find.h>
-
 
 namespace fst {
 
@@ -194,10 +195,10 @@ inline void SccVisitor<Arc>::InitVisit(const Fst<Arc> &fst) {
   start_ = fst.Start();
   nstates_ = 0;
   nscc_ = 0;
-  dfnumber_.reset(new std::vector<StateId>());
-  lowlink_.reset(new std::vector<StateId>());
-  onstack_.reset(new std::vector<bool>());
-  scc_stack_.reset(new std::vector<StateId>());
+  dfnumber_ = fst::make_unique<std::vector<StateId>>();
+  lowlink_ = fst::make_unique<std::vector<StateId>>();
+  onstack_ = fst::make_unique<std::vector<bool>>();
+  scc_stack_ = fst::make_unique<std::vector<StateId>>();
 }
 
 template <class Arc>

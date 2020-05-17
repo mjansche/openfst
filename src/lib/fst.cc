@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include <fst/flags.h>
+#include <fst/types.h>
 #include <fst/log.h>
 #include <fst/matcher-fst.h>  // declarations of *_lookahead_fst_type
 
@@ -47,6 +48,7 @@ bool IsFstHeader(std::istream &strm, const std::string &) {
   int32 magic_number = 0;
   ReadType(strm, &magic_number);
   if (magic_number != kFstMagicNumber) {
+      LOG(WARNING) << "Magic number not matched. Got: " << magic_number;
       match = false;
   }
   strm.seekg(pos);
@@ -62,7 +64,8 @@ bool FstHeader::Read(std::istream &strm, const std::string &source,
   int32 magic_number = 0;
   ReadType(strm, &magic_number);
   if (magic_number != kFstMagicNumber) {
-      LOG(ERROR) << "FstHeader::Read: Bad FST header: " << source;
+      LOG(ERROR) << "FstHeader::Read: Bad FST header: " << source
+          << ". Magic number not matched. Got: " << magic_number;
       if (rewind) strm.seekg(pos);
       return false;
   }

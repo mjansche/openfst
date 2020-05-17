@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/product-weight.h>
 #include <fst/union-weight.h>
 #include <fst/weight.h>
@@ -54,7 +56,7 @@ class StringWeight {
   StringWeight() {}
 
   template <typename Iterator>
-  StringWeight(const Iterator &begin, const Iterator &end) {
+  StringWeight(const Iterator begin, const Iterator end) {
     for (auto iter = begin; iter != end; ++iter) PushBack(*iter);
   }
 

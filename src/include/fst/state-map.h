@@ -12,12 +12,12 @@
 #include <string>
 #include <utility>
 
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/arc-map.h>
 #include <fst/cache.h>
 #include <fst/mutable-fst.h>
-
 
 namespace fst {
 
@@ -26,31 +26,31 @@ namespace fst {
 //
 // class StateMapper {
 //  public:
-//   using FromArc = A;
-//   using ToArc = B;
+//   using FromArc = ...;
+//   using ToArc = ...;
 //
 //   // Typical constructor.
-//   StateMapper(const Fst<A> &fst);
+//   StateMapper(const Fst<FromArc> &fst);
 //
 //   // Required copy constructor that allows updating FST argument;
 //   // pass only if relevant and changed.
-//   StateMapper(const StateMapper &mapper, const Fst<A> *fst = 0);
+//   StateMapper(const StateMapper &mapper, const Fst<FromArc> *fst = 0);
 //
 //   // Specifies initial state of result.
-//   B::StateId Start() const;
+//   ToArc::StateId Start() const;
 //   // Specifies state's final weight in result.
-//   B::Weight Final(B::StateId state) const;
+//   ToArc::Weight Final(ToArc::StateId state) const;
 //
 //   // These methods iterate through a state's arcs in result.
 //
 //   // Specifies state to iterate over.
-//   void SetState(B::StateId state);
+//   void SetState(ToArc::StateId state);
 //
 //   // End of arcs?
 //   bool Done() const;
 //
 //   // Current arc.
-//   const B &Value() const;
+//   const ToArc &Value() const;
 //
 //   // Advances to next arc (when !Done)
 //   void Next();
@@ -345,12 +345,12 @@ class StateMapFst : public ImplToFst<internal::StateMapFstImpl<A, B, C>> {
             std::make_shared<Impl>(fst, mapper, StateMapFstOptions())) {}
 
   // See Fst<>::Copy() for doc.
-  StateMapFst(const StateMapFst<A, B, C> &fst, bool safe = false)
+  StateMapFst(const StateMapFst &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
   // Get a copy of this StateMapFst. See Fst<>::Copy() for further doc.
-  StateMapFst<A, B, C> *Copy(bool safe = false) const override {
-    return new StateMapFst<A, B, C>(*this, safe);
+  StateMapFst *Copy(bool safe = false) const override {
+    return new StateMapFst(*this, safe);
   }
 
   void InitStateIterator(StateIteratorData<B> *data) const override {
@@ -406,7 +406,7 @@ class IdentityStateMapper {
   Weight Final(StateId state) const { return fst_.Final(state); }
 
   void SetState(StateId state) {
-    aiter_.reset(new ArcIterator<Fst<Arc>>(fst_, state));
+    aiter_ = fst::make_unique<ArcIterator<Fst<Arc>>>(fst_, state);
   }
 
   bool Done() const { return aiter_->Done(); }

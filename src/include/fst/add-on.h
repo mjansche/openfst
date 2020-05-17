@@ -14,10 +14,10 @@
 #include <string>
 #include <utility>
 
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/fst.h>
-
 
 namespace fst {
 
@@ -54,20 +54,18 @@ class AddOnPair {
 
   std::shared_ptr<A2> SharedSecond() const { return a2_; }
 
-  static AddOnPair<A1, A2> *Read(std::istream &istrm,
-                                 const FstReadOptions &opts) {
-    A1 *a1 = nullptr;
+  static AddOnPair *Read(std::istream &istrm, const FstReadOptions &opts) {
     bool have_addon1 = false;
     ReadType(istrm, &have_addon1);
-    if (have_addon1) a1 = A1::Read(istrm, opts);
+    std::unique_ptr<A1> a1;
+    if (have_addon1) a1 = fst::WrapUnique(A1::Read(istrm, opts));
 
-    A2 *a2 = nullptr;
     bool have_addon2 = false;
     ReadType(istrm, &have_addon2);
-    if (have_addon2) a2 = A2::Read(istrm, opts);
+    std::unique_ptr<A1> a2;
+    if (have_addon2) a2 = fst::WrapUnique(A2::Read(istrm, opts));
 
-    return new AddOnPair<A1, A2>(std::shared_ptr<A1>(a1),
-                                 std::shared_ptr<A2>(a2));
+    return new AddOnPair(std::move(a1), std::move(a2));
   }
 
   bool Write(std::ostream &ostrm, const FstWriteOptions &opts) const {
@@ -96,6 +94,7 @@ namespace internal {
 template <class FST, class T>
 class AddOnImpl : public FstImpl<typename FST::Arc> {
  public:
+  using FstType = FST;
   using Arc = typename FST::Arc;
   using Label = typename Arc::Label;
   using StateId = typename Arc::StateId;
@@ -110,7 +109,7 @@ class AddOnImpl : public FstImpl<typename FST::Arc> {
   // We make a thread-safe copy of the FST by default since an FST
   // implementation is expected to not share mutable data between objects.
   AddOnImpl(const FST &fst, const std::string &type,
-            std::shared_ptr<T> t = std::shared_ptr<T>())
+            std::shared_ptr<T> t = nullptr)
       : fst_(fst, true), t_(std::move(t)) {
     SetType(type);
     SetProperties(fst_.Properties(kFstProperties, false));
@@ -121,7 +120,7 @@ class AddOnImpl : public FstImpl<typename FST::Arc> {
   // Conversion from const Fst<Arc> & to F always copies the underlying
   // implementation.
   AddOnImpl(const Fst<Arc> &fst, const std::string &type,
-            std::shared_ptr<T> t = std::shared_ptr<T>())
+            std::shared_ptr<T> t = nullptr)
       : fst_(fst), t_(std::move(t)) {
     SetType(type);
     SetProperties(fst_.Properties(kFstProperties, false));
@@ -131,8 +130,7 @@ class AddOnImpl : public FstImpl<typename FST::Arc> {
 
   // We make a thread-safe copy of the FST by default since an FST
   // implementation is expected to not share mutable data between objects.
-  AddOnImpl(const AddOnImpl<FST, T> &impl)
-      : fst_(impl.fst_, true), t_(impl.t_) {
+  AddOnImpl(const AddOnImpl &impl) : fst_(impl.fst_, true), t_(impl.t_) {
     SetType(impl.Type());
     SetProperties(fst_.Properties(kCopyProperties, false));
     SetInputSymbols(fst_.InputSymbols());
@@ -153,16 +151,14 @@ class AddOnImpl : public FstImpl<typename FST::Arc> {
 
   size_t NumStates() const { return fst_.NumStates(); }
 
-  static AddOnImpl<FST, T> *Read(std::istream &strm,
-                                 const FstReadOptions &opts) {
+  static AddOnImpl *Read(std::istream &strm, const FstReadOptions &opts) {
     FstReadOptions nopts(opts);
     FstHeader hdr;
     if (!nopts.header) {
       hdr.Read(strm, nopts.source);
       nopts.header = &hdr;
     }
-    std::unique_ptr<AddOnImpl<FST, T>> impl(
-        new AddOnImpl<FST, T>(nopts.header->FstType()));
+    std::unique_ptr<AddOnImpl> impl(new AddOnImpl(nopts.header->FstType()));
     if (!impl->ReadHeader(strm, nopts, kMinFileVersion, &hdr)) return nullptr;
     impl.reset();
     int32 magic_number = 0;
@@ -182,7 +178,7 @@ class AddOnImpl : public FstImpl<typename FST::Arc> {
       t = std::shared_ptr<T>(T::Read(strm, fopts));
       if (!t) return nullptr;
     }
-    return new AddOnImpl<FST, T>(*fst, nopts.header->FstType(), t);
+    return new AddOnImpl(*fst, nopts.header->FstType(), t);
   }
 
   bool Write(std::ostream &strm, const FstWriteOptions &opts) const {

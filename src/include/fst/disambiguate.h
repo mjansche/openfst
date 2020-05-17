@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/arcsort.h>
 #include <fst/compose.h>
 #include <fst/connect.h>
@@ -23,7 +25,6 @@
 #include <fst/state-table.h>
 #include <fst/union-find.h>
 #include <fst/verify.h>
-
 
 namespace fst {
 
@@ -406,7 +407,7 @@ void Disambiguator<Arc>::PreDisambiguate(const ExpandedFst<Arc> &ifst,
 template <class Arc>
 void Disambiguator<Arc>::FindAmbiguities(const ExpandedFst<Arc> &fst) {
   if (fst.Start() == kNoStateId) return;
-  candidates_.reset(new ArcIdMap(ArcIdCompare(head_)));
+  candidates_ = fst::make_unique<ArcIdMap>(ArcIdCompare(head_));
   const auto start_pr = std::make_pair(fst.Start(), fst.Start());
   coreachable_.insert(start_pr);
   queue_.push_back(start_pr);
@@ -447,7 +448,8 @@ void Disambiguator<Arc>::FindAmbiguousPairs(const ExpandedFst<Arc> &fst,
           if (spr.first != spr.second &&
               head_[spr.first] == head_[spr.second]) {
             if (!merge_) {
-              merge_.reset(new UnionFind<StateId>(fst.NumStates(), kNoStateId));
+              merge_ = fst::make_unique<UnionFind<StateId>>(fst.NumStates(),
+                                                             kNoStateId);
               merge_->MakeAllSet(fst.NumStates());
             }
             merge_->Union(spr.first, spr.second);

@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
 
@@ -60,8 +62,8 @@ void Closure(RationalFst<Arc> *fst, ClosureType closure_type) {
 struct ClosureFstOptions : RationalFstOptions {
   ClosureType type;
 
-  ClosureFstOptions(const RationalFstOptions &opts,
-                    ClosureType type = CLOSURE_STAR)
+  explicit ClosureFstOptions(const RationalFstOptions &opts,
+                             ClosureType type = CLOSURE_STAR)
       : RationalFstOptions(opts), type(type) {}
 
   explicit ClosureFstOptions(ClosureType type = CLOSURE_STAR) : type(type) {}
@@ -95,12 +97,12 @@ class ClosureFst : public RationalFst<A> {
   }
 
   // See Fst<>::Copy() for doc.
-  ClosureFst(const ClosureFst<Arc> &fst, bool safe = false)
+  ClosureFst(const ClosureFst &fst, bool safe = false)
       : RationalFst<A>(fst, safe) {}
 
   // Gets a copy of this ClosureFst. See Fst<>::Copy() for further doc.
-  ClosureFst<A> *Copy(bool safe = false) const override {
-    return new ClosureFst<A>(*this, safe);
+  ClosureFst *Copy(bool safe = false) const override {
+    return new ClosureFst(*this, safe);
   }
 
  private:

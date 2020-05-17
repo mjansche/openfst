@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/arc-map.h>
@@ -23,7 +24,6 @@
 #include <fst/filter-state.h>
 #include <fst/prune.h>
 #include <fst/test-properties.h>
-
 
 namespace fst {
 
@@ -461,7 +461,7 @@ class DeterminizeFstImplBase : public CacheImpl<Arc> {
     SetOutputSymbols(fst.OutputSymbols());
   }
 
-  DeterminizeFstImplBase(const DeterminizeFstImplBase<Arc> &impl)
+  DeterminizeFstImplBase(const DeterminizeFstImplBase &impl)
       : CacheImpl<Arc>(impl), fst_(impl.fst_->Copy(true)) {
     SetType("determinize");
     SetProperties(impl.Properties(), kCopyProperties);
@@ -469,7 +469,7 @@ class DeterminizeFstImplBase : public CacheImpl<Arc> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  virtual DeterminizeFstImplBase<Arc> *Copy() const = 0;
+  virtual DeterminizeFstImplBase *Copy() const = 0;
 
   StateId Start() {
     if (!HasStart()) {
@@ -556,8 +556,7 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<Arc> {
     if (out_dist_) out_dist_->clear();
   }
 
-  DeterminizeFsaImpl(
-      const DeterminizeFsaImpl<Arc, CommonDivisor, Filter, StateTable> &impl)
+  DeterminizeFsaImpl(const DeterminizeFsaImpl &impl)
       : DeterminizeFstImplBase<Arc>(impl),
         delta_(impl.delta_),
         in_dist_(nullptr),
@@ -570,10 +569,8 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<Arc> {
     }
   }
 
-  DeterminizeFsaImpl<Arc, CommonDivisor, Filter, StateTable> *Copy()
-      const override {
-    return new DeterminizeFsaImpl<Arc, CommonDivisor, Filter, StateTable>(
-        *this);
+  DeterminizeFsaImpl *Copy() const override {
+    return new DeterminizeFsaImpl(*this);
   }
 
   uint64 Properties() const override { return Properties(kFstProperties); }
@@ -714,11 +711,14 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<Arc> {
   const std::vector<Weight> *in_dist_;  // Distance to final NFA states.
   std::vector<Weight> *out_dist_;       // Distance to final DFA states.
 
-  // FIXME(kbg): Ought to be static const?
-  CommonDivisor common_divisor_;
+  static const CommonDivisor common_divisor_;
   std::unique_ptr<Filter> filter_;
   std::unique_ptr<StateTable> state_table_;
 };
+
+template <class Arc, class CommonDivisor, class Filter, class StateTable>
+const CommonDivisor DeterminizeFsaImpl<Arc, CommonDivisor, Filter,
+                                       StateTable>::common_divisor_{};
 
 // Implementation of delayed determinization for transducers. Transducer
 // determinization is implemented by mapping the input to the Gallic semiring as
@@ -766,8 +766,7 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<Arc> {
     Init(GetFst(), opts.filter);
   }
 
-  DeterminizeFstImpl(
-      const DeterminizeFstImpl<Arc, G, CommonDivisor, Filter, StateTable> &impl)
+  DeterminizeFstImpl(const DeterminizeFstImpl &impl)
       : DeterminizeFstImplBase<Arc>(impl),
         delta_(impl.delta_),
         subsequential_label_(impl.subsequential_label_),
@@ -775,10 +774,8 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<Arc> {
     Init(GetFst(), nullptr);
   }
 
-  DeterminizeFstImpl<Arc, G, CommonDivisor, Filter, StateTable> *Copy()
-      const override {
-    return new DeterminizeFstImpl<Arc, G, CommonDivisor, Filter, StateTable>(
-        *this);
+  DeterminizeFstImpl *Copy() const override {
+    return new DeterminizeFstImpl(*this);
   }
 
   uint64 Properties() const override { return Properties(kFstProperties); }
@@ -864,7 +861,7 @@ class DeterminizeFst : public ImplToFst<internal::DeterminizeFstImplBase<A>> {
       : ImplToFst<Impl>(CreateImpl(fst)) {}
 
   template <class CommonDivisor, class Filter, class StateTable>
-  DeterminizeFst(
+  explicit DeterminizeFst(
       const Fst<Arc> &fst,
       const DeterminizeFstOptions<Arc, CommonDivisor, Filter, StateTable>
           &opts =
@@ -893,13 +890,13 @@ class DeterminizeFst : public ImplToFst<internal::DeterminizeFstImplBase<A>> {
   }
 
   // See Fst<>::Copy() for doc.
-  DeterminizeFst(const DeterminizeFst<Arc> &fst, bool safe = false)
+  DeterminizeFst(const DeterminizeFst &fst, bool safe = false)
       : ImplToFst<Impl>(safe ? std::shared_ptr<Impl>(fst.GetImpl()->Copy())
                              : fst.GetSharedImpl()) {}
 
   // Get a copy of this DeterminizeFst. See Fst<>::Copy() for further doc.
-  DeterminizeFst<Arc> *Copy(bool safe = false) const override {
-    return new DeterminizeFst<Arc>(*this, safe);
+  DeterminizeFst *Copy(bool safe = false) const override {
+    return new DeterminizeFst(*this, safe);
   }
 
   inline void InitStateIterator(StateIteratorData<Arc> *data) const override;
@@ -977,7 +974,8 @@ void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst, F *filter) {
       subsequential_label_, increment_subsequential_label_,
       increment_subsequential_label_);
   const FactorWeightFst<ToArc, FactorIterator> factored_fst(det_fsa, fopts);
-  from_fst_.reset(new FromFst(factored_fst, FromMapper(subsequential_label_)));
+  from_fst_ = fst::make_unique<FromFst>(factored_fst,
+                                         FromMapper(subsequential_label_));
 }
 
 }  // namespace internal

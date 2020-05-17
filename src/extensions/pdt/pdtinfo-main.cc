@@ -7,9 +7,11 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fst/flags.h>
+#include <fst/types.h>
 #include <fst/log.h>
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
@@ -43,7 +45,7 @@ int pdtinfo_main(int argc, char **argv) {
     return 1;
   }
 
-  std::vector<s::LabelPair> parens;
+  std::vector<std::pair<int64, int64>> parens;
   if (!ReadLabelPairs(FLAGS_pdt_parentheses, &parens, false)) return 1;
 
   s::PrintPdtInfo(*ifst, parens);

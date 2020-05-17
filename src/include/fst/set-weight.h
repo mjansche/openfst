@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/union-weight.h>
 #include <fst/weight.h>
 
@@ -57,7 +59,7 @@ class SetWeight {
 
   // Input should be positive, sorted and unique.
   template <typename Iterator>
-  SetWeight(const Iterator &begin, const Iterator &end) {
+  SetWeight(const Iterator begin, const Iterator end) {
     for (auto iter = begin; iter != end; ++iter) PushBack(*iter);
   }
 

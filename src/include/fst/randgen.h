@@ -6,15 +6,18 @@
 #ifndef FST_RANDGEN_H_
 #define FST_RANDGEN_H_
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <random>
 #include <utility>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/accumulator.h>
@@ -27,6 +30,8 @@
 #include <fst/properties.h>
 #include <fst/util.h>
 #include <fst/weight.h>
+
+#include <vector>
 
 namespace fst {
 
@@ -50,10 +55,8 @@ class UniformArcSelector {
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
 
-  // Constructs a selector with a non-deterministic seed.
-  UniformArcSelector() : rand_(std::random_device()()) {}
-  // Constructs a selector with a given seed.
-  explicit UniformArcSelector(uint64 seed) : rand_(seed) {}
+  explicit UniformArcSelector(uint64 seed = std::random_device()())
+      : rand_(seed) {}
 
   size_t operator()(const Fst<Arc> &fst, StateId s) const {
     const auto n = fst.NumArcs(s) + (fst.Final(s) != Weight::Zero());
@@ -78,6 +81,7 @@ class LogProbArcSelector {
 
   // Constructs a selector with a non-deterministic seed.
   LogProbArcSelector() : seed_(std::random_device()()), rand_(seed_) {}
+
   // Constructs a selector with a given seed.
   explicit LogProbArcSelector(uint64 seed) : seed_(seed), rand_(seed) {}
 
@@ -256,19 +260,21 @@ class ArcSampler {
 template <class Result, class RNG>
 void OneMultinomialSample(const std::vector<double> &probs,
                           size_t num_to_sample, Result *result, RNG *rng) {
-  // Left-over probability mass.
-  double norm = 0;
-  for (double p : probs) norm += p;
+  using distribution = std::binomial_distribution<size_t>;
+  // Left-over probability mass.  Keep an array of the partial sums because
+  // keeping a scalar and modifying norm -= probs[i] in the loop will result
+  // in round-off error and can have probs[i] > norm.
+  std::vector<double> norm(probs.size());
+  std::partial_sum(probs.rbegin(), probs.rend(), norm.rbegin());
   // Left-over number of samples needed.
   for (size_t i = 0; i < probs.size(); ++i) {
-    size_t num_sampled = 0;
+    distribution::result_type num_sampled = 0;
     if (probs[i] > 0) {
-      std::binomial_distribution<> d(num_to_sample, probs[i] / norm);
+      distribution d(num_to_sample, probs[i] / norm[i]);
       num_sampled = d(*rng);
     }
     if (num_sampled != 0) (*result)[i] = num_sampled;
-    norm -= probs[i];
-    num_to_sample -= num_sampled;
+    num_to_sample -= std::min(num_sampled, num_to_sample);
   }
 }
 
@@ -298,10 +304,10 @@ class ArcSampler<Arc, FastLogProbArcSelector<Arc>> {
         selector_(sampler.selector_),
         max_length_(sampler.max_length_) {
     if (fst) {
-      accumulator_.reset(new Accumulator());
+      accumulator_ = fst::make_unique<Accumulator>();
       accumulator_->Init(*fst);
     } else {  // Shallow copy.
-      accumulator_.reset(new Accumulator(*sampler.accumulator_));
+      accumulator_ = fst::make_unique<Accumulator>(*sampler.accumulator_);
     }
   }
 
@@ -577,12 +583,12 @@ class RandGenFst
       : ImplToFst<Impl>(std::make_shared<Impl>(fst, opts)) {}
 
   // See Fst<>::Copy() for doc.
-  RandGenFst(const RandGenFst<FromArc, ToArc, Sampler> &fst, bool safe = false)
+  RandGenFst(const RandGenFst &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
   // Get a copy of this RandGenFst. See Fst<>::Copy() for further doc.
-  RandGenFst<FromArc, ToArc, Sampler> *Copy(bool safe = false) const override {
-    return new RandGenFst<FromArc, ToArc, Sampler>(*this, safe);
+  RandGenFst *Copy(bool safe = false) const override {
+    return new RandGenFst(*this, safe);
   }
 
   inline void InitStateIterator(StateIteratorData<ToArc> *data) const override;
@@ -743,8 +749,9 @@ void RandGen(const Fst<FromArc> &ifst, MutableFst<ToArc> *ofst,
 // Randomly generate a path through an FST with the uniform distribution
 // over the transitions.
 template <class FromArc, class ToArc>
-void RandGen(const Fst<FromArc> &ifst, MutableFst<ToArc> *ofst) {
-  const UniformArcSelector<FromArc> uniform_selector;
+void RandGen(const Fst<FromArc> &ifst, MutableFst<ToArc> *ofst,
+             uint64 seed = std::random_device()()) {
+  const UniformArcSelector<FromArc> uniform_selector(seed);
   RandGenOptions<UniformArcSelector<ToArc>> opts(uniform_selector);
   RandGen(ifst, ofst, opts);
 }
