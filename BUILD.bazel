@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
-
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])  # Apache 2.0
@@ -125,7 +123,6 @@ PUBLIC_HEADERS = [
 cc_library(
     name = "lib_lite",
     srcs = [
-        prefix_dir + "lib/encode.cc",
         prefix_dir + "lib/fst.cc",
         prefix_dir + "lib/properties.cc",
         prefix_dir + "lib/symbol-table-ops.cc",
@@ -275,7 +272,6 @@ cc_library(
         prefix_dir + "include/fst/lock.h",
         prefix_dir + "include/fst/log.h",
         prefix_dir + "include/fst/types.h",
-        prefix_dir + "include/fst/windows_defs.inc",
     ],
     defines = select({
         ":has_absl": ["OPENFST_HAS_ABSL=1"],
@@ -295,7 +291,6 @@ cc_test(
     timeout = "short",
     srcs = [
         prefix_dir + "test/fst_test.cc",
-        prefix_dir + "include/fst/test/compactors.h",
         prefix_dir + "include/fst/test/fst_test.h",
     ],
     deps = [":fst"],
@@ -362,6 +357,7 @@ cc_library(
         prefix_dir + "include/fst/script/fstscript-decl.h",
         prefix_dir + "include/fst/script/fstscript.h",
         prefix_dir + "include/fst/script/getters.h",
+        prefix_dir + "include/fst/script/register.h",
         prefix_dir + "include/fst/script/script-impl.h",
         prefix_dir + "include/fst/script/stateiterator-class.h",
         prefix_dir + "include/fst/script/text-io.h",
@@ -847,10 +843,7 @@ cc_library(
 
 cc_binary(
     name = "pdtcompose",
-    srcs = [
-        prefix_dir + "extensions/pdt/pdtcompose.cc",
-        prefix_dir + "extensions/pdt/pdtcompose-main.cc",
-    ],
+    srcs = [prefix_dir + "extensions/pdt/pdtcompose.cc"],
     linkstatic = static_binary,
     deps = [
         ":fstscript_connect",
@@ -861,10 +854,7 @@ cc_binary(
 [
     cc_binary(
         name = "pdt%s" % operation,
-        srcs = [
-            prefix_dir + "extensions/pdt/pdt%s.cc" % operation,
-            prefix_dir + "extensions/pdt/pdt%s-main.cc" % operation,
-        ],
+        srcs = [prefix_dir + "extensions/pdt/pdt%s.cc" % operation],
         linkstatic = static_binary,
         deps = [":pdtscript"],
     )
@@ -912,10 +902,7 @@ cc_library(
 
 cc_binary(
     name = "mpdtcompose",
-    srcs = [
-        prefix_dir + "extensions/mpdt/mpdtcompose.cc",
-        prefix_dir + "extensions/mpdt/mpdtcompose-main.cc",
-    ],
+    srcs = [prefix_dir + "extensions/mpdt/mpdtcompose.cc"],
     linkstatic = static_binary,
     deps = [
         ":fstscript_connect",
@@ -926,10 +913,7 @@ cc_binary(
 [
     cc_binary(
         name = "mpdt%s" % operation,
-        srcs = [
-            prefix_dir + "extensions/mpdt/mpdt%s.cc" % operation,
-            prefix_dir + "extensions/mpdt/mpdt%s-main.cc" % operation,
-        ],
+        srcs = [prefix_dir + "extensions/mpdt/mpdt%s.cc" % operation],
         linkstatic = static_binary,
         deps = [":mpdtscript"],
     )
