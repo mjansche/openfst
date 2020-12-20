@@ -1,34 +1,29 @@
-OpenFst - Beta release version.  
+OpenFst - Release 1.0
 
-PLATFORMS:
+OpenFst is a library for constructing, combining, optimizing, and
+searching weighted finite-state transducers (FSTs).
 
-  This version is known to work under linux using g++.
-  The make files are unlikely to work on other platforms
-  unmodified. Stay tuned for an autoconf build.
-	
-BUILDING:
+REQUIREMENTS:
+  This version is known to work under Linux, MacOS, and Solaris using 
+  g++ (>= 4.1). Expected to work wherever tr1 ordered sets/maps 
+  (<tr1/ordered_set>, <tr1/ordered_map>) and dlopen (<dlfcn.h>, -ldl) 
+  are available.
+  	
+INSTALLATION:
+  Follow the generic GNU build system instructions in ./INSTALL.
 
-  To build (rudimentary Makefiles for now):
+  (Compiling with '-Wall -Wno-sign-compare' under g++ should give no
+  warnings from this library).
 
-    cd fst ; make all
-
-  To test:
-
-    cd fst ; make test
-    # Note long compile on algo_test and pair-arc.so (many templates)
-
-USING WITH YOUR OWN PROGRAMS:
-
-  Include "fst/lib/fstlib.h" (path must be relative to the OpenFst root
-  directory). You need to link to fst/lib/libfst.so as well as libpthread
-  and libdl. The linking is dynamic so that the Fst and Arc tpe
-  DSO extensions can be used (see e.g. test/dso_test.sh).
+USAGE:
+  Assuming you've installed under the default /usr/local, the FST
+  binaries are found on /usr/local/bin. To use in your own program,
+  include <fst/fstlib.h> and compile with '-I /usr/local/include'. 
+  Link against /usr/local/lib/libfst.so and -ldl. Set your
+  LD_LIBRARY_PATH (or equivalent) to contain /usr/local/lib. The
+  linking is, by default, dynamic so that the Fst and Arc type DSO
+  extensions can be used correctly if desired.
 
 DOCUMENTATION: 
-
-  At www.openfst.org.
-
-TO DO:
-  1) remove/sanitize google-isms - e.g. flags and error handling in compat.*
-  2) autoconf
-  3) check portability
+  See www.openfst.org for general documentation.
+  See ./NEWS for updates since the last release.
