@@ -97,6 +97,10 @@ inline bool operator==(const FloatWeightTpl<T> &w1,
   return v1 == v2;
 }
 
+// These seemingly unnecessary overloads are actually needed to make
+// comparisons like FloatWeightTpl<float> == float compile.  If only the
+// templated version exists, the FloatWeightTpl<float>(float) conversion
+// won't be found.
 inline bool operator==(const FloatWeightTpl<double> &w1,
                        const FloatWeightTpl<double> &w2) {
   return operator==<double>(w1, w2);
@@ -231,6 +235,8 @@ inline TropicalWeightTpl<T> Plus(const TropicalWeightTpl<T> &w1,
   return w1.Value() < w2.Value() ? w1 : w2;
 }
 
+// See comment at operator==(FloatWeightTpl<float>, FloatWeightTpl<float>)
+// for why these overloads are present.
 inline TropicalWeightTpl<float> Plus(const TropicalWeightTpl<float> &w1,
                                      const TropicalWeightTpl<float> &w2) {
   return Plus<float>(w1, w2);
@@ -495,7 +501,7 @@ class Adder<LogWeightTpl<T>> {
         c_(0.0) { }
 
   Weight Add(const Weight &w) {
-  using Limits = FloatLimits<T>;
+    using Limits = FloatLimits<T>;
     const T f = w.Value();
     if (f == Limits::PosInfinity()) {
       return Sum();

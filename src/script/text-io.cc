@@ -33,7 +33,7 @@ bool ReadPotentials(const string &weight_type, const string &filename,
     ++nline;
     std::vector<char *> col;
     SplitToVector(line, "\n\t ", &col, true);
-    if (col.size() == 0 || col[0][0] == '\0') continue;
+    if (col.empty() || col[0][0] == '\0') continue;
     if (col.size() != 2) {
       FSTERROR() << "ReadPotentials: Bad number of columns, "
                  << "file = " << filename << ", line = " << nline;

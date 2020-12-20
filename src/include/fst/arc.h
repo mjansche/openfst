@@ -234,7 +234,7 @@ struct PowerArc {
         nextstate(nextstate) {}
 
   static const string &Type() {
-    static string *const type =
+    static const string *const type =
         new string(Arc::Type() + "_^" + std::to_string(N));
     return *type;
   }
@@ -263,7 +263,7 @@ struct SparsePowerArc {
         nextstate(nextstate) {}
 
   static const string &Type() {
-    static string *const type = [] {
+    static const string *const type = [] {
       string type = Arc::Type() + "_^n";
       if (sizeof(K) != sizeof(uint32)) {
         type += "_" + std::to_string(CHAR_BIT * sizeof(K));
@@ -299,7 +299,7 @@ struct ExpectationArc {
         nextstate(nextstate) {}
 
   static const string &Type() {
-    static string *const type =
+    static const string *const type =
         new string("expectation_" + Arc::Type() + "_" + X2::Type());
     return *type;
   }

@@ -295,6 +295,13 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   size_t Position() const { return aiter_ ? aiter_->Position() : 0; }
 
  private:
+  Label GetLabel() const {
+    const auto &arc = aiter_->Value();
+    return match_type_ == MATCH_INPUT ? arc.ilabel : arc.olabel;
+  }
+
+  bool BinarySearch();
+  bool LinearSearch();
   bool Search();
 
   std::unique_ptr<const FST> fst_;
@@ -314,48 +321,57 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
 // Returns true iff match to match_label_, positioning arc iterator at lower
 // bound.
 template <class FST>
-inline bool SortedMatcher<FST>::Search() {
-  aiter_->SetFlags(
-      match_type_ == MATCH_INPUT ? kArcILabelValue : kArcOLabelValue,
-      kArcValueFlags);
-  if (match_label_ >= binary_label_) {
-    // Binary search for match.
-    size_t low = 0;
-    size_t high = narcs_;
-    while (low < high) {
-      const size_t mid = (low + high) / 2;
-      aiter_->Seek(mid);
-      auto label = match_type_ == MATCH_INPUT ? aiter_->Value().ilabel
-                                              : aiter_->Value().olabel;
-      if (label > match_label_) {
-        high = mid;
-      } else if (label < match_label_) {
-        low = mid + 1;
-      } else {
-        // Finds first matching label (when non-deterministic).
-        for (size_t i = mid; i > low; --i) {
-          aiter_->Seek(i - 1);
-          label = match_type_ == MATCH_INPUT ? aiter_->Value().ilabel
-                                             : aiter_->Value().olabel;
-          if (label != match_label_) {
-            aiter_->Seek(i);
-            return true;
-          }
+inline bool SortedMatcher<FST>::BinarySearch() {
+  size_t low = 0;
+  size_t high = narcs_;
+  while (low < high) {
+    const size_t mid = (low + high) / 2;
+    aiter_->Seek(mid);
+    const auto label = GetLabel();
+    if (label > match_label_) {
+      high = mid;
+    } else if (label < match_label_) {
+      low = mid + 1;
+    } else {
+      // Otherwise, search backwards for the first match.
+      for (size_t i = mid; i > low; --i) {
+        aiter_->Seek(i - 1);
+        const auto label = GetLabel();
+        if (label != match_label_) {
+          aiter_->Seek(i);
+          return true;
         }
-        return true;
       }
+      return true;
     }
-    aiter_->Seek(low);
-    return false;
+  }
+  aiter_->Seek(low);
+  return false;
+}
+
+// Returns true iff match to match_label_, positioning arc iterator at lower
+// bound.
+template <class FST>
+inline bool SortedMatcher<FST>::LinearSearch() {
+  for (aiter_->Reset(); !aiter_->Done(); aiter_->Next()) {
+    const auto label = GetLabel();
+    if (label == match_label_) return true;
+    if (label > match_label_) break;
+  }
+  return false;
+}
+
+// Returns true iff match to match_label_, positioning arc iterator at lower
+// bound.
+template <class FST>
+inline bool SortedMatcher<FST>::Search() {
+  aiter_->SetFlags(match_type_ == MATCH_INPUT ?
+                   kArcILabelValue : kArcOLabelValue,
+                   kArcValueFlags);
+  if (match_label_ >= binary_label_) {
+    return BinarySearch();
   } else {
-    // Linear search for match.
-    for (aiter_->Reset(); !aiter_->Done(); aiter_->Next()) {
-      const auto label = match_type_ == MATCH_INPUT ? aiter_->Value().ilabel
-                                                    : aiter_->Value().olabel;
-      if (label == match_label_) return true;
-      if (label > match_label_) break;
-    }
-    return false;
+    return LinearSearch();
   }
 }
 

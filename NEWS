@@ -1,4 +1,5 @@
 OpenFst: Release 1.6
+    * Fixes typing error in Python FAR reader (1.6.4)
     * Removes restriction that Prune argument have commutative weights (1.6.3)
     * Improves configuration of CompositeWeight readers and writers (1.6.3)
     * Improves accuracy of ShortestDistance summation (1.6.3)

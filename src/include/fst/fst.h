@@ -621,15 +621,13 @@ inline size_t NumOutputEpsilons(const Fst<Arc> &fst, typename Arc::StateId s) {
   return fst.NumOutputEpsilons(s);
 }
 
-}  // namespace internal
-
 // FST implementation base.
 //
 // This is the recommended FST implementation base class. It will handle
 // reference counts, property bits, type information and symbols.
-
-namespace internal {
-
+//
+// Users are discouraged, but not prohibited, from subclassing this outside the
+// FST library.
 template <class Arc>
 class FstImpl {
  public:

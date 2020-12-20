@@ -299,11 +299,9 @@ void NShortestPath(const Fst<RevArc> &ifst, MutableFst<Arc> *ofst,
   using Weight = typename Arc::Weight;
   using Pair = std::pair<StateId, Weight>;
   if (nshortest <= 0) return;
-  // TODO(kbg): Make this a compile-time static_assert once:
-  // 1) All weight properties are made constexpr for all weight types.
-  // 2) We have a pleasant way to "deregister" this operation for non-path
-  //    semirings so an informative error message is produced. The best
-  //    solution will probably involve some kind of SFINAE magic.
+  // TODO(kbg): Make this a compile-time static_assert once we have a pleasant
+  // way to "deregister" this operation for non-path semirings so an informative
+  // error message is produced.
   if ((Weight::Properties() & (kPath | kSemiring)) != (kPath | kSemiring)) {
     FSTERROR() << "NShortestPath: Weight needs to have the "
                << "path property and be distributive: " << Weight::Type();
@@ -441,11 +439,9 @@ void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
     return;
   }
   if (opts.nshortest <= 0) return;
-  // TODO(kbg): Make this a compile-time static_assert once:
-  // 1) All weight properties are made constexpr for all weight types.
-  // 2) We have a pleasant way to "deregister" this operation for non-path
-  //    semirings so an informative error message is produced. The best
-  //    solution will probably involve some kind of SFINAE magic.
+  // TODO(kbg): Make this a compile-time static_assert once we have a pleasant
+  // way to "deregister" this operation for non-path semirings so an informative
+  // error message is produced.
   if ((Weight::Properties() & (kPath | kSemiring)) != (kPath | kSemiring)) {
     FSTERROR() << "ShortestPath: Weight needs to have the "
                << "path property and be distributive: " << Weight::Type();

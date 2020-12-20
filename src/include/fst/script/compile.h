@@ -5,6 +5,7 @@
 #define FST_SCRIPT_COMPILE_H_
 
 #include <istream>
+#include <memory>
 
 #include <fst/script/arg-packs.h>
 #include <fst/script/compile-impl.h>
@@ -68,12 +69,14 @@ void CompileFstInternal(CompileFstArgs *args) {
       args->args.ssyms, args->args.accep, args->args.ikeep, args->args.okeep,
       args->args.nkeep, args->args.allow_negative_labels);
   const Fst<Arc> *fst = &fstcompiler.Fst();
+  std::unique_ptr<const Fst<Arc>> owned_fst;
   if (args->args.fst_type != "vector") {
-    fst = Convert<Arc>(*fst, args->args.fst_type);
-    if (!fst) {
+    owned_fst.reset(Convert<Arc>(*fst, args->args.fst_type));
+    if (!owned_fst) {
       FSTERROR() << "Failed to convert FST to desired type: "
                  << args->args.fst_type;
     }
+    fst = owned_fst.get();
   }
   args->retval = fst ? new FstClass(*fst) : nullptr;
 }

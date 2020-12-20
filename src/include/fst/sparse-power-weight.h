@@ -100,14 +100,14 @@ class SparsePowerWeight : public SparseTupleWeight<W, K> {
   // Overide this: Overwrite the Type method to reflect the key type if using
   // a non-default key type.
   static const string &Type() {
-    static string type;
-    if (type.empty()) {
-      type = W::Type() + "_^n";
+    static const string *const type = [] {
+      string type = W::Type() + "_^n";
       if (sizeof(K) != sizeof(uint32)) {
         type += "_" + std::to_string(CHAR_BIT * sizeof(K));
       }
-    }
-    return type;
+      return new string(type);
+    }();
+    return *type;
   }
 
   static constexpr uint64 Properties() {

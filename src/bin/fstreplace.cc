@@ -21,6 +21,13 @@ DEFINE_string(return_arc_labeling, "neither",
 DEFINE_int64(return_label, 0, "Label to put on return arc");
 DEFINE_bool(epsilon_on_replace, false, "Call/return arcs are epsilon arcs?");
 
+void Cleanup(std::vector<fst::script::LabelFstClassPair> *pairs) {
+  for (const auto &pair : *pairs) {
+    delete pair.second;
+  }
+  pairs->clear();
+}
+
 int main(int argc, char **argv) {
   namespace s = fst::script;
   using fst::script::FstClass;
@@ -42,8 +49,6 @@ int main(int argc, char **argv) {
   const string in_name = argv[1];
   const string out_name = argc % 2 == 0 ? argv[argc - 1] : "";
 
-  // Replace takes ownership of the pointer of FST arrays, deleting all such
-  // pointers when the underlying ReplaceFst is destroyed.
   auto *ifst = FstClass::Read(in_name);
   if (!ifst) return 1;
 
@@ -55,7 +60,10 @@ int main(int argc, char **argv) {
 
   for (auto i = 3; i < argc - 1; i += 2) {
     ifst = FstClass::Read(argv[i]);
-    if (!ifst) return 1;
+    if (!ifst) {
+      Cleanup(&pairs);
+      return 1;
+    }
     // Note that if the root label is beyond the range of the underlying FST's
     // labels, truncation will occur.
     const auto label = atoll(argv[i + 1]);
@@ -80,6 +88,7 @@ int main(int argc, char **argv) {
 
   VectorFstClass ofst(ifst->ArcType());
   s::Replace(pairs, &ofst, opts);
+  Cleanup(&pairs);
 
   return !ofst.Write(out_name);
 }

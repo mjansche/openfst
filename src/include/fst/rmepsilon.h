@@ -90,10 +90,11 @@ class RmEpsilonState {
   struct ElementHash {
    public:
     size_t operator()(const Element &element) const {
-      static constexpr auto prime0 = 7853;
-      static constexpr auto prime1 = 7867;
-      return element.nextstate + element.ilabel * prime0 +
-             element.olabel * prime1;
+      static constexpr size_t prime0 = 7853;
+      static constexpr size_t prime1 = 7867;
+      return static_cast<size_t>(element.nextstate) +
+             static_cast<size_t>(element.ilabel) * prime0 +
+             static_cast<size_t>(element.olabel) * prime1;
     }
   };
 
