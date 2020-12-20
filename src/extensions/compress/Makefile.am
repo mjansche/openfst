@@ -18,5 +18,5 @@ libfstcompressscript_la_LDFLAGS = -version-info 2:5:0
 endif
 
 if HAVE_SCRIPT
-libfst_LTLIBRARIES = libfstcompressscript.la
+lib_LTLIBRARIES = libfstcompressscript.la
 endif
