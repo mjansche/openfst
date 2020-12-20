@@ -26,7 +26,6 @@ using std::vector;
 using std::pair; using std::make_pair;
 
 
-#include <fst/compat.h>
 #include <fst/extensions/pdt/compose.h>
 #include <fst/extensions/pdt/expand.h>
 #include <fst/extensions/pdt/pdtscript.h>
