@@ -37,7 +37,11 @@ int ComposeMain(int argc, char **argv, istream &strm,
   Fst<Arc> *ifst1 = Fst<Arc>::Read(strm, opts);
   if (!ifst1) return 1;
 
-  Fst<Arc> *ifst2 = Fst<Arc>::Read(argv[2]);
+  Fst<Arc> *ifst2;
+  if (strcmp(argv[2], "-"))
+    ifst2 = Fst<Arc>::Read(argv[2]);
+  else
+    ifst2 = Fst<Arc>::Read(std::cin, FstReadOptions());
   if (!ifst2) return 1;
 
   ComposeOptions copts(FLAGS_connect);
