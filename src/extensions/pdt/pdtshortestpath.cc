@@ -1,4 +1,4 @@
-// pdtreverse.cc
+// pdtshortestpath.cc
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,9 +14,10 @@
 //
 // Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
-// Reverse a PDT.
+// Return the shortest path in a PDT.
 //
 
 #include <fst/extensions/pdt/pdtscript.h>
@@ -27,7 +28,7 @@ DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
 int main(int argc, char **argv) {
   namespace s = fst::script;
 
-  string usage = "Reverse a PDT.\n\n  Usage: ";
+  string usage = "Shortest path in a PDT.\n\n  Usage: ";
   usage += argv[0];
   usage += " in.pdt [out.fst]\n";
 
@@ -53,7 +54,7 @@ int main(int argc, char **argv) {
   fst::ReadLabelPairs(FLAGS_pdt_parentheses, &parens, false);
 
   s::VectorFstClass ofst(ifst->ArcType());
-  s::PdtReverse(*ifst, parens, &ofst);
+  s::PdtShortestPath(*ifst, parens, &ofst);
 
   ofst.Write(out_name);
 

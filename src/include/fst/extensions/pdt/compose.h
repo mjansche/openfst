@@ -25,42 +25,78 @@
 
 namespace fst {
 
-// Composes an FST (1st arg) and pushdown transducer (PDT) encoded as
-// an FST (2nd arg) with the result also a PDT encoded as an Fst (3rd arg).
-// In the PDTs, some transitions are labeled with open or close
-// parentheses. To be interpreted as a PDT, the parens must balance on
-// a path (see ExpandFst()). The open-close parenthesis label pairs
-// are passed in 'parens'.
-template<class Arc>
-void Compose(const Fst<Arc> &ifst1,
-             const Fst<Arc> &ifst2,
-             const vector<pair<typename Arc::Label,
-                               typename Arc::Label> > &parens,
-             MutableFst<Arc> *ofst,
-             const ComposeOptions &opts = ComposeOptions()) {
+// Class to setup composition options for PDT composition.
+// Default is for the PDT as the first composition argument.
+template <class Arc, bool left_pdt = true>
+class PdtComposeOptions : public
+ComposeFstOptions<Arc,
+                  MultiEpsMatcher< Matcher<Fst<Arc> > >,
+                  MultiEpsFilter<AltSequenceComposeFilter<
+                                   MultiEpsMatcher<
+                                     Matcher<Fst<Arc> > > > > > {
+ public:
+  typedef typename Arc::Label Label;
+  typedef MultiEpsMatcher< Matcher<Fst<Arc> > > PdtMatcher;
+  typedef MultiEpsFilter<AltSequenceComposeFilter<PdtMatcher> > PdtFilter;
+  typedef ComposeFstOptions<Arc, PdtMatcher, PdtFilter> COptions;
+  using COptions::matcher1;
+  using COptions::matcher2;
+  using COptions::filter;
+
+  PdtComposeOptions(const Fst<Arc> &ifst1,
+                    const vector<pair<Label, Label> > &parens,
+                    const Fst<Arc> &ifst2) {
+    matcher1 = new PdtMatcher(ifst1, MATCH_OUTPUT, kMultiEpsList);
+    matcher2 = new PdtMatcher(ifst2, MATCH_INPUT, kMultiEpsLoop);
+
+    // Treat parens as multi-epsilons when composing.
+    for (size_t i = 0; i < parens.size(); ++i) {
+      matcher1->AddMultiEpsLabel(parens[i].first);
+      matcher1->AddMultiEpsLabel(parens[i].second);
+      matcher2->AddMultiEpsLabel(parens[i].first);
+      matcher2->AddMultiEpsLabel(parens[i].second);
+    }
+
+    filter = new PdtFilter(ifst1, ifst2, matcher1, matcher2, true);
+  }
+};
+
+// Class to setup composition options for PDT with FST composition.
+// Specialization is for the FST as the first composition argument.
+template <class Arc>
+class PdtComposeOptions<Arc, false> : public
+ComposeFstOptions<Arc,
+                  MultiEpsMatcher< Matcher<Fst<Arc> > >,
+                  MultiEpsFilter<SequenceComposeFilter<
+                                   MultiEpsMatcher<
+                                     Matcher<Fst<Arc> > > > > > {
+ public:
+  typedef typename Arc::Label Label;
   typedef MultiEpsMatcher< Matcher<Fst<Arc> > > PdtMatcher;
   typedef MultiEpsFilter<SequenceComposeFilter<PdtMatcher> > PdtFilter;
+  typedef ComposeFstOptions<Arc, PdtMatcher, PdtFilter> COptions;
+  using COptions::matcher1;
+  using COptions::matcher2;
+  using COptions::filter;
 
-  ComposeFstOptions<Arc, PdtMatcher, PdtFilter> copts;
-  copts.gc_limit = 0;
-  copts.matcher1 = new PdtMatcher(ifst1, MATCH_OUTPUT, kMultiEpsLoop);
-  copts.matcher2 = new PdtMatcher(ifst2, MATCH_INPUT, kMultiEpsList);
+  PdtComposeOptions(const Fst<Arc> &ifst1,
+                    const Fst<Arc> &ifst2,
+                    const vector<pair<Label, Label> > &parens) {
+    matcher1 = new PdtMatcher(ifst1, MATCH_OUTPUT, kMultiEpsLoop);
+    matcher2 = new PdtMatcher(ifst2, MATCH_INPUT, kMultiEpsList);
 
-  // Treat parens as multi-epsilons when composing.
-  for (size_t i = 0; i < parens.size(); ++i) {
-    copts.matcher1->AddMultiEpsLabel(parens[i].first);
-    copts.matcher1->AddMultiEpsLabel(parens[i].second);
-    copts.matcher2->AddMultiEpsLabel(parens[i].first);
-    copts.matcher2->AddMultiEpsLabel(parens[i].second);
+    // Treat parens as multi-epsilons when composing.
+    for (size_t i = 0; i < parens.size(); ++i) {
+      matcher1->AddMultiEpsLabel(parens[i].first);
+      matcher1->AddMultiEpsLabel(parens[i].second);
+      matcher2->AddMultiEpsLabel(parens[i].first);
+      matcher2->AddMultiEpsLabel(parens[i].second);
+    }
+
+    filter = new PdtFilter(ifst1, ifst2, matcher1, matcher2, true);
   }
+};
 
-  copts.filter = new PdtFilter(ifst1, ifst2,
-                               copts.matcher1, copts.matcher2, true);
-
-  *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
-  if (opts.connect)
-    Connect(ofst);
-}
 
 // Composes pushdown transducer (PDT) encoded as an FST (1st arg) and
 // an FST (2nd arg) with the result also a PDT encoded as an Fst. (3rd arg).
@@ -68,32 +104,38 @@ void Compose(const Fst<Arc> &ifst1,
 // parentheses. To be interpreted as a PDT, the parens must balance on
 // a path (see PdtExpand()). The open-close parenthesis label pairs
 // are passed in 'parens'.
-template<class Arc>
+template <class Arc>
 void Compose(const Fst<Arc> &ifst1,
              const vector<pair<typename Arc::Label,
                                typename Arc::Label> > &parens,
              const Fst<Arc> &ifst2,
              MutableFst<Arc> *ofst,
              const ComposeOptions &opts = ComposeOptions()) {
-  typedef MultiEpsMatcher< Matcher<Fst<Arc> > > PdtMatcher;
-  typedef MultiEpsFilter<AltSequenceComposeFilter<PdtMatcher> > PdtFilter;
 
-  ComposeFstOptions<Arc, PdtMatcher, PdtFilter> copts;
+  PdtComposeOptions<Arc, true> copts(ifst1, parens, ifst2);
   copts.gc_limit = 0;
-  copts.matcher1 = new PdtMatcher(ifst1, MATCH_OUTPUT, kMultiEpsList);
-  copts.matcher2 = new PdtMatcher(ifst2, MATCH_INPUT, kMultiEpsLoop);
+  *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
+  if (opts.connect)
+    Connect(ofst);
+}
 
-  // Treat parens as multi-epsilons when composing.
-  for (size_t i = 0; i < parens.size(); ++i) {
-    copts.matcher1->AddMultiEpsLabel(parens[i].first);
-    copts.matcher1->AddMultiEpsLabel(parens[i].second);
-    copts.matcher2->AddMultiEpsLabel(parens[i].first);
-    copts.matcher2->AddMultiEpsLabel(parens[i].second);
-  }
 
-  copts.filter = new PdtFilter(ifst1, ifst2,
-                               copts.matcher1, copts.matcher2, true);
+// Composes an FST (1st arg) and pushdown transducer (PDT) encoded as
+// an FST (2nd arg) with the result also a PDT encoded as an Fst (3rd arg).
+// In the PDTs, some transitions are labeled with open or close
+// parentheses. To be interpreted as a PDT, the parens must balance on
+// a path (see ExpandFst()). The open-close parenthesis label pairs
+// are passed in 'parens'.
+template <class Arc>
+void Compose(const Fst<Arc> &ifst1,
+             const Fst<Arc> &ifst2,
+             const vector<pair<typename Arc::Label,
+                               typename Arc::Label> > &parens,
+             MutableFst<Arc> *ofst,
+             const ComposeOptions &opts = ComposeOptions()) {
 
+  PdtComposeOptions<Arc, false> copts(ifst1, ifst2, parens);
+  copts.gc_limit = 0;
   *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
   if (opts.connect)
     Connect(ofst);

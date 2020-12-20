@@ -54,7 +54,10 @@ class LogMessage {
 #define CHECK(x) assert(x)
 #define CHECK_EQ(x, y) assert((x) == (y))
 #define CHECK_LT(x, y) assert((x) <= (y))
+#define CHECK_GT(x, y) assert((x) > (y))
+#define CHECK_LE(x, y) assert((x) <= (y))
 #define CHECK_GE(x, y) assert((x) >= (y))
+#define CHECK_NE(x, y) assert((x) != (y))
 
 // Ports
 #define ATTRIBUTE_DEPRECATED __attribute__((deprecated))

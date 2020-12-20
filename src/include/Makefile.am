@@ -1,18 +1,18 @@
 if HAVE_FAR
 far_include_headers = fst/extensions/far/compile-strings.h \
 fst/extensions/far/create.h fst/extensions/far/extract.h \
-fst/extensions/far/far.h fst/extensions/far/farscript.h \
-fst/extensions/far/info.h fst/extensions/far/main.h \
-fst/extensions/far/print-strings.h fst/extensions/far/sttable.h \
-fst/extensions/far/farlib.h
+fst/extensions/far/far.h fst/extensions/far/farlib.h \
+fst/extensions/far/farscript.h fst/extensions/far/info.h \
+fst/extensions/far/main.h fst/extensions/far/print-strings.h \
+fst/extensions/far/sttable.h
 endif
 
 if HAVE_PDT
 pdt_include_headers = fst/extensions/pdt/compose.h \
-fst/extensions/pdt/expand.h fst/extensions/pdt/pdt.h \
-fst/extensions/pdt/info.h fst/extensions/pdt/replace.h \
-fst/extensions/pdt/reverse.h fst/extensions/pdt/pdtscript.h \
-fst/extensions/pdt/pdtlib.h
+fst/extensions/pdt/expand.h fst/extensions/pdt/info.h \
+fst/extensions/pdt/pdt.h fst/extensions/pdt/pdtlib.h \
+fst/extensions/pdt/pdtscript.h fst/extensions/pdt/replace.h \
+fst/extensions/pdt/reverse.h fst/extensions/pdt/shortest-path.h
 endif
 
 script_include_headers = fst/script/arcsort.h fst/script/arg-packs.h \
@@ -52,13 +52,13 @@ fst/rmepsilon.h fst/verify.h fst/compose.h fst/fst-decl.h \
 fst/project.h fst/rmfinalepsilon.h fst/visit.h fst/concat.h \
 fst/fst.h fst/properties.h fst/shortest-distance.h fst/weight.h \
 fst/connect.h fst/fstlib.h fst/prune.h fst/shortest-path.h \
-fst/const-fst.h fst/heap.h fst/push.h fst/state-table.h \
-fst/slist.h \
+fst/const-fst.h fst/heap.h fst/push.h fst/state-table.h fst/slist.h \
 fst/pair-weight.h fst/config.h fst/tuple-weight.h fst/power-weight.h \
 fst/lookahead-matcher.h fst/types.h fst/add-on.h fst/label-reachable.h \
 fst/accumulator.h fst/interval-set.h fst/state-reachable.h \
 fst/lookahead-filter.h fst/generic-register.h fst/edit-fst.h \
-fst/replace-util.h fst/icu.h fst/string.h \
+fst/replace-util.h fst/icu.h fst/string.h fst/signed-log-weight.h \
+fst/sparse-tuple-weight.h fst/sparse-power-weight.h fst/expectation-weight.h \
 $(far_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)

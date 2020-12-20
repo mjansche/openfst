@@ -24,15 +24,19 @@ using std::pair; using std::make_pair;
 #include <vector>
 using std::vector;
 
+#include <fst/compose.h>  // for ComposeOptions
+#include <fst/util.h>
+
 #include <fst/script/fst-class.h>
 #include <fst/script/arg-packs.h>
-#include <fst/compose.h>  // for ComposeOptions
 
 #include <fst/extensions/pdt/compose.h>
 #include <fst/extensions/pdt/expand.h>
 #include <fst/extensions/pdt/info.h>
 #include <fst/extensions/pdt/replace.h>
 #include <fst/extensions/pdt/reverse.h>
+#include <fst/extensions/pdt/shortest-path.h>
+
 
 namespace fst {
 namespace script {
@@ -108,14 +112,11 @@ template<class Arc>
 void PdtReplace(PdtReplaceArgs *args) {
   vector<pair<typename Arc::Label, const Fst<Arc> *> > tuples(
       args->arg1.size());
-
   for (size_t i = 0; i < tuples.size(); ++i) {
     tuples[i].first = args->arg1[i].first;
     tuples[i].second = (args->arg1[i].second)->GetFst<Arc>();
   }
-
   MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
-
   vector<pair<typename Arc::Label, typename Arc::Label> > parens(
       args->arg3->size());
 
@@ -123,10 +124,10 @@ void PdtReplace(PdtReplaceArgs *args) {
     parens[i].first = args->arg3->at(i).first;
     parens[i].second = args->arg3->at(i).second;
   }
-
   Replace(tuples, ofst, &parens, args->arg4);
 
   // now copy parens back
+  args->arg3->resize(parens.size());
   for (size_t i = 0; i < parens.size(); ++i) {
     (*args->arg3)[i].first = parens[i].first;
     (*args->arg3)[i].second = parens[i].second;
@@ -162,6 +163,34 @@ void PdtReverse(const FstClass &ifst,
                 const vector<pair<int64, int64> > &parens,
                 MutableFstClass *ofst);
 
+
+// PDT SHORTESTPATH
+
+typedef args::Package<const FstClass &,
+                      const vector<pair<int64, int64> >&,
+                      MutableFstClass *> PdtShortestPathArgs;
+
+template<class Arc>
+void PdtShortestPath(PdtShortestPathArgs *args) {
+  typedef typename Arc::StateId StateId;
+  typedef typename Arc::Label Label;
+
+  const Fst<Arc> &fst = *(args->arg1.GetFst<Arc>());
+  MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
+
+  vector<pair<Label, Label> > parens(args->arg2.size());
+  for (size_t i = 0; i < parens.size(); ++i) {
+    parens[i].first = args->arg2[i].first;
+    parens[i].second = args->arg2[i].second;
+  }
+
+  ShortestPath(fst, parens, ofst);
+}
+
+void PdtShortestPath(const FstClass &ifst,
+                     const vector<pair<int64, int64> > &parens,
+                     MutableFstClass *ofst);
+
 // PRINT INFO
 
 typedef args::Package<const FstClass &,
@@ -187,10 +216,11 @@ void PrintPdtInfo(const FstClass &ifst,
 }  // namespace fst
 
 
-#define REGISTER_FST_PDT_OPERATIONS(ArcType)                      \
-  REGISTER_FST_OPERATION(PdtCompose, ArcType, PdtComposeArgs);    \
-  REGISTER_FST_OPERATION(PdtExpand, ArcType, PdtExpandArgs);      \
-  REGISTER_FST_OPERATION(PdtReplace, ArcType, PdtReplaceArgs);    \
-  REGISTER_FST_OPERATION(PdtReverse, ArcType, PdtReverseArgs);    \
+#define REGISTER_FST_PDT_OPERATIONS(ArcType)                                \
+  REGISTER_FST_OPERATION(PdtCompose, ArcType, PdtComposeArgs);              \
+  REGISTER_FST_OPERATION(PdtExpand, ArcType, PdtExpandArgs);                \
+  REGISTER_FST_OPERATION(PdtReplace, ArcType, PdtReplaceArgs);              \
+  REGISTER_FST_OPERATION(PdtReverse, ArcType, PdtReverseArgs);              \
+  REGISTER_FST_OPERATION(PdtShortestPath, ArcType, PdtShortestPathArgs);    \
   REGISTER_FST_OPERATION(PrintPdtInfo, ArcType, PrintPdtInfoArgs)
 #endif  // FST_EXTENSIONS_PDT_PDTSCRIPT_H_

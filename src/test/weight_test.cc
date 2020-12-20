@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <ctime>
 
+#include <fst/expectation-weight.h>
 #include <fst/float-weight.h>
 #include <fst/random-weight.h>
 #include "./weight-tester.h"
@@ -58,6 +59,14 @@ using fst::ProductWeightGenerator;
 using fst::PowerWeight;
 using fst::PowerWeightGenerator;
 
+using fst::SignedLogWeightTpl;
+using fst::SignedLogWeightGenerator_;
+
+using fst::ExpectationWeight;
+
+using fst::SparsePowerWeight;
+using fst::SparsePowerWeightGenerator;
+
 using fst::STRING_LEFT;
 using fst::STRING_RIGHT;
 
@@ -79,6 +88,11 @@ void TestTemplatedWeights(int repeat, int seed) {
   WeightTester<MinMaxWeightTpl<T>, MinMaxWeightGenerator_<T> >
       minmax_tester(minmax_generator);
   minmax_tester.Test(repeat);
+
+  SignedLogWeightGenerator_<T> signedlog_generator(seed);
+  WeightTester<SignedLogWeightTpl<T>, SignedLogWeightGenerator_<T> >
+      signedlog_tester(signedlog_generator);
+  signedlog_tester.Test(repeat);
 }
 
 int main(int argc, char **argv) {
@@ -90,6 +104,11 @@ int main(int argc, char **argv) {
 
   TestTemplatedWeights<float>(FLAGS_repeat, seed);
   TestTemplatedWeights<double>(FLAGS_repeat, seed);
+  FLAGS_fst_weight_parentheses = "()";
+  TestTemplatedWeights<float>(FLAGS_repeat, seed);
+  TestTemplatedWeights<double>(FLAGS_repeat, seed);
+  FLAGS_fst_weight_parentheses = "";
+
   // Make sure type names for templated weights are consistent
   CHECK(TropicalWeight::Type() == "tropical");
   CHECK(TropicalWeightTpl<double>::Type() != TropicalWeightTpl<float>::Type());
@@ -164,15 +183,63 @@ int main(int argc, char **argv) {
   WeightTester<NestedProductCubeWeight, NestedProductCubeWeightGenerator>
       nested_product_cube_weight_tester(nested_product_cube_generator);
 
+  typedef SparsePowerWeight<NestedProductCubeWeight,
+      size_t > SparseNestedProductCubeWeight;
+  typedef SparsePowerWeightGenerator<NestedProductCubeWeightGenerator,
+      size_t, 3> SparseNestedProductCubeWeightGenerator;
+
+  SparseNestedProductCubeWeightGenerator
+      sparse_nested_product_cube_generator(seed);
+  WeightTester<SparseNestedProductCubeWeight,
+      SparseNestedProductCubeWeightGenerator>
+      sparse_nested_product_cube_weight_tester(
+          sparse_nested_product_cube_generator);
+
+  typedef SparsePowerWeight<LogWeight, size_t > LogSparsePowerWeight;
+  typedef SparsePowerWeightGenerator<LogWeightGenerator,
+      size_t, 3> LogSparsePowerWeightGenerator;
+
+  LogSparsePowerWeightGenerator
+      log_sparse_power_weight_generator(seed);
+  WeightTester<LogSparsePowerWeight,
+      LogSparsePowerWeightGenerator>
+      log_sparse_power_weight_tester(
+          log_sparse_power_weight_generator);
+
+  typedef ExpectationWeight<LogWeight, LogWeight>
+      LogLogExpectWeight;
+  typedef ProductWeightGenerator<LogWeightGenerator, LogWeightGenerator,
+    LogLogExpectWeight> LogLogExpectWeightGenerator;
+
+  LogLogExpectWeightGenerator log_log_expect_weight_generator(seed);
+  WeightTester<LogLogExpectWeight, LogLogExpectWeightGenerator>
+      log_log_expect_weight_tester(log_log_expect_weight_generator);
+
+  typedef ExpectationWeight<LogWeight, LogSparsePowerWeight>
+      LogLogSparseExpectWeight;
+  typedef ProductWeightGenerator<
+    LogWeightGenerator,
+    LogSparsePowerWeightGenerator,
+    LogLogSparseExpectWeight> LogLogSparseExpectWeightGenerator;
+
+  LogLogSparseExpectWeightGenerator log_logsparse_expect_weight_generator(seed);
+  WeightTester<LogLogSparseExpectWeight, LogLogSparseExpectWeightGenerator>
+      log_logsparse_expect_weight_tester(log_logsparse_expect_weight_generator);
+
   // Test all product weight I/O with parentheses
   FLAGS_fst_weight_parentheses = "()";
   first_nested_product_weight_tester.Test(FLAGS_repeat);
   nested_product_cube_weight_tester.Test(FLAGS_repeat);
+  log_sparse_power_weight_tester.Test(1);
+  sparse_nested_product_cube_weight_tester.Test(1);
   tropical_product_weight_tester.Test(5);
   second_nested_product_weight_tester.Test(5);
   tropical_gallic_tester.Test(5);
   tropical_cube_weight_tester.Test(5);
   FLAGS_fst_weight_parentheses = "";
+  log_sparse_power_weight_tester.Test(1);
+  log_log_expect_weight_tester.Test(1, false); // disables division
+  log_logsparse_expect_weight_tester.Test(1, false);
 
   typedef LexicographicWeight<TropicalWeight, TropicalWeight>
       TropicalLexicographicWeight;

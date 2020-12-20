@@ -11,7 +11,7 @@ REQUIREMENTS:
   	
 INSTALLATION:
   Follow the generic GNU build system instructions in ./INSTALL.  We
-  recommend configuring with =--enable-static=false= for faster
+  recommend configuring with =--enable-static=no= for faster
   compiles. 
 
   Optional features:

@@ -24,8 +24,10 @@
 #include <algorithm>
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
+using std::tr1::unordered_multimap;
 #include <tr1/unordered_set>
 using std::tr1::unordered_set;
+using std::tr1::unordered_multiset;
 #include <string>
 #include <utility>
 using std::pair; using std::make_pair;

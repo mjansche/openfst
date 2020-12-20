@@ -28,8 +28,10 @@ using std::pair; using std::make_pair;
 
 #include <fst/extensions/pdt/compose.h>
 #include <fst/extensions/pdt/expand.h>
-#include <fst/extensions/pdt/replace.h>
 #include <fst/extensions/pdt/pdtscript.h>
+#include <fst/extensions/pdt/replace.h>
+#include <fst/extensions/pdt/reverse.h>
+#include <fst/extensions/pdt/shortest-path.h>
 #include <fst/script/script-impl.h>
 
 namespace fst {
@@ -79,6 +81,15 @@ void PdtReverse(const FstClass &ifst,
   PdtReverseArgs args(ifst, parens, ofst);
 
   Apply<Operation<PdtReverseArgs> >("PdtReverse", ifst.ArcType(), &args);
+}
+
+void PdtShortestPath(const FstClass &ifst,
+                     const vector<pair<int64, int64> > &parens,
+                     MutableFstClass *ofst) {
+  PdtShortestPathArgs args(ifst, parens, ofst);
+
+  Apply<Operation<PdtShortestPathArgs> >("PdtShortestPath",
+                                         ifst.ArcType(), &args);
 }
 
 void PrintPdtInfo(const FstClass &ifst,

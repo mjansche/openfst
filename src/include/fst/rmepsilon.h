@@ -23,6 +23,7 @@
 
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
+using std::tr1::unordered_multimap;
 #include <fst/slist.h>
 #include <stack>
 #include <string>

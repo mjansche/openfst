@@ -50,13 +50,13 @@ int main(int argc, char **argv) {
   typedef int64 Label;
   typedef pair<Label, const s::FstClass* > FstTuple;
   vector<FstTuple> fst_tuples;
-  Label root = atoi(argv[2]);
+  Label root = atoll(argv[2]);
   fst_tuples.push_back(make_pair(root, ifst));
 
   for (size_t i = 3; i < argc - 1; i += 2) {
     ifst = s::FstClass::Read(argv[i]);
     if (!ifst) return 1;
-    Label lab = atoi(argv[i + 1]);
+    Label lab = atoll(argv[i + 1]);
     fst_tuples.push_back(make_pair(lab, ifst));
   }
 

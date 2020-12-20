@@ -38,7 +38,8 @@ class FarHeader {
 
   bool Read(const string &filename) {
     FstHeader fsthdr;
-    if (ReadSTTableHeader(filename, &fsthdr)) {  // Check if STTable
+    if (IsSTTable(filename)) {  // Check if STTable
+      ReadSTTableHeader(filename, &fsthdr);
       fartype_ = "sttable";
       arctype_ = fsthdr.ArcType().empty() ? "unknown" : fsthdr.ArcType();
       return true;

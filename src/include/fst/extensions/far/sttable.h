@@ -76,7 +76,7 @@ class STTableWriter {
 
   ~STTableWriter() {
     WriteType(stream_, positions_);
-    WriteType(stream_, positions_.size());
+    WriteType(stream_, static_cast<int64>(positions_.size()));
   }
 
  private:

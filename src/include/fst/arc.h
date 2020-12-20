@@ -23,13 +23,17 @@
 #define FST_LIB_ARC_H__
 
 #include <string>
+
+#include <fst/expectation-weight.h>
 #include <fst/float-weight.h>
+#include <fst/lexicographic-weight.h>
+#include <fst/power-weight.h>
 #include <fst/product-weight.h>
+#include <fst/signed-log-weight.h>
+#include <fst/sparse-power-weight.h>
 #include <iostream>
 #include <fstream>
 #include <fst/string-weight.h>
-#include <fst/lexicographic-weight.h>
-#include <fst/power-weight.h>
 
 namespace fst {
 
@@ -59,6 +63,7 @@ class ArcTpl {
 
 typedef ArcTpl<TropicalWeight> StdArc;
 typedef ArcTpl<LogWeight> LogArc;
+typedef ArcTpl<SignedLogWeight> SignedLogArc;
 typedef ArcTpl<MinMaxWeight> MinMaxArc;
 
 
@@ -198,7 +203,7 @@ struct ProductArc {
 };
 
 
-// Arc with label and state Id type the same as template arg and with
+// Arc with label and state Id type the same as first template arg and with
 // weights over the n-th cartesian power of the weight type of the
 // template arg.
 template <class A, unsigned int n>
@@ -219,6 +224,69 @@ struct PowerArc {
       string power;
       Int64ToStr(n, &power);
       type = A::Type() + "_^" + power;
+    }
+    return type;
+  }
+
+  Label ilabel;       // Transition input label
+  Label olabel;       // Transition output label
+  Weight weight;      // Transition weight
+  StateId nextstate;  // Transition destination state
+};
+
+
+// Arc with label and state Id type the same as first template arg and with
+// weights over the arbitrary cartesian power of the weight type.
+template <class A, class K = int>
+struct SparsePowerArc {
+  typedef A Arc;
+  typedef typename A::Label Label;
+  typedef typename A::StateId StateId;
+  typedef SparsePowerWeight<typename A::Weight, K> Weight;
+
+  SparsePowerArc() {}
+
+  SparsePowerArc(Label i, Label o, Weight w, StateId s)
+      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+
+  static const string &Type() {  // Arc type name
+    static string type;
+    if (type.empty()) { type = A::Type() + "_^n"; }
+    if(sizeof(K) != sizeof(uint32)) {
+      string size;
+      Int64ToStr(8 * sizeof(K), &size);
+      type += "_" + size;
+    }
+    return type;
+  }
+
+  Label ilabel;       // Transition input label
+  Label olabel;       // Transition output label
+  Weight weight;      // Transition weight
+  StateId nextstate;  // Transition destination state
+};
+
+
+// Arc with label and state Id type the same as first template arg and with
+// expectation weight over the first template arg weight type and the
+// second template arg.
+template <class A, class X2>
+struct ExpectationArc {
+  typedef A Arc;
+  typedef typename A::Label Label;
+  typedef typename A::StateId StateId;
+  typedef typename A::Weight X1;
+  typedef ExpectationWeight<X1, X2> Weight;
+
+  ExpectationArc() {}
+
+  ExpectationArc(Label i, Label o, Weight w, StateId s)
+      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+
+  static const string &Type() {  // Arc type name
+    static string type;
+    if (type.empty()) {
+      type = "expectation_" + A::Type() + "_" + X2::Type();
     }
     return type;
   }

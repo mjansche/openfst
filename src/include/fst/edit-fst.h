@@ -253,9 +253,12 @@ class EditFstImpl : public FstImpl<A> {
           arc_iterator.Next()) {
         edits_.AddArc(new_internal_id, arc_iterator.Value());
       }
-      // copy the final weight if it has already been edited
+      // copy the final weight
       FinalWeightIterator final_weight_it = GetFinalWeightIterator(s);
-      if (final_weight_it != NotInFinalWeightMap()) {
+      if (final_weight_it == NotInFinalWeightMap()) {
+        edits_.SetFinal(new_internal_id, wrapped_->Final(s));
+      }
+      else {
         edits_.SetFinal(new_internal_id, final_weight_it->second);
         edited_final_weights_.erase(s);
       }

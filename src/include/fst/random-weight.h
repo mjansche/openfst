@@ -32,6 +32,8 @@ using std::vector;
 #include <fst/string-weight.h>
 #include <fst/lexicographic-weight.h>
 #include <fst/power-weight.h>
+#include <fst/signed-log-weight.h>
+#include <fst/sparse-power-weight.h>
 
 namespace fst {
 
@@ -176,13 +178,14 @@ const int StringWeightGenerator<L, S>::kMaxStringLength;
 
 
 // This function object returns a weight generator over the product of the
-// weights for the generators G1 and G2.
-template <class G1, class G2>
+// weights (by default) for the generators G1 and G2.
+template <class G1, class G2,
+  class W = ProductWeight<typename G1::Weight, typename G2::Weight> >
 class ProductWeightGenerator {
  public:
   typedef typename G1::Weight W1;
   typedef typename G2::Weight W2;
-  typedef ProductWeight<W1, W2> Weight;
+  typedef W Weight;
 
   ProductWeightGenerator(int seed = time(0), bool allow_zero = true)
       : generator1_(seed, allow_zero), generator2_(seed, allow_zero) {}
@@ -269,6 +272,67 @@ class PowerWeightGenerator {
     for (size_t i = 0; i < n; ++i) {
       W r = generator_();
       w.SetValue(i, r);
+    }
+    return w;
+  }
+
+ private:
+  G generator_;
+};
+
+// This function object returns SignedLogWeightTpl<T>'s that are
+// random integers chosen from [0, kNumRandomWeights).
+// The sign is randomly chosen as well.
+template <class T>
+class SignedLogWeightGenerator_ {
+ public:
+  typedef SignedLogWeightTpl<T> Weight;
+
+  SignedLogWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  : allow_zero_(allow_zero) {
+    srand(seed);
+  }
+
+  Weight operator() () const {
+    int m = rand() % 2;
+    int n = rand() % (kNumRandomWeights + allow_zero_);
+
+    return SignedLogWeightTpl<T>(
+      (m == 0) ?
+        TropicalWeight(-1.0) :
+        TropicalWeight(1.0),
+      (allow_zero_ && n == kNumRandomWeights) ?
+        LogWeightTpl<T>::Zero() :
+        LogWeightTpl<T>(static_cast<T>(n)));
+  }
+
+ private:
+  // Number of alternative random weights.
+  static const int kNumRandomWeights = 5;
+  bool allow_zero_;  // permit Zero() and zero divisors
+};
+
+template <class T> const int SignedLogWeightGenerator_<T>::kNumRandomWeights;
+
+typedef SignedLogWeightGenerator_<float> SignedLogWeightGenerator;
+
+// This function object returms a weight generator over the catersian power
+// of rank n of the weights for the generator G.
+template <class G, class K, unsigned int n>
+class SparsePowerWeightGenerator {
+ public:
+  typedef typename G::Weight W;
+  typedef SparsePowerWeight<W, K> Weight;
+
+  SparsePowerWeightGenerator(int seed = time(0), bool allow_zero = true)
+      : generator_(seed, allow_zero) {}
+
+  Weight operator()() const {
+    Weight w;
+    for (size_t i = 1; i <= n; ++i) {
+      W r = generator_();
+      K p = i;
+      w.Push(p, r, true);
     }
     return w;
   }

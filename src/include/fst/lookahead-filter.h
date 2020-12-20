@@ -43,11 +43,11 @@ MatchType LookAheadMatchType(const M1 &m1, const M2 &m2) {
   else if (type2 == MATCH_INPUT &&
            m2.Flags() & kInputLookAheadMatcher)
     return MATCH_INPUT;
-  else if (m1.Type(true) == MATCH_OUTPUT &&
-           m1.Flags() & kOutputLookAheadMatcher)
+  else if (m1.Flags() & kOutputLookAheadMatcher &&
+           m1.Type(true) == MATCH_OUTPUT)
     return MATCH_OUTPUT;
-  else if (m2.Type(true) == MATCH_INPUT &&
-           m2.Flags() & kInputLookAheadMatcher)
+  else if (m2.Flags() & kInputLookAheadMatcher &&
+           m2.Type(true) == MATCH_INPUT)
     return MATCH_INPUT;
   else
     return MATCH_NONE;

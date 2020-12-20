@@ -23,6 +23,7 @@
 
 #include <tr1/unordered_set>
 using std::tr1::unordered_set;
+using std::tr1::unordered_multiset;
 #include <vector>
 using std::vector;
 

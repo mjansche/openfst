@@ -21,6 +21,9 @@
 #ifndef FST_TEST_WEIGHT_TESTER_H_
 #define FST_TEST_WEIGHT_TESTER_H_
 
+#include <iostream>
+#include <sstream>
+
 #include <fst/random-weight.h>
 
 namespace fst {
@@ -33,7 +36,7 @@ class WeightTester {
  public:
   WeightTester(WeightGenerator generator) : weight_generator_(generator) {}
 
-  void Test(int iterations) {
+  void Test(int iterations, bool test_division = true) {
     for (int i = 0; i < iterations; ++i) {
       // Selects the test weights.
       Weight w1 = weight_generator_();
@@ -46,10 +49,12 @@ class WeightTester {
       VLOG(1) << "w3 = " << w3;
 
       TestSemiring(w1, w2, w3);
-      TestDivision(w1, w2);
+      if (test_division)
+        TestDivision(w1, w2);
       TestReverse(w1, w2);
       TestEquality(w1, w2, w3);
       TestIO(w1);
+      TestCopy(w1);
     }
   }
 
@@ -154,16 +159,16 @@ class WeightTester {
 
   // Tests binary serialization and textual I/O.
   void TestIO(Weight w) {
-
-    /*
-    // Tests binary serialization.
+    // Tests binary I/O
     {
-      string s;
-      w.Data(&s);
-      Weight v(s);
-      CHECK(w == v);
+    ostringstream os;
+    w.Write(os);
+    os.flush();
+    istringstream is(os.str());
+    Weight v;
+    v.Read(is);
+    CHECK_EQ(w, v);
     }
-    */
 
     // Tests textual I/O.
     {
@@ -174,6 +179,19 @@ class WeightTester {
       is >> v;
       CHECK(ApproxEqual(w, v));
     }
+  }
+
+  // Tests copy constructor and assignment operator
+  void TestCopy(Weight w) {
+    Weight x = w;
+    CHECK(w == x);
+
+    x = Weight(w);
+    CHECK(w == x);
+
+    x = x;
+    CHECK(w == x);
+
   }
 
   // Generates weights used in testing.

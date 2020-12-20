@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
+using std::tr1::unordered_multimap;
 #include <vector>
 using std::vector;
 

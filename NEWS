@@ -8,6 +8,9 @@ OpenFst - Release 1.2
      dispatching.
    * Added per-arc-iterator control of Fst caching.
    * Added PowerWeight and Power Arc.
+   * Added SparsePowerWeight and SparsePowerArc
+   * Added SignedLogWeight and SignedLogArc
+   * Added ExpectationWeight and ExpectationArc
    * Added fstsymbols shell-level command
    * Added total weight removal option to pushing
    * Changed methods for symbol table mutation: use MutableInputSymbols()/MutableOutputSymbols().
