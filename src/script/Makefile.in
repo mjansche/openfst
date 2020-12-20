@@ -53,19 +53,33 @@ am__installdirs = "$(DESTDIR)$(libdir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libfstscript_la_LIBADD =
-am_libfstscript_la_OBJECTS = arcsort.lo closure.lo compile.lo \
-	compose.lo concat.lo connect.lo convert.lo decode.lo \
-	determinize.lo difference.lo draw.lo encode.lo epsnormalize.lo \
-	equal.lo equivalent.lo fst-class.lo info.lo intersect.lo \
-	invert.lo map.lo minimize.lo print.lo project.lo prune.lo \
-	push.lo randequivalent.lo randgen.lo relabel.lo replace.lo \
-	reverse.lo reweight.lo rmepsilon.lo script-impl.lo \
-	shortest-distance.lo shortest-path.lo synchronize.lo \
-	text-io.lo topsort.lo union.lo weight-class.lo
+am__libfstscript_la_SOURCES_DIST = arcsort.cc closure.cc compile.cc \
+	compose.cc concat.cc connect.cc convert.cc decode.cc \
+	determinize.cc difference.cc draw.cc encode.cc epsnormalize.cc \
+	equal.cc equivalent.cc fst-class.cc info.cc intersect.cc \
+	invert.cc map.cc minimize.cc print.cc project.cc prune.cc \
+	push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
+	reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
+	shortest-distance.cc shortest-path.cc synchronize.cc \
+	text-io.cc topsort.cc union.cc weight-class.cc
+@HAVE_SCRIPT_TRUE@am_libfstscript_la_OBJECTS = arcsort.lo closure.lo \
+@HAVE_SCRIPT_TRUE@	compile.lo compose.lo concat.lo connect.lo \
+@HAVE_SCRIPT_TRUE@	convert.lo decode.lo determinize.lo \
+@HAVE_SCRIPT_TRUE@	difference.lo draw.lo encode.lo \
+@HAVE_SCRIPT_TRUE@	epsnormalize.lo equal.lo equivalent.lo \
+@HAVE_SCRIPT_TRUE@	fst-class.lo info.lo intersect.lo invert.lo \
+@HAVE_SCRIPT_TRUE@	map.lo minimize.lo print.lo project.lo \
+@HAVE_SCRIPT_TRUE@	prune.lo push.lo randequivalent.lo \
+@HAVE_SCRIPT_TRUE@	randgen.lo relabel.lo replace.lo reverse.lo \
+@HAVE_SCRIPT_TRUE@	reweight.lo rmepsilon.lo script-impl.lo \
+@HAVE_SCRIPT_TRUE@	shortest-distance.lo shortest-path.lo \
+@HAVE_SCRIPT_TRUE@	synchronize.lo text-io.lo topsort.lo \
+@HAVE_SCRIPT_TRUE@	union.lo weight-class.lo
 libfstscript_la_OBJECTS = $(am_libfstscript_la_OBJECTS)
 libfstscript_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libfstscript_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_SCRIPT_TRUE@am_libfstscript_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -79,7 +93,7 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libfstscript_la_SOURCES)
-DIST_SOURCES = $(libfstscript_la_SOURCES)
+DIST_SOURCES = $(am__libfstscript_la_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -198,17 +212,17 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
-lib_LTLIBRARIES = libfstscript.la
-libfstscript_la_SOURCES = arcsort.cc closure.cc compile.cc compose.cc \
-concat.cc connect.cc convert.cc decode.cc determinize.cc difference.cc \
-draw.cc encode.cc epsnormalize.cc equal.cc equivalent.cc fst-class.cc \
-info.cc intersect.cc invert.cc map.cc minimize.cc print.cc project.cc \
-prune.cc push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
-reverse.cc reweight.cc rmepsilon.cc script-impl.cc shortest-distance.cc \
-shortest-path.cc synchronize.cc text-io.cc topsort.cc union.cc \
-weight-class.cc
+@HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstscript.la
+@HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arcsort.cc closure.cc compile.cc compose.cc \
+@HAVE_SCRIPT_TRUE@concat.cc connect.cc convert.cc decode.cc determinize.cc difference.cc \
+@HAVE_SCRIPT_TRUE@draw.cc encode.cc epsnormalize.cc equal.cc equivalent.cc fst-class.cc \
+@HAVE_SCRIPT_TRUE@info.cc intersect.cc invert.cc map.cc minimize.cc print.cc project.cc \
+@HAVE_SCRIPT_TRUE@prune.cc push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
+@HAVE_SCRIPT_TRUE@reverse.cc reweight.cc rmepsilon.cc script-impl.cc shortest-distance.cc \
+@HAVE_SCRIPT_TRUE@shortest-path.cc synchronize.cc text-io.cc topsort.cc union.cc \
+@HAVE_SCRIPT_TRUE@weight-class.cc
 
-libfstscript_la_LDFLAGS = -version-info 0:0:0
+@HAVE_SCRIPT_TRUE@libfstscript_la_LDFLAGS = -version-info 0:0:0
 all: all-am
 
 .SUFFIXES:
@@ -270,7 +284,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libfstscript.la: $(libfstscript_la_OBJECTS) $(libfstscript_la_DEPENDENCIES) 
-	$(libfstscript_la_LINK) -rpath $(libdir) $(libfstscript_la_OBJECTS) $(libfstscript_la_LIBADD) $(LIBS)
+	$(libfstscript_la_LINK) $(am_libfstscript_la_rpath) $(libfstscript_la_OBJECTS) $(libfstscript_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

@@ -247,9 +247,9 @@ class SequenceComposeFilter {
     s1_ = s1;
     s2_ = s2;
     f_ = f;
-    size_t na1 = NumArcs(fst1_, s1);
-    size_t ne1 = NumOutputEpsilons(fst1_, s1);
-    bool fin1 = Final(fst1_, s1) != Weight::Zero();
+    size_t na1 = internal::NumArcs(fst1_, s1);
+    size_t ne1 = internal::NumOutputEpsilons(fst1_, s1);
+    bool fin1 = internal::Final(fst1_, s1) != Weight::Zero();
     alleps1_ = na1 == ne1 && !fin1;
     noeps1_ = ne1 == 0;
   }
@@ -332,9 +332,9 @@ class AltSequenceComposeFilter {
     s1_ = s1;
     s2_ = s2;
     f_ = f;
-    size_t na2 = NumArcs(fst2_, s2);
-    size_t ne2 = NumInputEpsilons(fst2_, s2);
-    bool fin2 = Final(fst2_, s2) != Weight::Zero();
+    size_t na2 = internal::NumArcs(fst2_, s2);
+    size_t ne2 = internal::NumInputEpsilons(fst2_, s2);
+    bool fin2 = internal::Final(fst2_, s2) != Weight::Zero();
     alleps2_ = na2 == ne2 && !fin2;
     noeps2_ = ne2 == 0;
   }
@@ -420,14 +420,14 @@ class MatchComposeFilter {
     s1_ = s1;
     s2_ = s2;
     f_ = f;
-    size_t na1 = NumArcs(fst1_, s1);
-    size_t ne1 = NumOutputEpsilons(fst1_, s1);
-    bool f1 = Final(fst1_, s1) != Weight::Zero();
+    size_t na1 = internal::NumArcs(fst1_, s1);
+    size_t ne1 = internal::NumOutputEpsilons(fst1_, s1);
+    bool f1 = internal::Final(fst1_, s1) != Weight::Zero();
     alleps1_ = na1 == ne1 && !f1;
     noeps1_ = ne1 == 0;
-    size_t na2 = NumArcs(fst2_, s2);
-    size_t ne2 = NumInputEpsilons(fst2_, s2);
-    bool f2 = Final(fst2_, s2) != Weight::Zero();
+    size_t na2 = internal::NumArcs(fst2_, s2);
+    size_t ne2 = internal::NumInputEpsilons(fst2_, s2);
+    bool f2 = internal::Final(fst2_, s2) != Weight::Zero();
     alleps2_ = na2 == ne2 && !f2;
     noeps2_ = ne2 == 0;
   }

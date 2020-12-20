@@ -20,6 +20,7 @@
 #ifndef FST_EXTENSIONS_FAR_COMPILE_STRINGS_H_
 #define FST_EXTENSIONS_FAR_COMPILE_STRINGS_H_
 
+#include <libgen.h>
 #include <string>
 #include <vector>
 using std::vector;

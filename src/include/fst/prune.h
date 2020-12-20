@@ -166,7 +166,7 @@ void Prune(MutableFst<Arc> *fst,
       if ((opts.state_threshold != kNoStateId) &&
           (num_visited >= opts.state_threshold))
         continue;
-      if (enqueued[arc.nextstate] == kNoStateId) {
+      if (enqueued[arc.nextstate] == kNoKey) {
         enqueued[arc.nextstate] = heap.Insert(arc.nextstate);
         ++num_visited;
       } else {
@@ -298,7 +298,7 @@ void Prune(const Fst<Arc> &ifst,
         visited.push_back(false);
       }
       if (visited[arc.nextstate]) continue;
-      if (enqueued[arc.nextstate] == kNoStateId)
+      if (enqueued[arc.nextstate] == kNoKey)
         enqueued[arc.nextstate] = heap.Insert(arc.nextstate);
       else
         heap.Update(enqueued[arc.nextstate], arc.nextstate);

@@ -1,5 +1,6 @@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
 
+if HAVE_SCRIPT
 lib_LTLIBRARIES = libfstscript.la
 libfstscript_la_SOURCES = arcsort.cc closure.cc compile.cc compose.cc \
 concat.cc connect.cc convert.cc decode.cc determinize.cc difference.cc \
@@ -11,3 +12,4 @@ shortest-path.cc synchronize.cc text-io.cc topsort.cc union.cc \
 weight-class.cc
 
 libfstscript_la_LDFLAGS = -version-info 0:0:0
+endif

@@ -17,7 +17,9 @@
 // \file
 // Various type definitions
 
-#include <cstdlib>    // for ssize_t
+#include <cstdlib>       // for ssize_t
+
+#include <fst/compat.h>  // for DISALLOW_COPY_AND_ASSIGN
 
 #ifndef FST_LIB_TYPES_H__
 #define FST_LIB_TYPES_H__

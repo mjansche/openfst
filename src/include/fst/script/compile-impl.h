@@ -69,7 +69,8 @@ template <class A> class FstCompiler {
       if (col.size() > 5 ||
           (col.size() > 4 && accep) ||
           (col.size() == 3 && !accep)) {
-        LOG(ERROR) << "FstCompiler: Bad number of columns, source = " << source_
+        LOG(ERROR) << "FstCompiler: Bad number of columns, source = "
+                   << source_
                    << ", line = " << nline_;
         exit(1);
       }

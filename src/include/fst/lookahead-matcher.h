@@ -306,81 +306,7 @@ class ArcLookAheadMatcher
 
   // Checks if there is a matching (possibly super-final) transition
   // at (s_, s).
-  bool LookAheadFst(const Fst<Arc> &fst, StateId s) {
-    if (&fst != lfst_)
-      InitLookAheadFst(fst);
-
-    bool ret = false;
-    ssize_t nprefix = 0;
-    if (F & kLookAheadWeight)
-      SetLookAheadWeight(Weight::Zero());
-    if (F & kLookAheadPrefix)
-      ClearLookAheadPrefix();
-    if (fst_.Final(s_) != Weight::Zero() &&
-        lfst_->Final(s) != Weight::Zero()) {
-      if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
-        return true;
-      ++nprefix;
-      if (F & kLookAheadWeight)
-        SetLookAheadWeight(Plus(LookAheadWeight(),
-                                Times(fst_.Final(s_), lfst_->Final(s))));
-      ret = true;
-    }
-    if (matcher_.Find(kNoLabel)) {
-      if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
-        return true;
-      ++nprefix;
-      if (F & kLookAheadWeight)
-        for (; !matcher_.Done(); matcher_.Next())
-          SetLookAheadWeight(Plus(LookAheadWeight(), matcher_.Value().weight));
-      ret = true;
-    }
-    for (ArcIterator< Fst<Arc> > aiter(*lfst_, s);
-         !aiter.Done();
-         aiter.Next()) {
-      const Arc &arc = aiter.Value();
-      Label label = kNoLabel;
-      switch (matcher_.Type(false)) {
-        case MATCH_INPUT:
-          label = arc.olabel;
-          break;
-        case MATCH_OUTPUT:
-          label = arc.ilabel;
-          break;
-        default:
-          LOG(FATAL) << "ArcLookAheadMatcher::LookAheadFst: bad match type";
-      }
-      if (label == 0) {
-        if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
-          return true;
-        if (!(F & kLookAheadNonEpsilonPrefix))
-          ++nprefix;
-        if (F & kLookAheadWeight)
-          SetLookAheadWeight(Plus(LookAheadWeight(), arc.weight));
-        ret = true;
-      } else if (matcher_.Find(label)) {
-        if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
-          return true;
-        for (; !matcher_.Done(); matcher_.Next()) {
-          ++nprefix;
-          if (F & kLookAheadWeight)
-            SetLookAheadWeight(Plus(LookAheadWeight(),
-                                    Times(arc.weight,
-                                          matcher_.Value().weight)));
-          if ((F & kLookAheadPrefix) && nprefix == 1)
-            SetLookAheadPrefix(arc);
-        }
-        ret = true;
-      }
-    }
-    if (F & kLookAheadPrefix) {
-      if (nprefix == 1)
-        SetLookAheadWeight(Weight::One());  // Avoids double counting.
-      else
-        ClearLookAheadPrefix();
-    }
-    return ret;
-  }
+  bool LookAheadFst(const Fst<Arc> &fst, StateId s);
 
   void InitLookAheadFst(const Fst<Arc>& fst, bool copy = false) {
     lfst_ = &fst;
@@ -406,6 +332,84 @@ class ArcLookAheadMatcher
   const Fst<Arc> *lfst_;   // Look-ahead FST
   StateId s_;              // Matcher state
 };
+
+template <class M, uint32 F>
+bool ArcLookAheadMatcher<M, F>::LookAheadFst(const Fst<Arc> &fst, StateId s) {
+  if (&fst != lfst_)
+    InitLookAheadFst(fst);
+
+  bool ret = false;
+  ssize_t nprefix = 0;
+  if (F & kLookAheadWeight)
+    SetLookAheadWeight(Weight::Zero());
+  if (F & kLookAheadPrefix)
+    ClearLookAheadPrefix();
+  if (fst_.Final(s_) != Weight::Zero() &&
+      lfst_->Final(s) != Weight::Zero()) {
+    if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
+      return true;
+    ++nprefix;
+    if (F & kLookAheadWeight)
+      SetLookAheadWeight(Plus(LookAheadWeight(),
+                              Times(fst_.Final(s_), lfst_->Final(s))));
+    ret = true;
+  }
+  if (matcher_.Find(kNoLabel)) {
+    if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
+      return true;
+    ++nprefix;
+    if (F & kLookAheadWeight)
+      for (; !matcher_.Done(); matcher_.Next())
+        SetLookAheadWeight(Plus(LookAheadWeight(), matcher_.Value().weight));
+    ret = true;
+  }
+  for (ArcIterator< Fst<Arc> > aiter(*lfst_, s);
+       !aiter.Done();
+       aiter.Next()) {
+    const Arc &arc = aiter.Value();
+    Label label = kNoLabel;
+    switch (matcher_.Type(false)) {
+      case MATCH_INPUT:
+        label = arc.olabel;
+        break;
+      case MATCH_OUTPUT:
+        label = arc.ilabel;
+        break;
+      default:
+        LOG(FATAL) << "ArcLookAheadMatcher::LookAheadFst: bad match type";
+    }
+    if (label == 0) {
+      if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
+        return true;
+      if (!(F & kLookAheadNonEpsilonPrefix))
+        ++nprefix;
+      if (F & kLookAheadWeight)
+        SetLookAheadWeight(Plus(LookAheadWeight(), arc.weight));
+      ret = true;
+    } else if (matcher_.Find(label)) {
+      if (!(F & (kLookAheadWeight | kLookAheadPrefix)))
+        return true;
+      for (; !matcher_.Done(); matcher_.Next()) {
+        ++nprefix;
+        if (F & kLookAheadWeight)
+          SetLookAheadWeight(Plus(LookAheadWeight(),
+                                  Times(arc.weight,
+                                        matcher_.Value().weight)));
+        if ((F & kLookAheadPrefix) && nprefix == 1)
+          SetLookAheadPrefix(arc);
+      }
+      ret = true;
+    }
+  }
+  if (F & kLookAheadPrefix) {
+    if (nprefix == 1)
+      SetLookAheadWeight(Weight::One());  // Avoids double counting.
+    else
+      ClearLookAheadPrefix();
+  }
+  return ret;
+}
+
 
 // Template argument F accepts flags to control behavior.
 // It must include precisely one of KInputLookAheadMatcher or
@@ -442,8 +446,8 @@ class LabelLookAheadMatcher
         label_reachable_ = new LabelReachable<Arc, S>(data, s);
     } else if ((reach_input && (F & kInputLookAheadMatcher)) ||
                (!reach_input && (F & kOutputLookAheadMatcher))) {
-      label_reachable_ = new LabelReachable<Arc, S>(fst, reach_input, s,
-                                                    F & kLookAheadKeepRelabelData);
+      label_reachable_ = new LabelReachable<Arc, S>(
+          fst, reach_input, s, F & kLookAheadKeepRelabelData);
     }
   }
 
@@ -521,46 +525,7 @@ class LabelLookAheadMatcher
   // Checks if there is a matching (possibly super-final) transition
   // at (s_, s).
   template <class L>
-  bool LookAheadFst(const L &fst, StateId s) {
-    if (static_cast<const Fst<Arc> *>(&fst) != lfst_)
-      InitLookAheadFst(fst);
-
-    SetLookAheadWeight(Weight::One());
-    ClearLookAheadPrefix();
-
-    if (!label_reachable_)
-      return true;
-
-    label_reachable_->SetState(s_, s);
-    reach_set_state_ = true;
-
-    bool compute_weight = F & kLookAheadWeight;
-    bool compute_prefix = F & kLookAheadPrefix;
-
-    bool reach_input = Type(false) == MATCH_OUTPUT;
-    ArcIterator<L> aiter(fst, s);
-    bool reach_arc = label_reachable_->Reach(&aiter, 0, NumArcs(*lfst_, s),
-                                             reach_input, compute_weight);
-    if (reach_arc) {
-      ssize_t begin = label_reachable_->ReachBegin();
-      ssize_t end = label_reachable_->ReachEnd();
-      if (compute_prefix && end - begin == 1) {
-        aiter.Seek(begin);
-        SetLookAheadPrefix(aiter.Value());
-        compute_weight = false;
-      } else if (compute_weight) {
-        SetLookAheadWeight(label_reachable_->ReachWeight());
-      }
-    }
-    Weight lfinal = Final(*lfst_, s);
-    bool reach_final = lfinal != Weight::Zero() &&
-        label_reachable_->ReachFinal();
-    if (reach_final && compute_weight)
-           SetLookAheadWeight(reach_arc ?
-                              Plus(LookAheadWeight(), lfinal) : lfinal);
-
-    return reach_arc || reach_final;
-  }
+  bool LookAheadFst(const L &fst, StateId s);
 
   void InitLookAheadFst(const Fst<Arc>& fst, bool copy = false) {
     lfst_ = &fst;
@@ -598,6 +563,49 @@ class LabelLookAheadMatcher
   mutable bool reach_set_state_;             // reachable_.SetState called?
 };
 
+template <class M, uint32 F, class S>
+template <class L> inline
+bool LabelLookAheadMatcher<M, F, S>::LookAheadFst(const L &fst, StateId s) {
+  if (static_cast<const Fst<Arc> *>(&fst) != lfst_)
+    InitLookAheadFst(fst);
+
+  SetLookAheadWeight(Weight::One());
+  ClearLookAheadPrefix();
+
+  if (!label_reachable_)
+    return true;
+
+  label_reachable_->SetState(s_, s);
+  reach_set_state_ = true;
+
+  bool compute_weight = F & kLookAheadWeight;
+  bool compute_prefix = F & kLookAheadPrefix;
+
+  bool reach_input = Type(false) == MATCH_OUTPUT;
+  ArcIterator<L> aiter(fst, s);
+  bool reach_arc = label_reachable_->Reach(&aiter, 0, internal::NumArcs(*lfst_, s),
+                                           reach_input, compute_weight);
+  if (reach_arc) {
+    ssize_t begin = label_reachable_->ReachBegin();
+    ssize_t end = label_reachable_->ReachEnd();
+    if (compute_prefix && end - begin == 1) {
+      aiter.Seek(begin);
+      SetLookAheadPrefix(aiter.Value());
+      compute_weight = false;
+    } else if (compute_weight) {
+      SetLookAheadWeight(label_reachable_->ReachWeight());
+    }
+  }
+  Weight lfinal = internal::Final(*lfst_, s);
+  bool reach_final = lfinal != Weight::Zero() &&
+      label_reachable_->ReachFinal();
+  if (reach_final && compute_weight)
+    SetLookAheadWeight(reach_arc ?
+                       Plus(LookAheadWeight(), lfinal) : lfinal);
+
+  return reach_arc || reach_final;
+}
+
 
 // Label-lookahead relabeling class.
 template <class A>
@@ -609,43 +617,7 @@ class LabelLookAheadRelabeler {
 
   // Relabels matcher Fst - initialization function object.
   template <typename I>
-  LabelLookAheadRelabeler(I **impl) {
-    Fst<A> &fst = (*impl)->GetFst();
-    D *data = (*impl)->GetAddOn();
-    const string name = (*impl)->Type();
-    bool is_mutable = fst.Properties(kMutable, false);
-    MutableFst<A> *mfst = 0;
-    if (is_mutable) {
-      mfst = static_cast<MutableFst<A> *>(&fst);
-    } else {
-      mfst = new VectorFst<A>(fst);
-      data->IncrRefCount();
-      delete *impl;
-    }
-    if (data->First()) {  // reach_input
-      LabelReachable<A> reachable(data->First());
-      reachable.Relabel(mfst, true);
-      if (!FLAGS_save_relabel_ipairs.empty()) {
-        vector<pair<Label, Label> > pairs;
-        reachable.RelabelPairs(&pairs);
-        WriteLabelPairs(FLAGS_save_relabel_ipairs, pairs);
-      }
-    } else {
-      LabelReachable<A> reachable(data->Second());
-      reachable.Relabel(mfst, false);
-      if (!FLAGS_save_relabel_opairs.empty()) {
-        vector<pair<Label, Label> > pairs;
-        reachable.RelabelPairs(&pairs);
-        WriteLabelPairs(FLAGS_save_relabel_opairs, pairs);
-      }
-    }
-    if (!is_mutable) {
-      *impl = new I(*mfst, name);
-      (*impl)->SetAddOn(data);
-      delete mfst;
-      data->DecrRefCount();
-    }
-  }
+  LabelLookAheadRelabeler(I **impl);
 
   // Relabels arbitrary Fst. Class L should be a label-lookahead Fst.
   template <class L>
@@ -669,6 +641,46 @@ class LabelLookAheadRelabeler {
     reachable.RelabelPairs(pairs);
   }
 };
+
+template <class A>
+template <typename I> inline
+LabelLookAheadRelabeler<A>::LabelLookAheadRelabeler(I **impl) {
+  Fst<A> &fst = (*impl)->GetFst();
+  D *data = (*impl)->GetAddOn();
+  const string name = (*impl)->Type();
+  bool is_mutable = fst.Properties(kMutable, false);
+  MutableFst<A> *mfst = 0;
+  if (is_mutable) {
+    mfst = static_cast<MutableFst<A> *>(&fst);
+  } else {
+    mfst = new VectorFst<A>(fst);
+    data->IncrRefCount();
+    delete *impl;
+  }
+  if (data->First()) {  // reach_input
+    LabelReachable<A> reachable(data->First());
+    reachable.Relabel(mfst, true);
+    if (!FLAGS_save_relabel_ipairs.empty()) {
+      vector<pair<Label, Label> > pairs;
+      reachable.RelabelPairs(&pairs);
+      WriteLabelPairs(FLAGS_save_relabel_ipairs, pairs);
+    }
+  } else {
+    LabelReachable<A> reachable(data->Second());
+    reachable.Relabel(mfst, false);
+    if (!FLAGS_save_relabel_opairs.empty()) {
+      vector<pair<Label, Label> > pairs;
+      reachable.RelabelPairs(&pairs);
+      WriteLabelPairs(FLAGS_save_relabel_opairs, pairs);
+    }
+  }
+  if (!is_mutable) {
+    *impl = new I(*mfst, name);
+    (*impl)->SetAddOn(data);
+    delete mfst;
+    data->DecrRefCount();
+  }
+}
 
 
 // Generic lookahead matcher, templated on the FST definition

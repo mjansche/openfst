@@ -154,76 +154,18 @@ template <class A>  class EncodeTable {
 
   // Given an encode arc Label decode back to input/output labels and costs
   const Tuple* Decode(Label key) const {
-    if (key < 1 || key > encode_tuples_.size())
+    if (key < 1 || key > encode_tuples_.size()) {
       LOG(FATAL) << "EncodeTable::Decode: unknown decode key: " << key;
+      return 0;
+    }
     return encode_tuples_[key - 1];
   }
 
   size_t Size() const { return encode_tuples_.size(); }
 
-  bool Write(ostream &strm, const string &source) const {
-    WriteType(strm, kEncodeMagicNumber);
-    WriteType(strm, flags_);
-    int64 size = encode_tuples_.size();
-    WriteType(strm, size);
-    for (size_t i = 0;  i < size; ++i) {
-      const Tuple* tuple = encode_tuples_[i];
-      WriteType(strm, tuple->ilabel);
-      WriteType(strm, tuple->olabel);
-      tuple->weight.Write(strm);
-    }
+  bool Write(ostream &strm, const string &source) const;
 
-    if (flags_ & kEncodeHasISymbols)
-      isymbols_->Write(strm);
-
-    if (flags_ & kEncodeHasOSymbols)
-      osymbols_->Write(strm);
-
-    strm.flush();
-    if (!strm) {
-      LOG(ERROR) << "EncodeTable::Write: write failed: " << source;
-      return false;
-    }
-    return true;
-  }
-
-  bool Read(istream &strm, const string &source) {
-    encode_tuples_.clear();
-    encode_hash_.clear();
-    int32 magic_number = 0;
-    ReadType(strm, &magic_number);
-    if (magic_number != kEncodeMagicNumber) {
-      LOG(ERROR) << "EncodeTable::Read: Bad encode table header: " << source;
-      return false;
-    }
-    ReadType(strm, &flags_);
-    int64 size;
-    ReadType(strm, &size);
-    if (!strm) {
-      LOG(ERROR) << "EncodeTable::Read: read failed: " << source;
-      return false;
-    }
-    for (size_t i = 0; i < size; ++i) {
-      Tuple* tuple = new Tuple();
-      ReadType(strm, &tuple->ilabel);
-      ReadType(strm, &tuple->olabel);
-      tuple->weight.Read(strm);
-      if (!strm) {
-        LOG(ERROR) << "EncodeTable::Read: read failed: " << source;
-        return false;
-      }
-      encode_tuples_.push_back(tuple);
-      encode_hash_[encode_tuples_.back()] = encode_tuples_.size();
-    }
-
-    if (flags_ & kEncodeHasISymbols)
-      isymbols_ = SymbolTable::Read(strm, source);
-
-    if (flags_ & kEncodeHasOSymbols)
-      osymbols_ = SymbolTable::Read(strm, source);
-
-    return true;
-  }
+  static EncodeTable<A> *Read(istream &strm, const string &source);
 
   const uint32 flags() const { return flags_ & kEncodeFlags; }
 
@@ -268,6 +210,75 @@ template <class A>  class EncodeTable {
 
   DISALLOW_COPY_AND_ASSIGN(EncodeTable);
 };
+
+template <class A> inline
+bool EncodeTable<A>::Write(ostream &strm, const string &source) const {
+  WriteType(strm, kEncodeMagicNumber);
+  WriteType(strm, flags_);
+  int64 size = encode_tuples_.size();
+  WriteType(strm, size);
+  for (size_t i = 0;  i < size; ++i) {
+    const Tuple* tuple = encode_tuples_[i];
+    WriteType(strm, tuple->ilabel);
+    WriteType(strm, tuple->olabel);
+    tuple->weight.Write(strm);
+  }
+
+  if (flags_ & kEncodeHasISymbols)
+    isymbols_->Write(strm);
+
+  if (flags_ & kEncodeHasOSymbols)
+    osymbols_->Write(strm);
+
+  strm.flush();
+  if (!strm) {
+    LOG(ERROR) << "EncodeTable::Write: write failed: " << source;
+    return false;
+  }
+  return true;
+}
+
+template <class A> inline
+EncodeTable<A> *EncodeTable<A>::Read(istream &strm, const string &source) {
+  int32 magic_number = 0;
+  ReadType(strm, &magic_number);
+  if (magic_number != kEncodeMagicNumber) {
+    LOG(ERROR) << "EncodeTable::Read: Bad encode table header: " << source;
+    return 0;
+  }
+  uint32 flags;
+  ReadType(strm, &flags);
+  EncodeTable<A> *table = new EncodeTable<A>(flags);
+
+  int64 size;
+  ReadType(strm, &size);
+  if (!strm) {
+    LOG(ERROR) << "EncodeTable::Read: read failed: " << source;
+    return 0;
+  }
+
+  for (size_t i = 0; i < size; ++i) {
+    Tuple* tuple = new Tuple();
+    ReadType(strm, &tuple->ilabel);
+    ReadType(strm, &tuple->olabel);
+    tuple->weight.Read(strm);
+    if (!strm) {
+      LOG(ERROR) << "EncodeTable::Read: read failed: " << source;
+      return 0;
+    }
+    table->encode_tuples_.push_back(tuple);
+    table->encode_hash_[table->encode_tuples_.back()] =
+        table->encode_tuples_.size();
+  }
+
+  if (flags & kEncodeHasISymbols)
+    table->isymbols_ = SymbolTable::Read(strm, source);
+
+  if (flags & kEncodeHasOSymbols)
+    table->osymbols_ = SymbolTable::Read(strm, source);
+
+  return table;
+}
 
 
 // A mapper to encode/decode weighted transducers. Encoding of an
@@ -315,41 +326,7 @@ template <class A> class EncodeMapper {
     if (!table_->DecrRefCount()) delete table_;
   }
 
-  A operator()(const A &arc) {
-    if (type_ == ENCODE) {  // labels and/or weights to single label
-      if ((arc.nextstate == kNoStateId && !(flags_ & kEncodeWeights)) ||
-          (arc.nextstate == kNoStateId && (flags_ & kEncodeWeights) &&
-           arc.weight == Weight::Zero())) {
-        return arc;
-      } else {
-        Label label = table_->Encode(arc);
-        return A(label,
-                 flags_ & kEncodeLabels ? label : arc.olabel,
-                 flags_ & kEncodeWeights ? Weight::One() : arc.weight,
-                 arc.nextstate);
-      }
-    } else if (type_ == DECODE) {
-      if (arc.nextstate == kNoStateId) {
-        return arc;
-      } else {
-        if (arc.ilabel == 0) return arc;
-        if (flags_ & kEncodeLabels && arc.ilabel != arc.olabel)
-          LOG(FATAL) << "EncodeMapper: Label-encoded arc has different "
-                     "input and output labels";
-        if (flags_ & kEncodeWeights && arc.weight != Weight::One())
-          LOG(FATAL) <<
-                     "EncodeMapper: Weight-encoded arc has non-trivial weight";
-        const typename EncodeTable<A>::Tuple* tuple =
-          table_->Decode(arc.ilabel);
-        return A(tuple->ilabel,
-                 flags_ & kEncodeLabels ? tuple->olabel : arc.olabel,
-                 flags_ & kEncodeWeights ? tuple->weight : arc.weight,
-                 arc.nextstate);
-      }
-    } else {
-      LOG(FATAL) << "EncodeMapper: Unknown operation";
-    }
-  }
+  A operator()(const A &arc);
 
   MapFinalAction FinalAction() const {
     return (type_ == ENCODE && (flags_ & kEncodeWeights)) ?
@@ -391,9 +368,8 @@ template <class A> class EncodeMapper {
   static EncodeMapper<A> *Read(istream &strm,
                                const string& source,
                                EncodeType type = ENCODE) {
-    EncodeTable<A> *table = new EncodeTable<A>(0);
-    bool r = table->Read(strm, source);
-    return r ? new EncodeMapper(table->flags(), type, table) : 0;
+    EncodeTable<A> *table = table->Read(strm, source);
+    return table ? new EncodeMapper(table->flags(), type, table) : 0;
   }
 
   static EncodeMapper<A> *Read(const string& filename,
@@ -427,6 +403,43 @@ template <class A> class EncodeMapper {
       : flags_(flags), type_(type), table_(table) {}
   void operator=(const EncodeMapper &);  // Disallow.
 };
+
+template <class A> inline
+A EncodeMapper<A>::operator()(const A &arc) {
+  if (type_ == ENCODE) {  // labels and/or weights to single label
+    if ((arc.nextstate == kNoStateId && !(flags_ & kEncodeWeights)) ||
+        (arc.nextstate == kNoStateId && (flags_ & kEncodeWeights) &&
+         arc.weight == Weight::Zero())) {
+      return arc;
+    } else {
+      Label label = table_->Encode(arc);
+      return A(label,
+               flags_ & kEncodeLabels ? label : arc.olabel,
+               flags_ & kEncodeWeights ? Weight::One() : arc.weight,
+               arc.nextstate);
+    }
+  } else if (type_ == DECODE) {
+    if (arc.nextstate == kNoStateId) {
+      return arc;
+    } else {
+      if (arc.ilabel == 0) return arc;
+      if (flags_ & kEncodeLabels && arc.ilabel != arc.olabel)
+        LOG(FATAL) << "EncodeMapper: Label-encoded arc has different "
+            "input and output labels";
+      if (flags_ & kEncodeWeights && arc.weight != Weight::One())
+        LOG(FATAL) <<
+            "EncodeMapper: Weight-encoded arc has non-trivial weight";
+      const typename EncodeTable<A>::Tuple* tuple =
+          table_->Decode(arc.ilabel);
+      return A(tuple->ilabel,
+               flags_ & kEncodeLabels ? tuple->olabel : arc.olabel,
+               flags_ & kEncodeWeights ? tuple->weight : arc.weight,
+               arc.nextstate);
+    }
+  } else {
+    LOG(FATAL) << "EncodeMapper: Unknown operation";
+  }
+}
 
 
 // Complexity: O(nstates + narcs)

@@ -10,7 +10,7 @@ OpenFst - Release 1.2
    * Added PowerWeight and Power Arc.
    * Added fstsymbols shell-level command
    * Added total weight removal option to pushing
-   * Changed methods for symbol table mutation
+   * Changed methods for symbol table mutation: use MutableInputSymbols()/MutableOutputSymbols().
    * Numerous efficiency improvements esp in composition, replace, and caching
    * Fixed numerous bugs including:
      - improper types of some approximation deltas
@@ -21,6 +21,7 @@ OpenFst - Release 1.2
      - symbol table checksumming issues
      - various C++ standards issues
      - Visit() behavior when visitation aborted
+     - Decode() hash performance bug
    * Added extensions directories including:
      - finite-state archive (FAR) utilities
      - compact fsts

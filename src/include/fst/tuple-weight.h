@@ -71,6 +71,10 @@ class TupleWeight {
     return one;
   }
 
+  static unsigned int Length() {
+    return n;
+  }
+
   istream &Read(istream &strm) {
     for (size_t i = 0; i < n; ++i)
       values_[i].Read(strm);

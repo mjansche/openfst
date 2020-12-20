@@ -448,8 +448,8 @@ class SymbolTableIterator {
 
  private:
   const SymbolTable& table_;
-  size_t pos_;
-  ssize_t nsymbols_;
+  ssize_t pos_;
+  size_t nsymbols_;
   int64 key_;
 };
 

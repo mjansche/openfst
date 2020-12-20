@@ -70,7 +70,7 @@ void CompileFst(FstCompileArgs *args) {
   if (args->fst_type != "vector") {
     fst = Convert<Arc>(*fst, args->fst_type);
     if (!fst) {
-      LOG(ERROR) << "Failed to convert FST to desired type: "
+      LOG(FATAL) << "Failed to convert FST to desired type: "
                  << args->fst_type;
     }
   }

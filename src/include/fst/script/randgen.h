@@ -68,13 +68,15 @@ void RandGen(RandGenArgs *args) {
   const RandGenOptions<RandArcSelection> &opts = args->arg4;
 
   if (opts.arc_selector == UNIFORM_ARC_SELECTOR) {
+    UniformArcSelector<Arc> arc_selector(seed);
     RandGenOptions< UniformArcSelector<Arc> >
-        ropts(UniformArcSelector<Arc>(seed), opts.max_length,
+        ropts(arc_selector, opts.max_length,
               opts.npath);
     RandGen(ifst, ofst, ropts);
   } else {
+    LogProbArcSelectorGuard<Arc> arc_selector(seed);
     RandGenOptions< LogProbArcSelectorGuard<Arc> >
-        ropts(LogProbArcSelectorGuard<Arc>(seed), opts.max_length,
+        ropts(arc_selector, opts.max_length,
               opts.npath);
     RandGen(ifst, ofst, ropts);
   }

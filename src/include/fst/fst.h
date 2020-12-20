@@ -498,6 +498,8 @@ MatcherBase<A> *Fst<A>::InitMatcher(MatchType match_type) const {
 // FST ACCESSORS - Useful functions in high-performance cases.
 //
 
+namespace internal {
+
 // General case - requires non-abstract, 'final' methods. Use for inlining.
 template <class F> inline
 typename F::Arc::Weight Final(const F &fst, typename F::Arc::StateId s) {
@@ -541,6 +543,7 @@ ssize_t NumOutputEpsilons(const Fst<A> &fst, typename A::StateId s) {
   return fst.NumOutputEpsilons(s);
 }
 
+} // namespace internal
 
 // A useful alias when using StdArc.
 typedef Fst<StdArc> StdFst;
@@ -628,42 +631,7 @@ template <class A> class FstImpl {
   // use the option value.  If opts.[io]symbols is non-null, read-in
   // (if present), but use the option value.
   bool ReadHeader(istream &strm, const FstReadOptions& opts,
-                  int min_version, FstHeader *hdr) {
-    if (opts.header)
-      *hdr = *opts.header;
-    else if (!hdr->Read(strm, opts.source))
-      return false;
-    if (hdr->FstType() != type_) {
-      LOG(ERROR) << "FstImpl::ReadHeader: Fst not of type \"" << type_
-                 << "\": " << opts.source;
-      return false;
-    }
-    if (hdr->ArcType() != A::Type()) {
-      LOG(ERROR) << "FstImpl::ReadHeader: Arc not of type \"" << A::Type()
-                 << "\": " << opts.source;
-      return false;
-    }
-    if (hdr->Version() < min_version) {
-      LOG(ERROR) << "FstImpl::ReadHeader: Obsolete " << type_
-                 << " Fst version: " << opts.source;
-      return false;
-    }
-    properties_ = hdr->Properties();
-    if (hdr->GetFlags() & FstHeader::HAS_ISYMBOLS)
-      isymbols_ = SymbolTable::Read(strm, opts.source);
-    if (hdr->GetFlags() & FstHeader::HAS_OSYMBOLS)
-      osymbols_ =SymbolTable::Read(strm, opts.source);
-
-    if (opts.isymbols) {
-      delete isymbols_;
-      isymbols_ = opts.isymbols->Copy();
-    }
-    if (opts.osymbols) {
-      delete osymbols_;
-      osymbols_ = opts.osymbols->Copy();
-    }
-    return true;
-  }
+                  int min_version, FstHeader *hdr);
 
   // Write-out header and symbols from output stream.
   // If a opts.header is false, skip writing header.
@@ -698,6 +666,45 @@ template <class A> class FstImpl {
 
   void operator=(const FstImpl<A> &impl);  // disallow
 };
+
+template <class A> inline
+bool FstImpl<A>::ReadHeader(istream &strm, const FstReadOptions& opts,
+                            int min_version, FstHeader *hdr) {
+  if (opts.header)
+    *hdr = *opts.header;
+  else if (!hdr->Read(strm, opts.source))
+    return false;
+  if (hdr->FstType() != type_) {
+    LOG(ERROR) << "FstImpl::ReadHeader: Fst not of type \"" << type_
+               << "\": " << opts.source;
+    return false;
+  }
+  if (hdr->ArcType() != A::Type()) {
+    LOG(ERROR) << "FstImpl::ReadHeader: Arc not of type \"" << A::Type()
+               << "\": " << opts.source;
+    return false;
+  }
+  if (hdr->Version() < min_version) {
+    LOG(ERROR) << "FstImpl::ReadHeader: Obsolete " << type_
+               << " Fst version: " << opts.source;
+    return false;
+  }
+  properties_ = hdr->Properties();
+  if (hdr->GetFlags() & FstHeader::HAS_ISYMBOLS)
+    isymbols_ = SymbolTable::Read(strm, opts.source);
+  if (hdr->GetFlags() & FstHeader::HAS_OSYMBOLS)
+    osymbols_ =SymbolTable::Read(strm, opts.source);
+
+  if (opts.isymbols) {
+    delete isymbols_;
+    isymbols_ = opts.isymbols->Copy();
+  }
+  if (opts.osymbols) {
+    delete osymbols_;
+    osymbols_ = opts.osymbols->Copy();
+  }
+  return true;
+}
 
 
 template<class Arc>

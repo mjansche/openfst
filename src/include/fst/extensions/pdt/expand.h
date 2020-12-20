@@ -35,7 +35,7 @@ namespace fst {
 typedef CacheOptions ExpandFstOptions;
 
 // Properties for an expanded PDT.
-uint64 ExpandProperties(uint64 inprops) {
+inline uint64 ExpandProperties(uint64 inprops) {
   return inprops & (kAcceptor | kAcyclic | kInitialAcyclic | kUnweighted);
 }
 

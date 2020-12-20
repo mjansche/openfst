@@ -26,7 +26,7 @@ bool RandEquivalent(const FstClass &fst1, const FstClass &fst2,
                     int32 seed, ssize_t num_paths, float delta,
                     int path_length) {
   if (!ArcTypesMatch(fst1, fst2, "RandEquivalent")) return false;
-  RandEquivalentInnerArgs1 args(fst1, fst2, num_paths, delta, seed,
+  RandEquivalentInnerArgs1 args(fst1, fst2, seed, num_paths, delta,
                                 path_length);
   RandEquivalentArgs1 args_with_retval(args);
 

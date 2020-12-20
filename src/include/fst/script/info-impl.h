@@ -30,7 +30,9 @@ using std::vector;
 #include <fst/fst.h>
 #include <fst/lookahead-matcher.h>
 #include <fst/matcher.h>
+#include <fst/queue.h>
 #include <fst/test-properties.h>
+#include <fst/visit.h>
 
 namespace fst {
 
@@ -57,7 +59,7 @@ template <class A> class FstInfo {
                         fst.OutputSymbols()->Name() : "none"),
         nstates_(0), narcs_(0), start_(kNoStateId), nfinal_(0),
         nepsilons_(0), niepsilons_(0), noepsilons_(0),
-        naccess_(0), ncoaccess_(0), nconnect_(0), nscc_(0),
+        naccess_(0), ncoaccess_(0), nconnect_(0), ncc_(0), nscc_(0),
         arc_filter_type_(arc_filter_type) {
     if (info_type == "long")
       long_info_ = true;
@@ -95,31 +97,54 @@ template <class A> class FstInfo {
       }
     }
 
-    vector<StateId> scc;
-    vector<bool> access, coaccess;
-    uint64 props = 0;
-    SccVisitor<Arc> scc_visitor(&scc, &access, &coaccess, &props);
-    if (arc_filter_type == "any")
-      DfsVisit(fst, &scc_visitor);
-    else if (arc_filter_type == "epsilon")
-      DfsVisit(fst, &scc_visitor, EpsilonArcFilter<Arc>());
-    else if (arc_filter_type == "iepsilon")
-      DfsVisit(fst, &scc_visitor, InputEpsilonArcFilter<Arc>());
-    else if (arc_filter_type == "oepsilon")
-      DfsVisit(fst, &scc_visitor, OutputEpsilonArcFilter<Arc>());
-    else
-      LOG(FATAL) << "Bad arc filter type: " << arc_filter_type;
+    {
+      vector<StateId> cc;
+      CcVisitor<Arc> cc_visitor(&cc);
+      FifoQueue<StateId> fifo_queue;
+      if (arc_filter_type == "any")
+        Visit(fst, &cc_visitor, &fifo_queue);
+      else if (arc_filter_type == "epsilon")
+        Visit(fst, &cc_visitor, &fifo_queue, EpsilonArcFilter<Arc>());
+      else if (arc_filter_type == "iepsilon")
+        Visit(fst, &cc_visitor, &fifo_queue, InputEpsilonArcFilter<Arc>());
+      else if (arc_filter_type == "oepsilon")
+        Visit(fst, &cc_visitor, &fifo_queue, OutputEpsilonArcFilter<Arc>());
+      else
+        LOG(FATAL) << "Bad arc filter type: " << arc_filter_type;
+
+      for (StateId s = 0; s < cc.size(); ++s) {
+        if (cc[s] >= ncc_)
+          ncc_ = cc[s] + 1;
+      }
+    }
+
+    {
+      vector<StateId> scc;
+      vector<bool> access, coaccess;
+      uint64 props = 0;
+      SccVisitor<Arc> scc_visitor(&scc, &access, &coaccess, &props);
+      if (arc_filter_type == "any")
+        DfsVisit(fst, &scc_visitor);
+      else if (arc_filter_type == "epsilon")
+        DfsVisit(fst, &scc_visitor, EpsilonArcFilter<Arc>());
+      else if (arc_filter_type == "iepsilon")
+        DfsVisit(fst, &scc_visitor, InputEpsilonArcFilter<Arc>());
+      else if (arc_filter_type == "oepsilon")
+        DfsVisit(fst, &scc_visitor, OutputEpsilonArcFilter<Arc>());
+      else
+        LOG(FATAL) << "Bad arc filter type: " << arc_filter_type;
 
 
-    for (StateId s = 0; s < scc.size(); ++s) {
-      if (access[s])
-        ++naccess_;
-      if (coaccess[s])
-        ++ncoaccess_;
-      if (access[s] && coaccess[s])
-        ++nconnect_;
-      if (scc[s] >= nscc_)
-        nscc_ = scc[s] + 1;
+      for (StateId s = 0; s < scc.size(); ++s) {
+        if (access[s])
+          ++naccess_;
+        if (coaccess[s])
+          ++ncoaccess_;
+        if (access[s] && coaccess[s])
+          ++nconnect_;
+        if (scc[s] >= nscc_)
+          nscc_ = scc[s] + 1;
+      }
     }
 
     LookAheadMatcher< Fst<A> > imatcher(fst, MATCH_INPUT);
@@ -154,6 +179,7 @@ template <class A> class FstInfo {
   int64 NumAccessible() const { CheckLong(); return naccess_; }
   int64 NumCoAccessible() const { CheckLong(); return ncoaccess_; }
   int64 NumConnected() const { CheckLong(); return nconnect_; }
+  int64 NumCc() const { CheckLong(); return ncc_; }
   int64 NumScc() const { CheckLong(); return nscc_; }
   uint64 Properties() const { CheckLong(); return properties_; }
 
@@ -176,6 +202,7 @@ template <class A> class FstInfo {
   int64 naccess_;
   int64 ncoaccess_;
   int64 nconnect_;
+  int64 ncc_;
   int64 nscc_;
   MatchType input_match_type_;
   MatchType output_match_type_;
@@ -235,6 +262,9 @@ void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
   string connected_label = "# of " +  arc_type + "connected states";
   fprintf(fp, "%-50s%lld\n", connected_label.c_str(),
           fstinfo.NumConnected());
+  string numcc_label = "# of " +  arc_type + "connected components";
+  fprintf(fp, "%-50s%lld\n", numcc_label.c_str(),
+          fstinfo.NumCc());
   string numscc_label = "# of " +  arc_type + "strongly conn components";
   fprintf(fp, "%-50s%lld\n", numscc_label.c_str(),
           fstinfo.NumScc());

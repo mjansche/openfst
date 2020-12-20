@@ -20,6 +20,8 @@
 #ifndef FST_LIB_LOCK_H__
 #define FST_LIB_LOCK_H__
 
+#include <fst/compat.h>  // for DISALLOW_COPY_AND_ASSIGN
+
 namespace fst {
 
 using namespace std;

@@ -816,10 +816,12 @@ struct GallicToNewSymbolsMapper {
     fst_->SetFinal(state_, AW::One());
     if (osymbols_) {
       string name = osymbols_->Name() + "_from_gallic";
-      isymbols_ = new SymbolTable(name);
+      fst_->SetInputSymbols(new SymbolTable(name));
+      isymbols_ = fst_->MutableInputSymbols();
       isymbols_->AddSymbol(osymbols_->Find((int64) 0), 0);
-   }
-    fst_->SetInputSymbols(isymbols_);
+    } else {
+      fst_->SetInputSymbols(0);
+    }
   }
 
   A operator()(const FromArc &arc) {

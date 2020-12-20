@@ -472,7 +472,8 @@ class PushLabelsComposeFilter {
     if (!(LookAheadFlags() & kLookAheadPrefix))
       return;
 
-    narcsa_ = LookAheadOutput() ? NumArcs(fst1_, s1) : NumArcs(fst2_, s2);
+    narcsa_ = LookAheadOutput() ? internal::NumArcs(fst1_, s1)
+        : internal::NumArcs(fst2_, s2);
 
     const FilterState2 &f2 = f_.GetState2();
     const Label &flabel = f2.GetState();

@@ -218,40 +218,7 @@ class ComposeFstImpl : public ComposeFstImplBase<typename M1::Arc> {
 
  public:
   ComposeFstImpl(const FST1 &fst1, const FST2 &fst2,
-                 const ComposeFstImplOptions<M1, M2, F, T> &opts)
-      : ComposeFstImplBase<Arc>(fst1, fst2, opts),
-        filter_(opts.filter ? opts.filter :
-                new F(fst1, fst2, opts.matcher1, opts.matcher2)),
-        matcher1_(filter_->GetMatcher1()),
-        matcher2_(filter_->GetMatcher2()),
-        fst1_(matcher1_->GetFst()),
-        fst2_(matcher2_->GetFst()),
-        state_table_(opts.state_table ? opts.state_table :
-                     new T(fst1_, fst2_)) {
-    MatchType type1 = matcher1_->Type(false);
-    MatchType type2 = matcher2_->Type(false);
-    if (type1 == MATCH_OUTPUT && type2  == MATCH_INPUT) {
-      match_type_ = MATCH_BOTH;
-    } else if (type1 == MATCH_OUTPUT) {
-      match_type_ = MATCH_OUTPUT;
-    } else if (type2 == MATCH_INPUT) {
-      match_type_ = MATCH_INPUT;
-    } else if (matcher1_->Type(true) == MATCH_OUTPUT) {
-      match_type_ = MATCH_OUTPUT;
-    } else if (matcher2_->Type(true) == MATCH_INPUT) {
-      match_type_ = MATCH_INPUT;
-    } else {
-      LOG(FATAL) << "ComposeFst: 1st argument cannot match on output labels "
-                 << "and 2nd argument cannot match on input labels (sort?).";
-    }
-    uint64 fprops1 = fst1.Properties(kFstProperties, false);
-    uint64 fprops2 = fst2.Properties(kFstProperties, false);
-    uint64 mprops1 = matcher1_->Properties(fprops1);
-    uint64 mprops2 = matcher2_->Properties(fprops2);
-    uint64 cprops = ComposeProperties(mprops1, mprops2);
-    SetProperties(filter_->Properties(cprops), kCopyProperties);
-    VLOG(2) << "ComposeFst(" << this << "): Initialized";
-  }
+                 const ComposeFstImplOptions<M1, M2, F, T> &opts);
 
   ComposeFstImpl(const ComposeFstImpl<M1, M2, F, T> &impl)
       : ComposeFstImplBase<Arc>(impl),
@@ -284,7 +251,7 @@ class ComposeFstImpl : public ComposeFstImplBase<typename M1::Arc> {
     filter_->SetState(s1, s2, tuple.filter_state);
     if (match_type_ == MATCH_OUTPUT ||
         (match_type_ == MATCH_BOTH &&
-         NumArcs(fst1_, s1) > NumArcs(fst2_, s2)))
+         internal::NumArcs(fst1_, s1) > internal::NumArcs(fst2_, s2)))
       OrderedExpand(s, fst1_, s1, fst2_, s2, matcher1_, false);
     else
       OrderedExpand(s, fst2_, s2, fst1_, s1, matcher2_, true);
@@ -361,12 +328,12 @@ class ComposeFstImpl : public ComposeFstImplBase<typename M1::Arc> {
   Weight ComputeFinal(StateId s) {
     const StateTuple &tuple = state_table_->Tuple(s);
     StateId s1 = tuple.state_id1;
-    Weight final1 = Final(fst1_, s1);
+    Weight final1 = internal::Final(fst1_, s1);
     if (final1 == Weight::Zero())
       return final1;
 
     StateId s2 = tuple.state_id2;
-    Weight final2 = Final(fst2_, s2);
+    Weight final2 = internal::Final(fst2_, s2);
     if (final2 == Weight::Zero())
       return final2;
 
@@ -386,6 +353,45 @@ class ComposeFstImpl : public ComposeFstImplBase<typename M1::Arc> {
 
   void operator=(const ComposeFstImpl<M1, M2, F, T> &);  // disallow
 };
+
+template <class M1, class M2, class F, class T> inline
+ComposeFstImpl<M1, M2, F, T>::ComposeFstImpl(
+    const FST1 &fst1, const FST2 &fst2,
+    const ComposeFstImplOptions<M1, M2, F, T> &opts)
+    : ComposeFstImplBase<Arc>(fst1, fst2, opts),
+      filter_(opts.filter ? opts.filter :
+              new F(fst1, fst2, opts.matcher1, opts.matcher2)),
+      matcher1_(filter_->GetMatcher1()),
+      matcher2_(filter_->GetMatcher2()),
+      fst1_(matcher1_->GetFst()),
+      fst2_(matcher2_->GetFst()),
+      state_table_(opts.state_table ? opts.state_table :
+                   new T(fst1_, fst2_)) {
+  MatchType type1 = matcher1_->Type(false);
+  MatchType type2 = matcher2_->Type(false);
+  if (type1 == MATCH_OUTPUT && type2  == MATCH_INPUT) {
+    match_type_ = MATCH_BOTH;
+  } else if (type1 == MATCH_OUTPUT) {
+    match_type_ = MATCH_OUTPUT;
+  } else if (type2 == MATCH_INPUT) {
+    match_type_ = MATCH_INPUT;
+  } else if (matcher1_->Type(true) == MATCH_OUTPUT) {
+    match_type_ = MATCH_OUTPUT;
+  } else if (matcher2_->Type(true) == MATCH_INPUT) {
+    match_type_ = MATCH_INPUT;
+  } else {
+    LOG(FATAL) << "ComposeFst: 1st argument cannot match on output labels "
+               << "and 2nd argument cannot match on input labels (sort?).";
+  }
+  uint64 fprops1 = fst1.Properties(kFstProperties, false);
+  uint64 fprops2 = fst2.Properties(kFstProperties, false);
+  uint64 mprops1 = matcher1_->Properties(fprops1);
+  uint64 mprops2 = matcher2_->Properties(fprops2);
+  uint64 cprops = ComposeProperties(mprops1, mprops2);
+  SetProperties(filter_->Properties(cprops), kCopyProperties);
+  VLOG(2) << "ComposeFst(" << this << "): Initialized";
+}
+
 
 // Computes the composition of two transducers. This version is a
 // delayed Fst. If FST1 transduces string x to y with weight a and FST2

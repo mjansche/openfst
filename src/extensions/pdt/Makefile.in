@@ -33,8 +33,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = pdtcompose$(EXEEXT) pdtexpand$(EXEEXT) \
-	pdtreplace$(EXEEXT)
+@HAVE_BIN_TRUE@bin_PROGRAMS = pdtcompose$(EXEEXT) pdtexpand$(EXEEXT) \
+@HAVE_BIN_TRUE@	pdtreplace$(EXEEXT)
 subdir = src/extensions/pdt
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -55,23 +55,28 @@ am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(libfstdir)" "$(DESTDIR)$(bindir)"
 libfstLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(libfst_LTLIBRARIES)
-libfstpdt_la_LIBADD =
-am_libfstpdt_la_OBJECTS = pdtscript.lo
-libfstpdt_la_OBJECTS = $(am_libfstpdt_la_OBJECTS)
-libfstpdt_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
+libfstpdtscript_la_LIBADD =
+am__libfstpdtscript_la_SOURCES_DIST = pdtscript.cc
+@HAVE_SCRIPT_TRUE@am_libfstpdtscript_la_OBJECTS = pdtscript.lo
+libfstpdtscript_la_OBJECTS = $(am_libfstpdtscript_la_OBJECTS)
+libfstpdtscript_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(libfstpdt_la_LDFLAGS) $(LDFLAGS) -o $@
+	$(CXXFLAGS) $(libfstpdtscript_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_SCRIPT_TRUE@am_libfstpdtscript_la_rpath = -rpath $(libfstdir)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_pdtcompose_OBJECTS = pdtcompose.$(OBJEXT)
+am__pdtcompose_SOURCES_DIST = pdtcompose.cc
+@HAVE_BIN_TRUE@am_pdtcompose_OBJECTS = pdtcompose.$(OBJEXT)
 pdtcompose_OBJECTS = $(am_pdtcompose_OBJECTS)
-pdtcompose_DEPENDENCIES = $(pdtbindeps)
-am_pdtexpand_OBJECTS = pdtexpand.$(OBJEXT)
+@HAVE_BIN_TRUE@pdtcompose_DEPENDENCIES = $(pdtbindeps)
+am__pdtexpand_SOURCES_DIST = pdtexpand.cc
+@HAVE_BIN_TRUE@am_pdtexpand_OBJECTS = pdtexpand.$(OBJEXT)
 pdtexpand_OBJECTS = $(am_pdtexpand_OBJECTS)
-pdtexpand_DEPENDENCIES = $(pdtbindeps)
-am_pdtreplace_OBJECTS = pdtreplace.$(OBJEXT)
+@HAVE_BIN_TRUE@pdtexpand_DEPENDENCIES = $(pdtbindeps)
+am__pdtreplace_SOURCES_DIST = pdtreplace.cc
+@HAVE_BIN_TRUE@am_pdtreplace_OBJECTS = pdtreplace.$(OBJEXT)
 pdtreplace_OBJECTS = $(am_pdtreplace_OBJECTS)
-pdtreplace_DEPENDENCIES = $(pdtbindeps)
+@HAVE_BIN_TRUE@pdtreplace_DEPENDENCIES = $(pdtbindeps)
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -84,10 +89,11 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libfstpdt_la_SOURCES) $(pdtcompose_SOURCES) \
+SOURCES = $(libfstpdtscript_la_SOURCES) $(pdtcompose_SOURCES) \
 	$(pdtexpand_SOURCES) $(pdtreplace_SOURCES)
-DIST_SOURCES = $(libfstpdt_la_SOURCES) $(pdtcompose_SOURCES) \
-	$(pdtexpand_SOURCES) $(pdtreplace_SOURCES)
+DIST_SOURCES = $(am__libfstpdtscript_la_SOURCES_DIST) \
+	$(am__pdtcompose_SOURCES_DIST) $(am__pdtexpand_SOURCES_DIST) \
+	$(am__pdtreplace_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -207,18 +213,18 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 AM_LDFLAGS = -lm -ldl
-pdtbindeps = ../../lib/libfst.la ../../script/libfstscript.la \
-     libfstpdt.la
+@HAVE_BIN_TRUE@pdtbindeps = libfstpdtscript.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@             ../../lib/libfst.la
 
-pdtcompose_SOURCES = pdtcompose.cc
-pdtcompose_LDADD = $(pdtbindeps)
-pdtexpand_SOURCES = pdtexpand.cc
-pdtexpand_LDADD = $(pdtbindeps)
-pdtreplace_SOURCES = pdtreplace.cc
-pdtreplace_LDADD = $(pdtbindeps)
-libfst_LTLIBRARIES = libfstpdt.la
-libfstpdt_la_SOURCES = pdtscript.cc
-libfstpdt_la_LDFLAGS = -version-info 0:0:0
+@HAVE_BIN_TRUE@pdtcompose_SOURCES = pdtcompose.cc
+@HAVE_BIN_TRUE@pdtcompose_LDADD = $(pdtbindeps)
+@HAVE_BIN_TRUE@pdtexpand_SOURCES = pdtexpand.cc
+@HAVE_BIN_TRUE@pdtexpand_LDADD = $(pdtbindeps)
+@HAVE_BIN_TRUE@pdtreplace_SOURCES = pdtreplace.cc
+@HAVE_BIN_TRUE@pdtreplace_LDADD = $(pdtbindeps)
+@HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = libfstpdtscript.la
+@HAVE_SCRIPT_TRUE@libfstpdtscript_la_SOURCES = pdtscript.cc
+@HAVE_SCRIPT_TRUE@libfstpdtscript_la_LDFLAGS = -version-info 0:0:0
 all: all-am
 
 .SUFFIXES:
@@ -279,8 +285,8 @@ clean-libfstLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libfstpdt.la: $(libfstpdt_la_OBJECTS) $(libfstpdt_la_DEPENDENCIES) 
-	$(libfstpdt_la_LINK) -rpath $(libfstdir) $(libfstpdt_la_OBJECTS) $(libfstpdt_la_LIBADD) $(LIBS)
+libfstpdtscript.la: $(libfstpdtscript_la_OBJECTS) $(libfstpdtscript_la_DEPENDENCIES) 
+	$(libfstpdtscript_la_LINK) $(am_libfstpdtscript_la_rpath) $(libfstpdtscript_la_OBJECTS) $(libfstpdtscript_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"

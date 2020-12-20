@@ -75,7 +75,7 @@ void PdtCompose(const FstClass & ifst1,
 // EXPAND
 
 typedef args::Package<const FstClass &,
-                      const vector<pair<int64, int64> >,
+                      const vector<pair<int64, int64> >&,
                       MutableFstClass *, bool> PdtExpandArgs;
 
 template<class Arc>
@@ -83,17 +83,17 @@ void PdtExpand(PdtExpandArgs *args) {
   const Fst<Arc> &fst = *(args->arg1.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
 
-  vector<pair<typename Arc::Label, typename Arc::Label> > labels(
+  vector<pair<typename Arc::Label, typename Arc::Label> > parens(
       args->arg2.size());
-  for (unsigned i = 0; i < labels.size(); ++i) {
-    labels[i].first = args->arg2[i].first;
-    labels[i].second = args->arg2[i].second;
+  for (unsigned i = 0; i < parens.size(); ++i) {
+    parens[i].first = args->arg2[i].first;
+    parens[i].second = args->arg2[i].second;
   }
-  Expand(fst, labels, ofst, args->arg4);
+  Expand(fst, parens, ofst, args->arg4);
 }
 
 void PdtExpand(const FstClass &ifst,
-               const vector<pair<int64, int64> > &labels,
+               const vector<pair<int64, int64> > &parens,
                MutableFstClass *ofst, bool connect);
 
 // REPLACE

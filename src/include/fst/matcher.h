@@ -203,62 +203,11 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
       delete aiter_;
     aiter_ = new ArcIterator<F>(*fst_, s);
     aiter_->SetFlags(kArcNoCache, kArcNoCache);
-    narcs_ = NumArcs(*fst_, s);
+    narcs_ = internal::NumArcs(*fst_, s);
     loop_.nextstate = s;
   }
 
-  bool Find(Label match_label) {
-    current_loop_ = match_label == 0;
-    match_label_ = match_label == kNoLabel ? 0 : match_label;
-    aiter_->SetFlags(
-        match_type_ == MATCH_INPUT ? kArcILabelValue : kArcOLabelValue,
-        kArcValueFlags);
-    if (match_label_ >= binary_label_) {
-      // Binary search for match.
-      size_t low = 0;
-      size_t high = narcs_;
-      while (low < high) {
-        size_t mid = (low + high) / 2;
-        aiter_->Seek(mid);
-        Label label = match_type_ == MATCH_INPUT ?
-            aiter_->Value().ilabel : aiter_->Value().olabel;
-        if (label > match_label_) {
-          high = mid;
-        } else if (label < match_label_) {
-          low = mid + 1;
-        } else {
-          // find first matching label (when non-determinism)
-          for (size_t i = mid; i > low; --i) {
-            aiter_->Seek(i - 1);
-            label = match_type_ == MATCH_INPUT ? aiter_->Value().ilabel :
-                aiter_->Value().olabel;
-            if (label != match_label_) {
-              aiter_->Seek(i);
-              aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
-              return true;
-            }
-          }
-          aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
-          return true;
-        }
-       }
-       return current_loop_;
-    } else {
-      // Linear search for match.
-      for (aiter_->Reset(); !aiter_->Done(); aiter_->Next()) {
-        Label label = match_type_ == MATCH_INPUT ?
-            aiter_->Value().ilabel : aiter_->Value().olabel;
-        if (label == match_label_) {
-          aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
-          return true;
-        }
-        if (label > match_label_)
-          break;
-      }
-      aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
-      return current_loop_;
-    }
-  }
+  bool Find(Label match_label);
 
   bool Done() const {
     if (current_loop_)
@@ -304,6 +253,60 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
 
   void operator=(const SortedMatcher<F> &);  // Disallow
 };
+
+template <class F> inline
+bool SortedMatcher<F>::Find(Label match_label) {
+  current_loop_ = match_label == 0;
+  match_label_ = match_label == kNoLabel ? 0 : match_label;
+  aiter_->SetFlags(
+      match_type_ == MATCH_INPUT ? kArcILabelValue : kArcOLabelValue,
+      kArcValueFlags);
+  if (match_label_ >= binary_label_) {
+    // Binary search for match.
+    size_t low = 0;
+    size_t high = narcs_;
+    while (low < high) {
+      size_t mid = (low + high) / 2;
+      aiter_->Seek(mid);
+      Label label = match_type_ == MATCH_INPUT ?
+          aiter_->Value().ilabel : aiter_->Value().olabel;
+      if (label > match_label_) {
+        high = mid;
+      } else if (label < match_label_) {
+        low = mid + 1;
+      } else {
+        // find first matching label (when non-determinism)
+        for (size_t i = mid; i > low; --i) {
+          aiter_->Seek(i - 1);
+          label = match_type_ == MATCH_INPUT ? aiter_->Value().ilabel :
+              aiter_->Value().olabel;
+          if (label != match_label_) {
+            aiter_->Seek(i);
+            aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
+            return true;
+          }
+        }
+        aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
+        return true;
+      }
+    }
+    return current_loop_;
+  } else {
+    // Linear search for match.
+    for (aiter_->Reset(); !aiter_->Done(); aiter_->Next()) {
+      Label label = match_type_ == MATCH_INPUT ?
+          aiter_->Value().ilabel : aiter_->Value().olabel;
+      if (label == match_label_) {
+        aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
+        return true;
+      }
+      if (label > match_label_)
+        break;
+    }
+    aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
+    return current_loop_;
+  }
+}
 
 
 // Specifies whether during matching we rewrite both the input and output sides.
@@ -417,33 +420,7 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
 
   virtual const FST &GetFst() const { return matcher_->GetFst(); }
 
-  virtual uint64 Properties(uint64 props) const {
-    if (match_type_ == MATCH_NONE) {
-      return props;
-    } else if (match_type_ == MATCH_INPUT) {
-      if (rewrite_both_) {
-        return props & ~(kODeterministic | kNonODeterministic | kString |
-                         kILabelSorted | kNotILabelSorted |
-                         kOLabelSorted | kNotOLabelSorted);
-      } else {
-        return props & ~(kODeterministic | kAcceptor | kString |
-                         kILabelSorted | kNotILabelSorted);
-      }
-    } else if (match_type_ == MATCH_OUTPUT) {
-      if (rewrite_both_) {
-        return props & ~(kIDeterministic | kNonIDeterministic | kString |
-                         kILabelSorted | kNotILabelSorted |
-                         kOLabelSorted | kNotOLabelSorted);
-      } else {
-        return props & ~(kIDeterministic | kAcceptor | kString |
-                         kOLabelSorted | kNotOLabelSorted);
-      }
-    } else {
-      LOG(FATAL) << "RhoMatcher::Properties: Invalid match type: "
-                 << match_type_;
-      return 0;
-    }
-  }
+  virtual uint64 Properties(uint64 props) const;
 
  private:
   virtual void SetState_(StateId s) { SetState(s); }
@@ -462,6 +439,35 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
 
   void operator=(const RhoMatcher<M> &);  // Disallow
 };
+
+template <class M> inline
+uint64 RhoMatcher<M>::Properties(uint64 props) const {
+  if (match_type_ == MATCH_NONE) {
+    return props;
+  } else if (match_type_ == MATCH_INPUT) {
+    if (rewrite_both_) {
+      return props & ~(kODeterministic | kNonODeterministic | kString |
+                       kILabelSorted | kNotILabelSorted |
+                       kOLabelSorted | kNotOLabelSorted);
+    } else {
+      return props & ~(kODeterministic | kAcceptor | kString |
+                       kILabelSorted | kNotILabelSorted);
+    }
+  } else if (match_type_ == MATCH_OUTPUT) {
+    if (rewrite_both_) {
+      return props & ~(kIDeterministic | kNonIDeterministic | kString |
+                       kILabelSorted | kNotILabelSorted |
+                       kOLabelSorted | kNotOLabelSorted);
+    } else {
+      return props & ~(kIDeterministic | kAcceptor | kString |
+                       kOLabelSorted | kNotOLabelSorted);
+    }
+  } else {
+    LOG(FATAL) << "RhoMatcher::Properties: Invalid match type: "
+               << match_type_;
+    return 0;
+  }
+}
 
 
 // For any requested label, this matcher considers all transitions
@@ -579,31 +585,7 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
 
   virtual const FST &GetFst() const { return matcher_->GetFst(); }
 
-  virtual uint64 Properties(uint64 props) const {
-    if (match_type_ == MATCH_NONE) {
-      return props;
-    } else if (rewrite_both_) {
-      return props & ~(kIDeterministic | kNonIDeterministic |
-                       kODeterministic | kNonODeterministic |
-                       kILabelSorted | kNotILabelSorted |
-                       kOLabelSorted | kNotOLabelSorted |
-                       kString);
-    } else if (match_type_ == MATCH_INPUT) {
-      return props & ~(kIDeterministic | kNonIDeterministic |
-                       kODeterministic | kNonODeterministic |
-                       kILabelSorted | kNotILabelSorted |
-                       kString | kAcceptor);
-    } else if (match_type_ == MATCH_OUTPUT) {
-      return props & ~(kIDeterministic | kNonIDeterministic |
-                       kODeterministic | kNonODeterministic |
-                       kOLabelSorted | kNotOLabelSorted |
-                       kString | kAcceptor);
-    } else {
-      LOG(FATAL) << "SigmaMatcher::Properties: Invalid match type: "
-                 << match_type_;
-      return 0;
-    }
-  }
+  virtual uint64 Properties(uint64 props) const;
 
 private:
   virtual void SetState_(StateId s) { SetState(s); }
@@ -623,6 +605,33 @@ private:
 
   void operator=(const SigmaMatcher<M> &);  // disallow
 };
+
+template <class M> inline
+uint64 SigmaMatcher<M>::Properties(uint64 props) const {
+  if (match_type_ == MATCH_NONE) {
+    return props;
+  } else if (rewrite_both_) {
+    return props & ~(kIDeterministic | kNonIDeterministic |
+                     kODeterministic | kNonODeterministic |
+                     kILabelSorted | kNotILabelSorted |
+                     kOLabelSorted | kNotOLabelSorted |
+                     kString);
+  } else if (match_type_ == MATCH_INPUT) {
+    return props & ~(kIDeterministic | kNonIDeterministic |
+                     kODeterministic | kNonODeterministic |
+                     kILabelSorted | kNotILabelSorted |
+                     kString | kAcceptor);
+  } else if (match_type_ == MATCH_OUTPUT) {
+    return props & ~(kIDeterministic | kNonIDeterministic |
+                     kODeterministic | kNonODeterministic |
+                     kOLabelSorted | kNotOLabelSorted |
+                     kString | kAcceptor);
+  } else {
+    LOG(FATAL) << "SigmaMatcher::Properties: Invalid match type: "
+               << match_type_;
+    return 0;
+  }
+}
 
 
 // For any requested label that doesn't match at a state, this matcher
@@ -696,32 +705,7 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
     has_phi_ = phi_label_ != kNoLabel;
   }
 
-  bool Find(Label match_label) {
-    if (match_label == phi_label_ && phi_label_ != kNoLabel) {
-      LOG(FATAL) << "PhiMatcher::Find: bad label (phi)";
-    }
-    matcher_->SetState(state_);
-    phi_match_ = kNoLabel;
-    phi_weight_ = Weight::One();
-    if (!has_phi_ || match_label == 0 || match_label == kNoLabel)
-      return matcher_->Find(match_label);
-    StateId state = state_;
-    while (!matcher_->Find(match_label)) {
-      if (!matcher_->Find(phi_label_))
-        return false;
-      if (phi_loop_ && matcher_->Value().nextstate == state) {
-        phi_match_ = match_label;
-        return true;
-      }
-      phi_weight_ = Times(phi_weight_, matcher_->Value().weight);
-      state = matcher_->Value().nextstate;
-      matcher_->Next();
-      if (!matcher_->Done())
-        LOG(FATAL) << "PhiMatcher: phi non-determinism not supported";
-      matcher_->SetState(state);
-    }
-    return true;
-  }
+  bool Find(Label match_label);
 
   bool Done() const { return matcher_->Done(); }
 
@@ -751,35 +735,7 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
 
   virtual const FST &GetFst() const { return matcher_->GetFst(); }
 
-  virtual uint64 Properties(uint64 props) const {
-    if (match_type_ == MATCH_NONE) {
-      return props;
-    } else if (match_type_ == MATCH_INPUT) {
-      if (rewrite_both_) {
-        return props & ~(kODeterministic | kNonODeterministic | kString |
-                         kILabelSorted | kNotILabelSorted |
-                         kOLabelSorted | kNotOLabelSorted);
-      } else {
-        return props & ~(kODeterministic | kAcceptor | kString |
-                         kILabelSorted | kNotILabelSorted |
-                         kOLabelSorted | kNotOLabelSorted);
-      }
-    } else if (match_type_ == MATCH_OUTPUT) {
-      if (rewrite_both_) {
-        return props & ~(kIDeterministic | kNonIDeterministic | kString |
-                         kILabelSorted | kNotILabelSorted |
-                         kOLabelSorted | kNotOLabelSorted);
-      } else {
-        return props & ~(kIDeterministic | kAcceptor | kString |
-                         kILabelSorted | kNotILabelSorted |
-                         kOLabelSorted | kNotOLabelSorted);
-      }
-    } else {
-      LOG(FATAL) << "PhiMatcher::Properties: Invalid match type: "
-                 << match_type_;
-      return 0;
-    }
-  }
+  virtual uint64 Properties(uint64 props) const;
 
 private:
   virtual void SetState_(StateId s) { SetState(s); }
@@ -802,6 +758,65 @@ private:
 
   void operator=(const PhiMatcher<M> &);  // disallow
 };
+
+template <class M> inline
+bool PhiMatcher<M>::Find(Label match_label) {
+  if (match_label == phi_label_ && phi_label_ != kNoLabel) {
+    LOG(FATAL) << "PhiMatcher::Find: bad label (phi)";
+  }
+  matcher_->SetState(state_);
+  phi_match_ = kNoLabel;
+  phi_weight_ = Weight::One();
+  if (!has_phi_ || match_label == 0 || match_label == kNoLabel)
+    return matcher_->Find(match_label);
+  StateId state = state_;
+  while (!matcher_->Find(match_label)) {
+    if (!matcher_->Find(phi_label_))
+      return false;
+    if (phi_loop_ && matcher_->Value().nextstate == state) {
+      phi_match_ = match_label;
+      return true;
+    }
+    phi_weight_ = Times(phi_weight_, matcher_->Value().weight);
+    state = matcher_->Value().nextstate;
+    matcher_->Next();
+    if (!matcher_->Done())
+      LOG(FATAL) << "PhiMatcher: phi non-determinism not supported";
+    matcher_->SetState(state);
+  }
+  return true;
+}
+
+template <class M> inline
+uint64 PhiMatcher<M>::Properties(uint64 props) const {
+  if (match_type_ == MATCH_NONE) {
+    return props;
+  } else if (match_type_ == MATCH_INPUT) {
+    if (rewrite_both_) {
+      return props & ~(kODeterministic | kNonODeterministic | kString |
+                       kILabelSorted | kNotILabelSorted |
+                       kOLabelSorted | kNotOLabelSorted);
+    } else {
+      return props & ~(kODeterministic | kAcceptor | kString |
+                       kILabelSorted | kNotILabelSorted |
+                       kOLabelSorted | kNotOLabelSorted);
+    }
+  } else if (match_type_ == MATCH_OUTPUT) {
+    if (rewrite_both_) {
+      return props & ~(kIDeterministic | kNonIDeterministic | kString |
+                       kILabelSorted | kNotILabelSorted |
+                       kOLabelSorted | kNotOLabelSorted);
+    } else {
+      return props & ~(kIDeterministic | kAcceptor | kString |
+                       kILabelSorted | kNotILabelSorted |
+                       kOLabelSorted | kNotOLabelSorted);
+    }
+  } else {
+    LOG(FATAL) << "PhiMatcher::Properties: Invalid match type: "
+               << match_type_;
+    return 0;
+  }
+}
 
 
 //
@@ -877,38 +892,7 @@ class MultiEpsMatcher {
     loop_.nextstate = s;
   }
 
-  bool Find(Label match_label) {
-    multi_eps_iter_ = multi_eps_labels_.end();
-    current_loop_ = false;
-    bool ret;
-    if (match_label == 0) {
-      ret = matcher_->Find(0);
-    } else if (match_label == kNoLabel) {
-      if (flags_ & kMultiEpsList) {
-        // return all non-consuming arcs (incl. epsilon)
-        multi_eps_iter_ = multi_eps_labels_.begin();
-        while ((multi_eps_iter_ != multi_eps_labels_.end()) &&
-               !matcher_->Find(*multi_eps_iter_))
-          ++multi_eps_iter_;
-        if (multi_eps_iter_ != multi_eps_labels_.end())
-          ret = true;
-        else
-          ret = matcher_->Find(kNoLabel);
-      } else {
-        // return all epsilon arcs
-        ret = matcher_->Find(kNoLabel);
-      }
-    } else if ((flags_ & kMultiEpsLoop) &&
-               IsMultiEps(multi_eps_labels_, match_label)) {
-      // return 'implicit' loop
-      current_loop_ = true;
-      ret = true;
-    } else {
-      ret = matcher_->Find(match_label);
-    }
-    done_ = !ret;
-    return ret;
-  }
+  bool Find(Label match_label);
 
   bool Done() const {
     return done_;
@@ -991,6 +975,41 @@ private:
 
   void operator=(const MultiEpsMatcher<M> &);  // Disallow
 };
+
+template <class M, class S> inline
+bool MultiEpsMatcher<M, S>::Find(Label match_label) {
+  multi_eps_iter_ = multi_eps_labels_.end();
+  current_loop_ = false;
+  bool ret;
+  if (match_label == 0) {
+    ret = matcher_->Find(0);
+  } else if (match_label == kNoLabel) {
+    if (flags_ & kMultiEpsList) {
+      // return all non-consuming arcs (incl. epsilon)
+      multi_eps_iter_ = multi_eps_labels_.begin();
+      while ((multi_eps_iter_ != multi_eps_labels_.end()) &&
+             !matcher_->Find(*multi_eps_iter_))
+        ++multi_eps_iter_;
+      if (multi_eps_iter_ != multi_eps_labels_.end())
+        ret = true;
+      else
+        ret = matcher_->Find(kNoLabel);
+    } else {
+      // return all epsilon arcs
+      ret = matcher_->Find(kNoLabel);
+    }
+  } else if ((flags_ & kMultiEpsLoop) &&
+             IsMultiEps(multi_eps_labels_, match_label)) {
+    // return 'implicit' loop
+    current_loop_ = true;
+    ret = true;
+  } else {
+    ret = matcher_->Find(match_label);
+  }
+  done_ = !ret;
+  return ret;
+}
+
 
 // Generic matcher, templated on the FST definition
 // - a wrapper around pointer to specific one.

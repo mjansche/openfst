@@ -40,7 +40,7 @@ namespace fst {
 // before the sort.
 //
 // Complexity:
-// - Time: O(V + D log D)
+// - Time: O(V D log D)
 // - Space: O(D)
 // where V = # of states and D = maximum out-degree.
 template<class Arc, class Compare>
@@ -185,8 +185,8 @@ class ArcSortFstImpl : public CacheImpl<A> {
 // known properties.
 //
 // Complexity:
-// - Time: O(v + d log d)
-// - Space: O(v + d)
+// - Time: O(v d log d)
+// - Space: O(d)
 // where v = # of states visited, d = maximum out-degree of states
 // visited. Constant time and space to visit an input state is assumed
 // and exclusive of caching.

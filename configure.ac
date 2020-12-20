@@ -1,7 +1,8 @@
-AC_INIT([OpenFst], [1.2], [help@www.openfst.org])
+AC_INIT([OpenFst], [1.2.1], [help@www.openfst.org])
 AM_INIT_AUTOMAKE([foreign nostdinc -Wall -Werror])
 
 AC_PROG_CXX
+AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
 AC_CONFIG_HEADERS([config.h src/include/fst/config.h])
@@ -28,6 +29,16 @@ AC_CHECK_TYPES([std::tr1::hash<long long unsigned>], [], [],
                [[#include <tr1/unordered_map>]])
 AC_CHECK_TYPES([__gnu_cxx::slist<int>], [], [],
                [[#include <ext/slist>]])
+
+AC_ARG_ENABLE(
+	[bin],
+	[AS_HELP_STRING(
+		[--enable-bin],
+		[enable fst::script and command-line binaries])],
+	[],
+	[enable_bin=yes])
+AM_CONDITIONAL([HAVE_BIN], [test "x$enable_bin" != xno])
+AM_CONDITIONAL([HAVE_SCRIPT], [test "x$enable_bin" != xno])
 
 AC_ARG_ENABLE(
 	[compact-fsts],

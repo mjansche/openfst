@@ -5,23 +5,29 @@ searching weighted finite-state transducers (FSTs).
 
 REQUIREMENTS:
   This version is known to work under Linux, MacOS, and Solaris using 
-  g++ (>= 4.1). Expected to work wherever adequate POSIX (dlopen, ssize_t), 
+  g++ (>= 4.1). Expected to work wherever adequate POSIX (dlopen, ssize_t, basename), 
   c99 (snprintf, strtoll, long long), and tr1 (<tr1/ordered_set>, 
   <tr1/ordered_map>) support are available.
   	
 INSTALLATION:
-  Follow the generic GNU build system instructions in ./INSTALL.
+  Follow the generic GNU build system instructions in ./INSTALL.  We
+  recommend configuring with =--enable-static=false= for faster
+  compiles. 
 
   Optional features:
-  --enable-compact-fsts    Enable all CompactFst classes as shared objects
-  --enable-const-fsts      Enable all ConstFst classes as shared objects
-  --enable-far		   Enable FAR (FST Archive) extension
-  --enable-lookahead-fsts  Enable LookAheadFST classes as shared objects
-  --enable-pdt             Experimental push-down transducer extensions
-  --with-icu		   Use ICU to provide unicode support
+  --enable-bin             Build fst::script and command-line binaries (def: yes)
+  --enable-compact-fsts    Enable all CompactFst classes (def: no)
+  --enable-const-fsts      Enable all ConstFst classes (def: no)
+  --enable-far		   Enable FAR (FST Archive) extension (def: no)
+  --enable-lookahead-fsts  Enable LookAheadFst classes (def: no)
+  --enable-pdt             Experimental push-down transducer extensions (def: no)
+  --with-icu		   Use ICU to provide unicode support (def: no)
 
-  (Compiling with '-Wall -Wno-sign-compare' under g++ should give no
-  warnings from this library).
+  Configuring with --enable-bin=no gives very fast compiles, but
+  excludes the command line utilities.
+
+  Compiling with '-Wall -Wno-sign-compare' under g++ should give no
+  warnings from this library.
 
 USAGE:
   Assuming you've installed under the default /usr/local, the FST

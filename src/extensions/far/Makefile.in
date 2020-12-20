@@ -33,8 +33,9 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = farcompilestrings$(EXEEXT) farcreate$(EXEEXT) \
-	farextract$(EXEEXT) farinfo$(EXEEXT) farprintstrings$(EXEEXT)
+@HAVE_BIN_TRUE@bin_PROGRAMS = farcompilestrings$(EXEEXT) \
+@HAVE_BIN_TRUE@	farcreate$(EXEEXT) farextract$(EXEEXT) \
+@HAVE_BIN_TRUE@	farinfo$(EXEEXT) farprintstrings$(EXEEXT)
 subdir = src/extensions/far
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -61,30 +62,41 @@ libfstfar_la_OBJECTS = $(am_libfstfar_la_OBJECTS)
 libfstfar_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libfstfar_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_SCRIPT_FALSE@am_libfstfar_la_rpath = -rpath $(libfstdir)
+@HAVE_SCRIPT_TRUE@am_libfstfar_la_rpath = -rpath $(libfstdir)
 libfstfarscript_la_LIBADD =
-am_libfstfarscript_la_OBJECTS = farscript.lo compile-strings.lo \
-	main.lo
+am__libfstfarscript_la_SOURCES_DIST = farscript.cc compile-strings.cc \
+	main.cc
+@HAVE_SCRIPT_TRUE@am_libfstfarscript_la_OBJECTS = farscript.lo \
+@HAVE_SCRIPT_TRUE@	compile-strings.lo main.lo
 libfstfarscript_la_OBJECTS = $(am_libfstfarscript_la_OBJECTS)
 libfstfarscript_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libfstfarscript_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_SCRIPT_TRUE@am_libfstfarscript_la_rpath = -rpath $(libfstdir)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_farcompilestrings_OBJECTS = farcompilestrings.$(OBJEXT)
+am__farcompilestrings_SOURCES_DIST = farcompilestrings.cc
+@HAVE_BIN_TRUE@am_farcompilestrings_OBJECTS =  \
+@HAVE_BIN_TRUE@	farcompilestrings.$(OBJEXT)
 farcompilestrings_OBJECTS = $(am_farcompilestrings_OBJECTS)
-farcompilestrings_DEPENDENCIES = $(farbindeps)
-am_farcreate_OBJECTS = farcreate.$(OBJEXT)
+@HAVE_BIN_TRUE@farcompilestrings_DEPENDENCIES = $(farbindeps)
+am__farcreate_SOURCES_DIST = farcreate.cc
+@HAVE_BIN_TRUE@am_farcreate_OBJECTS = farcreate.$(OBJEXT)
 farcreate_OBJECTS = $(am_farcreate_OBJECTS)
-farcreate_DEPENDENCIES = $(farbindeps)
-am_farextract_OBJECTS = farextract.$(OBJEXT)
+@HAVE_BIN_TRUE@farcreate_DEPENDENCIES = $(farbindeps)
+am__farextract_SOURCES_DIST = farextract.cc
+@HAVE_BIN_TRUE@am_farextract_OBJECTS = farextract.$(OBJEXT)
 farextract_OBJECTS = $(am_farextract_OBJECTS)
-farextract_DEPENDENCIES = $(farbindeps)
-am_farinfo_OBJECTS = farinfo.$(OBJEXT)
+@HAVE_BIN_TRUE@farextract_DEPENDENCIES = $(farbindeps)
+am__farinfo_SOURCES_DIST = farinfo.cc
+@HAVE_BIN_TRUE@am_farinfo_OBJECTS = farinfo.$(OBJEXT)
 farinfo_OBJECTS = $(am_farinfo_OBJECTS)
-farinfo_DEPENDENCIES = $(farbindeps)
-am_farprintstrings_OBJECTS = farprintstrings.$(OBJEXT)
+@HAVE_BIN_TRUE@farinfo_DEPENDENCIES = $(farbindeps)
+am__farprintstrings_SOURCES_DIST = farprintstrings.cc
+@HAVE_BIN_TRUE@am_farprintstrings_OBJECTS = farprintstrings.$(OBJEXT)
 farprintstrings_OBJECTS = $(am_farprintstrings_OBJECTS)
-farprintstrings_DEPENDENCIES = $(farbindeps)
+@HAVE_BIN_TRUE@farprintstrings_DEPENDENCIES = $(farbindeps)
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -101,10 +113,12 @@ SOURCES = $(libfstfar_la_SOURCES) $(libfstfarscript_la_SOURCES) \
 	$(farcompilestrings_SOURCES) $(farcreate_SOURCES) \
 	$(farextract_SOURCES) $(farinfo_SOURCES) \
 	$(farprintstrings_SOURCES)
-DIST_SOURCES = $(libfstfar_la_SOURCES) $(libfstfarscript_la_SOURCES) \
-	$(farcompilestrings_SOURCES) $(farcreate_SOURCES) \
-	$(farextract_SOURCES) $(farinfo_SOURCES) \
-	$(farprintstrings_SOURCES)
+DIST_SOURCES = $(libfstfar_la_SOURCES) \
+	$(am__libfstfarscript_la_SOURCES_DIST) \
+	$(am__farcompilestrings_SOURCES_DIST) \
+	$(am__farcreate_SOURCES_DIST) $(am__farextract_SOURCES_DIST) \
+	$(am__farinfo_SOURCES_DIST) \
+	$(am__farprintstrings_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -224,24 +238,25 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 AM_LDFLAGS = $(ICU_LIBS) -lm -ldl
-libfst_LTLIBRARIES = libfstfar.la libfstfarscript.la
+@HAVE_SCRIPT_FALSE@libfst_LTLIBRARIES = libfstfar.la
+@HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = libfstfarscript.la libfstfar.la
 libfstfar_la_SOURCES = sttable.cc
 libfstfar_la_LDFLAGS = -version-info 0:0:0
-libfstfarscript_la_SOURCES = farscript.cc compile-strings.cc main.cc
-libfstfarscript_la_LDFLAGS = -version-info 0:0:0
-farbindeps = ../../lib/libfst.la ../../script/libfstscript.la \
-     libfstfar.la libfstfarscript.la
+@HAVE_SCRIPT_TRUE@libfstfarscript_la_SOURCES = farscript.cc compile-strings.cc main.cc
+@HAVE_SCRIPT_TRUE@libfstfarscript_la_LDFLAGS = -version-info 0:0:0
+@HAVE_BIN_TRUE@farbindeps = libfstfarscript.la libfstfar.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@             ../../lib/libfst.la 
 
-farcompilestrings_SOURCES = farcompilestrings.cc
-farcompilestrings_LDADD = $(farbindeps)
-farcreate_SOURCES = farcreate.cc
-farcreate_LDADD = $(farbindeps)
-farextract_SOURCES = farextract.cc
-farextract_LDADD = $(farbindeps)
-farinfo_SOURCES = farinfo.cc
-farinfo_LDADD = $(farbindeps)
-farprintstrings_SOURCES = farprintstrings.cc
-farprintstrings_LDADD = $(farbindeps)
+@HAVE_BIN_TRUE@farcompilestrings_SOURCES = farcompilestrings.cc
+@HAVE_BIN_TRUE@farcompilestrings_LDADD = $(farbindeps)
+@HAVE_BIN_TRUE@farcreate_SOURCES = farcreate.cc
+@HAVE_BIN_TRUE@farcreate_LDADD = $(farbindeps)
+@HAVE_BIN_TRUE@farextract_SOURCES = farextract.cc
+@HAVE_BIN_TRUE@farextract_LDADD = $(farbindeps)
+@HAVE_BIN_TRUE@farinfo_SOURCES = farinfo.cc
+@HAVE_BIN_TRUE@farinfo_LDADD = $(farbindeps)
+@HAVE_BIN_TRUE@farprintstrings_SOURCES = farprintstrings.cc
+@HAVE_BIN_TRUE@farprintstrings_LDADD = $(farbindeps)
 all: all-am
 
 .SUFFIXES:
@@ -303,9 +318,9 @@ clean-libfstLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libfstfar.la: $(libfstfar_la_OBJECTS) $(libfstfar_la_DEPENDENCIES) 
-	$(libfstfar_la_LINK) -rpath $(libfstdir) $(libfstfar_la_OBJECTS) $(libfstfar_la_LIBADD) $(LIBS)
+	$(libfstfar_la_LINK) $(am_libfstfar_la_rpath) $(libfstfar_la_OBJECTS) $(libfstfar_la_LIBADD) $(LIBS)
 libfstfarscript.la: $(libfstfarscript_la_OBJECTS) $(libfstfarscript_la_DEPENDENCIES) 
-	$(libfstfarscript_la_LINK) -rpath $(libfstdir) $(libfstfarscript_la_OBJECTS) $(libfstfarscript_la_LIBADD) $(LIBS)
+	$(libfstfarscript_la_LINK) $(am_libfstfarscript_la_rpath) $(libfstfarscript_la_OBJECTS) $(libfstfarscript_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"

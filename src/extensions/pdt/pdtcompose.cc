@@ -60,8 +60,10 @@ int main(int argc, char **argv) {
   s::FstClass *ifst2 = s::FstClass::Read(in2_name);
   if (!ifst2) return 1;
 
-  if (FLAGS_pdt_parentheses.empty())
+  if (FLAGS_pdt_parentheses.empty()) {
     LOG(ERROR) << argv[0] << ": No PDT parenthesis label pairs provided";
+    return 1;
+  }
 
   vector<pair<int64, int64> > parens;
   fst::ReadLabelPairs(FLAGS_pdt_parentheses, &parens, false);

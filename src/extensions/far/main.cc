@@ -59,7 +59,7 @@ FarEntryType StringToFarEntryType(const string &s) {
   } else if (s == "file") {
     return FET_FILE;
   } else {
-    LOG(ERROR) << "Unknown FAR entry type: " << s;
+    LOG(FATAL) << "Unknown FAR entry type: " << s;
     return FET_LINE;  // compiler requires return
   }
 }
@@ -72,7 +72,7 @@ FarTokenType StringToFarTokenType(const string &s) {
   } else if (s == "utf8") {
     return FTT_UTF8;
   } else {
-    LOG(ERROR) << "Unknown FAR entry type: " << s;
+    LOG(FATAL) << "Unknown FAR entry type: " << s;
     return FTT_SYMBOL;  // compiler requires return
   }
 }

@@ -36,7 +36,7 @@ class ArcMergeCompare {
     if (x.ilabel < y.ilabel) return true;
     if (x.ilabel > y.ilabel) return false;
     if (x.olabel < y.olabel) return true;
-    if (x.olabel < y.olabel) return false;
+    if (x.olabel > y.olabel) return false;
     if (x.nextstate < y.nextstate) return true;
     if (x.nextstate > y.nextstate) return false;
     return false;

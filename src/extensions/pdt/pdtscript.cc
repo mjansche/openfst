@@ -50,9 +50,9 @@ void PdtCompose(const FstClass &ifst1,
 }
 
 void PdtExpand(const FstClass &ifst,
-               const vector<pair<int64, int64> > &labels,
+               const vector<pair<int64, int64> > &parens,
                MutableFstClass *ofst, bool connect) {
-  PdtExpandArgs args(ifst, labels, ofst, connect);
+  PdtExpandArgs args(ifst, parens, ofst, connect);
 
   Apply<Operation<PdtExpandArgs> >("PdtExpand", ifst.ArcType(), &args);
 }

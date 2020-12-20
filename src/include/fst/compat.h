@@ -118,13 +118,13 @@ class CheckSummer {
 #ifndef HAVE_ICU
 
 template <class Label>
-bool UTF8StringToLabels(const string&, vector<Label>*) {
+bool UTF8StringToLabels(const string&, std::vector<Label>*) {
   LOG(ERROR) << "UTF8StringToLabels: ICU Library required for UTF8 handling";
   return false;
 }
 
 template <class Label>
-bool LabelsToUTF8String(const vector<Label>&, string*) {
+bool LabelsToUTF8String(const std::vector<Label>&, string*) {
   LOG(ERROR) << "LabelsToUTF8String: ICU Library required for UTF8 handling";
   return false;
 }
