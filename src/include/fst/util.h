@@ -52,17 +52,14 @@ inline std::istream &ReadType(std::istream &strm, T *t) {
   }
 
 READ_POD_TYPE(bool);
-READ_POD_TYPE(char);
-READ_POD_TYPE(signed char);
-READ_POD_TYPE(unsigned char);
-READ_POD_TYPE(short);
-READ_POD_TYPE(unsigned short);
-READ_POD_TYPE(int);
-READ_POD_TYPE(unsigned int);
-READ_POD_TYPE(long);
-READ_POD_TYPE(unsigned long);
-READ_POD_TYPE(long long);
-READ_POD_TYPE(unsigned long long);
+READ_POD_TYPE(int8);
+READ_POD_TYPE(uint8);
+READ_POD_TYPE(int16);
+READ_POD_TYPE(uint16);
+READ_POD_TYPE(int32);
+READ_POD_TYPE(uint32);
+READ_POD_TYPE(int64);
+READ_POD_TYPE(uint64);
 READ_POD_TYPE(float);
 READ_POD_TYPE(double);
 
@@ -177,17 +174,14 @@ inline std::ostream &WriteType(std::ostream &strm, const T t) {
   }
 
 WRITE_POD_TYPE(bool);
-WRITE_POD_TYPE(char);
-WRITE_POD_TYPE(signed char);
-WRITE_POD_TYPE(unsigned char);
-WRITE_POD_TYPE(short);
-WRITE_POD_TYPE(unsigned short);
-WRITE_POD_TYPE(int);
-WRITE_POD_TYPE(unsigned int);
-WRITE_POD_TYPE(long);
-WRITE_POD_TYPE(unsigned long);
-WRITE_POD_TYPE(long long);
-WRITE_POD_TYPE(unsigned long long);
+WRITE_POD_TYPE(int8);
+WRITE_POD_TYPE(uint8);
+WRITE_POD_TYPE(int16);
+WRITE_POD_TYPE(uint16);
+WRITE_POD_TYPE(int32);
+WRITE_POD_TYPE(uint32);
+WRITE_POD_TYPE(int64);
+WRITE_POD_TYPE(uint64);
 WRITE_POD_TYPE(float);
 WRITE_POD_TYPE(double);
 

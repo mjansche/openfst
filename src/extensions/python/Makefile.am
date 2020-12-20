@@ -19,4 +19,4 @@ pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
 pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
 pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la    \
 											../../script/libfstscript.la ../../lib/libfst.la \
-                      -lfstfarscript -lfstfar -lfstscript -lfst -lm -ldl
+                      -lfstfarscript -lfstfar -lfstscript -lfst -lm $(DL_LIBS)

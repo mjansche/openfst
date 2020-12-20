@@ -143,9 +143,10 @@ fst_properties_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(AM_CXXFLAGS) $(CXXFLAGS) $(fst_properties_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am__DEPENDENCIES_1 =
 pywrapfst_la_DEPENDENCIES = ../far/libfstfarscript.la \
 	../far/libfstfar.la ../../script/libfstscript.la \
-	../../lib/libfst.la
+	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am_pywrapfst_la_OBJECTS = pywrapfst_la-pywrapfst.lo
 pywrapfst_la_OBJECTS = $(am_pywrapfst_la_OBJECTS)
 pywrapfst_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -235,6 +236,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -362,7 +364,7 @@ pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
 pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
 pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la    \
 											../../script/libfstscript.la ../../lib/libfst.la \
-                      -lfstfarscript -lfstfar -lfstscript -lfst -lm -ldl
+                      -lfstfarscript -lfstfar -lfstscript -lfst -lm $(DL_LIBS)
 
 all: all-am
 

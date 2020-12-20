@@ -156,51 +156,52 @@ am__farcompilestrings_SOURCES_DIST = farcompilestrings.cc
 @HAVE_BIN_TRUE@	farcompilestrings.$(OBJEXT)
 farcompilestrings_OBJECTS = $(am_farcompilestrings_OBJECTS)
 farcompilestrings_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
 @HAVE_BIN_TRUE@farcompilestrings_DEPENDENCIES = libfstfarscript.la \
 @HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__farcreate_SOURCES_DIST = farcreate.cc
 @HAVE_BIN_TRUE@am_farcreate_OBJECTS = farcreate.$(OBJEXT)
 farcreate_OBJECTS = $(am_farcreate_OBJECTS)
 farcreate_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farcreate_DEPENDENCIES = libfstfarscript.la \
 @HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__farequal_SOURCES_DIST = farequal.cc
 @HAVE_BIN_TRUE@am_farequal_OBJECTS = farequal.$(OBJEXT)
 farequal_OBJECTS = $(am_farequal_OBJECTS)
 farequal_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farequal_DEPENDENCIES = libfstfarscript.la libfstfar.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__farextract_SOURCES_DIST = farextract.cc
 @HAVE_BIN_TRUE@am_farextract_OBJECTS = farextract.$(OBJEXT)
 farextract_OBJECTS = $(am_farextract_OBJECTS)
 farextract_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farextract_DEPENDENCIES = libfstfarscript.la \
 @HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__farinfo_SOURCES_DIST = farinfo.cc
 @HAVE_BIN_TRUE@am_farinfo_OBJECTS = farinfo.$(OBJEXT)
 farinfo_OBJECTS = $(am_farinfo_OBJECTS)
 farinfo_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farinfo_DEPENDENCIES = libfstfarscript.la libfstfar.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__farisomorphic_SOURCES_DIST = farisomorphic.cc
 @HAVE_BIN_TRUE@am_farisomorphic_OBJECTS = farisomorphic.$(OBJEXT)
 farisomorphic_OBJECTS = $(am_farisomorphic_OBJECTS)
 farisomorphic_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farisomorphic_DEPENDENCIES = libfstfarscript.la \
 @HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__farprintstrings_SOURCES_DIST = farprintstrings.cc
 @HAVE_BIN_TRUE@am_farprintstrings_OBJECTS = farprintstrings.$(OBJEXT)
 farprintstrings_OBJECTS = $(am_farprintstrings_OBJECTS)
 farprintstrings_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farprintstrings_DEPENDENCIES = libfstfarscript.la \
 @HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -292,6 +293,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -413,7 +415,7 @@ libfstfar_la_LDFLAGS = -version-info 2:5:0
 @HAVE_SCRIPT_TRUE@libfstfarscript_la_SOURCES = far-class.cc farscript.cc strings.cc main.cc
 @HAVE_SCRIPT_TRUE@libfstfarscript_la_LDFLAGS = -version-info 2:5:0
 @HAVE_BIN_TRUE@LDADD = libfstfarscript.la libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@        ../../lib/libfst.la -lm -ldl
+@HAVE_BIN_TRUE@        ../../lib/libfst.la -lm $(DL_LIBS)
 
 @HAVE_BIN_TRUE@farcompilestrings_SOURCES = farcompilestrings.cc
 @HAVE_BIN_TRUE@farcreate_SOURCES = farcreate.cc

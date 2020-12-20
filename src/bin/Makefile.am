@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS)
-LDADD = ../script/libfstscript.la ../lib/libfst.la -lm -ldl
+LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS)
 
 if HAVE_BIN
 bin_PROGRAMS = fstarcsort fstclosure fstcompile fstcompose fstconcat \

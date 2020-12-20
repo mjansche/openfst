@@ -143,30 +143,31 @@ am__mpdtcompose_SOURCES_DIST = mpdtcompose.cc
 @HAVE_BIN_TRUE@am_mpdtcompose_OBJECTS = mpdtcompose.$(OBJEXT)
 mpdtcompose_OBJECTS = $(am_mpdtcompose_OBJECTS)
 mpdtcompose_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
 @HAVE_BIN_TRUE@mpdtcompose_DEPENDENCIES = libfstmpdtscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__mpdtexpand_SOURCES_DIST = mpdtexpand.cc
 @HAVE_BIN_TRUE@am_mpdtexpand_OBJECTS = mpdtexpand.$(OBJEXT)
 mpdtexpand_OBJECTS = $(am_mpdtexpand_OBJECTS)
 mpdtexpand_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@mpdtexpand_DEPENDENCIES = libfstmpdtscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__mpdtinfo_SOURCES_DIST = mpdtinfo.cc
 @HAVE_BIN_TRUE@am_mpdtinfo_OBJECTS = mpdtinfo.$(OBJEXT)
 mpdtinfo_OBJECTS = $(am_mpdtinfo_OBJECTS)
 mpdtinfo_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@mpdtinfo_DEPENDENCIES = libfstmpdtscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__mpdtreverse_SOURCES_DIST = mpdtreverse.cc
 @HAVE_BIN_TRUE@am_mpdtreverse_OBJECTS = mpdtreverse.$(OBJEXT)
 mpdtreverse_OBJECTS = $(am_mpdtreverse_OBJECTS)
 mpdtreverse_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@mpdtreverse_DEPENDENCIES = libfstmpdtscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -253,6 +254,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -369,7 +371,7 @@ top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 @HAVE_BIN_TRUE@LDADD = libfstmpdtscript.la \
 @HAVE_BIN_TRUE@  ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@  ../../lib/libfst.la -lm -ldl
+@HAVE_BIN_TRUE@  ../../lib/libfst.la -lm $(DL_LIBS)
 
 @HAVE_BIN_TRUE@mpdtcompose_SOURCES = mpdtcompose.cc
 @HAVE_BIN_TRUE@mpdtexpand_SOURCES = mpdtexpand.cc

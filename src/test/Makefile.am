@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
-LDADD = ../lib/libfst.la -lm -ldl
+LDADD = ../lib/libfst.la -lm $(DL_LIBS)
 
 check_PROGRAMS = fst_test weight_test algo_test
 

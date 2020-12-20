@@ -134,4 +134,7 @@ AC_ARG_WITH([libfstdir],
 
 AC_SUBST([libfstdir], $with_libfstdir)
 
+AC_CHECK_LIB([dl], dlopen, [DL_LIBS=-ldl])
+AC_SUBST([DL_LIBS])
+
 AC_OUTPUT

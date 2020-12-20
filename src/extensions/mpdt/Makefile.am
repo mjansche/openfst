@@ -5,7 +5,7 @@ bin_PROGRAMS = mpdtcompose mpdtexpand mpdtinfo mpdtreverse
 
 LDADD = libfstmpdtscript.la \
   ../../script/libfstscript.la \
-  ../../lib/libfst.la -lm -ldl
+  ../../lib/libfst.la -lm $(DL_LIBS)
 
 mpdtcompose_SOURCES = mpdtcompose.cc
 

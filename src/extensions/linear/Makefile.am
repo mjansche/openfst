@@ -4,7 +4,7 @@ if HAVE_BIN
 bin_PROGRAMS = fstlinear fstloglinearapply
 
 LDADD = libfstlinearscript.la ../../script/libfstscript.la \
-	../../lib/libfst.la -lm -ldl
+	../../lib/libfst.la -lm $(DL_LIBS)
 
 fstlinear_SOURCES = fstlinear.cc
 

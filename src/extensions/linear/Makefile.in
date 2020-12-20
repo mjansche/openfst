@@ -165,9 +165,10 @@ am__fstlinear_SOURCES_DIST = fstlinear.cc
 @HAVE_BIN_TRUE@am_fstlinear_OBJECTS = fstlinear.$(OBJEXT)
 fstlinear_OBJECTS = $(am_fstlinear_OBJECTS)
 fstlinear_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
 @HAVE_BIN_TRUE@fstlinear_DEPENDENCIES = libfstlinearscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am__fstloglinearapply_SOURCES_DIST = fstloglinearapply.cc
 @HAVE_BIN_TRUE@am_fstloglinearapply_OBJECTS =  \
 @HAVE_BIN_TRUE@	fstloglinearapply.$(OBJEXT)
@@ -175,7 +176,7 @@ fstloglinearapply_OBJECTS = $(am_fstloglinearapply_OBJECTS)
 fstloglinearapply_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@fstloglinearapply_DEPENDENCIES = libfstlinearscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la
+@HAVE_BIN_TRUE@	../../lib/libfst.la $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -264,6 +265,7 @@ CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
+DL_LIBS = @DL_LIBS@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -379,7 +381,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 @HAVE_BIN_TRUE@LDADD = libfstlinearscript.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@	../../lib/libfst.la -lm -ldl
+@HAVE_BIN_TRUE@	../../lib/libfst.la -lm $(DL_LIBS)
 
 @HAVE_BIN_TRUE@fstlinear_SOURCES = fstlinear.cc
 @HAVE_BIN_TRUE@fstloglinearapply_SOURCES = fstloglinearapply.cc

@@ -70,6 +70,9 @@ class GenericRegister {
       LOG(ERROR) << "GenericRegister::GetEntry: " << dlerror();
       return EntryType();
     }
+#ifdef RUN_MODULE_INITIALIZERS
+    RUN_MODULE_INITIALIZERS();
+#endif
 
     // We assume that the DSO constructs a static object in its global
     // scope that does the registration. Thus we need only load it, not

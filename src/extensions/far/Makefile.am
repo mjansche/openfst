@@ -19,7 +19,7 @@ bin_PROGRAMS = farcompilestrings farcreate farequal farextract farinfo \
 	farisomorphic farprintstrings
 
 LDADD = libfstfarscript.la libfstfar.la ../../script/libfstscript.la \
-        ../../lib/libfst.la -lm -ldl
+        ../../lib/libfst.la -lm $(DL_LIBS)
 
 farcompilestrings_SOURCES = farcompilestrings.cc
 

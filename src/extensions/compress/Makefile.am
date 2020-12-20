@@ -6,7 +6,7 @@ bin_PROGRAMS = fstcompress fstrandmod
 LDADD = libfstcompressscript.la \
         ../../script/libfstscript.la \
         ../../lib/libfst.la \
-        -lz -lm -ldl
+        -lz -lm $(DL_LIBS)
 
 fstcompress_SOURCES = fstcompress.cc
 fstrandmod_SOURCES = fstrandmod.cc
