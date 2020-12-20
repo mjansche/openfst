@@ -355,7 +355,6 @@ class PrunedExpand {
         efst_(ifst, parens,
               ExpandFstOptions<Arc>(opts, true, &stack_, &state_table_)),
         queue_(state_table_, stack_, stack_length_, distance_, fdistance_) {
-
     Reverse(*ifst_, parens, &rfst_);
     VectorFst<Arc> path;
     reverse_shortest_path_ = new SP(
@@ -448,6 +447,8 @@ class PrunedExpand {
   void SetDistance(StateId s, Weight w);
   Weight FinalDistance(StateId s) const;
   void SetFinalDistance(StateId s, Weight w);
+  StateId SourceState(StateId s) const;
+  void SetSourceState(StateId s, StateId p);
   void AddStateAndEnqueue(StateId s);
   void Relax(StateId s, const A &arc, Weight w);
   bool PruneArc(StateId s, const A &arc);
@@ -469,6 +470,7 @@ class PrunedExpand {
   vector<Weight> fdistance_;       // Distance to final states in efst_/ofst
   ShortestStackFirstQueue queue_;  // Queue used to visit efst_
   vector<uint8> flags_;            // Status flags for states in efst_/ofst
+  vector<StateId> sources_;        // PDT source state for each expanded state
 
   typedef PdtShortestPath<Arc, FifoQueue<StateId> > SP;
   typedef typename SP::CloseParenMultimap ParenMultimap;
@@ -489,6 +491,16 @@ class PrunedExpand {
   // of a close parentheses matching the top of 'current_stack_id_; to
   // the shortest-distance from '(s, current_stack_id_)' to the final
   // states in 'efst_'.
+  ssize_t current_paren_id_;  // Paren id at top of current stack
+  ssize_t cached_stack_id_;
+  StateId cached_source_;
+  slist<pair<StateId, Weight> > cached_dest_list_;
+  // TODO(allauzen): rewrite this comment.
+  // 'cached_dest_list_' contains the set of destination states for
+  // source state 'cached_source_' and paren id 'cached_paren_id':
+  // the set of source state of a close parenthesis with paren id
+  // 'cached_paren_id' balancing an incoming open parenthesis with paren
+  // id 'cached_paren_id' in state 'cached_source_'.
 
   NaturalLess<Weight> less_;
 };
@@ -580,6 +592,18 @@ void PrunedExpand<A>::SetFinalDistance(StateId s, Weight w) {
   fdistance_[s] = w;
 }
 
+// Returns the PDT "source" state of state 's' in 'ofst_'.
+template <class A>
+typename A::StateId PrunedExpand<A>::SourceState(StateId s) const {
+  return s < sources_.size() ? sources_[s] : kNoStateId;
+}
+
+// Sets the PDT "source" state of state 's' in 'ofst_' to state 'p' in 'ifst_'.
+template <class A>
+void PrunedExpand<A>::SetSourceState(StateId s, StateId p) {
+  while (sources_.size() <= s) sources_.push_back(kNoStateId);
+  sources_[s] = p;
+}
 
 // Adds state 's' of 'efst_' to 'ofst_' and inserts it in the queue,
 // modifying the flags for 's' accordingly.
@@ -604,8 +628,10 @@ void PrunedExpand<A>::AddStateAndEnqueue(StateId s) {
 template <class A>
 void PrunedExpand<A>::Relax(StateId s, const A &arc, Weight fd) {
   Weight nd = Times(Distance(s), arc.weight);
-  if (less_(nd, Distance(arc.nextstate)))
+  if (less_(nd, Distance(arc.nextstate))) {
     SetDistance(arc.nextstate, nd);
+    SetSourceState(arc.nextstate, SourceState(s));
+  }
   if (less_(fd, FinalDistance(arc.nextstate)))
     SetFinalDistance(arc.nextstate, fd);
   VLOG(2) << "Relax: " << s << ", d[s] = " << Distance(s) << ", to "
@@ -619,13 +645,39 @@ template <class A>
 bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
   VLOG(2) << "Prune ?";
   Weight fd = Weight::Zero();
-  for (typename DestMap::const_iterator it = dest_map_.begin();
-       it != dest_map_.end();
-       ++it)
+  CHECK_NE(SourceState(s), kNoStateId);
+
+  if ((cached_source_ != SourceState(s)) ||
+      (cached_stack_id_ != current_stack_id_)) {
+    cached_source_ = SourceState(s);
+    cached_stack_id_ = current_stack_id_;
+    cached_dest_list_.clear();
+    if (cached_source_ != ifst_->Start()) {
+      balance_data_->Find(current_paren_id_, cached_source_);
+      for (; !balance_data_->Done(); balance_data_->Next()) {
+        StateId dest = balance_data_->Value();
+        typename DestMap::const_iterator iter = dest_map_.find(dest);
+        CHECK(iter != dest_map_.end());
+        CHECK_EQ(iter->first, dest);
+        cached_dest_list_.push_front(*iter);
+      }
+    } else {
+      // TODO(allauzen): queue discipline should prevent this never
+      // from happening; replace by CHECK.
+      cached_dest_list_.push_front(
+          make_pair(rfst_.Start() -1, Weight::One()));
+    }
+  }
+
+  for (typename slist<pair<StateId, Weight> >::const_iterator iter =
+           cached_dest_list_.begin();
+       iter != cached_dest_list_.end();
+       ++iter) {
     fd = Plus(fd,
               Times(DistanceToDest(state_table_.Tuple(arc.nextstate).state_id,
-                                   it->first),
-                    it->second));
+                                   iter->first),
+                    iter->second));
+  }
   Relax(s, arc, fd);
   Weight w = Times(Distance(s), Times(arc.weight, fd));
   return less_(limit_, w);
@@ -638,10 +690,17 @@ void PrunedExpand<A>::ProcStart() {
   StateId s = efst_.Start();
   AddStateAndEnqueue(s);
   ofst_->SetStart(s);
+  SetSourceState(s, ifst_->Start());
 
   current_stack_id_ = 0;
+  current_paren_id_ = -1;
   stack_length_.push_back(0);
-  dest_map_[rfst_.Start() - 1] = Weight::One();
+  dest_map_[rfst_.Start() - 1] = Weight::One(); // not needed
+
+  cached_source_ = ifst_->Start();
+  cached_stack_id_ = 0;
+  cached_dest_list_.push_front(
+          make_pair(rfst_.Start() -1, Weight::One()));
 
   PdtStateTuple<StateId, StackId> tuple(rfst_.Start() - 1, 0);
   SetFinalDistance(state_table_.FindState(tuple), Weight::One());
@@ -664,6 +723,9 @@ void PrunedExpand<A>::ProcFinal(StateId s) {
 // below the threshold.  When 'add_arc' is true, 'arc' is added to 'ofst_'.
 template <class A>
 bool PrunedExpand<A>::ProcNonParen(StateId s, const A &arc, bool add_arc) {
+  VLOG(2) << "ProcNonParen: " << s << " to " << arc.nextstate
+          << ", " << arc.ilabel << ":" << arc.olabel << " / " << arc.weight
+          << ", add_arc = " << (add_arc ? "true" : "false");
   if (PruneArc(s, arc)) return false;
   if(add_arc) ofst_->AddArc(s, arc);
   AddStateAndEnqueue(arc.nextstate);
@@ -693,9 +755,14 @@ bool PrunedExpand<A>::ProcOpenParen(StateId s, const A &arc, StackId si,
   bool proc_arc = false;
   Weight fd = Weight::Zero();
   ssize_t paren_id = stack_.ParenId(arc.ilabel);
+  slist<StateId> sources;
   balance_data_->Find(paren_id, state_table_.Tuple(ns).state_id);
-  for (; !balance_data_->Done(); balance_data_->Next()) {
-    StateId source = balance_data_->Value();
+  for (; !balance_data_->Done(); balance_data_->Next())
+    sources.push_front(balance_data_->Value());
+  for (typename slist<StateId>::const_iterator sources_iter = sources.begin();
+       sources_iter != sources.end();
+       ++ sources_iter) {
+    StateId source = *sources_iter;//balance_data_->Value();
     VLOG(2) << "Close paren source: " << source;
     ParenKey paren_key(paren_id, source);
     for (typename ParenMultimap::const_iterator iter =
@@ -764,8 +831,13 @@ void PrunedExpand<A>::ProcDestStates(StateId s, StackId si) {
   if (si != current_stack_id_) {
     dest_map_.clear();
     current_stack_id_ = si;
+    current_paren_id_ = stack_.Top(current_stack_id_);
     VLOG(2) << "StackID " << si << " dequeued for first time";
   }
+  // TODO(allauzen): clean up source state business; rename current function to
+  // ProcSourceState.
+  SetSourceState(s, state_table_.Tuple(s).state_id);
+
   ssize_t paren_id = stack_.Top(si);
   balance_data_->Find(paren_id, state_table_.Tuple(s).state_id);
   for (; !balance_data_->Done(); balance_data_->Next()) {

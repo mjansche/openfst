@@ -254,6 +254,8 @@ class PdtBalanceData {
   // Maps from open paren key to state node ID
   typedef unordered_map<ParenKey, StateNodeId, ParenHash> StateNodeMap;
 
+  PdtBalanceData() : cached_close_key_(kNoLabel, kNoStateId) {}
+
   ~PdtBalanceData() {
     VLOG(1) << "# of balanced close paren states: " << node_map_.size();
   }
@@ -287,14 +289,24 @@ class PdtBalanceData {
   // Should be called only after FinishInsert(open_dest).
   bool Find(Label paren_id, StateId open_dest) {
     ParenKey close_key(paren_id, open_dest);
+    if (close_key == cached_close_key_) {
+      node_ = cached_node_;
+      return cached_found_;
+    } else {
+      cached_close_key_ = close_key;
+    }
     StateNodeId node_id = node_map_[close_key];
+    bool found;
     if (node_id == kNoStateNodeId) {
       node_.state_id = kNoStateId;
-      return false;
+      found = false;
     } else {
       node_ = node_table_.Tuple(node_id);
-      return true;
+      found = true;
     }
+    cached_node_ = node_;
+    cached_found_ = found;
+    return found;
   }
 
   bool Done() const { return node_.state_id == kNoStateId; }
@@ -378,7 +390,9 @@ class PdtBalanceData {
   StateNodeMap node_map_;                            // paren, state to node ID
   PdtStateTable<StateId, StateNodeId> node_table_;
   StateNode node_;                                   // current state node
-
+  ParenKey cached_close_key_;
+  bool cached_found_;
+  StateNode cached_node_;
 };
 
 template<class Arc>
