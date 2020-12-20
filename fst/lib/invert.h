@@ -49,7 +49,7 @@ template <class A> struct InvertMapper {
 template<class Arc> inline
 void Invert(MutableFst<Arc> *fst) {
   Map(fst, InvertMapper<Arc>());
-  SymbolTable *input = fst->InputSymbols();
+  SymbolTable *input = fst->InputSymbols()->Copy();
   fst->SetInputSymbols(fst->OutputSymbols());
   fst->SetOutputSymbols(input);
 }
