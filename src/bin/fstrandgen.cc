@@ -25,7 +25,8 @@ DEFINE_int32(max_length, INT_MAX, "Maximum path length");
 DEFINE_int32(npath, 1, "Number of paths to generate");
 DEFINE_int32(seed, time(0), "Random seed");
 DEFINE_string(select, "uniform", "Selection type: one of: "
-              " \"uniform\", \"log_prob (when appropriate)\"");
+              " \"uniform\", \"log_prob\" (when appropriate),"
+	      " \"fast_log_prob\" (when appropriate)");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -57,6 +58,8 @@ int main(int argc, char **argv) {
     ras = s::UNIFORM_ARC_SELECTOR;
   } else if (FLAGS_select == "log_prob") {
     ras = s::LOG_PROB_ARC_SELECTOR;
+  } else if (FLAGS_select == "fast_log_prob") {
+    ras = s::FAST_LOG_PROB_ARC_SELECTOR;
   } else {
     LOG(ERROR) << argv[0] << ": Unknown selection type \""
                << FLAGS_select << "\"\n";

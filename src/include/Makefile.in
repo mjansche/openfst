@@ -80,8 +80,9 @@ am__nobase_include_HEADERS_DIST = fst/arc.h fst/determinize.h \
 	fst/extensions/far/print-strings.h \
 	fst/extensions/far/sttable.h fst/extensions/far/farlib.h \
 	fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
-	fst/extensions/pdt/pdt.h fst/extensions/pdt/pdtscript.h \
-	fst/extensions/pdt/replace.h fst/extensions/pdt/pdtlib.h \
+	fst/extensions/pdt/pdt.h fst/extensions/pdt/info.h \
+	fst/extensions/pdt/replace.h fst/extensions/pdt/reverse.h \
+	fst/extensions/pdt/pdtscript.h fst/extensions/pdt/pdtlib.h \
 	fst/script/arcsort.h fst/script/arg-packs.h \
 	fst/script/closure.h fst/script/compile-impl.h \
 	fst/script/compile.h fst/script/compose.h fst/script/concat.h \
@@ -238,7 +239,8 @@ top_srcdir = @top_srcdir@
 
 @HAVE_PDT_TRUE@pdt_include_headers = fst/extensions/pdt/compose.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/expand.h fst/extensions/pdt/pdt.h \
-@HAVE_PDT_TRUE@fst/extensions/pdt/pdtscript.h fst/extensions/pdt/replace.h \
+@HAVE_PDT_TRUE@fst/extensions/pdt/info.h fst/extensions/pdt/replace.h \
+@HAVE_PDT_TRUE@fst/extensions/pdt/reverse.h fst/extensions/pdt/pdtscript.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/pdtlib.h
 
 script_include_headers = fst/script/arcsort.h fst/script/arg-packs.h \

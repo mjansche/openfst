@@ -41,7 +41,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  s::FstClass *ifst = s::FstClass::Read(argv[1]);
+  string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  s::FstClass *ifst = s::FstClass::Read(in_name);
   if (!ifst) return 1;
 
   if (FLAGS_pdt_parentheses.empty()) {
@@ -55,7 +58,7 @@ int main(int argc, char **argv) {
   s::VectorFstClass ofst(ifst->ArcType());
   s::PdtExpand(*ifst, parens, &ofst, FLAGS_connect);
 
-  ofst.Write(argc > 2 ? argv[2] : "");
+  ofst.Write(out_name);
 
   return 0;
 }

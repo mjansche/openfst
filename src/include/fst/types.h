@@ -15,23 +15,24 @@
 // Author: riley@google.com (Michael Riley)
 //
 // \file
-// Various type definitions
+// Various type definitions (mostly for Google compatibility).
 
 #include <cstdlib>       // for ssize_t
+#include <stdint.h>       // *int*_t
 
 #include <fst/compat.h>  // for DISALLOW_COPY_AND_ASSIGN
 
 #ifndef FST_LIB_TYPES_H__
 #define FST_LIB_TYPES_H__
 
-typedef signed char int8;
-typedef short int16;
-typedef int int32;
-typedef long long int64;
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
 
-typedef char uint8;
-typedef unsigned short uint16;
-typedef unsigned int uint32;
-typedef unsigned long long uint64;
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
 
 #endif  // FST_LIB_TYPES_H__

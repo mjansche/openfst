@@ -485,7 +485,7 @@ class CacheLogAccumulator {
     } else {
       size_t n = 0;
       double x =  FloatLimits<double>::kPosInfinity;
-      for(; !aiter->Done(); aiter->Next(), ++n) {
+      for(aiter->Reset(); !aiter->Done(); aiter->Next(), ++n) {
         x = LogPlus(x, aiter->Value().weight.Value());
         if (x < w) break;
       }

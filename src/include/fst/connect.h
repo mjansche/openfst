@@ -40,57 +40,75 @@ class CcVisitor {
 
   // cc[i]: connected component number for state i.
   CcVisitor(vector<StateId> *cc)
-  : cc_(cc),
-    nstates_(0),
-    comps_(0, kNoStateId) {
-    cc_->clear();
+      : comps_(new UnionFind<StateId>(0, kNoStateId)),
+        cc_(cc),
+        nstates_(0) { }
+
+  // comps: connected components equiv classes.
+  CcVisitor(UnionFind<StateId> *comps)
+      : comps_(comps),
+        cc_(0),
+        nstates_(0) { }
+
+  ~CcVisitor() {
+    if (cc_)  // own comps_?
+      delete comps_;
   }
 
-  void InitVisit(const Fst<A> &fst) {
-    CHECK(cc_->empty());
-  }
+  void InitVisit(const Fst<A> &fst) { }
 
   bool InitState(StateId s, StateId root) {
     ++nstates_;
-    if (comps_.FindSet(s) == kNoStateId)
-      comps_.MakeSet(s);
+    if (comps_->FindSet(s) == kNoStateId)
+      comps_->MakeSet(s);
     return true;
   }
 
   bool WhiteArc(StateId s, const A &arc) {
-    comps_.MakeSet(arc.nextstate);
-    comps_.Union(s, arc.nextstate);
+    comps_->MakeSet(arc.nextstate);
+    comps_->Union(s, arc.nextstate);
     return true;
   }
 
   bool GreyArc(StateId s, const A &arc) {
-    comps_.Union(s, arc.nextstate);
+    comps_->Union(s, arc.nextstate);
     return true;
   }
 
   bool BlackArc(StateId s, const A &arc) {
-    comps_.Union(s, arc.nextstate);
+    comps_->Union(s, arc.nextstate);
     return true;
   }
 
   void FinishState(StateId s) { }
 
   void FinishVisit() {
+    if (cc_)
+      GetCcVector(cc_);
+  }
+
+  // cc[i]: connected component number for state i.
+  // Returns number of components.
+  int GetCcVector(vector<StateId> *cc) {
+    cc->clear();
+    cc->resize(nstates_, kNoStateId);
     StateId ncomp = 0;
-    vector<StateId> rep2comp(nstates_, kNoStateId);
-    for (int i = 0; i < nstates_; ++i) {
-      StateId rep = comps_.FindSet(i);
-      StateId &comp = rep2comp[rep];
-      if (comp == kNoStateId)
-        comp = ncomp++;
-      cc_->push_back(comp);
+    for (StateId i = 0; i < nstates_; ++i) {
+      StateId rep = comps_->FindSet(i);
+      StateId &comp = (*cc)[rep];
+      if (comp == kNoStateId) {
+        comp = ncomp;
+        ++ncomp;
+      }
+      (*cc)[i] = comp;
     }
+    return ncomp;
   }
 
  private:
+  UnionFind<StateId> *comps_;   // Components
   vector<StateId> *cc_;         // State's cc number
   StateId nstates_;             // State count
-  UnionFind<StateId> comps_;    // Components
 };
 
 
@@ -118,57 +136,9 @@ class SccVisitor {
   SccVisitor(uint64 *props)
       : scc_(0), access_(0), coaccess_(0), props_(props) {}
 
-  void InitVisit(const Fst<A> &fst) {
-    if (scc_)
-      scc_->clear();
-    if (access_)
-      access_->clear();
-    if (coaccess_) {
-      coaccess_->clear();
-      coaccess_internal_ = false;
-    } else {
-      coaccess_ = new vector<bool>;
-      coaccess_internal_ = true;
-    }
-    *props_ |= kAcyclic | kInitialAcyclic | kAccessible | kCoAccessible;
-    *props_ &= ~(kCyclic | kInitialCyclic | kNotAccessible | kNotCoAccessible);
-    fst_ = &fst;
-    start_ = fst.Start();
-    nstates_ = 0;
-    nscc_ = 0;
-    dfnumber_ = new vector<StateId>;
-    lowlink_ = new vector<StateId>;
-    onstack_ = new vector<bool>;
-    scc_stack_ = new vector<StateId>;
-  }
+  void InitVisit(const Fst<A> &fst);
 
-  bool InitState(StateId s, StateId root) {
-    scc_stack_->push_back(s);
-    while (dfnumber_->size() <= s) {
-      if (scc_)
-        scc_->push_back(-1);
-      if (access_)
-        access_->push_back(false);
-      coaccess_->push_back(false);
-      dfnumber_->push_back(-1);
-      lowlink_->push_back(-1);
-      onstack_->push_back(false);
-    }
-    (*dfnumber_)[s] = nstates_;
-    (*lowlink_)[s] = nstates_;
-    (*onstack_)[s] = true;
-    if (root == start_) {
-      if (access_)
-        (*access_)[s] = true;
-    } else {
-      if (access_)
-        (*access_)[s] = false;
-      *props_ |= kNotAccessible;
-      *props_ &= ~kAccessible;
-    }
-    ++nstates_;
-    return true;
-  }
+  bool InitState(StateId s, StateId root);
 
   bool TreeArc(StateId s, const A &arc) { return true; }
 
@@ -197,40 +167,7 @@ class SccVisitor {
     return true;
   }
 
-  void FinishState(StateId s, StateId p, const A *) {
-    if (fst_->Final(s) != Weight::Zero())
-      (*coaccess_)[s] = true;
-    if ((*dfnumber_)[s] == (*lowlink_)[s]) {  // root of new SCC
-      bool scc_coaccess = false;
-      size_t i = scc_stack_->size();
-      StateId t;
-      do {
-        t = (*scc_stack_)[--i];
-        if ((*coaccess_)[t])
-          scc_coaccess = true;
-      } while (s != t);
-      do {
-        t = scc_stack_->back();
-        if (scc_)
-          (*scc_)[t] = nscc_;
-        if (scc_coaccess)
-          (*coaccess_)[t] = true;
-        (*onstack_)[t] = false;
-        scc_stack_->pop_back();
-      } while (s != t);
-      if (!scc_coaccess) {
-        *props_ |= kNotCoAccessible;
-        *props_ &= ~kCoAccessible;
-      }
-      ++nscc_;
-    }
-    if (p != kNoStateId) {
-      if ((*coaccess_)[s])
-        (*coaccess_)[p] = true;
-      if ((*lowlink_)[s] < (*lowlink_)[p])
-        (*lowlink_)[p] = (*lowlink_)[s];
-    }
-  }
+  void FinishState(StateId s, StateId p, const A *);
 
   void FinishVisit() {
     // Numbers SCC's in topological order when acyclic.
@@ -260,6 +197,97 @@ class SccVisitor {
   vector<bool> *onstack_;       // is a state on the SCC stack
   vector<StateId> *scc_stack_;  // SCC stack (w/ random access)
 };
+
+template <class A> inline
+void SccVisitor<A>::InitVisit(const Fst<A> &fst) {
+  if (scc_)
+    scc_->clear();
+  if (access_)
+    access_->clear();
+  if (coaccess_) {
+    coaccess_->clear();
+    coaccess_internal_ = false;
+  } else {
+    coaccess_ = new vector<bool>;
+    coaccess_internal_ = true;
+  }
+  *props_ |= kAcyclic | kInitialAcyclic | kAccessible | kCoAccessible;
+  *props_ &= ~(kCyclic | kInitialCyclic | kNotAccessible | kNotCoAccessible);
+  fst_ = &fst;
+  start_ = fst.Start();
+  nstates_ = 0;
+  nscc_ = 0;
+  dfnumber_ = new vector<StateId>;
+  lowlink_ = new vector<StateId>;
+  onstack_ = new vector<bool>;
+  scc_stack_ = new vector<StateId>;
+}
+
+template <class A> inline
+bool SccVisitor<A>::InitState(StateId s, StateId root) {
+  scc_stack_->push_back(s);
+  while (dfnumber_->size() <= s) {
+    if (scc_)
+      scc_->push_back(-1);
+    if (access_)
+      access_->push_back(false);
+    coaccess_->push_back(false);
+    dfnumber_->push_back(-1);
+    lowlink_->push_back(-1);
+    onstack_->push_back(false);
+  }
+  (*dfnumber_)[s] = nstates_;
+  (*lowlink_)[s] = nstates_;
+  (*onstack_)[s] = true;
+  if (root == start_) {
+    if (access_)
+      (*access_)[s] = true;
+  } else {
+    if (access_)
+      (*access_)[s] = false;
+    *props_ |= kNotAccessible;
+    *props_ &= ~kAccessible;
+  }
+  ++nstates_;
+  return true;
+}
+
+template <class A> inline
+void SccVisitor<A>::FinishState(StateId s, StateId p, const A *) {
+  if (fst_->Final(s) != Weight::Zero())
+    (*coaccess_)[s] = true;
+  if ((*dfnumber_)[s] == (*lowlink_)[s]) {  // root of new SCC
+    bool scc_coaccess = false;
+    size_t i = scc_stack_->size();
+    StateId t;
+    do {
+      t = (*scc_stack_)[--i];
+      if ((*coaccess_)[t])
+        scc_coaccess = true;
+    } while (s != t);
+    do {
+      t = scc_stack_->back();
+      if (scc_)
+        (*scc_)[t] = nscc_;
+      if (scc_coaccess)
+        (*coaccess_)[t] = true;
+      (*onstack_)[t] = false;
+      scc_stack_->pop_back();
+    } while (s != t);
+    if (!scc_coaccess) {
+      *props_ |= kNotCoAccessible;
+      *props_ &= ~kCoAccessible;
+    }
+    ++nscc_;
+  }
+  if (p != kNoStateId) {
+    if ((*coaccess_)[s])
+      (*coaccess_)[p] = true;
+    if ((*lowlink_)[s] < (*lowlink_)[p])
+      (*lowlink_)[p] = (*lowlink_)[s];
+  }
+}
+
 
 // Trims an FST, removing states and arcs that are not on successful
 // paths. This version modifies its input.

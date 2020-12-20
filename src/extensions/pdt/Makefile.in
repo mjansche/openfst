@@ -34,7 +34,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @HAVE_BIN_TRUE@bin_PROGRAMS = pdtcompose$(EXEEXT) pdtexpand$(EXEEXT) \
-@HAVE_BIN_TRUE@	pdtreplace$(EXEEXT)
+@HAVE_BIN_TRUE@	pdtinfo$(EXEEXT) pdtreplace$(EXEEXT) \
+@HAVE_BIN_TRUE@	pdtreverse$(EXEEXT)
 subdir = src/extensions/pdt
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -73,10 +74,18 @@ am__pdtexpand_SOURCES_DIST = pdtexpand.cc
 @HAVE_BIN_TRUE@am_pdtexpand_OBJECTS = pdtexpand.$(OBJEXT)
 pdtexpand_OBJECTS = $(am_pdtexpand_OBJECTS)
 @HAVE_BIN_TRUE@pdtexpand_DEPENDENCIES = $(pdtbindeps)
+am__pdtinfo_SOURCES_DIST = pdtinfo.cc
+@HAVE_BIN_TRUE@am_pdtinfo_OBJECTS = pdtinfo.$(OBJEXT)
+pdtinfo_OBJECTS = $(am_pdtinfo_OBJECTS)
+@HAVE_BIN_TRUE@pdtinfo_DEPENDENCIES = $(pdtbindeps)
 am__pdtreplace_SOURCES_DIST = pdtreplace.cc
 @HAVE_BIN_TRUE@am_pdtreplace_OBJECTS = pdtreplace.$(OBJEXT)
 pdtreplace_OBJECTS = $(am_pdtreplace_OBJECTS)
 @HAVE_BIN_TRUE@pdtreplace_DEPENDENCIES = $(pdtbindeps)
+am__pdtreverse_SOURCES_DIST = pdtreverse.cc
+@HAVE_BIN_TRUE@am_pdtreverse_OBJECTS = pdtreverse.$(OBJEXT)
+pdtreverse_OBJECTS = $(am_pdtreverse_OBJECTS)
+@HAVE_BIN_TRUE@pdtreverse_DEPENDENCIES = $(pdtbindeps)
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -90,10 +99,12 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libfstpdtscript_la_SOURCES) $(pdtcompose_SOURCES) \
-	$(pdtexpand_SOURCES) $(pdtreplace_SOURCES)
+	$(pdtexpand_SOURCES) $(pdtinfo_SOURCES) $(pdtreplace_SOURCES) \
+	$(pdtreverse_SOURCES)
 DIST_SOURCES = $(am__libfstpdtscript_la_SOURCES_DIST) \
 	$(am__pdtcompose_SOURCES_DIST) $(am__pdtexpand_SOURCES_DIST) \
-	$(am__pdtreplace_SOURCES_DIST)
+	$(am__pdtinfo_SOURCES_DIST) $(am__pdtreplace_SOURCES_DIST) \
+	$(am__pdtreverse_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -220,8 +231,12 @@ AM_LDFLAGS = -lm -ldl
 @HAVE_BIN_TRUE@pdtcompose_LDADD = $(pdtbindeps)
 @HAVE_BIN_TRUE@pdtexpand_SOURCES = pdtexpand.cc
 @HAVE_BIN_TRUE@pdtexpand_LDADD = $(pdtbindeps)
+@HAVE_BIN_TRUE@pdtinfo_SOURCES = pdtinfo.cc
+@HAVE_BIN_TRUE@pdtinfo_LDADD = $(pdtbindeps)
 @HAVE_BIN_TRUE@pdtreplace_SOURCES = pdtreplace.cc
 @HAVE_BIN_TRUE@pdtreplace_LDADD = $(pdtbindeps)
+@HAVE_BIN_TRUE@pdtreverse_SOURCES = pdtreverse.cc
+@HAVE_BIN_TRUE@pdtreverse_LDADD = $(pdtbindeps)
 @HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = libfstpdtscript.la
 @HAVE_SCRIPT_TRUE@libfstpdtscript_la_SOURCES = pdtscript.cc
 @HAVE_SCRIPT_TRUE@libfstpdtscript_la_LDFLAGS = -version-info 0:0:0
@@ -321,9 +336,15 @@ pdtcompose$(EXEEXT): $(pdtcompose_OBJECTS) $(pdtcompose_DEPENDENCIES)
 pdtexpand$(EXEEXT): $(pdtexpand_OBJECTS) $(pdtexpand_DEPENDENCIES) 
 	@rm -f pdtexpand$(EXEEXT)
 	$(CXXLINK) $(pdtexpand_OBJECTS) $(pdtexpand_LDADD) $(LIBS)
+pdtinfo$(EXEEXT): $(pdtinfo_OBJECTS) $(pdtinfo_DEPENDENCIES) 
+	@rm -f pdtinfo$(EXEEXT)
+	$(CXXLINK) $(pdtinfo_OBJECTS) $(pdtinfo_LDADD) $(LIBS)
 pdtreplace$(EXEEXT): $(pdtreplace_OBJECTS) $(pdtreplace_DEPENDENCIES) 
 	@rm -f pdtreplace$(EXEEXT)
 	$(CXXLINK) $(pdtreplace_OBJECTS) $(pdtreplace_LDADD) $(LIBS)
+pdtreverse$(EXEEXT): $(pdtreverse_OBJECTS) $(pdtreverse_DEPENDENCIES) 
+	@rm -f pdtreverse$(EXEEXT)
+	$(CXXLINK) $(pdtreverse_OBJECTS) $(pdtreverse_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -333,7 +354,9 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdtcompose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdtexpand.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdtinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdtreplace.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdtreverse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdtscript.Plo@am__quote@
 
 .cc.o:

@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   if (ifst->Properties(fst::kMutable, false)) {
     ofst = static_cast<MutableFstClass *>(ifst);
   } else {
-    ofst = new VectorFstClass(ifst->ArcType());
+    ofst = new VectorFstClass(*ifst);
     delete ifst;
   }
 

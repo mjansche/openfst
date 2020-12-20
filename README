@@ -5,8 +5,8 @@ searching weighted finite-state transducers (FSTs).
 
 REQUIREMENTS:
   This version is known to work under Linux, MacOS, and Solaris using 
-  g++ (>= 4.1). Expected to work wherever adequate POSIX (dlopen, ssize_t, basename), 
-  c99 (snprintf, strtoll, long long), and tr1 (<tr1/ordered_set>, 
+  g++ (>= 4.1). Expected to work wherever adequate POSIX (dlopen, ssize_t, 
+  basename), c99 (snprintf, strtoll, <stdint.h>), and tr1 (<tr1/ordered_set>, 
   <tr1/ordered_map>) support are available.
   	
 INSTALLATION:

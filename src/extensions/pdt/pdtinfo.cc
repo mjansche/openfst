@@ -1,4 +1,4 @@
-// pdtcompose.cc
+// pdtinfo.cc
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,50 +16,34 @@
 // Author: riley@google.com (Michael Riley)
 //
 // \file
-// Composes a PDT and an FST.
+// Prints out various information about a PDT such as number of
+// states, arcs and parentheses.
 //
 
-#include <vector>
-using std::vector;
-#include <utility>
-using std::pair; using std::make_pair;
-
-#include <fst/util.h>
 #include <fst/extensions/pdt/pdtscript.h>
-#include <fst/script/connect.h>
+#include <fst/util.h>
 
 DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
-DEFINE_bool(left_pdt, true, "1st arg is PDT (o.w. 2nd arg).");
-DEFINE_bool(connect, true, "Trim output");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
 
-  string usage = "Compose a PDT and an FST.\n\n  Usage: ";
+  string usage = "Prints out information about a PDT.\n\n  Usage: ";
   usage += argv[0];
-  usage += " in.pdt in.fst [out.pdt]\n";
-  usage += " in.fst in.pdt [out.pdt]\n";
+  usage += " in.pdt\n";
+
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
-  if (argc < 3 || argc > 4) {
+  if (argc > 2) {
     ShowUsage();
     return 1;
   }
 
-  string in1_name = strcmp(argv[1], "-") == 0 ? "" : argv[1];
-  string in2_name = strcmp(argv[2], "-") == 0 ? "" : argv[2];
-  string out_name = argc > 3 ? argv[3] : "";
+  string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
 
-  if (in1_name.empty() && in2_name.empty()) {
-    LOG(ERROR) << argv[0] << ": Can't take both inputs from standard input.";
-    return 1;
-  }
-
-  s::FstClass *ifst1 = s::FstClass::Read(in1_name);
-  if (!ifst1) return 1;
-  s::FstClass *ifst2 = s::FstClass::Read(in2_name);
-  if (!ifst2) return 1;
+  s::FstClass *ifst = s::FstClass::Read(in_name);
+  if (!ifst) return 1;
 
   if (FLAGS_pdt_parentheses.empty()) {
     LOG(ERROR) << argv[0] << ": No PDT parenthesis label pairs provided";
@@ -69,14 +53,7 @@ int main(int argc, char **argv) {
   vector<pair<int64, int64> > parens;
   fst::ReadLabelPairs(FLAGS_pdt_parentheses, &parens, false);
 
-  s::VectorFstClass ofst(ifst1->ArcType());
-  fst::ComposeOptions copts(false);
-
-  s::PdtCompose(*ifst1, *ifst2, parens, &ofst, copts, FLAGS_left_pdt);
-
-  if (FLAGS_connect)
-    s::Connect(&ofst);
-  ofst.Write(out_name);
+  s::PrintPdtInfo(*ifst, parens);
 
   return 0;
 }

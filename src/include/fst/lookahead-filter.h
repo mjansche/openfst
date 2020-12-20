@@ -425,8 +425,8 @@ class PushLabelsComposeFilter {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  typedef MultiEpsMatcher<typename F::Matcher1, vector<Label> > Matcher1;
-  typedef MultiEpsMatcher<typename F::Matcher2, vector<Label> > Matcher2;
+  typedef MultiEpsMatcher<typename F::Matcher1> Matcher1;
+  typedef MultiEpsMatcher<typename F::Matcher2> Matcher2;
   typedef typename F::FilterState FilterState1;
   typedef IntegerFilterState<typename Arc::Label> FilterState2;
   typedef PairFilterState<FilterState1, FilterState2> FilterState;

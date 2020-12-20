@@ -73,6 +73,20 @@ void PdtReplace(const vector<pair<int64, const FstClass*> > &fst_tuples,
   Apply<Operation<PdtReplaceArgs> >("PdtReplace", ofst->ArcType(), &args);
 }
 
+void PdtReverse(const FstClass &ifst,
+                const vector<pair<int64, int64> > &parens,
+                MutableFstClass *ofst) {
+  PdtReverseArgs args(ifst, parens, ofst);
+
+  Apply<Operation<PdtReverseArgs> >("PdtReverse", ifst.ArcType(), &args);
+}
+
+void PrintPdtInfo(const FstClass &ifst,
+                  const vector<pair<int64, int64> > &parens) {
+  PrintPdtInfoArgs args(ifst, parens);
+  Apply<Operation<PrintPdtInfoArgs> >("PrintPdtInfo", ifst.ArcType(), &args);
+}
+
 // Register operations for common arc types.
 
 REGISTER_FST_PDT_OPERATIONS(StdArc);

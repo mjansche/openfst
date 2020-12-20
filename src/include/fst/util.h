@@ -25,6 +25,7 @@
 using std::tr1::unordered_map;
 #include <tr1/unordered_set>
 using std::tr1::unordered_set;
+#include <list>
 #include <map>
 #include <set>
 #include <sstream>
@@ -128,6 +129,7 @@ inline istream &ReadType(istream &strm, C<S, T> *c) {    \
 }
 
 READ_STL_SEQ_TYPE(vector);
+READ_STL_SEQ_TYPE(list);
 
 // STL associative container.
 #define READ_STL_ASSOC_TYPE(C)                           \
@@ -207,6 +209,7 @@ inline ostream &WriteType(ostream &strm, const C<S, T> &c) {                 \
 }
 
 WRITE_STL_SEQ_TYPE(vector);
+WRITE_STL_SEQ_TYPE(list);
 
 // STL associative container.
 #define WRITE_STL_ASSOC_TYPE(C)                                              \
@@ -306,6 +309,59 @@ void WriteLabelPairs(const string& filename,
 
 void ConvertToLegalCSymbol(string *s);
 
+
+// An associative container for which testing membership is
+// faster than an STL set if members are restricted to an interval
+// that excludes most non-members. A 'Key' must have ==, !=, and < defined.
+// Element 'NoKey' should be a key that marks an uninitialized key and
+// is otherwise unused. 'Find()' returns an STL const_iterator to the match
+// found, otherwise it equals 'End()'.
+template <class Key, Key NoKey>
+class CompactSet {
+public:
+  typedef typename set<Key>::const_iterator const_iterator;
+
+  CompactSet()
+    : min_key_(NoKey),
+      max_key_(NoKey) { }
+
+  CompactSet(const CompactSet<Key, NoKey> &compact_set)
+    : set_(compact_set.set_),
+      min_key_(compact_set.min_key_),
+      max_key_(compact_set.max_key_) { }
+
+  void Insert(Key key) {
+    set_.insert(key);
+    if (min_key_ == NoKey || key < min_key_)
+      min_key_ = key;
+    if (max_key_ == NoKey || max_key_ < key)
+        max_key_ = key;
+  }
+
+  void Clear() {
+    set_.clear();
+    min_key_ = max_key_ = NoKey;
+  }
+
+  const_iterator Find(Key key) const {
+    if (min_key_ == NoKey ||
+        key < min_key_ || max_key_ < key)
+      return set_.end();
+    else
+      return set_.find(key);
+  }
+
+  const_iterator Begin() const { return set_.begin(); }
+
+  const_iterator End() const { return set_.end(); }
+
+private:
+  set<Key> set_;
+  Key min_key_;
+  Key max_key_;
+
+  void operator=(const CompactSet<Key, NoKey> &);  //disallow
+};
 
 }  // namespace fst;
 

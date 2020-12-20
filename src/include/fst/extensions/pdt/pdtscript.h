@@ -30,12 +30,14 @@ using std::vector;
 
 #include <fst/extensions/pdt/compose.h>
 #include <fst/extensions/pdt/expand.h>
+#include <fst/extensions/pdt/info.h>
 #include <fst/extensions/pdt/replace.h>
+#include <fst/extensions/pdt/reverse.h>
 
 namespace fst {
 namespace script {
 
-// COMPOSE
+// PDT COMPOSE
 
 typedef args::Package<const FstClass &,
                       const FstClass &,
@@ -53,7 +55,7 @@ void PdtCompose(PdtComposeArgs *args) {
   vector<pair<typename Arc::Label, typename Arc::Label> > parens(
       args->arg3.size());
 
-  for (unsigned i = 0; i < parens.size(); ++i) {
+  for (size_t i = 0; i < parens.size(); ++i) {
     parens[i].first = args->arg3[i].first;
     parens[i].second = args->arg3[i].second;
   }
@@ -72,7 +74,7 @@ void PdtCompose(const FstClass & ifst1,
                 const ComposeOptions &copts,
                 bool left_pdt);
 
-// EXPAND
+// PDT EXPAND
 
 typedef args::Package<const FstClass &,
                       const vector<pair<int64, int64> >&,
@@ -85,7 +87,7 @@ void PdtExpand(PdtExpandArgs *args) {
 
   vector<pair<typename Arc::Label, typename Arc::Label> > parens(
       args->arg2.size());
-  for (unsigned i = 0; i < parens.size(); ++i) {
+  for (size_t i = 0; i < parens.size(); ++i) {
     parens[i].first = args->arg2[i].first;
     parens[i].second = args->arg2[i].second;
   }
@@ -96,7 +98,7 @@ void PdtExpand(const FstClass &ifst,
                const vector<pair<int64, int64> > &parens,
                MutableFstClass *ofst, bool connect);
 
-// REPLACE
+// PDT REPLACE
 
 typedef args::Package<const vector<pair<int64, const FstClass*> > &,
                       MutableFstClass *,
@@ -107,7 +109,7 @@ void PdtReplace(PdtReplaceArgs *args) {
   vector<pair<typename Arc::Label, const Fst<Arc> *> > tuples(
       args->arg1.size());
 
-  for (unsigned i = 0; i < tuples.size(); ++i) {
+  for (size_t i = 0; i < tuples.size(); ++i) {
     tuples[i].first = args->arg1[i].first;
     tuples[i].second = (args->arg1[i].second)->GetFst<Arc>();
   }
@@ -117,7 +119,7 @@ void PdtReplace(PdtReplaceArgs *args) {
   vector<pair<typename Arc::Label, typename Arc::Label> > parens(
       args->arg3->size());
 
-  for (unsigned i = 0; i < parens.size(); ++i) {
+  for (size_t i = 0; i < parens.size(); ++i) {
     parens[i].first = args->arg3->at(i).first;
     parens[i].second = args->arg3->at(i).second;
   }
@@ -125,7 +127,7 @@ void PdtReplace(PdtReplaceArgs *args) {
   Replace(tuples, ofst, &parens, args->arg4);
 
   // now copy parens back
-  for (unsigned i = 0; i < parens.size(); ++i) {
+  for (size_t i = 0; i < parens.size(); ++i) {
     (*args->arg3)[i].first = parens[i].first;
     (*args->arg3)[i].second = parens[i].second;
   }
@@ -136,6 +138,51 @@ void PdtReplace(const vector<pair<int64, const FstClass*> > &fst_tuples,
                 vector<pair<int64, int64> > *parens,
                 const int64 &root);
 
+// PDT REVERSE
+
+typedef args::Package<const FstClass &,
+                      const vector<pair<int64, int64> >&,
+                      MutableFstClass *> PdtReverseArgs;
+
+template<class Arc>
+void PdtReverse(PdtReverseArgs *args) {
+  const Fst<Arc> &fst = *(args->arg1.GetFst<Arc>());
+  MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
+
+  vector<pair<typename Arc::Label, typename Arc::Label> > parens(
+      args->arg2.size());
+  for (size_t i = 0; i < parens.size(); ++i) {
+    parens[i].first = args->arg2[i].first;
+    parens[i].second = args->arg2[i].second;
+  }
+  Reverse(fst, parens, ofst);
+}
+
+void PdtReverse(const FstClass &ifst,
+                const vector<pair<int64, int64> > &parens,
+                MutableFstClass *ofst);
+
+// PRINT INFO
+
+typedef args::Package<const FstClass &,
+                      const vector<pair<int64, int64> > &> PrintPdtInfoArgs;
+
+template<class Arc>
+void PrintPdtInfo(PrintPdtInfoArgs *args) {
+  const Fst<Arc> &fst = *(args->arg1.GetFst<Arc>());
+  vector<pair<typename Arc::Label, typename Arc::Label> > parens(
+      args->arg2.size());
+  for (size_t i = 0; i < parens.size(); ++i) {
+    parens[i].first = args->arg2[i].first;
+    parens[i].second = args->arg2[i].second;
+  }
+  PdtInfo<Arc> pdtinfo(fst, parens);
+  PrintPdtInfo(pdtinfo);
+}
+
+void PrintPdtInfo(const FstClass &ifst,
+                  const vector<pair<int64, int64> > &parens);
+
 }  // namespace script
 }  // namespace fst
 
@@ -143,6 +190,7 @@ void PdtReplace(const vector<pair<int64, const FstClass*> > &fst_tuples,
 #define REGISTER_FST_PDT_OPERATIONS(ArcType)                      \
   REGISTER_FST_OPERATION(PdtCompose, ArcType, PdtComposeArgs);    \
   REGISTER_FST_OPERATION(PdtExpand, ArcType, PdtExpandArgs);      \
-  REGISTER_FST_OPERATION(PdtReplace, ArcType, PdtReplaceArgs)
-
+  REGISTER_FST_OPERATION(PdtReplace, ArcType, PdtReplaceArgs);    \
+  REGISTER_FST_OPERATION(PdtReverse, ArcType, PdtReverseArgs);    \
+  REGISTER_FST_OPERATION(PrintPdtInfo, ArcType, PrintPdtInfoArgs)
 #endif  // FST_EXTENSIONS_PDT_PDTSCRIPT_H_

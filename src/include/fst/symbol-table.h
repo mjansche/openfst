@@ -315,7 +315,7 @@ class SymbolTable {
 
   // Return the label-agnostic MD5 check-sum for this table.  All new symbols
   // added to the table will result in an updated checksum.
-  virtual string CheckSum() const ATTRIBUTE_DEPRECATED {
+  virtual string CheckSum() const  {
     return impl_->CheckSum();
   }
 

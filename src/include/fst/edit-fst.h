@@ -41,6 +41,10 @@ namespace fst {
 template <typename A, typename MutableFstT = VectorFst<A> >
 class EditFstImpl : public FstImpl<A> {
  public:
+  using FstImpl<A>::SetProperties;
+  using FstImpl<A>::SetInputSymbols;
+  using FstImpl<A>::SetOutputSymbols;
+
   typedef A Arc;
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;

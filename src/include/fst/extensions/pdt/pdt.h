@@ -23,8 +23,11 @@
 
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
+#include <map>
+#include <set>
 
 #include <fst/state-table.h>
+#include <fst/fst.h>
 
 namespace fst {
 

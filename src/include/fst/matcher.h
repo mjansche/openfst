@@ -835,9 +835,8 @@ const uint32 kMultiEpsLoop =  0x00000002;
 // default, the underlying matcher is constructed by
 // MultiEpsMatcher. The user can instead pass in this object; in that
 // case, MultiEpsMatcher takes its ownership iff 'own_matcher' is
-// true. Second template argument determines internal STL storage
-// class for multi-epsilons.
-template <class M, class S = set<typename M::Arc::Label> >
+// true.
+template <class M>
 class MultiEpsMatcher {
  public:
   typedef typename M::FST FST;
@@ -851,9 +850,7 @@ class MultiEpsMatcher {
                   M *matcher = 0, bool own_matcher = true)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         flags_(flags),
-        own_matcher_(matcher ?  own_matcher : true),
-        min_multi_eps_label_(kNoLabel),
-        max_multi_eps_label_(kNoLabel) {
+        own_matcher_(matcher ?  own_matcher : true) {
     if (match_type == MATCH_INPUT) {
       loop_.ilabel = kNoLabel;
       loop_.olabel = 0;
@@ -870,9 +867,7 @@ class MultiEpsMatcher {
         flags_(matcher.flags_),
         own_matcher_(true),
         multi_eps_labels_(matcher.multi_eps_labels_),
-        loop_(matcher.loop_),
-        min_multi_eps_label_(matcher.min_multi_eps_label_),
-        max_multi_eps_label_(matcher.max_multi_eps_label_) {
+        loop_(matcher.loop_) {
     loop_.nextstate = kNoStateId;
   }
 
@@ -906,12 +901,12 @@ class MultiEpsMatcher {
     if (!current_loop_) {
       matcher_->Next();
       done_ = matcher_->Done();
-      if (done_ && multi_eps_iter_ != multi_eps_labels_.end()) {
+      if (done_ && multi_eps_iter_ != multi_eps_labels_.End()) {
         ++multi_eps_iter_;
-        while ((multi_eps_iter_ != multi_eps_labels_.end()) &&
+        while ((multi_eps_iter_ != multi_eps_labels_.End()) &&
                !matcher_->Find(*multi_eps_iter_))
           ++multi_eps_iter_;
-        if (multi_eps_iter_ != multi_eps_labels_.end())
+        if (multi_eps_iter_ != multi_eps_labels_.End())
           done_ = false;
         else
           done_ = !matcher_->Find(kNoLabel);
@@ -931,54 +926,37 @@ class MultiEpsMatcher {
   void AddMultiEpsLabel(Label label) {
     if (label == 0)
       LOG(FATAL) << "MultiEpsMatcher: Bad multi-eps label: 0";
-    multi_eps_labels_.insert(multi_eps_labels_.end(), label);
-    if (min_multi_eps_label_ == kNoLabel || label < min_multi_eps_label_)
-      min_multi_eps_label_ = label;
-    if (max_multi_eps_label_ == kNoLabel || label > max_multi_eps_label_)
-      max_multi_eps_label_ = label;
+    multi_eps_labels_.Insert(label);
   }
 
   void ClearMultiEpsLabels() {
-    multi_eps_labels_.clear();
-    min_multi_eps_label_ = max_multi_eps_label_ = kNoLabel;
+    multi_eps_labels_.Clear();
   }
 
 private:
-  // Generic case - linear lookup
-  template <class T>
-  bool IsMultiEps(const T &multi_eps_labels, Label label) const {
-    if (min_multi_eps_label_ == kNoLabel ||
-        label < min_multi_eps_label_ || label > max_multi_eps_label_)
-      return false;
-    return find(multi_eps_labels.begin(), multi_eps_labels.end(), label)
-        != multi_eps_labels.end();
-  }
-
   // Specialized for 'set' - log lookup
   bool IsMultiEps(const set<Label> &multi_eps_labels, Label label) const {
-    if (min_multi_eps_label_ == kNoLabel ||
-        label < min_multi_eps_label_ || label > max_multi_eps_label_)
-      return false;
-    return multi_eps_labels.find(label) != multi_eps_labels.end();
+    return multi_eps_labels.Find(label) != multi_eps_labels.end();
   }
 
   M *matcher_;
   uint32 flags_;
   bool own_matcher_;             // Does this class delete the matcher?
-  S multi_eps_labels_;           // Multi-eps label set
-  typename S::const_iterator multi_eps_iter_;
+
+  // Multi-eps label set
+  CompactSet<Label, kNoLabel> multi_eps_labels_;
+  typename CompactSet<Label, kNoLabel>::const_iterator multi_eps_iter_;
+
   bool current_loop_;            // Current arc is the implicit loop
   mutable Arc loop_;             // For non-consuming symbols
   bool done_;                    // Matching done
-  Label min_multi_eps_label_;    // For faster IsMultiEps check
-  Label max_multi_eps_label_;    // For faster IsMultiEps check
 
   void operator=(const MultiEpsMatcher<M> &);  // Disallow
 };
 
-template <class M, class S> inline
-bool MultiEpsMatcher<M, S>::Find(Label match_label) {
-  multi_eps_iter_ = multi_eps_labels_.end();
+template <class M> inline
+bool MultiEpsMatcher<M>::Find(Label match_label) {
+  multi_eps_iter_ = multi_eps_labels_.End();
   current_loop_ = false;
   bool ret;
   if (match_label == 0) {
@@ -986,11 +964,11 @@ bool MultiEpsMatcher<M, S>::Find(Label match_label) {
   } else if (match_label == kNoLabel) {
     if (flags_ & kMultiEpsList) {
       // return all non-consuming arcs (incl. epsilon)
-      multi_eps_iter_ = multi_eps_labels_.begin();
-      while ((multi_eps_iter_ != multi_eps_labels_.end()) &&
+      multi_eps_iter_ = multi_eps_labels_.Begin();
+      while ((multi_eps_iter_ != multi_eps_labels_.End()) &&
              !matcher_->Find(*multi_eps_iter_))
         ++multi_eps_iter_;
-      if (multi_eps_iter_ != multi_eps_labels_.end())
+      if (multi_eps_iter_ != multi_eps_labels_.End())
         ret = true;
       else
         ret = matcher_->Find(kNoLabel);
@@ -999,7 +977,7 @@ bool MultiEpsMatcher<M, S>::Find(Label match_label) {
       ret = matcher_->Find(kNoLabel);
     }
   } else if ((flags_ & kMultiEpsLoop) &&
-             IsMultiEps(multi_eps_labels_, match_label)) {
+             multi_eps_labels_.Find(match_label) != multi_eps_labels_.End()) {
     // return 'implicit' loop
     current_loop_ = true;
     ret = true;

@@ -10,7 +10,8 @@ endif
 if HAVE_PDT
 pdt_include_headers = fst/extensions/pdt/compose.h \
 fst/extensions/pdt/expand.h fst/extensions/pdt/pdt.h \
-fst/extensions/pdt/pdtscript.h fst/extensions/pdt/replace.h \
+fst/extensions/pdt/info.h fst/extensions/pdt/replace.h \
+fst/extensions/pdt/reverse.h fst/extensions/pdt/pdtscript.h \
 fst/extensions/pdt/pdtlib.h
 endif
 
