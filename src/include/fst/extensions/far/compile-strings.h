@@ -180,7 +180,7 @@ void FarCompileStrings(const vector<string> &in_fnames,
 
   vector<string> inputs;
   if (file_list_input) {
-    for (int i = 1; i < in_fnames.size(); ++i) {
+    for (int i = 0; i < in_fnames.size(); ++i) {
       ifstream istrm(in_fnames[i].c_str());
       string str;
       while (getline(istrm, str))
