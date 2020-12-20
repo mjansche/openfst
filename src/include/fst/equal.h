@@ -105,10 +105,12 @@ bool Equal(const Fst<Arc> &fst1, const Fst<Arc> &fst2, float delta = kDelta) {
       aiter2.Next();
 
     }
-    // Sanity checks
-    CHECK_EQ(fst1.NumArcs(s1), fst2.NumArcs(s2));
-    CHECK_EQ(fst1.NumInputEpsilons(s1), fst2.NumInputEpsilons(s2));
-    CHECK_EQ(fst1.NumOutputEpsilons(s1), fst2.NumOutputEpsilons(s2));
+    // Sanity checks: should never fail
+    if (fst1.NumArcs(s1) != fst2.NumArcs(s2) ||
+        fst1.NumInputEpsilons(s1) != fst2.NumInputEpsilons(s2) ||
+        fst1.NumOutputEpsilons(s1) != fst2.NumOutputEpsilons(s2)) {
+      FSTERROR() << "Equal: inconsistent arc/epsilon counts";
+    }
 
     siter1.Next();
     siter2.Next();

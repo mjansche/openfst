@@ -28,14 +28,18 @@
 //  A left semiring distributes on the left; a right semiring is
 //  similarly defined.
 //
-// A Weight class is required to be (at least) a left or right semiring.
+// A Weight class must have binary functions =Plus= and =Times= and
+// static member functions =Zero()= and =One()= and these must form
+// (at least) a left or right semiring.
 //
 // In addition, the following should be defined for a Weight:
 //   Member: predicate on set membership.
-//   >>: reads weight.
-//   <<: prints weight.
-//   Read(istream &strm): reads from an input stream.
-//   Write(ostream &strm): writes to an output stream.
+//   NoWeight: static member function that returns an element that is
+//      not a set member; used to signal an error.
+//   >>: reads textual representation of a weight.
+//   <<: prints textual representation of a weight.
+//   Read(istream &strm): reads binary representation of a weight.
+//   Write(ostream &strm): writes binary representation of a weight.
 //   Hash: maps weight to size_t.
 //   ApproxEqual: approximate equality (for inexact weights)
 //   Quantize: quantizes wrt delta (for inexact weights)
@@ -44,11 +48,9 @@
 //      and Times(a, b') == c
 //     --> a' = Divide(c, b, DIVIDE_RIGHT) if a right semiring, a'.Member()
 //      and Times(a', b) == c
-//     --> b' = Divide(c, a)
-//            = Divide(c, a, DIVIDE_ANY)
-//            = Divide(c, a, DIVIDE_LEFT)
-//            = Divide(c, a, DIVIDE_RIGHT) if a commutative semiring,
-//      b'.Member() and Times(a, b') == Times(b', a) == c
+//     --> b' = Divide(c, a) = Divide(c, a, DIVIDE_ANY) =
+//      Divide(c, a, DIVIDE_LEFT) = Divide(c, a, DIVIDE_RIGHT) if a
+//      commutative semiring, b'.Member() and Times(a, b') = Times(b', a) = c
 //   ReverseWeight: the type of the corresponding reverse weight.
 //     Typically the same type as Weight for a (both left and right) semiring.
 //     For the left string semiring, it is the right string semiring.
@@ -64,7 +66,7 @@
 //      RightSemiring: indicates weights form a right semiring.
 //      Commutative: for all a,b: Times(a,b) == Times(b,a)
 //      Idempotent: for all a: Plus(a, a) == a.
-//      Path Property: for all a, b: Plus(a, b) == a or Plus(a, b) == b.
+//      Path: for all a, b: Plus(a, b) == a or Plus(a, b) == b.
 
 
 #ifndef FST_LIB_WEIGHT_H__
@@ -131,9 +133,10 @@ class NaturalLess {
   typedef W Weight;
 
   NaturalLess() {
-    if (!(W::Properties() & kIdempotent))
-      LOG(ERROR) << "NaturalLess: Weight type is not idempotent: "
+    if (!(W::Properties() & kIdempotent)) {
+      FSTERROR() << "NaturalLess: Weight type is not idempotent: "
                  << W::Type();
+    }
   }
 
   bool operator()(const W &w1, const W &w2) const {
@@ -159,9 +162,9 @@ W Power(W w, size_t n) {
 template <class W1, class W2>
 struct WeightConvert {
   W2 operator()(W1 w1) const {
-    LOG(FATAL) << "WeightConvert: can't convert weight from \""
+    FSTERROR() << "WeightConvert: can't convert weight from \""
                << W1::Type() << "\" to \"" << W2::Type();
-    return W2::Zero();
+    return W2::NoWeight();
   }
 };
 

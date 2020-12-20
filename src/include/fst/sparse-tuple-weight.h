@@ -103,6 +103,11 @@ class SparseTupleWeight {
     return one;
   }
 
+  static const SparseTupleWeight<W, K> &NoWeight() {
+    static SparseTupleWeight<W, K> no_weight(W::NoWeight());
+    return no_weight;
+  }
+
   istream &Read(istream &strm) {
     ReadType(strm, &default_);
     ReadType(strm, &first_);
@@ -125,6 +130,7 @@ class SparseTupleWeight {
   }
 
   bool Member() const {
+    if (!DefaultValue().Member()) return false;
     for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
       if (!it.Value().second.Member()) return false;
     }
@@ -182,17 +188,10 @@ class SparseTupleWeight {
   }
 
   inline void Push(const Pair &p, bool default_value_check = true) {
-    CHECK_NE(p.first, 0);  // key 0 is reserved
     if (default_value_check && p.second == default_) return;
     if (first_.first == kNoKey) {
       first_ = p;
     } else {
-      if (default_value_check) {
-        if (rest_.size())
-          CHECK_LT(rest_.back().first, p.first);
-        else
-          CHECK_LT(first_.first, p.first);
-      }
       rest_.push_back(p);
     }
   }
@@ -331,11 +330,19 @@ inline bool operator!=(const SparseTupleWeight<W, K> &w1,
 
 template <class W, class K>
 inline ostream &operator<<(ostream &strm, const SparseTupleWeight<W, K> &w) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  if(FLAGS_fst_weight_separator.size() != 1) {
+    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char separator = FLAGS_fst_weight_separator[0];
   bool write_parens = false;
   if (!FLAGS_fst_weight_parentheses.empty()) {
-    CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+    if (FLAGS_fst_weight_parentheses.size() != 2) {
+      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
+      strm.clear(std::ios::badbit);
+      return strm;
+    }
     write_parens = true;
   }
 
@@ -364,11 +371,19 @@ inline ostream &operator<<(ostream &strm, const SparseTupleWeight<W, K> &w) {
 
 template <class W, class K>
 inline istream &operator>>(istream &strm, SparseTupleWeight<W, K> &w) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  if(FLAGS_fst_weight_separator.size() != 1) {
+    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char separator = FLAGS_fst_weight_separator[0];
 
   if (!FLAGS_fst_weight_parentheses.empty()) {
-    CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+    if (FLAGS_fst_weight_parentheses.size() != 2) {
+      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
+      strm.clear(std::ios::badbit);
+      return strm;
+    }
     return SparseTupleWeight<W, K>::ReadWithParen(
         strm, w, separator, FLAGS_fst_weight_parentheses[0],
         FLAGS_fst_weight_parentheses[1]);
@@ -486,8 +501,11 @@ inline istream& SparseTupleWeight<W, K>::ReadWithParen(
     c = strm.get();
   } while (isspace(c));
 
-  if (c != open_paren)
-    LOG(FATAL) << "is fst_weight_parentheses flag set correcty? ";
+  if (c != open_paren) {
+    FSTERROR() << "is fst_weight_parentheses flag set correcty? ";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
 
   c = strm.get();
 
@@ -600,13 +618,16 @@ inline istream& SparseTupleWeight<W, K>::ReadWithParen(
   }
 
   if (c != separator) {
+    FSTERROR() << " separator expected, not found! ";
     strm.clear(std::ios::badbit);
-    LOG(FATAL) << " separator expected, not found! ";
+    return strm;
   }
 
   c = strm.get();
   if (c != close_paren) {
-    LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
+    FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
+    strm.clear(std::ios::badbit);
+    return strm;
   }
 
   return strm;
@@ -617,4 +638,3 @@ inline istream& SparseTupleWeight<W, K>::ReadWithParen(
 }  // namespace fst
 
 #endif  // FST_LIB_SPARSE_TUPLE_WEIGHT_H__
-

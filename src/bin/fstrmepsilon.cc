@@ -73,7 +73,8 @@ int main(int argc, char **argv) {
   } else if (FLAGS_queue_type == "top") {
     qt = fst::TOP_ORDER_QUEUE;
   } else {
-    LOG(FATAL) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    LOG(ERROR) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    return 1;
   }
 
   s::RmEpsilonOptions opts(qt, FLAGS_delta, FLAGS_connect,

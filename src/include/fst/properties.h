@@ -46,6 +46,9 @@ const uint64 kExpanded =          0x0000000000000001ULL;
 // The Fst is a MutableFst
 const uint64 kMutable =           0x0000000000000002ULL;
 
+// An error was detected while constructing/using the FST
+const uint64 kError =             0x0000000000000004ULL;
+
 //
 // TRINARY PROPERTIES
 //
@@ -140,7 +143,6 @@ const uint64 kNotString =         0x0000200000000000ULL;
 //
 
 // Properties of an empty machine
-
 const uint64 kNullProperties
   = kAcceptor | kIDeterministic | kODeterministic | kNoEpsilons |
     kNoIEpsilons | kNoOEpsilons | kILabelSorted | kOLabelSorted |
@@ -149,7 +151,7 @@ const uint64 kNullProperties
 
 // Properties that are preserved when an FST is copied
 const uint64 kCopyProperties
-  = kAcceptor | kNotAcceptor | kIDeterministic | kNonIDeterministic |
+  = kError | kAcceptor | kNotAcceptor | kIDeterministic | kNonIDeterministic |
     kODeterministic | kNonODeterministic | kEpsilons | kNoEpsilons |
     kIEpsilons | kNoIEpsilons | kOEpsilons | kNoOEpsilons |
     kILabelSorted | kNotILabelSorted | kOLabelSorted |
@@ -158,71 +160,87 @@ const uint64 kCopyProperties
     kAccessible | kNotAccessible | kCoAccessible | kNotCoAccessible |
     kString | kNotString;
 
-// Properties that are preserved when an FST start state is set
-const uint64 kSetStartProperties
-  = kExpanded | kMutable | kAcceptor | kNotAcceptor | kIDeterministic |
-    kNonIDeterministic | kODeterministic | kNonODeterministic |
-    kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons | kOEpsilons |
-    kNoOEpsilons | kILabelSorted | kNotILabelSorted | kOLabelSorted |
-    kNotOLabelSorted | kWeighted | kUnweighted | kCyclic | kAcyclic |
-    kTopSorted | kNotTopSorted | kCoAccessible | kNotCoAccessible;
-
-// Properties that are preserved when an FST final weight is set
-const uint64 kSetFinalProperties
-  = kExpanded | kMutable | kAcceptor | kNotAcceptor | kIDeterministic |
-    kNonIDeterministic | kODeterministic | kNonODeterministic |
-    kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons | kOEpsilons |
-    kNoOEpsilons | kILabelSorted | kNotILabelSorted | kOLabelSorted |
-    kNotOLabelSorted | kCyclic | kAcyclic | kInitialCyclic |
-    kInitialAcyclic | kTopSorted | kNotTopSorted | kAccessible |
-    kNotAccessible;
-
-// Properties that are preserved when an FST state is added
-const uint64 kAddStateProperties
+// Properites that are intrinsic to the FST
+const uint64 kIntrinsicProperties
   = kExpanded | kMutable | kAcceptor | kNotAcceptor | kIDeterministic |
     kNonIDeterministic | kODeterministic | kNonODeterministic |
     kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons | kOEpsilons |
     kNoOEpsilons | kILabelSorted | kNotILabelSorted | kOLabelSorted |
     kNotOLabelSorted | kWeighted | kUnweighted | kCyclic | kAcyclic |
     kInitialCyclic | kInitialAcyclic | kTopSorted | kNotTopSorted |
-    kNotAccessible | kNotCoAccessible | kNotString;
+    kAccessible | kNotAccessible | kCoAccessible | kNotCoAccessible |
+    kString | kNotString;
+
+// Properites that are (potentially) extrinsic to the FST
+const uint64 kExtrinsicProperties = kError;
+
+// Properties that are preserved when an FST start state is set
+const uint64 kSetStartProperties
+  = kExpanded | kMutable | kError | kAcceptor | kNotAcceptor |
+    kIDeterministic | kNonIDeterministic | kODeterministic |
+    kNonODeterministic | kEpsilons | kNoEpsilons | kIEpsilons |
+    kNoIEpsilons | kOEpsilons | kNoOEpsilons | kILabelSorted |
+    kNotILabelSorted | kOLabelSorted | kNotOLabelSorted | kWeighted |
+    kUnweighted | kCyclic | kAcyclic | kTopSorted | kNotTopSorted |
+    kCoAccessible | kNotCoAccessible;
+
+// Properties that are preserved when an FST final weight is set
+const uint64 kSetFinalProperties
+  = kExpanded | kMutable | kError | kAcceptor | kNotAcceptor |
+    kIDeterministic | kNonIDeterministic | kODeterministic |
+    kNonODeterministic | kEpsilons | kNoEpsilons | kIEpsilons |
+    kNoIEpsilons | kOEpsilons | kNoOEpsilons | kILabelSorted |
+    kNotILabelSorted | kOLabelSorted | kNotOLabelSorted | kCyclic |
+    kAcyclic | kInitialCyclic | kInitialAcyclic | kTopSorted |
+    kNotTopSorted | kAccessible | kNotAccessible;
+
+// Properties that are preserved when an FST state is added
+const uint64 kAddStateProperties
+  = kExpanded | kMutable | kError | kAcceptor | kNotAcceptor |
+    kIDeterministic | kNonIDeterministic | kODeterministic |
+    kNonODeterministic | kEpsilons | kNoEpsilons | kIEpsilons |
+    kNoIEpsilons | kOEpsilons | kNoOEpsilons | kILabelSorted |
+    kNotILabelSorted | kOLabelSorted | kNotOLabelSorted | kWeighted |
+    kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
+    kInitialAcyclic | kTopSorted | kNotTopSorted | kNotAccessible |
+    kNotCoAccessible | kNotString;
 
 // Properties that are preserved when an FST arc is added
-const uint64 kAddArcProperties = kExpanded | kMutable | kNotAcceptor |
+const uint64 kAddArcProperties = kExpanded | kMutable | kError | kNotAcceptor |
     kNonIDeterministic | kNonODeterministic | kEpsilons | kIEpsilons |
     kOEpsilons | kNotILabelSorted | kNotOLabelSorted | kWeighted |
     kCyclic | kInitialCyclic | kNotTopSorted | kAccessible | kCoAccessible;
 
 // Properties that are preserved when an FST arc is set
-const uint64 kSetArcProperties = kExpanded | kMutable;
+const uint64 kSetArcProperties = kExpanded | kMutable | kError;
 
 // Properties that are preserved when FST states are deleted
 const uint64 kDeleteStatesProperties
-  = kExpanded | kMutable | kAcceptor | kIDeterministic |
+  = kExpanded | kMutable | kError | kAcceptor | kIDeterministic |
     kODeterministic | kNoEpsilons | kNoIEpsilons | kNoOEpsilons |
     kILabelSorted | kOLabelSorted | kUnweighted | kAcyclic |
     kInitialAcyclic | kTopSorted;
 
 // Properties that are preserved when FST arcs are deleted
 const uint64 kDeleteArcsProperties
-  = kExpanded | kMutable | kAcceptor | kIDeterministic |
+  = kExpanded | kMutable | kError | kAcceptor | kIDeterministic |
     kODeterministic | kNoEpsilons | kNoIEpsilons | kNoOEpsilons |
     kILabelSorted | kOLabelSorted | kUnweighted | kAcyclic |
     kInitialAcyclic | kTopSorted |  kNotAccessible | kNotCoAccessible;
 
 // Properties that are preserved when an FST's states are reordered
-const uint64 kStateSortProperties = kExpanded | kMutable | kAcceptor |
-  kNotAcceptor | kIDeterministic | kNonIDeterministic |
-  kODeterministic | kNonODeterministic | kEpsilons | kNoEpsilons |
-  kIEpsilons | kNoIEpsilons | kOEpsilons | kNoOEpsilons |
-  kILabelSorted | kNotILabelSorted | kOLabelSorted | kNotOLabelSorted
-  | kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
-  kInitialAcyclic | kAccessible | kNotAccessible | kCoAccessible |
-  kNotCoAccessible;
+const uint64 kStateSortProperties = kExpanded | kMutable | kError | kAcceptor |
+    kNotAcceptor | kIDeterministic | kNonIDeterministic |
+    kODeterministic | kNonODeterministic | kEpsilons | kNoEpsilons |
+    kIEpsilons | kNoIEpsilons | kOEpsilons | kNoOEpsilons |
+    kILabelSorted | kNotILabelSorted | kOLabelSorted | kNotOLabelSorted
+    | kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
+    kInitialAcyclic | kAccessible | kNotAccessible | kCoAccessible |
+    kNotCoAccessible;
 
 // Properties that are preserved when an FST's arcs are reordered
 const uint64 kArcSortProperties =
-  kExpanded | kMutable | kAcceptor | kNotAcceptor | kIDeterministic |
+  kExpanded | kMutable | kError | kAcceptor | kNotAcceptor | kIDeterministic |
   kNonIDeterministic | kODeterministic | kNonODeterministic |
   kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons | kOEpsilons |
   kNoOEpsilons | kWeighted | kUnweighted | kCyclic | kAcyclic |
@@ -232,7 +250,7 @@ const uint64 kArcSortProperties =
 
 // Properties that are preserved when an FST's input labels are changed.
 const uint64 kILabelInvariantProperties =
-  kExpanded | kMutable | kODeterministic | kNonODeterministic |
+  kExpanded | kMutable | kError | kODeterministic | kNonODeterministic |
   kOEpsilons | kNoOEpsilons | kOLabelSorted | kNotOLabelSorted |
   kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
   kInitialAcyclic | kTopSorted | kNotTopSorted | kAccessible |
@@ -240,7 +258,7 @@ const uint64 kILabelInvariantProperties =
 
 // Properties that are preserved when an FST's output labels are changed.
 const uint64 kOLabelInvariantProperties =
-  kExpanded | kMutable | kIDeterministic | kNonIDeterministic |
+  kExpanded | kMutable | kError | kIDeterministic | kNonIDeterministic |
   kIEpsilons | kNoIEpsilons | kILabelSorted | kNotILabelSorted |
   kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
   kInitialAcyclic | kTopSorted | kNotTopSorted | kAccessible |
@@ -249,7 +267,7 @@ const uint64 kOLabelInvariantProperties =
 // Properties that are preserved when an FST's weights are changed.
 // This assumes that the set of states that are non-final is not changed.
 const uint64 kWeightInvariantProperties =
-  kExpanded | kMutable | kAcceptor | kNotAcceptor | kIDeterministic |
+  kExpanded | kMutable | kError | kAcceptor | kNotAcceptor | kIDeterministic |
   kNonIDeterministic | kODeterministic | kNonODeterministic |
   kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons | kOEpsilons |
   kNoOEpsilons | kILabelSorted | kNotILabelSorted | kOLabelSorted |
@@ -259,24 +277,24 @@ const uint64 kWeightInvariantProperties =
 
 // Properties that are preserved when a superfinal state is added
 // and an FSTs final weights are directed to it via new transitions.
-const uint64 kAddSuperFinalProperties  = kExpanded | kMutable | kAcceptor |
-  kNotAcceptor | kNonIDeterministic | kNonODeterministic | kEpsilons |
-  kIEpsilons | kOEpsilons | kNotILabelSorted | kNotOLabelSorted |
-  kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
-  kInitialAcyclic | kNotTopSorted | kNotAccessible | kCoAccessible |
-  kNotCoAccessible | kNotString;
+const uint64 kAddSuperFinalProperties  = kExpanded | kMutable | kError |
+    kAcceptor | kNotAcceptor | kNonIDeterministic | kNonODeterministic |
+    kEpsilons | kIEpsilons | kOEpsilons | kNotILabelSorted | kNotOLabelSorted |
+    kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
+    kInitialAcyclic | kNotTopSorted | kNotAccessible | kCoAccessible |
+    kNotCoAccessible | kNotString;
 
 // Properties that are preserved when a superfinal state is removed
 // and the epsilon transitions directed to it are made final weights.
-const uint64 kRmSuperFinalProperties  = kExpanded | kMutable | kAcceptor |
-  kNotAcceptor | kIDeterministic | kODeterministic | kNoEpsilons |
-  kNoIEpsilons | kNoOEpsilons | kILabelSorted | kOLabelSorted |
-  kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
-  kInitialAcyclic | kTopSorted | kAccessible | kCoAccessible |
-  kNotCoAccessible | kString;
+const uint64 kRmSuperFinalProperties  = kExpanded | kMutable | kError |
+    kAcceptor | kNotAcceptor | kIDeterministic | kODeterministic |
+    kNoEpsilons | kNoIEpsilons | kNoOEpsilons | kILabelSorted | kOLabelSorted |
+    kWeighted | kUnweighted | kCyclic | kAcyclic | kInitialCyclic |
+    kInitialAcyclic | kTopSorted | kAccessible | kCoAccessible |
+    kNotCoAccessible | kString;
 
 // All binary properties
-const uint64 kBinaryProperties =  0x0000000000000003ULL;
+const uint64 kBinaryProperties =  0x0000000000000007ULL;
 
 // All trinary properties
 const uint64 kTrinaryProperties = 0x00003fffffff0000ULL;
@@ -304,7 +322,8 @@ const uint64 kFstProperties = kBinaryProperties | kTrinaryProperties;
 // mutating fst operations.
 inline uint64 SetStartProperties(uint64 inprops);
 template <typename Weight>
-uint64 SetFinalProperties(uint64 inprops, Weight old_weight, Weight new_weight);
+uint64 SetFinalProperties(uint64 inprops, Weight old_weight,
+                          Weight new_weight);
 inline uint64 AddStateProperties(uint64 inprops);
 template <typename A>
 uint64 AddArcProperties(uint64 inprops, typename A::StateId s, const A &arc,
@@ -353,8 +372,9 @@ uint64 DeleteStatesProperties(uint64 inprops) {
   return inprops & kDeleteStatesProperties;
 }
 
-uint64 DeleteAllStatesProperties(uint64 inprops, uint64 staticProps) {
-  return kNullProperties | staticProps;
+uint64 DeleteAllStatesProperties(uint64 inprops, uint64 staticprops) {
+  uint64 outprops = inprops & kError;
+  return outprops | kNullProperties | staticprops;
 }
 
 uint64 DeleteArcsProperties(uint64 inprops) {

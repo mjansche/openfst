@@ -153,8 +153,6 @@ void ShortestDistanceHelper(ShortestDistanceArgs1 *args) {
   }
 
   // Copy the weights back
-  CHECK(args->arg2);
-
   args->arg2->resize(weights.size());
   for (unsigned i = 0; i < weights.size(); ++i) {
     (*args->arg2)[i] = WeightClass(weights[i]);
@@ -169,6 +167,9 @@ void ShortestDistance(ShortestDistanceArgs1 *args) {
 
   // Must consider (opts.queue_type x opts.filter_type) options
   switch (opts.queue_type) {
+    default:
+      FSTERROR() << "Unknown queue type." << opts.queue_type;
+
     case AUTO_QUEUE:
       ShortestDistanceHelper<Arc, AutoQueue<StateId> >(args);
       return;
@@ -193,9 +194,6 @@ void ShortestDistance(ShortestDistanceArgs1 *args) {
     case TOP_ORDER_QUEUE:
        ShortestDistanceHelper<Arc, TopOrderQueue<StateId> >(args);
       return;
-
-    default:
-      LOG(FATAL) << "Unknown queue type." << opts.queue_type;
   }
 }
 

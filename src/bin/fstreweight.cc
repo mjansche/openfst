@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
   if (!fst) return 1;
 
   vector<s::WeightClass> potential;
-  s::ReadPotentials(fst->WeightType(), potentials_fname, &potential);
+  if (!s::ReadPotentials(fst->WeightType(), potentials_fname, &potential))
+    return 1;
 
   fst::ReweightType reweight_type = FLAGS_to_final ?
       fst::REWEIGHT_TO_FINAL :

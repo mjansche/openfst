@@ -1,4 +1,4 @@
-OpenFst - Release 1.2
+OpenFst - Release 1.3
 
 OpenFst is a library for constructing, combining, optimizing, and
 searching weighted finite-state transducers (FSTs).
@@ -21,7 +21,6 @@ INSTALLATION:
   --enable-far		   Enable FAR (FST Archive) extension (def: no)
   --enable-lookahead-fsts  Enable LookAheadFst classes (def: no)
   --enable-pdt             Experimental push-down transducer extensions (def: no)
-  --with-icu		   Use ICU to provide unicode support (def: no)
 
   Configuring with --enable-bin=no gives very fast compiles, but
   excludes the command line utilities.

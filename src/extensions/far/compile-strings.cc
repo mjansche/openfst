@@ -17,6 +17,7 @@
 #include <fst/extensions/far/compile-strings.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 namespace fst {
 

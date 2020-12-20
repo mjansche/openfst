@@ -83,7 +83,6 @@ class Collection {
   // Lookups integer ID from set. If it doesn't exist, then adds it.
   // Set elements should be in strict order (and therefore unique).
   I FindId(const vector<T> &set) {
-    CHECK(!set.empty());
     I node_id = kNoNodeId;
     for (ssize_t i = set.size() - 1; i >= 0; --i) {
       Node node(node_id, set[i]);

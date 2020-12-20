@@ -80,7 +80,7 @@ am__libfstscript_la_SOURCES_DIST = arcsort.cc closure.cc compile.cc \
 	push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
 	reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
 	shortest-distance.cc shortest-path.cc synchronize.cc \
-	text-io.cc topsort.cc union.cc weight-class.cc
+	text-io.cc topsort.cc union.cc weight-class.cc verify.cc
 @HAVE_SCRIPT_TRUE@am_libfstscript_la_OBJECTS = arcsort.lo closure.lo \
 @HAVE_SCRIPT_TRUE@	compile.lo compose.lo concat.lo connect.lo \
 @HAVE_SCRIPT_TRUE@	convert.lo decode.lo determinize.lo \
@@ -93,7 +93,7 @@ am__libfstscript_la_SOURCES_DIST = arcsort.cc closure.cc compile.cc \
 @HAVE_SCRIPT_TRUE@	reweight.lo rmepsilon.lo script-impl.lo \
 @HAVE_SCRIPT_TRUE@	shortest-distance.lo shortest-path.lo \
 @HAVE_SCRIPT_TRUE@	synchronize.lo text-io.lo topsort.lo \
-@HAVE_SCRIPT_TRUE@	union.lo weight-class.lo
+@HAVE_SCRIPT_TRUE@	union.lo weight-class.lo verify.lo
 libfstscript_la_OBJECTS = $(am_libfstscript_la_OBJECTS)
 libfstscript_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
@@ -248,7 +248,7 @@ AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
 @HAVE_SCRIPT_TRUE@prune.cc push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
 @HAVE_SCRIPT_TRUE@reverse.cc reweight.cc rmepsilon.cc script-impl.cc shortest-distance.cc \
 @HAVE_SCRIPT_TRUE@shortest-path.cc synchronize.cc text-io.cc topsort.cc union.cc \
-@HAVE_SCRIPT_TRUE@weight-class.cc
+@HAVE_SCRIPT_TRUE@weight-class.cc verify.cc
 
 @HAVE_SCRIPT_TRUE@libfstscript_la_LDFLAGS = -version-info 0:0:0
 all: all-am
@@ -364,6 +364,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text-io.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/topsort.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/union.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/verify.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/weight-class.Plo@am__quote@
 
 .cc.o:

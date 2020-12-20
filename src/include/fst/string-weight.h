@@ -93,6 +93,11 @@ class StringWeight {
     return one;
   }
 
+  static const StringWeight<L, S> &NoWeight() {
+    static const StringWeight<L, S> no_weight(kStringBad);
+    return no_weight;
+  }
+
   static const string &Type() {
     static const string type =
         S == STRING_LEFT ? "string" :
@@ -364,14 +369,20 @@ inline istream &operator>>(istream &strm, StringWeight<L, S> &w) {
 template <typename L, StringType S>  inline StringWeight<L, S>
 Plus(const StringWeight<L, S> &w1,
      const StringWeight<L, S> &w2) {
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, S>::NoWeight();
   if (w1 == StringWeight<L, S>::Zero())
     return w2;
   if (w2 == StringWeight<L, S>::Zero())
     return w1;
 
-  if (w1 != w2)
-    LOG(FATAL) << "StringWeight::Plus: unequal arguments "
-               << "(non-functional FST?)";
+  if (w1 != w2) {
+    FSTERROR() << "StringWeight::Plus: unequal arguments "
+               << "(non-functional FST?)"
+               << " w1 = " << w1
+               << " w2 = " << w2;
+    return StringWeight<L, S>::NoWeight();
+  }
 
   return w1;
 }
@@ -381,6 +392,8 @@ Plus(const StringWeight<L, S> &w1,
 template <typename L>  inline StringWeight<L, STRING_LEFT>
 Plus(const StringWeight<L, STRING_LEFT> &w1,
      const StringWeight<L, STRING_LEFT> &w2) {
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, STRING_LEFT>::NoWeight();
   if (w1 == StringWeight<L, STRING_LEFT>::Zero())
     return w2;
   if (w2 == StringWeight<L, STRING_LEFT>::Zero())
@@ -400,6 +413,8 @@ Plus(const StringWeight<L, STRING_LEFT> &w1,
 template <typename L>  inline StringWeight<L, STRING_RIGHT>
 Plus(const StringWeight<L, STRING_RIGHT> &w1,
      const StringWeight<L, STRING_RIGHT> &w2) {
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, STRING_RIGHT>::NoWeight();
   if (w1 == StringWeight<L, STRING_RIGHT>::Zero())
     return w2;
   if (w2 == StringWeight<L, STRING_RIGHT>::Zero())
@@ -418,6 +433,8 @@ Plus(const StringWeight<L, STRING_RIGHT> &w1,
 template <typename L, StringType S>
 inline StringWeight<L, S> Times(const StringWeight<L, S> &w1,
                              const StringWeight<L, S> &w2) {
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, S>::NoWeight();
   if (w1 == StringWeight<L, S>::Zero() || w2 == StringWeight<L, S>::Zero())
     return StringWeight<L, S>::Zero();
 
@@ -436,9 +453,14 @@ Divide(const StringWeight<L, S> &w1,
        const StringWeight<L, S> &w2,
        DivideType typ) {
 
-  if (typ != DIVIDE_LEFT)
-    LOG(FATAL) << "StringWeight::Divide: only left division is defined "
+  if (typ != DIVIDE_LEFT) {
+    FSTERROR() << "StringWeight::Divide: only left division is defined "
                << "for the " << StringWeight<L, S>::Type() << " semiring";
+    return StringWeight<L, S>::NoWeight();
+  }
+
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, S>::NoWeight();
 
   if (w2 == StringWeight<L, S>::Zero())
     return StringWeight<L, S>(kStringBad);
@@ -461,9 +483,14 @@ Divide(const StringWeight<L, STRING_RIGHT> &w1,
        const StringWeight<L, STRING_RIGHT> &w2,
        DivideType typ) {
 
-  if (typ != DIVIDE_RIGHT)
-    LOG(FATAL) << "StringWeight::Divide: only right division is defined "
+  if (typ != DIVIDE_RIGHT) {
+    FSTERROR() << "StringWeight::Divide: only right division is defined "
                << "for the right string semiring";
+    return StringWeight<L, STRING_RIGHT>::NoWeight();
+  }
+
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, STRING_RIGHT>::NoWeight();
 
   if (w2 == StringWeight<L, STRING_RIGHT>::Zero())
     return StringWeight<L, STRING_RIGHT>(kStringBad);
@@ -486,9 +513,14 @@ Divide(const StringWeight<L, STRING_RIGHT_RESTRICT> &w1,
        const StringWeight<L, STRING_RIGHT_RESTRICT> &w2,
        DivideType typ) {
 
-  if (typ != DIVIDE_RIGHT)
-    LOG(FATAL) << "StringWeight::Divide: only right division is defined "
+  if (typ != DIVIDE_RIGHT) {
+    FSTERROR() << "StringWeight::Divide: only right division is defined "
                << "for the right restricted string semiring";
+    return StringWeight<L, STRING_RIGHT_RESTRICT>::NoWeight();
+  }
+
+  if (!w1.Member() || !w2.Member())
+    return StringWeight<L, STRING_RIGHT_RESTRICT>::NoWeight();
 
   if (w2 == StringWeight<L, STRING_RIGHT_RESTRICT>::Zero())
     return StringWeight<L, STRING_RIGHT_RESTRICT>(kStringBad);

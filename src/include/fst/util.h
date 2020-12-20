@@ -41,6 +41,15 @@ using std::vector;
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
+
+//
+// UTILITY FOR ERROR HANDLING
+//
+
+DECLARE_bool(fst_error_fatal);
+
+#define FSTERROR() (FLAGS_fst_error_fatal ? LOG(FATAL) : LOG(ERROR))
 
 namespace fst {
 
@@ -234,16 +243,18 @@ WRITE_STL_ASSOC_TYPE(unordered_map);
 // Utilities for converting between int64 or Weight and string.
 
 int64 StrToInt64(const string &s, const string &src, size_t nline,
-                 bool allow_negative);
+                 bool allow_negative, bool *error = 0);
 
 template <typename Weight>
 Weight StrToWeight(const string &s, const string &src, size_t nline) {
   Weight w;
   istringstream strm(s);
   strm >> w;
-  if (!strm)
-    LOG(FATAL) << "StrToWeight: Bad weight = \"" << s
+  if (!strm) {
+    FSTERROR() << "StrToWeight: Bad weight = \"" << s
                << "\", source = " << src << ", line = " << nline;
+    return Weight::NoWeight();
+  }
   return w;
 }
 
@@ -259,13 +270,17 @@ void WeightToStr(Weight w, string *s) {
 
 // Utilities for reading/writing label pairs
 
+// Returns true on success
 template <typename Label>
-void ReadLabelPairs(const string& filename,
+bool ReadLabelPairs(const string& filename,
                     vector<pair<Label, Label> >* pairs,
                     bool allow_negative = false) {
   ifstream strm(filename.c_str());
-  if (!strm)
-    LOG(FATAL) << "ReadLabelPairs: Can't open file: " << filename;
+
+  if (!strm) {
+    LOG(ERROR) << "ReadLabelPairs: Can't open file: " << filename;
+    return false;
+  }
 
   const int kLineLen = 8096;
   char line[kLineLen];
@@ -278,34 +293,46 @@ void ReadLabelPairs(const string& filename,
     SplitToVector(line, "\n\t ", &col, true);
     if (col.size() == 0 || col[0][0] == '\0')  // empty line
       continue;
-    if (col.size() != 2)
-      LOG(FATAL) << "ReadLabelPairs: Bad number of columns, "
+    if (col.size() != 2) {
+      LOG(ERROR) << "ReadLabelPairs: Bad number of columns, "
                  << "file = " << filename << ", line = " << nline;
+      return false;
+    }
 
-    Label fromlabel = StrToInt64(col[0], filename, nline, allow_negative);
-    Label tolabel   = StrToInt64(col[1], filename, nline, allow_negative);
-    pairs->push_back(make_pair(fromlabel, tolabel));
+    bool err;
+    Label frmlabel = StrToInt64(col[0], filename, nline, allow_negative, &err);
+    if (err) return false;
+    Label tolabel = StrToInt64(col[1], filename, nline, allow_negative, &err);
+    if (err) return false;
+    pairs->push_back(make_pair(frmlabel, tolabel));
   }
+  return true;
 }
 
+// Returns true on success
 template <typename Label>
-void WriteLabelPairs(const string& filename,
+bool WriteLabelPairs(const string& filename,
                      const vector<pair<Label, Label> >& pairs) {
   ostream *strm = &std::cout;
   if (!filename.empty()) {
     strm = new ofstream(filename.c_str());
-    if (!*strm)
-      LOG(FATAL) << "WriteLabelPairs: Can't open file: " << filename;
+    if (!*strm) {
+      LOG(ERROR) << "WriteLabelPairs: Can't open file: " << filename;
+      return false;
+    }
   }
 
   for (ssize_t n = 0; n < pairs.size(); ++n)
     *strm << pairs[n].first << "\t" << pairs[n].second << "\n";
 
-  if (!*strm)
-    LOG(FATAL) << "WriteLabelPairs: Write failed: "
+  if (!*strm) {
+    LOG(ERROR) << "WriteLabelPairs: Write failed: "
                << (filename.empty() ? "standard output" : filename);
+    return false;
+  }
   if (strm != &std::cout)
     delete strm;
+  return true;
 }
 
 // Utilities for converting a type name to a legal C symbol.

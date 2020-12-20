@@ -41,6 +41,8 @@ istream &operator>>(istream &strm, PairWeight<W1, W2> &w);
 template<class W1, class W2>
 class PairWeight {
  public:
+  friend istream &operator>><W1, W2>(istream&, PairWeight<W1, W2>&);
+
   typedef PairWeight<typename W1::ReverseWeight,
                      typename W2::ReverseWeight>
   ReverseWeight;
@@ -59,6 +61,11 @@ class PairWeight {
   static const PairWeight<W1, W2> &One() {
     static const PairWeight<W1, W2> one(W1::One(), W2::One());
     return one;
+  }
+
+  static const PairWeight<W1, W2> &NoWeight() {
+    static const PairWeight<W1, W2> no_weight(W1::NoWeight(), W2::NoWeight());
+    return no_weight;
   }
 
   istream &Read(istream &strm) {
@@ -101,6 +108,9 @@ class PairWeight {
   const W2& Value2() const { return value2_; }
 
  protected:
+  void SetValue1(const W1 &w) { value1_ = w; }
+  void SetValue2(const W2 &w) { value2_ = w; }
+
   // Reads PairWeight when there are not parentheses around pair terms
   inline static istream &ReadNoParen(
       istream &strm, PairWeight<W1, W2>& w, char separator) {
@@ -138,8 +148,11 @@ class PairWeight {
     do {
       c = strm.get();
     } while (isspace(c));
-    if (c != open_paren)
-      LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
+    if (c != open_paren) {
+      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
+      strm.clear(std::ios::failbit);
+      return strm;
+    }
     c = strm.get();
 
     // read first element
@@ -175,9 +188,12 @@ class PairWeight {
       s2 += c;
       c = strm.get();
     }
-    CHECK(s2.size() > 0);
-    if (s2[s2.size() - 1] != close_paren)
-      LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
+    if (s2.empty() || (s2[s2.size() - 1] != close_paren)) {
+      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
+      strm.clear(std::ios::failbit);
+      return strm;
+    }
+
     s2.erase(s2.size() - 1, 1);
     istringstream strm2(s2);
     W2 w2 = W2::Zero();
@@ -187,9 +203,10 @@ class PairWeight {
     return strm;
   }
 
+ private:
   W1 value1_;
   W2 value2_;
-  friend istream &operator>><W1, W2>(istream&, PairWeight<W1, W2>&);
+
 };
 
 template <class W1, class W2>
@@ -215,12 +232,20 @@ inline bool ApproxEqual(const PairWeight<W1, W2> &w1,
 
 template <class W1, class W2>
 inline ostream &operator<<(ostream &strm, const PairWeight<W1, W2> &w) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  if(FLAGS_fst_weight_separator.size() != 1) {
+    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char separator = FLAGS_fst_weight_separator[0];
   if (FLAGS_fst_weight_parentheses.empty())
     return strm << w.Value1() << separator << w.Value2();
 
-  CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+  if (FLAGS_fst_weight_parentheses.size() != 2) {
+    FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char open_paren = FLAGS_fst_weight_parentheses[0];
   char close_paren = FLAGS_fst_weight_parentheses[1];
   return strm << open_paren << w.Value1() << separator
@@ -229,11 +254,19 @@ inline ostream &operator<<(ostream &strm, const PairWeight<W1, W2> &w) {
 
 template <class W1, class W2>
 inline istream &operator>>(istream &strm, PairWeight<W1, W2> &w) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  if(FLAGS_fst_weight_separator.size() != 1) {
+    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char separator = FLAGS_fst_weight_separator[0];
   bool read_parens = !FLAGS_fst_weight_parentheses.empty();
   if (read_parens) {
-    CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+    if (FLAGS_fst_weight_parentheses.size() != 2) {
+      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
+      strm.clear(std::ios::badbit);
+      return strm;
+    }
     return PairWeight<W1, W2>::ReadWithParen(
         strm, w, separator, FLAGS_fst_weight_parentheses[0],
         FLAGS_fst_weight_parentheses[1]);

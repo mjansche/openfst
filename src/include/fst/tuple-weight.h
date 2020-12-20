@@ -52,7 +52,6 @@ class TupleWeight {
 
   template <class Iterator>
   TupleWeight(Iterator begin, Iterator end) {
-    CHECK(end - begin == n);
     for (Iterator iter = begin; iter != end; ++iter)
       values_[iter - begin] = *iter;
   }
@@ -70,6 +69,11 @@ class TupleWeight {
   static const TupleWeight<W, n> &One() {
     static const TupleWeight<W, n> one(W::One());
     return one;
+  }
+
+  static const TupleWeight<W, n> &NoWeight() {
+    static const TupleWeight<W, n> no_weight(W::NoWeight());
+    return no_weight;
   }
 
   static unsigned int Length() {
@@ -174,8 +178,11 @@ class TupleWeight {
       c = strm.get();
     } while (isspace(c));
 
-    if (c != open_paren)
-      LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
+    if (c != open_paren) {
+      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
+      strm.clear(std::ios::badbit);
+      return strm;
+    }
 
     for (size_t i = 0; i < n - 1; ++i) {
       // read (i+1)-th element
@@ -214,9 +221,11 @@ class TupleWeight {
       s += c;
       c = strm.get();
     }
-    CHECK(s.size() > 0);
-    if (s[s.size() - 1] != close_paren)
-      LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
+    if (s.empty() || *s.rbegin() != close_paren) {
+      FSTERROR() << " is fst_weight_parentheses flag set correcty? ";
+      strm.clear(std::ios::failbit);
+      return strm;
+    }
     s.erase(s.size() - 1, 1);
     istringstream sstrm(s);
     W r = W::Zero();
@@ -264,11 +273,19 @@ inline bool ApproxEqual(const TupleWeight<W, n> &w1,
 
 template <class W, unsigned int n>
 inline ostream &operator<<(ostream &strm, const TupleWeight<W, n> &w) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  if(FLAGS_fst_weight_separator.size() != 1) {
+    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char separator = FLAGS_fst_weight_separator[0];
   bool write_parens = false;
   if (!FLAGS_fst_weight_parentheses.empty()) {
-    CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+    if (FLAGS_fst_weight_parentheses.size() != 2) {
+      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
+      strm.clear(std::ios::badbit);
+      return strm;
+    }
     write_parens = true;
   }
 
@@ -287,11 +304,19 @@ inline ostream &operator<<(ostream &strm, const TupleWeight<W, n> &w) {
 
 template <class W, unsigned int n>
 inline istream &operator>>(istream &strm, TupleWeight<W, n> &w) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  if(FLAGS_fst_weight_separator.size() != 1) {
+    FSTERROR() << "FLAGS_fst_weight_separator.size() is not equal to 1";
+    strm.clear(std::ios::badbit);
+    return strm;
+  }
   char separator = FLAGS_fst_weight_separator[0];
 
   if (!FLAGS_fst_weight_parentheses.empty()) {
-    CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+    if (FLAGS_fst_weight_parentheses.size() != 2) {
+      FSTERROR() << "FLAGS_fst_weight_parentheses.size() is not equal to 2";
+      strm.clear(std::ios::badbit);
+      return strm;
+    }
     return TupleWeight<W, n>::ReadWithParen(
         strm, w, separator, FLAGS_fst_weight_parentheses[0],
         FLAGS_fst_weight_parentheses[1]);

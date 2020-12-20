@@ -69,7 +69,8 @@ int main(int argc, char **argv) {
   } else if (FLAGS_queue_type == "state") {
     qt = fst::STATE_ORDER_QUEUE;
   } else {
-    LOG(FATAL) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    LOG(ERROR) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    return 1;
   }
 
   s::PdtShortestPathOptions opts(qt, FLAGS_keep_parentheses, FLAGS_path_gc);

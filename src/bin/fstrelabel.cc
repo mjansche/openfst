@@ -98,13 +98,16 @@ int main(int argc, char **argv) {
     typedef int64 Label;
     vector<pair<Label, Label> > ipairs;
     vector<pair<Label, Label> > opairs;
-    if (!FLAGS_relabel_ipairs.empty())
-      fst::ReadLabelPairs(FLAGS_relabel_ipairs, &ipairs,
-                              FLAGS_allow_negative_labels);
-    if (!FLAGS_relabel_opairs.empty())
-      fst::ReadLabelPairs(FLAGS_relabel_opairs, &opairs,
-                              FLAGS_allow_negative_labels);
-
+    if (!FLAGS_relabel_ipairs.empty()) {
+      if(!fst::ReadLabelPairs(FLAGS_relabel_ipairs, &ipairs,
+                                  FLAGS_allow_negative_labels))
+        return 1;
+    }
+    if (!FLAGS_relabel_opairs.empty()) {
+      if (!fst::ReadLabelPairs(FLAGS_relabel_opairs, &opairs,
+                                   FLAGS_allow_negative_labels))
+        return 1;
+    }
     s::Relabel(fst, ipairs, opairs);
   }
 

@@ -65,6 +65,7 @@
 #include <fst/script/synchronize.h>
 #include <fst/script/topsort.h>
 #include <fst/script/union.h>
+#include <fst/script/verify.h>
 
 //
 // REGISTER OPERATIONS
@@ -140,6 +141,7 @@ class AllFstOperationsRegisterer {
     REGISTER_FST_OPERATION(Synchronize, Arc, SynchronizeArgs);
     REGISTER_FST_OPERATION(TopSort, Arc, TopSortArgs);
     REGISTER_FST_OPERATION(Union, Arc, UnionArgs);
+    REGISTER_FST_OPERATION(Verify, Arc, VerifyArgs);
   }
 };
 }  // namespace script

@@ -36,30 +36,31 @@ void FarPrintStrings(
     const vector<string> &ifilenames, const FarEntryType entry_type,
     const FarTokenType far_token_type, const string &begin_key,
     const string &end_key, const bool print_key, const string &symbols_fname,
-    const int32 generate_filenames, const string &filename_prefix,
-    const string &filename_suffix) {
+    const bool initial_symbols, const int32 generate_filenames,
+    const string &filename_prefix, const string &filename_suffix) {
 
   typename StringPrinter<Arc>::TokenType token_type;
-  if (far_token_type == FTT_SYMBOL)
+  if (far_token_type == FTT_SYMBOL) {
     token_type = StringPrinter<Arc>::SYMBOL;
-  else if (far_token_type == FTT_BYTE)
+  } else if (far_token_type == FTT_BYTE) {
     token_type = StringPrinter<Arc>::BYTE;
-  else if (far_token_type == FTT_UTF8)
+  } else if (far_token_type == FTT_UTF8) {
     token_type = StringPrinter<Arc>::UTF8;
-  else
-    LOG(FATAL) << "FarPrintStrings: unknown token type";
+  } else {
+    FSTERROR() << "FarPrintStrings: unknown token type";
+    return;
+  }
 
   const SymbolTable *syms = 0;
   if (!symbols_fname.empty()) {
     // allow negative flag?
     syms = SymbolTable::ReadText(symbols_fname, true);
     if (!syms) {
-      LOG(FATAL) << "FarPrintStrings: error reading symbol table: "
+      FSTERROR() << "FarPrintStrings: error reading symbol table: "
                  << symbols_fname;
+      return;
     }
   }
-
-  StringPrinter<Arc> string_printer(token_type, syms);
 
   FarReader<Arc> *far_reader = FarReader<Arc>::Open(ifilenames);
   if (!far_reader) return;
@@ -80,8 +81,12 @@ void FarPrintStrings(
     okey = key;
 
     const Fst<Arc> &fst = far_reader->GetFst();
+    if (i == 1 && initial_symbols && syms == 0 && fst.InputSymbols() != 0)
+      syms = fst.InputSymbols()->Copy();
     string str;
     VLOG(2) << "Handling key: " << key;
+    StringPrinter<Arc> string_printer(
+        token_type, syms ? syms : fst.InputSymbols());
     string_printer(fst, &str);
 
     if (entry_type == FET_LINE) {
@@ -103,13 +108,18 @@ void FarPrintStrings(
       filename = filename_prefix +  sstrm.str() + filename_suffix;
 
       ofstream ostrm(filename.c_str());
-      if (!ostrm)
-        LOG(FATAL) << "FarPrintStrings: Can't open file:" << filename;
+      if (!ostrm) {
+        FSTERROR() << "FarPrintStrings: Can't open file:" << filename;
+        delete syms;
+        delete far_reader;
+        return;
+      }
       ostrm << str;
       if (token_type == StringPrinter<Arc>::SYMBOL)
         ostrm << "\n";
     }
   }
+  delete syms;
 }
 
 

@@ -80,8 +80,10 @@ void Relabel(
         input_map.find(arc.ilabel);
       if (it != input_map.end()) {
         if (it->second == kNoLabel) {
-          LOG(FATAL) << "Input symbol id " << arc.ilabel
+          FSTERROR() << "Input symbol id " << arc.ilabel
                      << " missing from target vocabulary";
+          fst->SetProperties(kError, kError);
+          return;
         }
         arc.ilabel = it->second;
       }
@@ -90,8 +92,10 @@ void Relabel(
       it = output_map.find(arc.olabel);
       if (it != output_map.end()) {
         if (it->second == kNoLabel) {
-          LOG(FATAL) << "Output symbol id " << arc.olabel
+          FSTERROR() << "Output symbol id " << arc.olabel
                      << " missing from target vocabulary";
+          fst->SetProperties(kError, kError);
+          return;
         }
         arc.olabel = it->second;
       }
@@ -183,7 +187,6 @@ class RelabelFstImpl : public CacheImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
-  using FstImpl<A>::Properties;
   using FstImpl<A>::WriteHeader;
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
@@ -315,6 +318,15 @@ class RelabelFstImpl : public CacheImpl<A> {
       Expand(s);
     }
     return CacheImpl<A>::NumOutputEpsilons(s);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && fst_->Properties(kError, false))
+      SetProperties(kError, kError);
+    return FstImpl<Arc>::Properties(mask);
   }
 
   void InitArcIterator(StateId s, ArcIteratorData<A>* data) {

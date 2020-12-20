@@ -52,7 +52,7 @@ template <class A> class FstInfo {
   // then only minimal info is computed and can be requested.
   FstInfo(const Fst<A> &fst, bool test_properties,
           const string &arc_filter_type = "any",
-          string info_type = "auto")
+          string info_type = "auto", bool verify = true)
       : fst_type_(fst.Type()),
         input_symbols_(fst.InputSymbols() ?
                        fst.InputSymbols()->Name() : "none"),
@@ -61,23 +61,28 @@ template <class A> class FstInfo {
         nstates_(0), narcs_(0), start_(kNoStateId), nfinal_(0),
         nepsilons_(0), niepsilons_(0), noepsilons_(0),
         naccess_(0), ncoaccess_(0), nconnect_(0), ncc_(0), nscc_(0),
-        arc_filter_type_(arc_filter_type) {
-    if (info_type == "long")
+        input_match_type_(MATCH_NONE), output_match_type_(MATCH_NONE),
+        input_lookahead_(false), output_lookahead_(false),
+        properties_(0), arc_filter_type_(arc_filter_type), long_info_(true) {
+    if (info_type == "long") {
       long_info_ = true;
-    else if (info_type == "short")
+    } else if (info_type == "short") {
       long_info_ = false;
-    else if (info_type == "auto")
+    } else if (info_type == "auto") {
       long_info_ = fst.Properties(kExpanded, false);
-    else
-      LOG(FATAL) << "Bad info type: " << info_type;
+    } else {
+      FSTERROR() << "Bad info type: " << info_type;
+      return;
+    }
 
     if (!long_info_)
       return;
 
-    // If the FST is not sane, we return, PrintFstInfo will exit with a CHECK
-    // failure.
-    if (!Verify(fst))
-      LOG(FATAL) << "FstInfo: Verify: FST not well-formed.";
+    // If the FST is not sane, we return.
+    if (verify && !Verify(fst)) {
+      FSTERROR() << "FstInfo: Verify: FST not well-formed.";
+      return;
+    }
 
     start_ = fst.Start();
     properties_ = fst.Properties(kFstProperties, test_properties);
@@ -107,16 +112,18 @@ template <class A> class FstInfo {
       vector<StateId> cc;
       CcVisitor<Arc> cc_visitor(&cc);
       FifoQueue<StateId> fifo_queue;
-      if (arc_filter_type == "any")
+      if (arc_filter_type == "any") {
         Visit(fst, &cc_visitor, &fifo_queue);
-      else if (arc_filter_type == "epsilon")
+      } else if (arc_filter_type == "epsilon") {
         Visit(fst, &cc_visitor, &fifo_queue, EpsilonArcFilter<Arc>());
-      else if (arc_filter_type == "iepsilon")
+      } else if (arc_filter_type == "iepsilon") {
         Visit(fst, &cc_visitor, &fifo_queue, InputEpsilonArcFilter<Arc>());
-      else if (arc_filter_type == "oepsilon")
+      } else if (arc_filter_type == "oepsilon") {
         Visit(fst, &cc_visitor, &fifo_queue, OutputEpsilonArcFilter<Arc>());
-      else
-        LOG(FATAL) << "Bad arc filter type: " << arc_filter_type;
+      } else {
+        FSTERROR() << "Bad arc filter type: " << arc_filter_type;
+        return;
+      }
 
       for (StateId s = 0; s < cc.size(); ++s) {
         if (cc[s] >= ncc_)
@@ -129,17 +136,18 @@ template <class A> class FstInfo {
       vector<bool> access, coaccess;
       uint64 props = 0;
       SccVisitor<Arc> scc_visitor(&scc, &access, &coaccess, &props);
-      if (arc_filter_type == "any")
+      if (arc_filter_type == "any") {
         DfsVisit(fst, &scc_visitor);
-      else if (arc_filter_type == "epsilon")
+      } else if (arc_filter_type == "epsilon") {
         DfsVisit(fst, &scc_visitor, EpsilonArcFilter<Arc>());
-      else if (arc_filter_type == "iepsilon")
+      } else if (arc_filter_type == "iepsilon") {
         DfsVisit(fst, &scc_visitor, InputEpsilonArcFilter<Arc>());
-      else if (arc_filter_type == "oepsilon")
+      } else if (arc_filter_type == "oepsilon") {
         DfsVisit(fst, &scc_visitor, OutputEpsilonArcFilter<Arc>());
-      else
-        LOG(FATAL) << "Bad arc filter type: " << arc_filter_type;
-
+      } else {
+        FSTERROR() << "Bad arc filter type: " << arc_filter_type;
+        return;
+      }
 
       for (StateId s = 0; s < scc.size(); ++s) {
         if (access[s])
@@ -192,7 +200,7 @@ template <class A> class FstInfo {
  private:
   void CheckLong() const {
     if (!long_info_)
-      LOG(FATAL) << "FstInfo: method only available with long info version";
+      FSTERROR() << "FstInfo: method only available with long info version";
   }
 
   string fst_type_;

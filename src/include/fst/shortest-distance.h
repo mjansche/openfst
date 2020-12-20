@@ -66,6 +66,7 @@ struct ShortestDistanceOptions {
 // (e.g., in epsilon removal). Contrary to usual conventions, 'fst'
 // may not be freed before this class. Vector 'distance' should not be
 // modified by the user between these calls.
+// The Error() method returns true if an error was encountered.
 template<class Arc, class Queue, class ArcFilter>
 class ShortestDistanceState {
  public:
@@ -79,13 +80,16 @@ class ShortestDistanceState {
       bool retain)
       : fst_(fst), distance_(distance), state_queue_(opts.state_queue),
         arc_filter_(opts.arc_filter), delta_(opts.delta),
-        first_path_(opts.first_path), retain_(retain), source_id_(0) {
+        first_path_(opts.first_path), retain_(retain), source_id_(0),
+        error_(false) {
     distance_->clear();
   }
 
   ~ShortestDistanceState() {}
 
   void ShortestDistance(StateId source);
+
+  bool Error() const { return error_; }
 
  private:
   const Fst<Arc> &fst_;
@@ -101,6 +105,8 @@ class ShortestDistanceState {
   vector<StateId> sources_;   // Source ID for ith state in 'distance_',
                               //  'rdistance_', and 'enqueued_' if retained.
   StateId source_id_;         // Unique ID characterizing each call to SD
+
+  bool error_;
 };
 
 // Compute the shortest distance. If 'source' is kNoStateId, use
@@ -108,17 +114,25 @@ class ShortestDistanceState {
 template <class Arc, class Queue, class ArcFilter>
 void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     StateId source) {
-  if (fst_.Start() == kNoStateId)
+  if (fst_.Start() == kNoStateId) {
+    if (fst_.Properties(kError, false)) error_ = true;
     return;
+  }
 
-  if (!(Weight::Properties() & kRightSemiring))
-    LOG(FATAL) << "ShortestDistance: Weight needs to be right distributive: "
+  if (!(Weight::Properties() & kRightSemiring)) {
+    FSTERROR() << "ShortestDistance: Weight needs to be right distributive: "
                << Weight::Type();
+    error_ = true;
+    return;
+  }
 
-  if (first_path_ && !(Weight::Properties() & kPath))
-    LOG(FATAL) << "ShortestDistance: first_path option disallowed when "
+  if (first_path_ && !(Weight::Properties() & kPath)) {
+    FSTERROR() << "ShortestDistance: first_path option disallowed when "
                << "Weight does not have the path property: "
                << Weight::Type();
+    error_ = true;
+    return;
+  }
 
   state_queue_->Clear();
 
@@ -187,6 +201,10 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
       if (!ApproxEqual(nd, Plus(nd, w), delta_)) {
         nd = Plus(nd, w);
         nr = Plus(nr, w);
+        if (!nd.Member() || !nr.Member()) {
+          error_ = true;
+          return;
+        }
         if (!enqueued_[arc.nextstate]) {
           state_queue_->Enqueue(arc.nextstate);
           enqueued_[arc.nextstate] = true;
@@ -197,6 +215,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     }
   }
   ++source_id_;
+  if (fst_.Properties(kError, false)) error_ = true;
 }
 
 
@@ -209,7 +228,9 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
 // the 'distance' vector if S is less than the maximum visited state.
 // The state queue discipline, arc filter, and convergence delta are
 // taken in the options argument.
-
+// The 'distance' vector will contain a unique element for which
+// Member() is false if an error was encountered.
+//
 // The weights must must be right distributive and k-closed (i.e., 1 +
 // x + x^2 + ... + x^(k +1) = 1 + x + x^2 + ... + x^k).
 //
@@ -227,6 +248,10 @@ void ShortestDistance(
   ShortestDistanceState<Arc, Queue, ArcFilter>
     sd_state(fst, distance, opts, false);
   sd_state.ShortestDistance(opts.source);
+  if (sd_state.Error()) {
+    distance->clear();
+    distance->resize(1, Arc::Weight::NoWeight());
+  }
 }
 
 // Shortest-distance algorithm: simplified interface. See above for a
@@ -239,6 +264,8 @@ void ShortestDistance(
 // has distance Zero(), which will be stored in the 'distance' vector
 // if S is less than the maximum visited state.  The state queue
 // discipline is automatically-selected.
+// The 'distance' vector will contain a unique element for which
+// Member() is false if an error was encountered.
 //
 // The weights must must be right (left) distributive if reverse is
 // false (true) and k-closed (i.e., 1 + x + x^2 + ... + x^(k +1) = 1 +
@@ -278,6 +305,10 @@ void ShortestDistance(const Fst<Arc> &fst,
     ropts.delta = delta;
     ShortestDistance(rfst, &rdistance, ropts);
     distance->clear();
+    if (rdistance.size() == 1 && !rdistance[0].Member()) {
+      distance->resize(1, Arc::Weight::NoWeight());
+      return;
+    }
     while (distance->size() < rdistance.size() - 1)
       distance->push_back(rdistance[distance->size() + 1].Reverse());
   }
@@ -286,6 +317,7 @@ void ShortestDistance(const Fst<Arc> &fst,
 
 // Return the sum of the weight of all successful paths in an FST, i.e.,
 // the shortest-distance from the initial state to the final states.
+// Returns a weight such that Member() is false if an error was encountered.
 template <class Arc>
 typename Arc::Weight ShortestDistance(const Fst<Arc> &fst, float delta = kDelta) {
   typedef typename Arc::Weight Weight;
@@ -293,6 +325,8 @@ typename Arc::Weight ShortestDistance(const Fst<Arc> &fst, float delta = kDelta)
   vector<Weight> distance;
   if (Weight::Properties() & kRightSemiring) {
     ShortestDistance(fst, &distance, false, delta);
+    if (distance.size() == 1 && !distance[0].Member())
+      return Arc::Weight::NoWeight();
     Weight sum = Weight::Zero();
     for (StateId s = 0; s < distance.size(); ++s)
       sum = Plus(sum, Times(distance[s], fst.Final(s)));
@@ -300,6 +334,8 @@ typename Arc::Weight ShortestDistance(const Fst<Arc> &fst, float delta = kDelta)
   } else {
     ShortestDistance(fst, &distance, true, delta);
     StateId s = fst.Start();
+    if (distance.size() == 1 && !distance[0].Member())
+      return Arc::Weight::NoWeight();
     return s != kNoStateId && s < distance.size() ?
         distance[s] : Weight::Zero();
   }

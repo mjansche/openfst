@@ -186,7 +186,6 @@ class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
   using FstImpl<A>::Properties;
-  using FstImpl<A>::WriteHeader;
 
   using VectorFstBaseImpl<VectorState<A> >::Start;
   using VectorFstBaseImpl<VectorState<A> >::NumStates;
@@ -210,8 +209,6 @@ class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
   size_t NumInputEpsilons(StateId s) const { return GetState(s)->niepsilons; }
 
   size_t NumOutputEpsilons(StateId s) const { return GetState(s)->noepsilons; }
-
-  bool Write(ostream &strm, const FstWriteOptions &opts) const;
 
   void SetStart(StateId s) {
     BaseImpl::SetStart(s);
@@ -295,7 +292,6 @@ template <class A> const int VectorFstImpl<A>::kMinFileVersion;
 template <class A>
 VectorFstImpl<A>::VectorFstImpl(const Fst<A> &fst) {
   SetType("vector");
-  SetProperties(fst.Properties(kCopyProperties, false) | kStaticProperties);
   SetInputSymbols(fst.InputSymbols());
   SetOutputSymbols(fst.OutputSymbols());
   BaseImpl::SetStart(fst.Start());
@@ -320,6 +316,7 @@ VectorFstImpl<A>::VectorFstImpl(const Fst<A> &fst) {
         ++GetState(s)->noepsilons;
     }
   }
+  SetProperties(fst.Properties(kCopyProperties, false) | kStaticProperties);
 }
 
 template <class A>
@@ -327,19 +324,27 @@ VectorFstImpl<A> *VectorFstImpl<A>::Read(istream &strm,
                                          const FstReadOptions &opts) {
   VectorFstImpl<A> *impl = new VectorFstImpl;
   FstHeader hdr;
-  if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr))
+  if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
+    delete impl;
     return 0;
+  }
   impl->BaseImpl::SetStart(hdr.Start());
-  impl->ReserveStates(hdr.NumStates());
+  if (hdr.NumStates() != kNoStateId) {
+    impl->ReserveStates(hdr.NumStates());
+  }
 
-  for (StateId s = 0; s < hdr.NumStates(); ++s) {
+  StateId s = 0;
+  for (;hdr.NumStates() == kNoStateId || s < hdr.NumStates(); ++s) {
+    typename A::Weight final;
+    if (!final.Read(strm)) break;
     impl->BaseImpl::AddState();
     VectorState<A> *state = impl->GetState(s);
-    state->final.Read(strm);
+    state->final = final;
     int64 narcs;
     ReadType(strm, &narcs);
     if (!strm) {
       LOG(ERROR) << "VectorFst::Read: read failed: " << opts.source;
+      delete impl;
       return 0;
     }
     impl->ReserveArcs(s, narcs);
@@ -351,6 +356,7 @@ VectorFstImpl<A> *VectorFstImpl<A>::Read(istream &strm,
        ReadType(strm, &arc.nextstate);
        if (!strm) {
         LOG(ERROR) << "VectorFst::Read: read failed: " << opts.source;
+        delete impl;
         return 0;
       }
       impl->BaseImpl::AddArc(s, arc);
@@ -359,6 +365,11 @@ VectorFstImpl<A> *VectorFstImpl<A>::Read(istream &strm,
       if (arc.olabel == 0)
         ++state->noepsilons;
     }
+  }
+  if (hdr.NumStates() != kNoStateId && s != hdr.NumStates()) {
+    LOG(ERROR) << "VectorFst::Read: unexpected end of file: " << opts.source;
+    delete impl;
+    return 0;
   }
   return impl;
 }
@@ -372,8 +383,8 @@ template <class W> class WeightFromString {
 // Generic case fails.
 template <class W> inline
 W WeightFromString<W>::operator()(const string &s) {
-  LOG(FATAL) << "VectorFst::Read: Obsolete file format";
-  return W();
+  FSTERROR() << "VectorFst::Read: Obsolete file format";
+  return W::NoWeight();
 }
 
 // TropicalWeight version.
@@ -391,37 +402,6 @@ LogWeight WeightFromString<LogWeight>::operator()(const string &s) {
   memcpy(&f, s.data(), sizeof(f));
   return LogWeight(f);
 }
-
-template <class A>
-bool VectorFstImpl<A>::Write(ostream &strm,
-                             const FstWriteOptions &opts) const {
-  FstHeader hdr;
-  hdr.SetStart(Start());
-  hdr.SetNumStates(NumStates());
-  WriteHeader(strm, opts, kFileVersion, &hdr);
-
-  for (StateId s = 0; s < NumStates(); ++s) {
-    const VectorState<A> *state = GetState(s);
-    state->final.Write(strm);
-    int64 narcs = state->arcs.size();
-    WriteType(strm, narcs);
-    for (size_t a = 0; a < narcs; ++a) {
-      const A &arc = state->arcs[a];
-      WriteType(strm, arc.ilabel);
-      WriteType(strm, arc.olabel);
-      arc.weight.Write(strm);
-      WriteType(strm, arc.nextstate);
-    }
-  }
-
-  strm.flush();
-  if (!strm) {
-    LOG(ERROR) << "VectorFst::Write: write failed: " << opts.source;
-    return false;
-  }
-  return true;
-}
-
 
 // Simple concrete, mutable FST. This class attaches interface to
 // implementation and handles reference counting, delegating most
@@ -473,6 +453,18 @@ class VectorFst : public ImplToMutableFst< VectorFstImpl<A> > {
     Impl* impl = ImplToExpandedFst<Impl, MutableFst<A> >::Read(filename);
     return impl ? new VectorFst<A>(impl) : 0;
   }
+
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return WriteFst(*this, strm, opts);
+  }
+
+  virtual bool Write(const string &filename) const {
+    return Fst<A>::WriteFile(filename);
+  }
+
+  template <class F>
+  static bool WriteFst(const F &fst, ostream &strm,
+                       const FstWriteOptions &opts);
 
   void ReserveStates(StateId n) {
     MutateCheck();
@@ -533,6 +525,56 @@ class StateIterator< VectorFst<A> > {
 
   DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
+
+// Writes Fst to file, will call CountStates so may involve two passes if
+// called from an Fst that is not derived from Expanded.
+template <class A>
+template <class F>
+bool VectorFst<A>::WriteFst(const F &fst, ostream &strm,
+                            const FstWriteOptions &opts) {
+  static const int kFileVersion = 2;
+  bool update_header = true;
+  FstHeader hdr;
+  hdr.SetStart(fst.Start());
+  hdr.SetNumStates(kNoStateId);
+  size_t start_offset = 0;
+  if (fst.Properties(kExpanded, false) || (start_offset = strm.tellp()) != -1) {
+    hdr.SetNumStates(CountStates(fst));
+    update_header = false;
+  }
+  FstImpl<A>::WriteFstHeader(fst, strm, opts, kFileVersion, "vector", &hdr);
+  StateId num_states = 0;
+  for (StateIterator<F> siter(fst); !siter.Done(); siter.Next()) {
+    typename A::StateId s = siter.Value();
+    fst.Final(s).Write(strm);
+    int64 narcs = fst.NumArcs(s);
+    WriteType(strm, narcs);
+    for (ArcIterator<F> aiter(fst, s); !aiter.Done(); aiter.Next()) {
+      const A &arc = aiter.Value();
+      WriteType(strm, arc.ilabel);
+      WriteType(strm, arc.olabel);
+      arc.weight.Write(strm);
+      WriteType(strm, arc.nextstate);
+    }
+    num_states++;
+  }
+  strm.flush();
+  if (!strm) {
+    LOG(ERROR) << "VectorFst::Write: write failed: " << opts.source;
+    return false;
+  }
+  if (update_header) {
+    hdr.SetNumStates(num_states);
+    return FstImpl<A>::UpdateFstHeader(fst, strm, opts, kFileVersion, "vector",
+                                       &hdr, start_offset);
+  } else {
+    if (num_states != hdr.NumStates()) {
+      LOG(ERROR) << "Inconsistent number of states observed during write";
+      return false;
+    }
+  }
+  return true;
+}
 
 // Specialization for VectorFst; see generic version in fst.h
 // for sample usage (but use the VectorFst type!). This version

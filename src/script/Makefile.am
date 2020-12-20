@@ -9,7 +9,7 @@ info.cc intersect.cc invert.cc map.cc minimize.cc print.cc project.cc \
 prune.cc push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
 reverse.cc reweight.cc rmepsilon.cc script-impl.cc shortest-distance.cc \
 shortest-path.cc synchronize.cc text-io.cc topsort.cc union.cc \
-weight-class.cc
+weight-class.cc verify.cc
 
 libfstscript_la_LDFLAGS = -version-info 0:0:0
 endif

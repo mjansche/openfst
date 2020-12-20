@@ -41,8 +41,11 @@ class LexicographicWeight : public PairWeight<W1, W2> {
  public:
   using PairWeight<W1, W2>::Value1;
   using PairWeight<W1, W2>::Value2;
+  using PairWeight<W1, W2>::SetValue1;
+  using PairWeight<W1, W2>::SetValue2;
   using PairWeight<W1, W2>::Zero;
   using PairWeight<W1, W2>::One;
+  using PairWeight<W1, W2>::NoWeight;
   using PairWeight<W1, W2>::Quantize;
   using PairWeight<W1, W2>::Reverse;
 
@@ -58,12 +61,14 @@ class LexicographicWeight : public PairWeight<W1, W2> {
   LexicographicWeight(W1 w1, W2 w2) : PairWeight<W1, W2>(w1, w2) {
     uint64 props = kPath;
     if ((W1::Properties() & props) != props) {
-      LOG(ERROR) << "LexicographicWeight must "
+      FSTERROR() << "LexicographicWeight must "
                  << "have the path property: " << W1::Type();
+      SetValue1(W1::NoWeight());
     }
     if ((W2::Properties() & props) != props) {
-      LOG(ERROR) << "LexicographicWeight must "
+      FSTERROR() << "LexicographicWeight must "
                  << "have the path property: " << W2::Type();
+      SetValue2(W2::NoWeight());
     }
   }
 
@@ -75,6 +80,12 @@ class LexicographicWeight : public PairWeight<W1, W2> {
   static const LexicographicWeight<W1, W2> &One() {
     static const LexicographicWeight<W1, W2> one(PairWeight<W1, W2>::One());
     return one;
+  }
+
+  static const LexicographicWeight<W1, W2> &NoWeight() {
+    static const LexicographicWeight<W1, W2> no_weight(
+        PairWeight<W1, W2>::NoWeight());
+    return no_weight;
   }
 
   static const string &Type() {
@@ -109,6 +120,8 @@ class LexicographicWeight : public PairWeight<W1, W2> {
 template <class W1, class W2>
 inline LexicographicWeight<W1, W2> Plus(const LexicographicWeight<W1, W2> &w,
                                         const LexicographicWeight<W1, W2> &v) {
+  if (!w.Member() || !v.Member())
+    return LexicographicWeight<W1, W2>::NoWeight();
   NaturalLess<W1> less1;
   NaturalLess<W2> less2;
   if (less1(w.Value1(), v.Value1())) return w;

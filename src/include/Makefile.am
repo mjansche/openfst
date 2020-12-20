@@ -1,10 +1,11 @@
 if HAVE_FAR
 far_include_headers = fst/extensions/far/compile-strings.h \
-fst/extensions/far/create.h fst/extensions/far/extract.h \
-fst/extensions/far/far.h fst/extensions/far/farlib.h \
-fst/extensions/far/farscript.h fst/extensions/far/info.h \
-fst/extensions/far/main.h fst/extensions/far/print-strings.h \
-fst/extensions/far/stlist.h fst/extensions/far/sttable.h
+fst/extensions/far/create.h fst/extensions/far/equal.h \
+fst/extensions/far/extract.h fst/extensions/far/far.h \
+fst/extensions/far/farlib.h fst/extensions/far/farscript.h \
+fst/extensions/far/info.h fst/extensions/far/main.h \
+fst/extensions/far/print-strings.h fst/extensions/far/stlist.h \
+fst/extensions/far/sttable.h
 endif
 
 if HAVE_PDT
@@ -33,7 +34,7 @@ fst/script/rmepsilon.h fst/script/script-impl.h \
 fst/script/shortest-distance.h fst/script/shortest-path.h \
 fst/script/symbols.h fst/script/synchronize.h fst/script/text-io.h \
 fst/script/topsort.h fst/script/union.h fst/script/weight-class.h \
-fst/script/fstscript-decl.h
+fst/script/fstscript-decl.h fst/script/verify.h
 
 nobase_include_HEADERS = fst/arc.h fst/determinize.h fst/intersect.h \
 fst/queue.h fst/statesort.h fst/arcfilter.h fst/dfs-visit.h \

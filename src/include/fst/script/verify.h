@@ -12,28 +12,29 @@
 // limitations under the License.
 //
 // Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// Author: sorenj@google.com (Jeffrey Sorensen)
 
-#include <string>
+#ifndef FST_SCRIPT_VERIFY_H_
+#define FST_SCRIPT_VERIFY_H_
 
+#include <fst/script/arg-packs.h>
 #include <fst/script/fst-class.h>
-#include <fst/script/script-impl.h>
-#include <fst/script/info.h>
+#include <fst/verify.h>
 
 namespace fst {
 namespace script {
 
-void PrintFstInfo(const FstClass &f, bool test_properties,
-                  const string &arc_filter, const string &info_type,
-                  bool pipe, bool verify) {
-  InfoArgs args(f, test_properties, arc_filter, info_type, pipe, verify);
+typedef args::WithReturnValue<bool, const FstClass *> VerifyArgs;
 
-  Apply<Operation<InfoArgs> >("PrintFstInfo", f.ArcType(), &args);
+template<class Arc>
+void Verify(VerifyArgs *args) {
+  const Fst<Arc> *fst = args->args->GetFst<Arc>();
+  args->retval = Verify(*fst);
 }
 
-REGISTER_FST_OPERATION(PrintFstInfo, StdArc, InfoArgs);
-REGISTER_FST_OPERATION(PrintFstInfo, LogArc, InfoArgs);
-REGISTER_FST_OPERATION(PrintFstInfo, Log64Arc, InfoArgs);
+bool Verify(const FstClass &fst1);
 
 }  // namespace script
 }  // namespace fst
+
+#endif  // FST_SCRIPT_VERIFY_H_

@@ -48,7 +48,6 @@ class ConstFstImpl : public FstImpl<A> {
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
   using FstImpl<A>::Properties;
-  using FstImpl<A>::WriteHeader;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
@@ -107,6 +106,8 @@ class ConstFstImpl : public FstImpl<A> {
   }
 
  private:
+  friend class ConstFst<A, U>;  // Allow finding narcs_, nstates_ during Write
+
   // States implemented by array *states_ below, arcs by (single) *arcs_.
   struct State {
     Weight final;                // Final weight
@@ -159,8 +160,6 @@ ConstFstImpl<A, U>::ConstFstImpl(const Fst<A> &fst) : nstates_(0), narcs_(0) {
     type += size;
   }
   SetType(type);
-  uint64 copy_properties = fst.Properties(kCopyProperties, true);
-  SetProperties(copy_properties | kStaticProperties);
   SetInputSymbols(fst.InputSymbols());
   SetOutputSymbols(fst.OutputSymbols());
   start_ = fst.Start();
@@ -197,15 +196,19 @@ ConstFstImpl<A, U>::ConstFstImpl(const Fst<A> &fst) : nstates_(0), narcs_(0) {
       arcs_[pos++] = arc;
     }
   }
+  SetProperties(fst.Properties(kCopyProperties, true) | kStaticProperties);
 }
+
 
 template<class A, class U>
 ConstFstImpl<A, U> *ConstFstImpl<A, U>::Read(istream &strm,
                                              const FstReadOptions &opts) {
   ConstFstImpl<A, U> *impl = new ConstFstImpl<A, U>;
   FstHeader hdr;
-  if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr))
+  if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
+    delete impl;
     return 0;
+  }
   impl->start_ = hdr.Start();
   impl->nstates_ = hdr.NumStates();
   impl->narcs_ = hdr.NumArcs();
@@ -216,60 +219,34 @@ ConstFstImpl<A, U> *ConstFstImpl<A, U>::Read(istream &strm,
   if (hdr.Version() == kAlignedFileVersion)
     hdr.SetFlags(hdr.GetFlags() | FstHeader::IS_ALIGNED);
 
-  if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) && !AlignInput(strm, kFileAlign)) {
+  if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) &&
+      !AlignInput(strm, kFileAlign)) {
     LOG(ERROR) << "ConstFst::Read: Alignment failed: " << opts.source;
+    delete impl;
     return 0;
   }
   size_t b = impl->nstates_ * sizeof(typename ConstFstImpl<A, U>::State);
   strm.read(reinterpret_cast<char *>(impl->states_), b);
   if (!strm) {
     LOG(ERROR) << "ConstFst::Read: Read failed: " << opts.source;
+    delete impl;
     return 0;
   }
-  if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) && !AlignInput(strm, kFileAlign)) {
+  if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) &&
+      !AlignInput(strm, kFileAlign)) {
     LOG(ERROR) << "ConstFst::Read: Alignment failed: " << opts.source;
+    delete impl;
     return 0;
   }
   b = impl->narcs_ * sizeof(A);
   strm.read(reinterpret_cast<char *>(impl->arcs_), b);
   if (!strm) {
     LOG(ERROR) << "ConstFst::Read: Read failed: " << opts.source;
+    delete impl;
     return 0;
   }
   return impl;
 }
-
-template<class A, class U>
-bool ConstFstImpl<A, U>::Write(ostream &strm,
-                               const FstWriteOptions &opts) const {
-  FstHeader hdr;
-  hdr.SetStart(start_);
-  hdr.SetNumStates(nstates_);
-  hdr.SetNumArcs(narcs_);
-
-  // Ensures compatibility
-  int file_version = opts.align ? kAlignedFileVersion : kFileVersion;
-  WriteHeader(strm, opts, file_version, &hdr);
-
-  if (opts.align && !AlignOutput(strm, kFileAlign)) {
-    LOG(ERROR) << "ConstFst::Write: Alignment failed: " << opts.source;
-    return false;
-  }
-  strm.write(reinterpret_cast<char *>(states_), nstates_ * sizeof(State));
-  if (opts.align && !AlignOutput(strm, kFileAlign)) {
-    LOG(ERROR) << "ConstFst::Write: Alignment failed: " << opts.source;
-    return false;
-  }
-  strm.write(reinterpret_cast<char *>(arcs_), narcs_ * sizeof(A));
-
-  strm.flush();
-  if (!strm) {
-    LOG(ERROR) << "ConstFst::Write: Write failed: " << opts.source;
-    return false;
-  }
-  return true;
-}
-
 
 // Simple concrete immutable FST.  This class attaches interface to
 // implementation and handles reference counting, delegating most
@@ -313,6 +290,18 @@ class ConstFst : public ImplToExpandedFst< ConstFstImpl<A, U> > {
     return impl ? new ConstFst<A, U>(impl) : 0;
   }
 
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return WriteFst(*this, strm, opts);
+  }
+
+  virtual bool Write(const string &filename) const {
+    return Fst<A>::WriteFile(filename);
+  }
+
+  template <class F>
+  static bool WriteFst(const F &fst, ostream &strm,
+                       const FstWriteOptions &opts);
+
   virtual void InitStateIterator(StateIteratorData<Arc> *data) const {
     GetImpl()->InitStateIterator(data);
   }
@@ -334,6 +323,92 @@ class ConstFst : public ImplToExpandedFst< ConstFstImpl<A, U> > {
   void operator=(const ConstFst<A, U> &fst);  // disallow
 };
 
+// Writes Fst in Const format, potentially with a pass over the machine
+// before writing to compute number of states and arcs.
+//
+template <class A, class U>
+template <class F>
+bool ConstFst<A, U>::WriteFst(const F &fst, ostream &strm,
+                              const FstWriteOptions &opts) {
+  static const int kFileVersion = 2;
+  static const int kAlignedFileVersion = 1;
+  static const int kFileAlign = 16;
+  int file_version = opts.align ? kAlignedFileVersion : kFileVersion;
+  size_t num_arcs = -1, num_states = -1;
+  size_t start_offset = 0;
+  bool update_header = true;
+  if (fst.Type() == ConstFst<A, U>().Type()) {
+    const ConstFst<A, U> *const_fst = static_cast<const ConstFst<A, U> *>(&fst);
+    num_arcs = const_fst->GetImpl()->narcs_;
+    num_states = const_fst->GetImpl()->nstates_;
+    update_header = false;
+  } else if ((start_offset = strm.tellp()) == -1) {
+    // precompute values needed for header when we cannot seek to rewrite it.
+    for (StateIterator<F> siter(fst); !siter.Done(); siter.Next()) {
+      num_arcs += fst.NumArcs(siter.Value());
+      num_states++;
+    }
+    update_header = false;
+  }
+  FstHeader hdr;
+  hdr.SetStart(fst.Start());
+  hdr.SetNumStates(num_states);
+  hdr.SetNumArcs(num_arcs);
+  string type = "const";
+  if (sizeof(U) != sizeof(uint32)) {
+    string size;
+    Int64ToStr(8 * sizeof(U), &size);
+    type += size;
+  }
+  FstImpl<A>::WriteFstHeader(fst, strm, opts, file_version, type, &hdr);
+  if (opts.align && !AlignOutput(strm, kFileAlign)) {
+    LOG(ERROR) << "Could not align file during write after header";
+    return false;
+  }
+  size_t pos = 0, states = 0;
+  typename ConstFstImpl<A, U>::State state;
+  for (StateIterator<F> siter(fst); !siter.Done(); siter.Next()) {
+    state.final = fst.Final(siter.Value());
+    state.pos = pos;
+    state.narcs = fst.NumArcs(siter.Value());
+    state.niepsilons = fst.NumInputEpsilons(siter.Value());
+    state.noepsilons = fst.NumOutputEpsilons(siter.Value());
+    strm.write(reinterpret_cast<const char *>(&state), sizeof(state));
+    pos += state.narcs;
+    states++;
+  }
+  hdr.SetNumStates(states);
+  hdr.SetNumArcs(pos);
+  if (opts.align && !AlignOutput(strm, kFileAlign)) {
+    LOG(ERROR) << "Could not align file during write after writing states";
+  }
+  for (StateIterator<F> siter(fst); !siter.Done(); siter.Next()) {
+    StateId s = siter.Value();
+    for (ArcIterator<F> aiter(fst, s); !aiter.Done(); aiter.Next()) {
+      const A &arc = aiter.Value();
+      strm.write(reinterpret_cast<const char *>(&arc), sizeof(arc));
+    }
+  }
+  strm.flush();
+  if (!strm) {
+    LOG(ERROR) << "WriteAsVectorFst write failed: " << opts.source;
+    return false;
+  }
+  if (update_header) {
+    return FstImpl<A>::UpdateFstHeader(fst, strm, opts, file_version, type,
+                                       &hdr, start_offset);
+  } else {
+    if (hdr.NumStates() != num_states) {
+      LOG(ERROR) << "Inconsistent number of states observed during write";
+      return false;
+    }
+    if (hdr.NumArcs() != num_arcs) {
+      LOG(ERROR) << "Inconsistent number of arcs observed during write";
+      return false;
+    }
+  }
+  return true;
+}
 
 // Specialization for ConstFst; see generic version in fst.h
 // for sample usage (but use the ConstFst type!). This version

@@ -143,7 +143,8 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
         binary_label_(binary_label),
         match_label_(kNoLabel),
         narcs_(0),
-        loop_(kNoLabel, 0, Weight::One(), kNoStateId) {
+        loop_(kNoLabel, 0, Weight::One(), kNoStateId),
+        error_(false) {
     switch(match_type_) {
       case MATCH_INPUT:
       case MATCH_NONE:
@@ -152,7 +153,9 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
         swap(loop_.ilabel, loop_.olabel);
         break;
       default:
-        LOG(FATAL) << "SortedMatcher: bad match type";
+        FSTERROR() << "SortedMatcher: bad match type";
+        match_type_ = MATCH_NONE;
+        error_ = true;
     }
   }
 
@@ -164,7 +167,8 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
         binary_label_(matcher.binary_label_),
         match_label_(kNoLabel),
         narcs_(0),
-        loop_(matcher.loop_) {}
+        loop_(matcher.loop_),
+        error_(matcher.error_) {}
 
   virtual ~SortedMatcher() {
     if (aiter_)
@@ -198,8 +202,10 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
     if (s_ == s)
       return;
     s_ = s;
-    if (match_type_ == MATCH_NONE)
-        LOG(FATAL) << "SortedMatcher: bad match type";
+    if (match_type_ == MATCH_NONE) {
+      FSTERROR() << "SortedMatcher: bad match type";
+      error_ = true;
+    }
     if (aiter_)
       delete aiter_;
     aiter_ = new ArcIterator<F>(*fst_, s);
@@ -240,7 +246,11 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
 
   virtual const F &GetFst() const { return *fst_; }
 
-  virtual uint64 Properties(uint64 props) const { return props; }
+  virtual uint64 Properties(uint64 inprops) const {
+    uint64 outprops = inprops;
+    if (error_) outprops |= kError;
+    return outprops;
+  }
 
  private:
   virtual void SetState_(StateId s) { SetState(s); }
@@ -258,12 +268,18 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   size_t narcs_;                  // Current state arc count
   Arc loop_;                      // For non-consuming symbols
   bool current_loop_;             // Current arc is the implicit loop
+  bool error_;                    // Error encountered
 
   void operator=(const SortedMatcher<F> &);  // Disallow
 };
 
 template <class F> inline
 bool SortedMatcher<F>::Find(Label match_label) {
+  if (error_) {
+    current_loop_ = false;
+    match_label_ = kNoLabel;
+    return false;
+  }
   current_loop_ = match_label == 0;
   match_label_ = match_label == kNoLabel ? 0 : match_label;
   aiter_->SetFlags(
@@ -348,11 +364,18 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
              M *matcher = 0)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         match_type_(match_type),
-        rho_label_(rho_label) {
-    if (match_type == MATCH_BOTH)
-      LOG(FATAL) << "RhoMatcher: bad match type";
-    if (rho_label == 0)
-      LOG(FATAL) << "RhoMatcher: 0 cannot be used as rho_label";
+        rho_label_(rho_label),
+        error_(false) {
+    if (match_type == MATCH_BOTH) {
+      FSTERROR() << "RhoMatcher: bad match type";
+      match_type_ = MATCH_NONE;
+      error_ = true;
+    }
+    if (rho_label == 0) {
+      FSTERROR() << "RhoMatcher: 0 cannot be used as rho_label";
+      rho_label_ = kNoLabel;
+      error_ = true;
+    }
 
     if (rewrite_mode == MATCHER_REWRITE_AUTO)
       rewrite_both_ = fst.Properties(kAcceptor, true);
@@ -366,7 +389,8 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
       : matcher_(new M(*matcher.matcher_, safe)),
         match_type_(matcher.match_type_),
         rho_label_(matcher.rho_label_),
-        rewrite_both_(matcher.rewrite_both_) {}
+        rewrite_both_(matcher.rewrite_both_),
+        error_(matcher.error_) {}
 
   virtual ~RhoMatcher() {
     delete matcher_;
@@ -385,7 +409,9 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
 
   bool Find(Label match_label) {
     if (match_label == rho_label_ && rho_label_ != kNoLabel) {
-      LOG(FATAL) << "RhoMatcher::Find: bad label (rho)";
+      FSTERROR() << "RhoMatcher::Find: bad label (rho)";
+      error_ = true;
+      return false;
     }
     if (matcher_->Find(match_label)) {
       rho_match_ = kNoLabel;
@@ -440,35 +466,39 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
   bool has_rho_;          // Are there possibly rhos at the current state?
   Label rho_match_;       // Current label that matches rho transition
   mutable Arc rho_arc_;   // Arc to return when rho match
+  bool error_;            // Error encountered
 
   void operator=(const RhoMatcher<M> &);  // Disallow
 };
 
 template <class M> inline
-uint64 RhoMatcher<M>::Properties(uint64 props) const {
+uint64 RhoMatcher<M>::Properties(uint64 inprops) const {
+  uint64 outprops = matcher_->Properties(inprops);
+  if (error_) outprops |= kError;
+
   if (match_type_ == MATCH_NONE) {
-    return props;
+    return outprops;
   } else if (match_type_ == MATCH_INPUT) {
     if (rewrite_both_) {
-      return props & ~(kODeterministic | kNonODeterministic | kString |
+      return outprops & ~(kODeterministic | kNonODeterministic | kString |
                        kILabelSorted | kNotILabelSorted |
                        kOLabelSorted | kNotOLabelSorted);
     } else {
-      return props & ~(kODeterministic | kAcceptor | kString |
+      return outprops & ~(kODeterministic | kAcceptor | kString |
                        kILabelSorted | kNotILabelSorted);
     }
   } else if (match_type_ == MATCH_OUTPUT) {
     if (rewrite_both_) {
-      return props & ~(kIDeterministic | kNonIDeterministic | kString |
+      return outprops & ~(kIDeterministic | kNonIDeterministic | kString |
                        kILabelSorted | kNotILabelSorted |
                        kOLabelSorted | kNotOLabelSorted);
     } else {
-      return props & ~(kIDeterministic | kAcceptor | kString |
+      return outprops & ~(kIDeterministic | kAcceptor | kString |
                        kOLabelSorted | kNotOLabelSorted);
     }
   } else {
-    LOG(FATAL) << "RhoMatcher::Properties: Invalid match type: "
-               << match_type_;
+    // Shouldn't ever get here.
+    FSTERROR() << "RhoMatcher:: bad match type: " << match_type_;
     return 0;
   }
 }
@@ -502,11 +532,18 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
                M *matcher = 0)
       : matcher_(matcher ? matcher : new M(fst, match_type)),
         match_type_(match_type),
-        sigma_label_(sigma_label) {
-    if (match_type == MATCH_BOTH)
-      LOG(FATAL) << "SigmaMatcher: bad match type";
-    if (sigma_label == 0)
-      LOG(FATAL) << "SigmaMatcher: 0 cannot be used as sigma_label";
+        sigma_label_(sigma_label),
+        error_(false) {
+    if (match_type == MATCH_BOTH) {
+      FSTERROR() << "SigmaMatcher: bad match type";
+      match_type_ = MATCH_NONE;
+      error_ = true;
+    }
+    if (sigma_label == 0) {
+      FSTERROR() << "SigmaMatcher: 0 cannot be used as sigma_label";
+      sigma_label_ = kNoLabel;
+      error_ = true;
+    }
 
     if (rewrite_mode == MATCHER_REWRITE_AUTO)
       rewrite_both_ = fst.Properties(kAcceptor, true);
@@ -520,7 +557,8 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
       : matcher_(new M(*matcher.matcher_, safe)),
         match_type_(matcher.match_type_),
         sigma_label_(matcher.sigma_label_),
-        rewrite_both_(matcher.rewrite_both_) {}
+        rewrite_both_(matcher.rewrite_both_),
+        error_(matcher.error_) {}
 
   virtual ~SigmaMatcher() {
     delete matcher_;
@@ -541,7 +579,9 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
   bool Find(Label match_label) {
     match_label_ = match_label;
     if (match_label == sigma_label_ && sigma_label_ != kNoLabel) {
-      LOG(FATAL) << "SigmaMatcher::Find: bad label (sigma)";
+      FSTERROR() << "SigmaMatcher::Find: bad label (sigma)";
+      error_ = true;
+      return false;
     }
     if (matcher_->Find(match_label)) {
       sigma_match_ = kNoLabel;
@@ -606,33 +646,37 @@ private:
   Label sigma_match_;      // Current label that matches sigma transition
   mutable Arc sigma_arc_;  // Arc to return when sigma match
   Label match_label_;      // Label being matched
+  bool error_;             // Error encountered
 
   void operator=(const SigmaMatcher<M> &);  // disallow
 };
 
 template <class M> inline
-uint64 SigmaMatcher<M>::Properties(uint64 props) const {
+uint64 SigmaMatcher<M>::Properties(uint64 inprops) const {
+  uint64 outprops = matcher_->Properties(inprops);
+  if (error_) outprops |= kError;
+
   if (match_type_ == MATCH_NONE) {
-    return props;
+    return outprops;
   } else if (rewrite_both_) {
-    return props & ~(kIDeterministic | kNonIDeterministic |
+    return outprops & ~(kIDeterministic | kNonIDeterministic |
                      kODeterministic | kNonODeterministic |
                      kILabelSorted | kNotILabelSorted |
                      kOLabelSorted | kNotOLabelSorted |
                      kString);
   } else if (match_type_ == MATCH_INPUT) {
-    return props & ~(kIDeterministic | kNonIDeterministic |
+    return outprops & ~(kIDeterministic | kNonIDeterministic |
                      kODeterministic | kNonODeterministic |
                      kILabelSorted | kNotILabelSorted |
                      kString | kAcceptor);
   } else if (match_type_ == MATCH_OUTPUT) {
-    return props & ~(kIDeterministic | kNonIDeterministic |
+    return outprops & ~(kIDeterministic | kNonIDeterministic |
                      kODeterministic | kNonODeterministic |
                      kOLabelSorted | kNotOLabelSorted |
                      kString | kAcceptor);
   } else {
-    LOG(FATAL) << "SigmaMatcher::Properties: Invalid match type: "
-               << match_type_;
+    // Shouldn't ever get here.
+    FSTERROR() << "SigmaMatcher:: bad match type: " << match_type_;
     return 0;
   }
 }
@@ -671,11 +715,18 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
         match_type_(match_type),
         phi_label_(phi_label),
         state_(kNoStateId),
-        phi_loop_(phi_loop) {
-    if (match_type == MATCH_BOTH)
-      LOG(FATAL) << "PhiMatcher: bad match type";
-    if (phi_label == 0)
-      LOG(FATAL) << "PhiMatcher: 0 cannot be used as phi_label";
+        phi_loop_(phi_loop),
+        error_(false) {
+    if (match_type == MATCH_BOTH) {
+      FSTERROR() << "PhiMatcher: bad match type";
+      match_type_ = MATCH_NONE;
+      error_ = true;
+    }
+    if (phi_label == 0) {
+      FSTERROR() << "PhiMatcher: 0 cannot be used as phi_label";
+      phi_label_ = kNoLabel;
+      error_ = true;
+    }
 
     if (rewrite_mode == MATCHER_REWRITE_AUTO)
       rewrite_both_ = fst.Properties(kAcceptor, true);
@@ -691,7 +742,8 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
         phi_label_(matcher.phi_label_),
         rewrite_both_(matcher.rewrite_both_),
         state_(kNoStateId),
-        phi_loop_(matcher.phi_loop_) {}
+        phi_loop_(matcher.phi_loop_),
+        error_(matcher.error_) {}
 
   virtual ~PhiMatcher() {
     delete matcher_;
@@ -759,6 +811,7 @@ private:
   Weight phi_weight_;     // Product of the weights of phi transitions taken
   bool phi_loop_;         // When true, phi self-loop are allowed and treated
                           // as rho (required for Aho-Corasick)
+  bool error_;             // Error encountered
 
   void operator=(const PhiMatcher<M> &);  // disallow
 };
@@ -766,7 +819,9 @@ private:
 template <class M> inline
 bool PhiMatcher<M>::Find(Label match_label) {
   if (match_label == phi_label_ && phi_label_ != kNoLabel) {
-    LOG(FATAL) << "PhiMatcher::Find: bad label (phi)";
+    FSTERROR() << "PhiMatcher::Find: bad label (phi)";
+    error_ = true;
+    return false;
   }
   matcher_->SetState(state_);
   phi_match_ = kNoLabel;
@@ -784,40 +839,45 @@ bool PhiMatcher<M>::Find(Label match_label) {
     phi_weight_ = Times(phi_weight_, matcher_->Value().weight);
     state = matcher_->Value().nextstate;
     matcher_->Next();
-    if (!matcher_->Done())
-      LOG(FATAL) << "PhiMatcher: phi non-determinism not supported";
+    if (!matcher_->Done()) {
+      FSTERROR() << "PhiMatcher: phi non-determinism not supported";
+      error_ = true;
+    }
     matcher_->SetState(state);
   }
   return true;
 }
 
 template <class M> inline
-uint64 PhiMatcher<M>::Properties(uint64 props) const {
+uint64 PhiMatcher<M>::Properties(uint64 inprops) const {
+  uint64 outprops = matcher_->Properties(inprops);
+  if (error_) outprops |= kError;
+
   if (match_type_ == MATCH_NONE) {
-    return props;
+    return outprops;
   } else if (match_type_ == MATCH_INPUT) {
     if (rewrite_both_) {
-      return props & ~(kODeterministic | kNonODeterministic | kString |
+      return outprops & ~(kODeterministic | kNonODeterministic | kString |
                        kILabelSorted | kNotILabelSorted |
                        kOLabelSorted | kNotOLabelSorted);
     } else {
-      return props & ~(kODeterministic | kAcceptor | kString |
+      return outprops & ~(kODeterministic | kAcceptor | kString |
                        kILabelSorted | kNotILabelSorted |
                        kOLabelSorted | kNotOLabelSorted);
     }
   } else if (match_type_ == MATCH_OUTPUT) {
     if (rewrite_both_) {
-      return props & ~(kIDeterministic | kNonIDeterministic | kString |
+      return outprops & ~(kIDeterministic | kNonIDeterministic | kString |
                        kILabelSorted | kNotILabelSorted |
                        kOLabelSorted | kNotOLabelSorted);
     } else {
-      return props & ~(kIDeterministic | kAcceptor | kString |
+      return outprops & ~(kIDeterministic | kAcceptor | kString |
                        kILabelSorted | kNotILabelSorted |
                        kOLabelSorted | kNotOLabelSorted);
     }
   } else {
-    LOG(FATAL) << "PhiMatcher::Properties: Invalid match type: "
-               << match_type_;
+    // Shouldn't ever get here.
+    FSTERROR() << "PhiMatcher:: bad match type: " << match_type_;
     return 0;
   }
 }
@@ -923,14 +983,16 @@ class MultiEpsMatcher {
 
   const FST &GetFst() const { return matcher_->GetFst(); }
 
-  uint64 Properties(uint64 props) const { return props; }
+  uint64 Properties(uint64 props) const { return matcher_->Properties(props); }
 
   uint32 Flags() const { return matcher_->Flags(); }
 
   void AddMultiEpsLabel(Label label) {
-    if (label == 0)
-      LOG(FATAL) << "MultiEpsMatcher: Bad multi-eps label: 0";
-    multi_eps_labels_.Insert(label);
+    if (label == 0) {
+      FSTERROR() << "MultiEpsMatcher: Bad multi-eps label: 0";
+    } else {
+      multi_eps_labels_.Insert(label);
+    }
   }
 
   void ClearMultiEpsLabels() {

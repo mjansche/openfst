@@ -217,6 +217,8 @@ void PdtShortestPath(PdtShortestPathArgs *args) {
   }
 
   switch (opts.queue_type) {
+    default:
+      FSTERROR() << "Unknown queue type: " << opts.queue_type;
     case FIFO_QUEUE: {
       typedef FifoQueue<StateId> Queue;
       fst::PdtShortestPathOptions<Arc, Queue> spopts(opts.keep_parentheses,
@@ -238,8 +240,6 @@ void PdtShortestPath(PdtShortestPathArgs *args) {
       ShortestPath(fst, parens, ofst, spopts);
       return;
     }
-    default:
-      LOG(FATAL) << "Unknown queue type: " << opts.queue_type;
   }
 }
 

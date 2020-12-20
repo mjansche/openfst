@@ -647,7 +647,6 @@ template <class A>
 bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
   VLOG(2) << "Prune ?";
   Weight fd = Weight::Zero();
-  CHECK_NE(SourceState(s), kNoStateId);
 
   if ((cached_source_ != SourceState(s)) ||
       (cached_stack_id_ != current_stack_id_)) {
@@ -660,13 +659,11 @@ bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
            !set_iter.Done(); set_iter.Next()) {
         StateId dest = set_iter.Element();
         typename DestMap::const_iterator iter = dest_map_.find(dest);
-        CHECK(iter != dest_map_.end());
-        CHECK_EQ(iter->first, dest);
         cached_dest_list_.push_front(*iter);
       }
     } else {
       // TODO(allauzen): queue discipline should prevent this never
-      // from happening; replace by CHECK.
+      // from happening; replace by a check.
       cached_dest_list_.push_front(
           make_pair(rfst_.Start() -1, Weight::One()));
     }

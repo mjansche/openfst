@@ -31,6 +31,7 @@ using std::vector;
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/fst.h>
 #include <fst/util.h>
 #include <fst/vector-fst.h>
@@ -70,9 +71,11 @@ template <class A> class FstCompiler {
       if (col.size() > 5 ||
           (col.size() > 4 && accep) ||
           (col.size() == 3 && !accep)) {
-        LOG(FATAL) << "FstCompiler: Bad number of columns, source = "
+        FSTERROR() << "FstCompiler: Bad number of columns, source = "
                    << source_
                    << ", line = " << nline_;
+        fst_.SetProperties(kError, kError);
+        return;
       }
       StateId s = StrToStateId(col[0]);
       while (s >= fst_.NumStates())
@@ -124,7 +127,9 @@ template <class A> class FstCompiler {
       fst_.SetOutputSymbols(osyms);
   }
 
-  const VectorFst<A> &Fst() const { return fst_; }
+  const VectorFst<A> &Fst() const {
+    return fst_;
+  }
 
  private:
   // Maximum line length in text file.
@@ -132,22 +137,24 @@ template <class A> class FstCompiler {
 
   int64 StrToId(const char *s, const SymbolTable *syms,
                 const char *name, bool allow_negative = false) const {
-    int64 n;
+    int64 n = 0;
 
     if (syms) {
       n = syms->Find(s);
       if (n == -1 || (!allow_negative && n < 0)) {
-        LOG(FATAL) << "FstCompiler: Symbol \"" << s
+        FSTERROR() << "FstCompiler: Symbol \"" << s
                    << "\" is not mapped to any integer " << name
                    << ", symbol table = " << syms->Name()
                    << ", source = " << source_ << ", line = " << nline_;
+        fst_.SetProperties(kError, kError);
       }
     } else {
       char *p;
       n = strtoll(s, &p, 10);
       if (p < s + strlen(s) || (!allow_negative && n < 0)) {
-        LOG(FATAL) << "FstCompiler: Bad " << name << " integer = \"" << s
+        FSTERROR() << "FstCompiler: Bad " << name << " integer = \"" << s
                    << "\", source = " << source_ << ", line = " << nline_;
+        fst_.SetProperties(kError, kError);
       }
     }
     return n;
@@ -182,13 +189,15 @@ template <class A> class FstCompiler {
     istringstream strm(s);
     strm >> w;
     if (!strm || (!allow_zero && w == Weight::Zero())) {
-      LOG(FATAL) << "FstCompiler: Bad weight = \"" << s
+      FSTERROR() << "FstCompiler: Bad weight = \"" << s
                  << "\", source = " << source_ << ", line = " << nline_;
+      fst_.SetProperties(kError, kError);
+      w = Weight::NoWeight();
     }
     return w;
   }
 
-  VectorFst<A> fst_;
+  mutable VectorFst<A> fst_;
   size_t nline_;
   string source_;                      // text FST source name
   const SymbolTable *isyms_;           // ilabel symbol table
@@ -198,6 +207,7 @@ template <class A> class FstCompiler {
   StateId nstates_;                    // number of seen states
   bool keep_state_numbering_;
   bool allow_negative_labels_;         // not recommended; may cause conflicts
+
   DISALLOW_COPY_AND_ASSIGN(FstCompiler);
 };
 

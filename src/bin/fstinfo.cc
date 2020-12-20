@@ -30,6 +30,7 @@ DEFINE_string(info_type, "auto",
 DEFINE_bool(pipe, false, "Send info to stderr, input to stdout");
 DEFINE_bool(test_properties, true,
             "Compute property values (if unknown to FST)");
+DEFINE_bool(fst_verify, true, "Verify FST sanity");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -52,7 +53,7 @@ int main(int argc, char **argv) {
   if (!ifst) return 1;
 
   s::PrintFstInfo(*ifst, FLAGS_test_properties, FLAGS_arc_filter,
-                  FLAGS_info_type, FLAGS_pipe);
+                  FLAGS_info_type, FLAGS_fst_verify, FLAGS_pipe);
 
   return 0;
 }

@@ -27,6 +27,7 @@ using std::vector;
 #include <fst/script/arg-packs.h>
 #include <fst/extensions/far/compile-strings.h>
 #include <fst/extensions/far/create.h>
+#include <fst/extensions/far/equal.h>
 #include <fst/extensions/far/extract.h>
 #include <fst/extensions/far/info.h>
 #include <fst/extensions/far/print-strings.h>
@@ -50,6 +51,9 @@ struct FarCompileStringsArgs {
   const FarEntryType fet;
   const FarTokenType tt;
   const string &symbols_fname;
+  const string &unknown_symbol;
+  const bool keep_symbols;
+  const bool initial_symbols;
   const bool allow_negative_labels;
   const bool file_list_input;
   const string &key_prefix;
@@ -63,13 +67,17 @@ struct FarCompileStringsArgs {
                         FarEntryType fet,
                         FarTokenType tt,
                         const string &symbols_fname,
+                        const string &unknown_symbol,
+                        bool keep_symbols,
+                        bool initial_symbols,
                         bool allow_negative_labels,
                         bool file_list_input,
                         const string &key_prefix,
                         const string &key_suffix) :
       in_fnames(in_fnames), out_fname(out_fname), fst_type(fst_type),
       far_type(far_type), generate_keys(generate_keys), fet(fet),
-      tt(tt), symbols_fname(symbols_fname),
+      tt(tt), symbols_fname(symbols_fname), unknown_symbol(unknown_symbol),
+      keep_symbols(keep_symbols), initial_symbols(initial_symbols),
       allow_negative_labels(allow_negative_labels),
       file_list_input(file_list_input), key_prefix(key_prefix),
       key_suffix(key_suffix) { }
@@ -80,6 +88,7 @@ void FarCompileStrings(FarCompileStringsArgs *args) {
   fst::FarCompileStrings<Arc>(
       args->in_fnames, args->out_fname, args->fst_type, args->far_type,
       args->generate_keys, args->fet, args->tt, args->symbols_fname,
+      args->unknown_symbol, args->keep_symbols, args->initial_symbols,
       args->allow_negative_labels, args->file_list_input,
       args->key_prefix, args->key_suffix);
 }
@@ -94,6 +103,9 @@ void FarCompileStrings(
     FarEntryType fet,
     FarTokenType tt,
     const string &symbols_fname,
+    const string &unknown_symbol,
+    bool keep_symbols,
+    bool initial_symbols,
     bool allow_negative_labels,
     bool file_list_input,
     const string &key_prefix,
@@ -140,6 +152,25 @@ void FarCreate(const vector<string> &in_fnames,
                const string &key_suffix);
 
 
+typedef args::Package<const string &, const string &, float,
+                      const string &, const string &> FarEqualInnerArgs;
+typedef args::WithReturnValue<bool, FarEqualInnerArgs> FarEqualArgs;
+
+template <class Arc>
+void FarEqual(FarEqualArgs *args) {
+  args->retval = fst::FarEqual<Arc>(
+      args->args.arg1, args->args.arg2, args->args.arg3,
+      args->args.arg4, args->args.arg5);
+}
+
+bool FarEqual(const string &filename1,
+              const string &filename2,
+              const string &arc_type,
+              float delta = kDelta,
+              const string &begin_key = string(),
+              const string &end_key = string());
+
+
 typedef args::Package<const vector<string> &, int32,
                       const string&, const string&, const string&,
                       const string&> FarExtractArgs;
@@ -178,6 +209,7 @@ struct FarPrintStringsArgs {
   const string &end_key;
   const bool print_key;
   const string &symbols_fname;
+  const bool initial_symbols;
   const int32 generate_filenames;
   const string &filename_prefix;
   const string &filename_suffix;
@@ -186,11 +218,12 @@ struct FarPrintStringsArgs {
       const vector<string> &ifilenames, const FarEntryType entry_type,
       const FarTokenType token_type, const string &begin_key,
       const string &end_key,  const bool print_key,
-      const string &symbols_fname, const int32 generate_filenames,
+      const string &symbols_fname, const bool initial_symbols,
+      const int32 generate_filenames,
       const string &filename_prefix, const string &filename_suffix) :
       ifilenames(ifilenames), entry_type(entry_type), token_type(token_type),
       begin_key(begin_key), end_key(end_key), print_key(print_key),
-      symbols_fname(symbols_fname),
+      symbols_fname(symbols_fname), initial_symbols(initial_symbols),
       generate_filenames(generate_filenames), filename_prefix(filename_prefix),
       filename_suffix(filename_suffix) { }
 };
@@ -200,8 +233,8 @@ void FarPrintStrings(FarPrintStringsArgs *args) {
   fst::FarPrintStrings<Arc>(
       args->ifilenames, args->entry_type, args->token_type,
       args->begin_key, args->end_key, args->print_key,
-      args->symbols_fname, args->generate_filenames, args->filename_prefix,
-      args->filename_suffix);
+      args->symbols_fname, args->initial_symbols, args->generate_filenames,
+      args->filename_prefix, args->filename_suffix);
 }
 
 
@@ -213,6 +246,7 @@ void FarPrintStrings(const vector<string> &ifilenames,
                      const string &end_key,
                      const bool print_key,
                      const string &symbols_fname,
+                     const bool initial_symbols,
                      const int32 generate_filenames,
                      const string &filename_prefix,
                      const string &filename_suffix);
@@ -224,6 +258,7 @@ void FarPrintStrings(const vector<string> &ifilenames,
 #define REGISTER_FST_FAR_OPERATIONS(ArcType)                            \
   REGISTER_FST_OPERATION(FarCompileStrings, ArcType, FarCompileStringsArgs); \
   REGISTER_FST_OPERATION(FarCreate, ArcType, FarCreateArgs);            \
+  REGISTER_FST_OPERATION(FarEqual, ArcType, FarEqualArgs);              \
   REGISTER_FST_OPERATION(FarExtract, ArcType, FarExtractArgs);          \
   REGISTER_FST_OPERATION(FarInfo, ArcType, FarInfoArgs);                \
   REGISTER_FST_OPERATION(FarPrintStrings, ArcType, FarPrintStringsArgs)

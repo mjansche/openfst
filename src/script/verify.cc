@@ -14,26 +14,24 @@
 // Copyright 2005-2010 Google, Inc.
 // Author: jpr@google.com (Jake Ratkiewicz)
 
-#include <string>
-
 #include <fst/script/fst-class.h>
 #include <fst/script/script-impl.h>
-#include <fst/script/info.h>
+#include <fst/script/verify.h>
 
 namespace fst {
 namespace script {
 
-void PrintFstInfo(const FstClass &f, bool test_properties,
-                  const string &arc_filter, const string &info_type,
-                  bool pipe, bool verify) {
-  InfoArgs args(f, test_properties, arc_filter, info_type, pipe, verify);
+bool Verify(const FstClass &fst) {
+  VerifyArgs args(&fst);
 
-  Apply<Operation<InfoArgs> >("PrintFstInfo", f.ArcType(), &args);
+  Apply<Operation<VerifyArgs> >("Verify", fst.ArcType(), &args);
+
+  return args.retval;
 }
 
-REGISTER_FST_OPERATION(PrintFstInfo, StdArc, InfoArgs);
-REGISTER_FST_OPERATION(PrintFstInfo, LogArc, InfoArgs);
-REGISTER_FST_OPERATION(PrintFstInfo, Log64Arc, InfoArgs);
+REGISTER_FST_OPERATION(Verify, StdArc, VerifyArgs);
+REGISTER_FST_OPERATION(Verify, LogArc, VerifyArgs);
+REGISTER_FST_OPERATION(Verify, Log64Arc, VerifyArgs);
 
 }  // namespace script
 }  // namespace fst

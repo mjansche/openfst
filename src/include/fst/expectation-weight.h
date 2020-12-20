@@ -82,6 +82,12 @@ class ExpectationWeight : public PairWeight<X1, X2> {
     return one;
   }
 
+  static const ExpectationWeight<X1, X2> &NoWeight() {
+    static const ExpectationWeight<X1, X2> no_weight(X1::NoWeight(),
+                                                     X2::NoWeight());
+    return no_weight;
+  }
+
   static const string &Type() {
     static const string type = "expectation_" + X1::Type() + "_" + X2::Type();
     return type;
@@ -127,8 +133,8 @@ template <class X1, class X2>
 inline ExpectationWeight<X1, X2> Divide(const ExpectationWeight<X1, X2> &w,
                                         const ExpectationWeight<X1, X2> &v,
                                         DivideType typ = DIVIDE_ANY) {
-  LOG(FATAL) << "ExpectationWeight::Divide: not implemented";
-  return ExpectationWeight<X1, X2>::Zero();
+  FSTERROR() << "ExpectationWeight::Divide: not implemented";
+  return ExpectationWeight<X1, X2>::NoWeight();
 }
 
 }  // namespace fst

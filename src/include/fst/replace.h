@@ -311,7 +311,6 @@ class ReplaceFstImpl : public CacheImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
-  using FstImpl<A>::Properties;
   using FstImpl<A>::WriteHeader;
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
@@ -384,20 +383,23 @@ class ReplaceFstImpl : public CacheImpl<A> {
       inprops.push_back(fst->Properties(kCopyProperties, false));
       if (i) {
         if (!CompatSymbols(InputSymbols(), fst->InputSymbols())) {
-          LOG(FATAL) << "ReplaceFstImpl: input symbols of Fst " << i
+          FSTERROR() << "ReplaceFstImpl: input symbols of Fst " << i
                      << " does not match input symbols of base Fst (0'th fst)";
+          SetProperties(kError, kError);
         }
         if (!CompatSymbols(OutputSymbols(), fst->OutputSymbols())) {
-          LOG(FATAL) << "ReplaceFstImpl: output symbols of Fst " << i
+          FSTERROR() << "ReplaceFstImpl: output symbols of Fst " << i
                      << " does not match output symbols of base Fst "
                      << "(0'th fst)";
+          SetProperties(kError, kError);
         }
       }
     }
     Label nonterminal = nonterminal_hash_[opts.root];
     if ((nonterminal == 0) && (fst_array_.size() > 1)) {
-      LOG(FATAL) << "ReplaceFstImpl: no Fst corresponding to root label '"
+      FSTERROR() << "ReplaceFstImpl: no Fst corresponding to root label '"
                  << opts.root << "' in the input tuple vector";
+      SetProperties(kError, kError);
     }
     root_ = (nonterminal > 0) ? nonterminal : 1;
 
@@ -604,6 +606,19 @@ class ReplaceFstImpl : public CacheImpl<A> {
         num++;
       return num;
     }
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if (mask & kError) {
+      for (size_t i = 1; i < fst_array_.size(); ++i) {
+        if (fst_array_[i]->Properties(kError, false))
+          SetProperties(kError, kError);
+      }
+    }
+    return FstImpl<Arc>::Properties(mask);
   }
 
   // return the base arc iterator, if arcs have not been computed yet,
@@ -1132,7 +1147,11 @@ class ArcIterator< ReplaceFst<A, T> > {
   const A& Value() const {
     // If 'data_flags_' was set to 0, non-caching was not requested
     if (!data_flags_) {
-      CHECK(!(flags_ & kArcNoCache));  // Do not remove, more efficient!!
+      // TODO(allauzen): revisit this.
+      if (flags_ & kArcNoCache) {
+        // Should never happen.
+        FSTERROR() << "ReplaceFst: inconsistent arc iterator flags";
+      }
       ExpandAndCache();  // Expand and cache.
     }
 

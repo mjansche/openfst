@@ -35,8 +35,7 @@ void ArcSort(ArcSortArgs *args) {
   if (args->arg2 == ILABEL_COMPARE) {
     ILabelCompare<Arc> icomp;
     ArcSort(fst, icomp);
-  } else {
-    CHECK(args->arg2 == OLABEL_COMPARE);
+  } else {       // OLABEL_COMPARE
     OLabelCompare<Arc> ocomp;
     ArcSort(fst, ocomp);
   }

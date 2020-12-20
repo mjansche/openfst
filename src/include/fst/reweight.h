@@ -49,15 +49,21 @@ void Reweight(MutableFst<Arc> *fst,
   if (fst->NumStates() == 0)
     return;
 
-  if (type == REWEIGHT_TO_FINAL && !(Weight::Properties() & kRightSemiring))
-    LOG(FATAL) << "Reweight: Reweighting to the final states requires "
+  if (type == REWEIGHT_TO_FINAL && !(Weight::Properties() & kRightSemiring)) {
+    FSTERROR() << "Reweight: Reweighting to the final states requires "
                << "Weight to be right distributive: "
                << Weight::Type();
+    fst->SetProperties(kError, kError);
+    return;
+  }
 
-  if (type == REWEIGHT_TO_INITIAL && !(Weight::Properties() & kLeftSemiring))
-    LOG(FATAL) << "Reweight: Reweighting to the initial state requires "
+  if (type == REWEIGHT_TO_INITIAL && !(Weight::Properties() & kLeftSemiring)) {
+    FSTERROR() << "Reweight: Reweighting to the initial state requires "
                << "Weight to be left distributive: "
                << Weight::Type();
+    fst->SetProperties(kError, kError);
+    return;
+  }
 
   StateIterator< MutableFst<Arc> > sit(*fst);
   for (; !sit.Done(); sit.Next()) {

@@ -176,38 +176,33 @@ class PdtShortestPathData {
   }
 
   void SetDistance(SearchState s, Weight w) {
-    CHECK(!finished_);
     SearchData *data = GetSearchData(s);
     data->distance = w;
   }
 
   void SetDistance(const ParenSpec &paren, Weight w) {
-    CHECK(!finished_);
     SearchData *data = GetSearchData(paren);
     data->distance = w;
   }
 
   void SetParent(SearchState s, SearchState p) {
-    CHECK(!finished_);
     SearchData *data = GetSearchData(s);
     data->parent = p;
   }
 
   void SetParent(const ParenSpec &paren, SearchState p) {
-    CHECK(!finished_);
     SearchData *data = GetSearchData(paren);
     data->parent = p;
   }
 
   void SetParenId(SearchState s, Label p) {
-    CHECK(!finished_);
-    CHECK_LT(p, 32768);  // Ensure paren ID fits in an int16
+    if (p >= 32768)
+      FSTERROR() << "PdtShortestPathData: Paren ID does not fits in an int16";
     SearchData *data = GetSearchData(s);
     data->paren_id = p;
   }
 
   void SetFlags(SearchState s, uint8 f, uint8 mask) {
-    CHECK(!finished_);
     SearchData *data = GetSearchData(s);
     data->flags &= ~mask;
     data->flags |= f & mask;
@@ -403,12 +398,15 @@ class PdtShortestPath {
         parens_(parens),
         keep_parens_(opts.keep_parentheses),
         start_(ifst.Start()),
-        sp_data_(opts.path_gc) {
+        sp_data_(opts.path_gc),
+        error_(false) {
 
     if ((Weight::Properties() & (kPath | kRightSemiring))
-        != (kPath | kRightSemiring))
-      LOG(FATAL) << "SingleShortestPath: Weight needs to have the path"
+        != (kPath | kRightSemiring)) {
+      FSTERROR() << "SingleShortestPath: Weight needs to have the path"
                  << " property and be right distributive: " << Weight::Type();
+      error_ = true;
+    }
 
     for (Label i = 0; i < parens.size(); ++i) {
       const pair<Label, Label>  &p = parens[i];
@@ -429,6 +427,7 @@ class PdtShortestPath {
     GetDistance(start_);
     GetPath();
     sp_data_.Finish();
+    if (error_) ofst->SetProperties(kError, kError);
   }
 
   const PdtShortestPathData<Arc> &GetShortestPathData() const {
@@ -478,6 +477,7 @@ class PdtShortestPath {
   CloseParenMultimap close_paren_multimap_;
   PdtBalanceData<Arc> balance_data_;
   ssize_t nenqueued_;
+  bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(PdtShortestPath);
 };
@@ -747,7 +747,10 @@ Arc PdtShortestPath<Arc, Queue>::GetPathArc(
     if (arc.weight == Plus(arc.weight, path_arc.weight))
       path_arc = arc;
   }
-  CHECK_NE(path_arc.nextstate, kNoStateId);
+  if (path_arc.nextstate == kNoStateId) {
+    FSTERROR() << "PdtShortestPath::GetPathArc failed to find arc";
+    error_ = true;
+  }
   return path_arc;
 }
 

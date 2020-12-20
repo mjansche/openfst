@@ -36,6 +36,7 @@
 #include <fst/register.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/symbol-table.h>
 #include <fst/util.h>
 
@@ -96,9 +97,9 @@ struct FstWriteOptions {
 class FstHeader {
  public:
   enum {
-    HAS_ISYMBOLS = 0x1,                           // Has input symbol table
-    HAS_OSYMBOLS = 0x2,                           // Has output symbol table
-    IS_ALIGNED   = 0x4,                           // Memory-aligned (where appropriate)
+    HAS_ISYMBOLS = 0x1,          // Has input symbol table
+    HAS_OSYMBOLS = 0x2,          // Has output symbol table
+    IS_ALIGNED   = 0x4,          // Memory-aligned (where appropriate)
   } Flags;
 
   FstHeader() : version_(0), flags_(0), properties_(0), start_(-1),
@@ -235,15 +236,16 @@ class Fst {
 
   // Write an Fst to an output stream; return false on error
   virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
-    LOG(ERROR) << "Fst::Write: No write method for " << Type() << " Fst type";
+    LOG(ERROR) << "Fst::Write: No write stream method for " << Type()
+               << " Fst type";
     return false;
   }
 
   // Write an Fst to a file; return false on error
   // Empty filename writes to standard output
   virtual bool Write(const string &filename) const {
-    LOG(ERROR) << "Fst::Write: No write method for "
-               << Type() << " Fst type: " << filename;
+    LOG(ERROR) << "Fst::Write: No write filename method for " << Type()
+               << " Fst type";
     return false;
   }
 
@@ -264,6 +266,21 @@ class Fst {
   // For generic matcher construction; not normally called
   // directly by users.
   virtual MatcherBase<A> *InitMatcher(MatchType match_type) const;
+
+ protected:
+
+  bool WriteFile(const string &filename) const {
+    if (!filename.empty()) {
+      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
+      if (!strm) {
+        LOG(ERROR) << "Fst::Write: Can't open file: " << filename;
+        return false;
+      }
+      return Write(strm, FstWriteOptions(filename));
+    } else {
+      return Write(std::cout, FstWriteOptions("standard output"));
+    }
+  }
 };
 
 
@@ -591,7 +608,7 @@ template <class A> class FstImpl {
         isymbols_(impl.isymbols_ ? impl.isymbols_->Copy() : 0),
         osymbols_(impl.osymbols_ ? impl.osymbols_->Copy() : 0) {}
 
-  ~FstImpl() {
+  virtual ~FstImpl() {
     delete isymbols_;
     delete osymbols_;
   }
@@ -600,15 +617,25 @@ template <class A> class FstImpl {
 
   void SetType(const string &type) { type_ = type; }
 
-  uint64 Properties() const { return properties_; }
+  virtual uint64 Properties() const { return properties_; }
 
-  uint64 Properties(uint64 mask) const { return properties_ & mask; }
+  virtual uint64 Properties(uint64 mask) const { return properties_ & mask; }
 
-  void SetProperties(uint64 props) { properties_ = props; }
+  void SetProperties(uint64 props) {
+    properties_ &= kError;          // kError can't be cleared
+    properties_ |= props;
+  }
 
   void SetProperties(uint64 props, uint64 mask) {
-    properties_ &= ~mask;
+    properties_ &= ~mask | kError;  // kError can't be cleared
     properties_ |= props & mask;
+  }
+
+  // Allows (only) setting error bit on const FST impls
+  void SetProperties(uint64 props, uint64 mask) const {
+    if (mask != kError)
+      FSTERROR() << "FstImpl::SetProperties() const: can only set kError";
+    properties_ |= kError;
   }
 
   const SymbolTable* InputSymbols() const { return isymbols_; }
@@ -651,6 +678,7 @@ template <class A> class FstImpl {
   // Write-out header and symbols from output stream.
   // If a opts.header is false, skip writing header.
   // If opts.[io]symbols is false, skip writing those symbols.
+  // This method is needed for Impl's that implement Write methods.
   void WriteHeader(ostream &strm, const FstWriteOptions& opts,
                    int version, FstHeader *hdr) const {
     if (opts.write_header) {
@@ -672,8 +700,66 @@ template <class A> class FstImpl {
     if (osymbols_ && opts.write_osymbols) osymbols_->Write(strm);
   }
 
+  // Write-out header and symbols to output stream.
+  // If a opts.header is false, skip writing header.
+  // If opts.[io]symbols is false, skip writing those symbols.
+  // type is the Fst type being written.
+  // This method is used in the cross-type serialization methods Fst::WriteFst.
+  static void WriteFstHeader(const Fst<A> &fst, ostream &strm,
+                             const FstWriteOptions& opts, int version,
+                             const string &type, FstHeader *hdr) {
+    if (opts.write_header) {
+      hdr->SetFstType(type);
+      hdr->SetArcType(A::Type());
+      hdr->SetVersion(version);
+      hdr->SetProperties(fst.Properties(kFstProperties, false));
+      int32 file_flags = 0;
+      if (fst.InputSymbols() && opts.write_isymbols)
+        file_flags |= FstHeader::HAS_ISYMBOLS;
+      if (fst.OutputSymbols() && opts.write_osymbols)
+        file_flags |= FstHeader::HAS_OSYMBOLS;
+      if (opts.align)
+        file_flags |= FstHeader::IS_ALIGNED;
+      hdr->SetFlags(file_flags);
+      hdr->Write(strm, opts.source);
+    }
+    if (fst.InputSymbols() && opts.write_isymbols) {
+      fst.InputSymbols()->Write(strm);
+    }
+    if (fst.OutputSymbols() && opts.write_osymbols) {
+      fst.OutputSymbols()->Write(strm);
+    }
+  }
+
+  // In serialization routines where the header cannot be written until after
+  // the machine has been serialized, this routine can be called to seek to
+  // the beginning of the file an rewrite the header with updated fields.
+  // It repositions the file pointer back at the end of the file.
+  // returns true on success, false on failure.
+  static bool UpdateFstHeader(const Fst<A> &fst, ostream &strm,
+                              const FstWriteOptions& opts, int version,
+                              const string &type, FstHeader *hdr,
+                              size_t header_offset) {
+    strm.seekp(header_offset);
+    if (!strm) {
+      LOG(ERROR) << "Fst::UpdateFstHeader: write failed: " << opts.source;
+      return false;
+    }
+    WriteFstHeader(fst, strm, opts, version, type, hdr);
+    if (!strm) {
+      LOG(ERROR) << "Fst::UpdateFstHeader: write failed: " << opts.source;
+      return false;
+    }
+    strm.seekp(0, ios_base::end);
+    if (!strm) {
+      LOG(ERROR) << "Fst::UpdateFstHeader: write failed: " << opts.source;
+      return false;
+    }
+    return true;
+  }
+
  protected:
-  uint64 properties_;           // Property bits
+  mutable uint64 properties_;           // Property bits
 
  private:
   string type_;                 // Unique name of Fst class
@@ -821,7 +907,8 @@ class ImplToFst : public F {
   ImplToFst<I, F> &operator=(const ImplToFst<I, F> &fst);
 
   ImplToFst<I, F> &operator=(const Fst<Arc> &fst) {
-    LOG(FATAL) << "ImplToFst: Assignment operator disallowed";
+    FSTERROR() << "ImplToFst: Assignment operator disallowed";
+    GetImpl()->SetProperties(kError, kError);
     return *this;
   }
 
@@ -830,9 +917,9 @@ class ImplToFst : public F {
 
 
 // Converts FSTs by casting their implementations, where this makes
-// sense (which excludes implementations with virtual methods). Must
-// be a friend of the Fst classes involved (currently the concrete
-// Fsts: VectorFst, ConstFst, CompactFst).
+// sense (which excludes implementations with weight-dependent virtual
+// methods). Must be a friend of the Fst classes involved (currently
+// the concrete Fsts: VectorFst, ConstFst, CompactFst).
 template<class F, class G> void Cast(const F &ifst, G *ofst) {
   ofst->SetImpl(reinterpret_cast<typename G::Impl *>(ifst.GetImpl()), false);
 }

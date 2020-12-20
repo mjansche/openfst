@@ -38,21 +38,20 @@ int main(int argc, char **argv) {
 
   string usage = "Creates a finite-state archive from input FSTs.\n\n Usage:";
   usage += argv[0];
-  usage += " in1.fst [in2.fst ...] out.far\n";
+  usage += " [in1.fst [[in2.fst ...] out.far]]\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
 
-  if (argc < 3) {
-    ShowUsage();
-    return 1;
-  }
-
   vector<string> in_fnames;
-  for (int i = 1; i < argc - 1; ++i)
-    in_fnames.push_back(argv[i]);
+  for (unsigned i = 1; i < argc - 1; ++i)
+    in_fnames.push_back(strcmp(argv[i], "") != 0 ? argv[i] : "");
+  if (in_fnames.empty())
+    in_fnames.push_back(argc == 2 && strcmp(argv[1], "-") != 0 ? argv[1] : "");
 
-  string out_fname = argv[argc - 1];
+  string out_fname =
+      argc > 2 && strcmp(argv[argc - 1], "-") != 0 ? argv[argc - 1] : "";
+
   string arc_type = fst::LoadArcTypeFromFst(in_fnames[0]);
   fst::FarType far_type = fst::FarTypeFromString(FLAGS_far_type);
 

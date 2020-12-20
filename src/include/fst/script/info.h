@@ -25,22 +25,22 @@ namespace fst {
 namespace script {
 
 typedef args::Package<const FstClass&, bool, const string&,
-                      const string&, bool> InfoArgs;
+                      const string&, bool, bool> InfoArgs;
 
 template<class Arc>
 void PrintFstInfo(InfoArgs *args) {
   const Fst<Arc> &fst = *(args->arg1.GetFst<Arc>());
   FstInfo<Arc> fstinfo(fst, args->arg2, args->arg3,
-                       args->arg4);
-  PrintFstInfo(fstinfo, args->arg5);
+                       args->arg4, args->arg5);
+  PrintFstInfo(fstinfo, args->arg6);
 
-  if (args->arg5)
+  if (args->arg6)
     fst.Write("");
 }
 
 void PrintFstInfo(const FstClass &f, bool test_properties,
                   const string &arc_filter, const string &info_type,
-                  bool pipe);
+                  bool pipe, bool verify);
 
 }  // namespace script
 }  // namespace fst

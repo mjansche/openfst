@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/util.h>
 
 namespace fst {
@@ -51,12 +52,15 @@ class STTableWriter {
   typedef W EntryWriter;
 
   explicit STTableWriter(const string &filename)
-      : stream_(filename.c_str(), ofstream::out | ofstream::binary) {
+      : stream_(filename.c_str(), ofstream::out | ofstream::binary),
+        error_(false) {
     WriteType(stream_, kSTTableMagicNumber);
     WriteType(stream_, kSTTableFileVersion);
-    if (!stream_)
-      LOG(FATAL) << "STTableWriter::STTableWriter: error writing to file: "
+    if (!stream_) {
+      FSTERROR() << "STTableWriter::STTableWriter: error writing to file: "
                  << filename;
+      error_=true;
+    }
   }
 
   static STTableWriter<T, W> *Create(const string &filename) {
@@ -68,15 +72,21 @@ class STTableWriter {
   }
 
   void Add(const string &key, const T &t) {
-    if (key == "")
-      LOG(FATAL) << "STTableWriter::Add: key empty: " << key;
-    else if (key < last_key_)
-      LOG(FATAL) << "STTableWriter::Add: key disorder: " << key;
+    if (key == "") {
+      FSTERROR() << "STTableWriter::Add: key empty: " << key;
+      error_ = true;
+    } else if (key < last_key_) {
+      FSTERROR() << "STTableWriter::Add: key disorder: " << key;
+      error_ = true;
+    }
+    if (error_) return;
     last_key_ = key;
     positions_.push_back(stream_.tellp());
     WriteType(stream_, key);
     entry_writer_(stream_, t);
   }
+
+  bool Error() const { return error_; }
 
   ~STTableWriter() {
     WriteType(stream_, positions_);
@@ -88,6 +98,7 @@ class STTableWriter {
   ofstream stream_;           // Output stream
   vector<int64> positions_;   // Position in file of each key-entry pair
   string last_key_;           // Last key
+  bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STTableWriter);
 };
@@ -108,10 +119,10 @@ class STTableReader {
   typedef R EntryReader;
 
   explicit STTableReader(const vector<string> &filenames)
-      : sources_(filenames), entry_(0) {
+      : sources_(filenames), entry_(0), error_(false) {
     compare_ = new Compare(&keys_);
     keys_.resize(filenames.size());
-    streams_.resize(filenames.size());
+    streams_.resize(filenames.size(), 0);
     positions_.resize(filenames.size());
     for (size_t i = 0; i < filenames.size(); ++i) {
       streams_[i] = new ifstream(
@@ -119,12 +130,18 @@ class STTableReader {
       int32 magic_number = 0, file_version = 0;
       ReadType(*streams_[i], &magic_number);
       ReadType(*streams_[i], &file_version);
-      if (magic_number != kSTTableMagicNumber)
-        LOG(FATAL) << "STTableReader::STTableReader: wrong file type: "
+      if (magic_number != kSTTableMagicNumber) {
+        FSTERROR() << "STTableReader::STTableReader: wrong file type: "
                    << filenames[i];
-      if (file_version != kSTTableFileVersion)
-        LOG(FATAL) << "STTableReader::STTableReader: wrong file version: "
+        error_ = true;
+        return;
+      }
+      if (file_version != kSTTableFileVersion) {
+        FSTERROR() << "STTableReader::STTableReader: wrong file version: "
                    << filenames[i];
+        error_ = true;
+        return;
+      }
       int64 num_entries;
       streams_[i]->seekg(-static_cast<int>(sizeof(int64)), ios_base::end);
       ReadType(*streams_[i], &num_entries);
@@ -134,9 +151,13 @@ class STTableReader {
       for (size_t j = 0; (j < num_entries) && (*streams_[i]); ++j)
         ReadType(*streams_[i], &(positions_[i][j]));
       streams_[i]->seekg(positions_[i][0]);
-      if (!*streams_[i])
-        LOG(FATAL) << "STTableReader::STTableReader: error reading file: "
+      if (!*streams_[i]) {
+        FSTERROR() << "STTableReader::STTableReader: error reading file: "
                    << filenames[i];
+        error_ = true;
+        return;
+      }
+
     }
     MakeHeap();
   }
@@ -164,26 +185,32 @@ class STTableReader {
   }
 
   void Reset() {
+    if (error_) return;
     for (size_t i = 0; i < streams_.size(); ++i)
       streams_[i]->seekg(positions_[i].front());
     MakeHeap();
   }
 
   bool Find(const string &key) {
+    if (error_) return false;
     for (size_t i = 0; i < streams_.size(); ++i)
       LowerBound(i, key);
     MakeHeap();
     return keys_[current_] == key;
   }
 
-  bool Done() const { return heap_.empty(); }
+  bool Done() const { return error_ || heap_.empty(); }
 
   void Next() {
+    if (error_) return;
     if (streams_[current_]->tellg() <= positions_[current_].back()) {
       ReadType(*(streams_[current_]), &(keys_[current_]));
-      if (!*streams_[current_])
-        LOG(FATAL) << "STTableReader: error reading file: "
+      if (!*streams_[current_]) {
+        FSTERROR() << "STTableReader: error reading file: "
                    << sources_[current_];
+        error_ = true;
+        return;
+      }
       push_heap(heap_.begin(), heap_.end(), *compare_);
     } else {
       heap_.pop_back();
@@ -199,6 +226,8 @@ class STTableReader {
   const EntryType &GetEntry() const {
     return *entry_;
   }
+
+  bool Error() const { return error_; }
 
  private:
   // Comparison functor used to compare stream IDs in the heap
@@ -250,8 +279,11 @@ class STTableReader {
     heap_.clear();
     for (size_t i = 0; i < streams_.size(); ++i) {
       ReadType(*streams_[i], &(keys_[i]));
-      if (!*streams_[i])
-        LOG(FATAL) << "STTableReader: error reading file: " << sources_[i];
+      if (!*streams_[i]) {
+        FSTERROR() << "STTableReader: error reading file: " << sources_[i];
+        error_ = true;
+        return;
+      }
       heap_.push_back(i);
     }
     make_heap(heap_.begin(), heap_.end(), *compare_);
@@ -267,9 +299,13 @@ class STTableReader {
     if (entry_)
       delete entry_;
     entry_ = entry_reader_(*streams_[current_]);
-    if (!*streams_[current_])
-      LOG(FATAL) << "STTableReader: error reading entry for key: "
+    if (!entry_)
+      error_ = true;
+    if (!*streams_[current_]) {
+      FSTERROR() << "STTableReader: error reading entry for key: "
                  << keys_[current_] << ", file: " << sources_[current_];
+      error_ = true;
+    }
   }
 
 
@@ -282,6 +318,7 @@ class STTableReader {
   int64 current_;        // Id of current stream to be read
   Compare *compare_;     // Functor comparing stream IDs for the heap
   mutable EntryType *entry_;  // Pointer to the currently read entry
+  bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STTableReader);
 };

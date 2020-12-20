@@ -1,3 +1,4 @@
+
 // string.h
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +24,7 @@
 #define FST_LIB_STRING_H_
 
 #include <fst/compact-fst.h>
+#include <fst/icu.h>
 #include <fst/mutable-fst.h>
 
 DECLARE_string(fst_field_separator);
@@ -40,12 +42,14 @@ class StringCompiler {
   enum TokenType { SYMBOL = 1, BYTE = 2, UTF8 = 3 };
 
   StringCompiler(TokenType type, const SymbolTable *syms = 0,
+                 Label unknown_label = kNoLabel,
                  bool allow_negative = false)
-      : token_type_(type), syms_(syms), allow_negative_(allow_negative) {}
+      : token_type_(type), syms_(syms), unknown_label_(unknown_label),
+        allow_negative_(allow_negative) {}
 
   // Compile string 's' into FST 'fst'.
   template <class F>
-  bool operator()(const string &s, F *fst) {
+  bool operator()(const string &s, F *fst) const {
     vector<Label> labels;
     if (!ConvertStringToLabels(s, &labels))
       return false;
@@ -99,6 +103,8 @@ class StringCompiler {
     int64 n;
     if (syms_) {
       n = syms_->Find(s);
+      if ((n == -1) && (unknown_label_ != kNoLabel))
+        n = unknown_label_;
       if (n == -1 || (!allow_negative_ && n < 0)) {
         VLOG(1) << "StringCompiler::ConvertSymbolToLabel: Symbol \"" << s
                 << "\" is not mapped to any integer label, symbol table = "
@@ -120,6 +126,7 @@ class StringCompiler {
 
   TokenType token_type_;     // Token type: symbol, byte or utf8 encoded
   const SymbolTable *syms_;  // Symbol table used when token type is symbol
+  Label unknown_label_;      // Label for token missing from symbol table
   bool allow_negative_;      // Negative labels allowed?
 
   DISALLOW_COPY_AND_ASSIGN(StringCompiler);

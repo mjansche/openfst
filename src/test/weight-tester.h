@@ -78,6 +78,13 @@ class WeightTester {
     CHECK(Times(w1, Weight::One()) == w1);
     CHECK(Times(Weight::One(), w1) == w1);
 
+    // Check the no weight element.
+    CHECK(!Weight::NoWeight().Member());
+    CHECK(!Plus(w1, Weight::NoWeight()).Member());
+    CHECK(!Plus(Weight::NoWeight(), w1).Member());
+    CHECK(!Times(w1, Weight::NoWeight()).Member());
+    CHECK(!Times(Weight::NoWeight(), w1).Member());
+
     // Checks that the operations commute.
     CHECK(ApproxEqual(Plus(w1, w2), Plus(w2, w1)));
     if (Weight::Properties() & kCommutative)
@@ -126,12 +133,16 @@ class WeightTester {
       Weight d = Divide(p, w1, DIVIDE_LEFT);
       if (d.Member())
         CHECK(ApproxEqual(p, Times(w1, d)));
+      CHECK(!Divide(w1, Weight::NoWeight(), DIVIDE_LEFT).Member());
+      CHECK(!Divide(Weight::NoWeight(), w1, DIVIDE_LEFT).Member());
     }
 
     if (Weight::Properties() & kRightSemiring) {
       Weight d = Divide(p, w2, DIVIDE_RIGHT);
       if (d.Member())
         CHECK(ApproxEqual(p, Times(d, w2)));
+      CHECK(!Divide(w1, Weight::NoWeight(), DIVIDE_RIGHT).Member());
+      CHECK(!Divide(Weight::NoWeight(), w1, DIVIDE_RIGHT).Member());
     }
 
     if (Weight::Properties() & kCommutative) {

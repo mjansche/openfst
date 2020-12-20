@@ -70,11 +70,13 @@ int main(int argc, char **argv) {
   } else if (FLAGS_queue_type == "top") {
     qt = fst::TOP_ORDER_QUEUE;
   } else {
-    LOG(FATAL) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    LOG(ERROR) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    return 1;
   }
 
   if (FLAGS_reverse && qt != fst::AUTO_QUEUE) {
-    LOG(FATAL) << "Specifying a non-default queue with reverse not supported.";
+    LOG(ERROR) << "Specifying a non-default queue with reverse not supported.";
+    return 1;
   }
 
   if (FLAGS_reverse) {

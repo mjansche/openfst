@@ -26,6 +26,7 @@ using std::vector;
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/extensions/far/main.h>
 
 namespace fst {
@@ -33,7 +34,9 @@ namespace fst {
 // Return the 'FarType' value corresponding to a far type name.
 FarType FarTypeFromString(const string &str) {
   FarType type = FAR_DEFAULT;
-  if (str == "stlist")
+  if (str == "fst")
+    type = FAR_FST;
+  else if (str == "stlist")
     type = FAR_STLIST;
   else if (str == "sttable")
     type = FAR_STTABLE;
@@ -46,6 +49,8 @@ FarType FarTypeFromString(const string &str) {
 // Return the textual name  corresponding to a 'FarType;.
 string FarTypeToString(FarType type) {
   switch (type) {
+    case FAR_FST:
+      return "fst";
     case FAR_STLIST:
       return "stlist";
     case FAR_STTABLE:
@@ -63,7 +68,7 @@ FarEntryType StringToFarEntryType(const string &s) {
   } else if (s == "file") {
     return FET_FILE;
   } else {
-    LOG(FATAL) << "Unknown FAR entry type: " << s;
+    FSTERROR() << "Unknown FAR entry type: " << s;
     return FET_LINE;  // compiler requires return
   }
 }
@@ -76,7 +81,7 @@ FarTokenType StringToFarTokenType(const string &s) {
   } else if (s == "utf8") {
     return FTT_UTF8;
   } else {
-    LOG(FATAL) << "Unknown FAR entry type: " << s;
+    FSTERROR() << "Unknown FAR entry type: " << s;
     return FTT_SYMBOL;  // compiler requires return
   }
 }
@@ -84,11 +89,6 @@ FarTokenType StringToFarTokenType(const string &s) {
 
 string LoadArcTypeFromFar(const string &far_fname) {
   FarHeader hdr;
-
-  if (far_fname.empty()) {
-    LOG(ERROR) << "Reading FAR from standard in not supported";
-    return "";
-  }
 
   if (!hdr.Read(far_fname)) {
     LOG(ERROR) << "Error reading FAR: " << far_fname;

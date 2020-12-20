@@ -1,4 +1,4 @@
-// farinfo.cc
+// farequal.cc
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,9 @@
 //
 // Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use new arc dispatching
 //
 // \file
-// Prints some basic information about the FSTs in an FST archive.
-//
+// Tests if two Far files contains the same (key,fst) pairs.
 
 #include <fst/extensions/far/main.h>
 #include <fst/extensions/far/farscript.h>
@@ -27,8 +25,7 @@ DEFINE_string(begin_key, "",
               "First key to extract (def: first key in archive)");
 DEFINE_string(end_key, "",
               "Last key to extract (def: last key in archive)");
-
-DEFINE_bool(list_fsts, false, "Display FST information for each key");
+DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -36,18 +33,25 @@ int main(int argc, char **argv) {
   string usage = "Prints some basic information about the FSTs in an FST ";
   usage += "archive.\n\n Usage:";
   usage += argv[0];
-  usage += " [in1.far in2.far...]\n";
-  usage += "  Flags: begin_key end_key list_fsts";
+  usage += " in1.far in2.far\n";
+  usage += "  Flags: begin_key end_key";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
 
-  vector<string> filenames;
-  for (int i = 1; i < argc; ++i)
-    filenames.push_back(strcmp(argv[i], "") != 0 ? argv[i] : "");
-  if (filenames.empty())
-    filenames.push_back("");
+  if (argc != 3) {
+    ShowUsage();
+    return 1;
+  }
 
-  s::FarInfo(filenames, fst::LoadArcTypeFromFar(filenames[0]),
-             FLAGS_begin_key, FLAGS_end_key, FLAGS_list_fsts);
+  string filename1(argv[1]), filename2(argv[2]);
+
+  bool result = s::FarEqual(
+      filename1, filename2, fst::LoadArcTypeFromFar(filename1),
+      FLAGS_delta, FLAGS_begin_key, FLAGS_end_key);
+
+  if (!result)
+    VLOG(1) << "FARs are not equal.";
+
+  return result ? 0 : 2;
 }

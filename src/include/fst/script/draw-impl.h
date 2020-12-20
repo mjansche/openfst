@@ -129,10 +129,11 @@ template <class A> class FstDrawer {
     if (syms) {
       string symbol = syms->Find(id);
       if (symbol == "") {
-        LOG(FATAL) << "FstDrawer: Integer " << id
+        FSTERROR() << "FstDrawer: Integer " << id
                    << " is not mapped to any textual symbol"
                    << ", symbol table = " << syms->Name()
                    << ", destination = " << dest_;
+        symbol = "?";
       }
       string nsymbol;
       EscapeChars(symbol, &nsymbol);

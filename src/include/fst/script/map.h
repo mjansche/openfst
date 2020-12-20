@@ -93,8 +93,11 @@ void Map(MapArgs *args) {
     args->retval = new FstClass(
         script::ArcMap(ifst, WeightConvertMapper<Arc, StdArc>()));
   } else {
-    LOG(FATAL) << "Error: unknown/unsupported mapper type un enum: "
+    FSTERROR() << "Error: unknown/unsupported mapper type: "
                << map_type;
+    VectorFst<Arc> *ofst = new VectorFst<Arc>;
+    ofst->SetProperties(kError, kError);
+    args->retval = new FstClass(ofst);
   }
 }
 

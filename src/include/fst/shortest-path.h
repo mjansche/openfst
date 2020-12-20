@@ -86,8 +86,10 @@ void SingleShortestPath(const Fst<Arc> &ifst,
   ofst->SetInputSymbols(ifst.InputSymbols());
   ofst->SetOutputSymbols(ifst.OutputSymbols());
 
-  if (ifst.Start() == kNoStateId)
+  if (ifst.Start() == kNoStateId) {
+    if (ifst.Properties(kError, false)) ofst->SetProperties(kError, kError);
     return;
+  }
 
   vector<bool> enqueued;
   vector<StateId> parent;
@@ -100,18 +102,26 @@ void SingleShortestPath(const Fst<Arc> &ifst,
 
   distance->clear();
   state_queue->Clear();
-  if (opts.nshortest != 1)
-    LOG(FATAL) << "SingleShortestPath: for nshortest > 1, use ShortestPath"
+  if (opts.nshortest != 1) {
+    FSTERROR() << "SingleShortestPath: for nshortest > 1, use ShortestPath"
                << " instead";
+    ofst->SetProperties(kError, kError);
+    return;
+  }
   if (opts.weight_threshold != Weight::Zero() ||
-      opts.state_threshold != kNoStateId)
-    LOG(FATAL) <<
+      opts.state_threshold != kNoStateId) {
+    FSTERROR() <<
         "SingleShortestPath: weight and state thresholds not applicable";
+    ofst->SetProperties(kError, kError);
+    return;
+  }
   if ((Weight::Properties() & (kPath | kRightSemiring))
-       != (kPath | kRightSemiring))
-      LOG(FATAL) << "SingleShortestPath: Weight needs to have the path"
-                 << " property and be right distributive: " << Weight::Type();
-
+      != (kPath | kRightSemiring)) {
+    FSTERROR() << "SingleShortestPath: Weight needs to have the path"
+               << " property and be right distributive: " << Weight::Type();
+    ofst->SetProperties(kError, kError);
+    return;
+  }
   while (distance->size() < source) {
     distance->push_back(Weight::Zero());
     enqueued.push_back(false);
@@ -135,6 +145,10 @@ void SingleShortestPath(const Fst<Arc> &ifst,
         f_distance = Plus(f_distance, w);
         f_parent = s;
       }
+      if (!f_distance.Member()) {
+        ofst->SetProperties(kError, kError);
+        return;
+      }
       if (opts.first_path)
         break;
     }
@@ -153,6 +167,10 @@ void SingleShortestPath(const Fst<Arc> &ifst,
       Weight w = Times(sd, arc.weight);
       if (nd != Plus(nd, w)) {
         nd = Plus(nd, w);
+        if (!nd.Member()) {
+          ofst->SetProperties(kError, kError);
+          return;
+        }
         parent[arc.nextstate] = s;
         arc_parent[arc.nextstate] = arc;
         if (!enqueued[arc.nextstate]) {
@@ -179,6 +197,7 @@ void SingleShortestPath(const Fst<Arc> &ifst,
     }
   }
   ofst->SetStart(s_p);
+  if (ifst.Properties(kError, false)) ofst->SetProperties(kError, kError);
   ofst->SetProperties(
       ShortestPathProperties(ofst->Properties(kFstProperties, false)),
       kFstProperties);
@@ -267,10 +286,13 @@ void NShortestPath(const Fst<RevArc> &ifst,
   typedef typename RevArc::Weight RevWeight;
 
   if (n <= 0) return;
-  if ((Weight::Properties() & (kPath | kSemiring)) != (kPath | kSemiring))
-    LOG(FATAL) << "NShortestPath: Weight needs to have the "
+  if ((Weight::Properties() & (kPath | kSemiring)) != (kPath | kSemiring)) {
+    FSTERROR() << "NShortestPath: Weight needs to have the "
                  << "path property and be distributive: "
                  << Weight::Type();
+    ofst->SetProperties(kError, kError);
+    return;
+  }
   ofst->DeleteStates();
   ofst->SetInputSymbols(ifst.InputSymbols());
   ofst->SetOutputSymbols(ifst.OutputSymbols());
@@ -296,8 +318,10 @@ void NShortestPath(const Fst<RevArc> &ifst,
       distance.size() <= ifst.Start() ||
       distance[ifst.Start()] == Weight::Zero() ||
       less(weight_threshold, Weight::One()) ||
-      state_threshold == 0)
+      state_threshold == 0) {
+    if (ifst.Properties(kError, false)) ofst->SetProperties(kError, kError);
     return;
+  }
   ofst->SetStart(ofst->AddState());
   StateId final = ofst->AddState();
   ofst->SetFinal(final, Weight::One());
@@ -353,6 +377,7 @@ void NShortestPath(const Fst<RevArc> &ifst,
     }
   }
   Connect(ofst);
+  if (ifst.Properties(kError, false)) ofst->SetProperties(kError, kError);
   ofst->SetProperties(
       ShortestPathProperties(ofst->Properties(kFstProperties, false)),
       kFstProperties);
@@ -398,12 +423,19 @@ void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
     return;
   }
   if (n <= 0) return;
-  if ((Weight::Properties() & (kPath | kSemiring)) != (kPath | kSemiring))
-    LOG(FATAL) << "ShortestPath: n-shortest: Weight needs to have the "
-                 << "path property and be distributive: "
-                 << Weight::Type();
+  if ((Weight::Properties() & (kPath | kSemiring)) != (kPath | kSemiring)) {
+    FSTERROR() << "ShortestPath: n-shortest: Weight needs to have the "
+               << "path property and be distributive: "
+               << Weight::Type();
+    ofst->SetProperties(kError, kError);
+    return;
+  }
   if (!opts.has_distance) {
     ShortestDistance(ifst, distance, opts);
+    if (distance->size() == 1 && !(*distance)[0].Member()) {
+      ofst->SetProperties(kError, kError);
+      return;
+    }
   }
   // Algorithm works on the reverse of 'fst' : 'rfst', 'distance' is
   // the distance to the final state in 'rfst', 'ofst' is built as the

@@ -126,9 +126,11 @@ class ComposeFstImplBase : public CacheImpl<A> {
     VLOG(2) << "ComposeFst(" << this << "): Begin";
     SetType("compose");
 
-    if (!CompatSymbols(fst2.InputSymbols(), fst1.OutputSymbols()))
-      LOG(FATAL) << "ComposeFst: output symbol table of 1st argument "
+    if (!CompatSymbols(fst2.InputSymbols(), fst1.OutputSymbols())) {
+      FSTERROR() << "ComposeFst: output symbol table of 1st argument "
                  << "does not match input symbol table of 2nd argument";
+      SetProperties(kError, kError);
+    }
 
     SetInputSymbols(fst1.InputSymbols());
     SetOutputSymbols(fst2.OutputSymbols());
@@ -240,6 +242,22 @@ class ComposeFstImpl : public ComposeFstImplBase<typename M1::Arc> {
 
   virtual ComposeFstImpl<M1, M2, F, T> *Copy() {
     return new ComposeFstImpl<M1, M2, F, T>(*this);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) &&
+        (fst1_.Properties(kError, false) ||
+         fst2_.Properties(kError, false) ||
+         (matcher1_->Properties(0) & kError) ||
+         (matcher2_->Properties(0) & kError) |
+         (filter_->Properties(0) & kError) ||
+         state_table_->Error())) {
+      SetProperties(kError, kError);
+    }
+    return FstImpl<Arc>::Properties(mask);
   }
 
   // Arranges it so that the first arg to OrderedExpand is the Fst
@@ -380,8 +398,9 @@ ComposeFstImpl<M1, M2, F, T>::ComposeFstImpl(
   } else if (matcher2_->Type(true) == MATCH_INPUT) {
     match_type_ = MATCH_INPUT;
   } else {
-    LOG(FATAL) << "ComposeFst: 1st argument cannot match on output labels "
+    FSTERROR() << "ComposeFst: 1st argument cannot match on output labels "
                << "and 2nd argument cannot match on input labels (sort?).";
+    SetProperties(kError, kError);
   }
   uint64 fprops1 = fst1.Properties(kFstProperties, false);
   uint64 fprops2 = fst2.Properties(kFstProperties, false);
@@ -389,6 +408,7 @@ ComposeFstImpl<M1, M2, F, T>::ComposeFstImpl(
   uint64 mprops2 = matcher2_->Properties(fprops2);
   uint64 cprops = ComposeProperties(mprops1, mprops2);
   SetProperties(filter_->Properties(cprops), kCopyProperties);
+  if (state_table_->Error()) SetProperties(kError, kError);
   VLOG(2) << "ComposeFst(" << this << "): Initialized";
 }
 
@@ -490,14 +510,17 @@ class ComposeFst : public ImplToFst< ComposeFstImplBase<A> > {
   static Impl *CreateBase2(
       const typename M1::FST &fst1, const typename M2::FST &fst2,
       const ComposeFstImplOptions<M1, M2, F, T> &opts) {
+    Impl *impl = new ComposeFstImpl<M1, M2, F, T>(fst1, fst2, opts);
     if (!(Weight::Properties() & kCommutative)) {
       int64 props1 = fst1.Properties(kUnweighted, true);
       int64 props2 = fst2.Properties(kUnweighted, true);
-      if (!(props1 & kUnweighted) && !(props2 & kUnweighted))
-        LOG(FATAL) << "ComposeFst: Weight needs to be a commutative semiring: "
+      if (!(props1 & kUnweighted) && !(props2 & kUnweighted)) {
+        FSTERROR() << "ComposeFst: Weights must be a commutative semiring: "
                    << Weight::Type();
+        impl->SetProperties(kError, kError);
+      }
     }
-    return new ComposeFstImpl<M1, M2, F, T>(fst1, fst2, opts);
+    return impl;
   }
 
   // Create compose implementation specifying one matcher type.

@@ -34,6 +34,7 @@
 #include <fst/sparse-power-weight.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/string-weight.h>
 
 

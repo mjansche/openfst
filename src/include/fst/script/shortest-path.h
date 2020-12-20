@@ -140,12 +140,11 @@ void ShortestPath(ShortestPathArgs1 *args) {
       return;
     }
     default:
-      LOG(FATAL) << "Unknown queue type: " << opts.queue_type;
+      FSTERROR() << "Unknown queue type: " << opts.queue_type;
+      ofst->SetProperties(kError, kError);
   }
 
   // Copy the weights back
-  CHECK(args->arg3);
-
   args->arg3->resize(weights.size());
   for (unsigned i = 0; i < weights.size(); ++i) {
     (*args->arg3)[i] = WeightClass(weights[i]);

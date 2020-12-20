@@ -24,6 +24,7 @@
 #include <fst/vector-fst.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 // Classes to support "boxing" all existing types of FST arcs in a single
 // FstClass which hides the arc types. This allows clients to load
@@ -141,7 +142,10 @@ class FstClass : public FstClassBase {
   template<class Arc>
   static FstClass *Read(istream &stream,
                         const FstReadOptions &opts) {
-    CHECK(opts.header);
+    if (!opts.header) {
+      FSTERROR() << "FstClass::Read: options header not specified";
+      return 0;
+    }
     const FstHeader &hdr = *opts.header;
 
     if (hdr.Properties() & kMutable) {

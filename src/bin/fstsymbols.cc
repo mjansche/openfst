@@ -23,6 +23,7 @@
 
 #include <fst/script/fst-class.h>
 #include <fst/script/script-impl.h>
+#include <fst/script/verify.h>
 #include <fst/util.h>
 
 DEFINE_string(isymbols, "", "Input label symbol table");
@@ -31,8 +32,11 @@ DEFINE_bool(clear_isymbols, false, "Clear input symbol table");
 DEFINE_bool(clear_osymbols, false, "Clear output symbol table");
 DEFINE_string(relabel_ipairs, "", "Input relabel pairs (numeric)");
 DEFINE_string(relabel_opairs, "", "Output relabel pairs (numeric)");
+DEFINE_string(save_isymbols, "", "Save fst file's input symbol table to file");
+DEFINE_string(save_osymbols, "", "Save fst file's output symbol table to file");
 DEFINE_bool(allow_negative_labels, false,
             "Allow negative labels (not recommended; may cause conflicts)");
+DEFINE_bool(verify, false, "Verify fst properities before saving");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -55,6 +59,24 @@ int main(int argc, char **argv) {
 
   s::MutableFstClass *fst = s::MutableFstClass::Read(in_fname, true);
   if (!fst) return 1;
+
+  if (!FLAGS_save_isymbols.empty()) {
+    const SymbolTable *isyms = fst->InputSymbols();
+    if (isyms) {
+      isyms->WriteText(FLAGS_save_isymbols);
+    } else {
+      LOG(ERROR) << "save isymbols requested but there are no input symbols.";
+    }
+  }
+
+  if (!FLAGS_save_osymbols.empty()) {
+    const SymbolTable *osyms = fst->OutputSymbols();
+    if (osyms) {
+      osyms->WriteText(FLAGS_save_osymbols);
+    } else {
+      LOG(ERROR) << "save osymbols requested but there are no output symbols.";
+    }
+  }
 
   if (FLAGS_clear_isymbols)
     fst->SetInputSymbols(0);
@@ -88,6 +110,8 @@ int main(int argc, char **argv) {
     delete osyms;
   }
 
-   fst->Write(out_fname);
+  if (FLAGS_verify && !s::Verify(*fst))
+    return 1;
+  fst->Write(out_fname);
   return 0;
 }

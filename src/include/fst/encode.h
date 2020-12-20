@@ -158,7 +158,7 @@ template <class A>  class EncodeTable {
   // Given an encode arc Label decode back to input/output labels and costs
   const Tuple* Decode(Label key) const {
     if (key < 1 || key > encode_tuples_.size()) {
-      LOG(FATAL) << "EncodeTable::Decode: unknown decode key: " << key;
+      LOG(ERROR) << "EncodeTable::Decode: unknown decode key: " << key;
       return 0;
     }
     return encode_tuples_[key - 1];
@@ -307,13 +307,16 @@ template <class A> class EncodeMapper {
   typedef typename A::Label  Label;
  public:
   EncodeMapper(uint32 flags, EncodeType type)
-    : flags_(flags), type_(type),
-      table_(new EncodeTable<A>(flags)) {}
+    : flags_(flags),
+      type_(type),
+      table_(new EncodeTable<A>(flags)),
+      error_(false) {}
 
   EncodeMapper(const EncodeMapper& mapper)
       : flags_(mapper.flags_),
         type_(mapper.type_),
-        table_(mapper.table_) {
+        table_(mapper.table_),
+        error_(false) {
     table_->IncrRefCount();
   }
 
@@ -321,7 +324,8 @@ template <class A> class EncodeMapper {
   EncodeMapper(const EncodeMapper& mapper, EncodeType type)
       : flags_(mapper.flags_),
         type_(type),
-        table_(mapper.table_) {
+        table_(mapper.table_),
+        error_(mapper.error_) {
     table_->IncrRefCount();
   }
 
@@ -340,7 +344,10 @@ template <class A> class EncodeMapper {
 
   MapSymbolsAction OutputSymbolsAction() const { return MAP_CLEAR_SYMBOLS;}
 
-  uint64 Properties(uint64 props) {
+  uint64 Properties(uint64 inprops) {
+    uint64 outprops = inprops;
+    if (error_) outprops |= kError;
+
     uint64 mask = kFstProperties;
     if (flags_ & kEncodeLabels)
       mask &= kILabelInvariantProperties & kOLabelInvariantProperties;
@@ -348,7 +355,8 @@ template <class A> class EncodeMapper {
       mask &= kILabelInvariantProperties & kWeightInvariantProperties &
           (type_ == ENCODE ? kAddSuperFinalProperties :
            kRmSuperFinalProperties);
-    return props & mask;
+
+    return outprops & mask;
   }
 
   const uint32 flags() const { return flags_; }
@@ -401,6 +409,7 @@ template <class A> class EncodeMapper {
   uint32 flags_;
   EncodeType type_;
   EncodeTable<A>* table_;
+  bool error_;
 
   explicit EncodeMapper(uint32 flags, EncodeType type, EncodeTable<A> *table)
       : flags_(flags), type_(type), table_(table) {}
@@ -421,26 +430,33 @@ A EncodeMapper<A>::operator()(const A &arc) {
                flags_ & kEncodeWeights ? Weight::One() : arc.weight,
                arc.nextstate);
     }
-  } else if (type_ == DECODE) {
+  } else {  // type_ == DECODE
     if (arc.nextstate == kNoStateId) {
       return arc;
     } else {
       if (arc.ilabel == 0) return arc;
-      if (flags_ & kEncodeLabels && arc.ilabel != arc.olabel)
-        LOG(FATAL) << "EncodeMapper: Label-encoded arc has different "
+      if (flags_ & kEncodeLabels && arc.ilabel != arc.olabel) {
+        FSTERROR() << "EncodeMapper: Label-encoded arc has different "
             "input and output labels";
-      if (flags_ & kEncodeWeights && arc.weight != Weight::One())
-        LOG(FATAL) <<
+        error_ = true;
+      }
+      if (flags_ & kEncodeWeights && arc.weight != Weight::One()) {
+        FSTERROR() <<
             "EncodeMapper: Weight-encoded arc has non-trivial weight";
-      const typename EncodeTable<A>::Tuple* tuple =
-          table_->Decode(arc.ilabel);
-      return A(tuple->ilabel,
-               flags_ & kEncodeLabels ? tuple->olabel : arc.olabel,
-               flags_ & kEncodeWeights ? tuple->weight : arc.weight,
-               arc.nextstate);
+        error_ = true;
+      }
+      const typename EncodeTable<A>::Tuple* tuple = table_->Decode(arc.ilabel);
+      if (!tuple) {
+        FSTERROR() << "EncodeMapper: decode failed";
+        error_ = true;
+        return A(kNoLabel, kNoLabel, Weight::NoWeight(), arc.nextstate);
+      } else {
+        return A(tuple->ilabel,
+                 flags_ & kEncodeLabels ? tuple->olabel : arc.olabel,
+                 flags_ & kEncodeWeights ? tuple->weight : arc.weight,
+                 arc.nextstate);
+      }
     }
-  } else {
-    LOG(FATAL) << "EncodeMapper: Unknown operation";
   }
 }
 
@@ -473,6 +489,8 @@ class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
  public:
   typedef A Arc;
   typedef EncodeMapper<A> C;
+  typedef ArcMapFstImpl< A, A, EncodeMapper<A> > Impl;
+  using ImplToFst<Impl>::GetImpl;
 
   EncodeFst(const Fst<A> &fst, EncodeMapper<A>* encoder)
       : ArcMapFst<A, A, C>(fst, encoder, ArcMapFstOptions()) {
@@ -489,8 +507,10 @@ class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
 
   // Get a copy of this EncodeFst. See Fst<>::Copy() for further doc.
   virtual EncodeFst<A> *Copy(bool safe = false) const {
-    if (safe)
-      LOG(FATAL) << "EncodeFst::Copy(true): not allowed.";
+    if (safe) {
+      FSTERROR() << "EncodeFst::Copy(true): not allowed.";
+      GetImpl()->SetProperties(kError, kError);
+    }
     return new EncodeFst(*this);
   }
 };

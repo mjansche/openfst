@@ -89,6 +89,9 @@ class RmEpsilonState {
   // Returns final weight of expanded state.
   const Weight &Final() const { return final_; }
 
+  // Return true if an error has occured.
+  bool Error() const { return sd_state_.Error(); }
+
  private:
   static const size_t kPrime0 = 7853;
   static const size_t kPrime1 = 7867;
@@ -156,10 +159,12 @@ const size_t RmEpsilonState<Arc, Queue>::kPrime1;
 
 template <class Arc, class Queue>
 void RmEpsilonState<Arc,Queue>::Expand(typename Arc::StateId source) {
-   sd_state_.ShortestDistance(source);
-   eps_queue_.push(source);
    final_ = Weight::Zero();
    arcs_.clear();
+   sd_state_.ShortestDistance(source);
+   if (sd_state_.Error())
+     return;
+   eps_queue_.push(source);
 
    while (!eps_queue_.empty()) {
      StateId state = eps_queue_.top();
@@ -258,8 +263,12 @@ void RmEpsilon(MutableFst<Arc> *fst,
     bool acyclic;
     TopOrderVisitor<Arc> top_order_visitor(&order, &acyclic);
     DfsVisit(*fst, &top_order_visitor, EpsilonArcFilter<Arc>());
-    if (!acyclic)
-      LOG(FATAL) << "RmEpsilon: not acyclic though property bit is set";
+    // Sanity check: should be acyclic if property bit is set.
+    if(!acyclic) {
+      FSTERROR() << "RmEpsilon: inconsistent acyclic property bit";
+      fst->SetProperties(kError, kError);
+      return;
+    }
     states.resize(order.size());
     for (StateId i = 0; i < order.size(); i++)
       states[order[i]] = i;
@@ -292,6 +301,7 @@ void RmEpsilon(MutableFst<Arc> *fst,
     fst->SetFinal(state, rmeps_state.Final());
     fst->DeleteArcs(state);
     vector<Arc> &arcs = rmeps_state.Arcs();
+    fst->ReserveArcs(state, arcs.size());
     while (!arcs.empty()) {
       fst->AddArc(state, arcs.back());
       arcs.pop_back();
@@ -303,9 +313,11 @@ void RmEpsilon(MutableFst<Arc> *fst,
       fst->DeleteArcs(s);
   }
 
-  fst->SetProperties(RmEpsilonProperties(
-                         fst->Properties(kFstProperties, false)),
-                     kFstProperties);
+  if(rmeps_state.Error())
+    fst->SetProperties(kError, kError);
+  fst->SetProperties(
+      RmEpsilonProperties(fst->Properties(kFstProperties, false)),
+      kFstProperties);
 
   if (opts.weight_threshold != Weight::Zero() ||
       opts.state_threshold != kNoStateId)
@@ -369,7 +381,6 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
-  using FstImpl<A>::Properties;
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
@@ -451,12 +462,15 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
     return CacheImpl<A>::NumOutputEpsilons(s);
   }
 
-  /*
-  void InitStateIterator(StateIteratorData<A> *data) {
-    LOG(FATAL) << "RmEpsilonFst: InitStateIterator defined in the Fst "
-               << "interface not its implementation.";
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) &&
+        (fst_->Properties(kError, false) || rmeps_state_.Error()))
+      SetProperties(kError, kError);
+    return FstImpl<A>::Properties(mask);
   }
-  */
 
   void InitArcIterator(StateId s, ArcIteratorData<A> *data) {
     if (!HasArcs(s))

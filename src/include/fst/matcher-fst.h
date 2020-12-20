@@ -122,6 +122,14 @@ class MatcherFst
     return impl ? new MatcherFst<F, M, N, I>(impl) : 0;
   }
 
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return GetImpl()->Write(strm, opts);
+  }
+
+  virtual bool Write(const string &filename) const {
+    return Fst<Arc>::WriteFile(filename);
+  }
+
   virtual void InitStateIterator(StateIteratorData<Arc> *data) const {
     return GetImpl()->InitStateIterator(data);
   }

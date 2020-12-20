@@ -36,8 +36,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @HAVE_BIN_TRUE@bin_PROGRAMS = farcompilestrings$(EXEEXT) \
-@HAVE_BIN_TRUE@	farcreate$(EXEEXT) farextract$(EXEEXT) \
-@HAVE_BIN_TRUE@	farinfo$(EXEEXT) farprintstrings$(EXEEXT)
+@HAVE_BIN_TRUE@	farcreate$(EXEEXT) farequal$(EXEEXT) \
+@HAVE_BIN_TRUE@	farextract$(EXEEXT) farinfo$(EXEEXT) \
+@HAVE_BIN_TRUE@	farprintstrings$(EXEEXT)
 subdir = src/extensions/far
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -109,6 +110,13 @@ farcreate_LDADD = $(LDADD)
 @HAVE_BIN_TRUE@farcreate_DEPENDENCIES = libfstfarscript.la \
 @HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
 @HAVE_BIN_TRUE@	../../lib/libfst.la
+am__farequal_SOURCES_DIST = farequal.cc
+@HAVE_BIN_TRUE@am_farequal_OBJECTS = farequal.$(OBJEXT)
+farequal_OBJECTS = $(am_farequal_OBJECTS)
+farequal_LDADD = $(LDADD)
+@HAVE_BIN_TRUE@farequal_DEPENDENCIES = libfstfarscript.la libfstfar.la \
+@HAVE_BIN_TRUE@	../../script/libfstscript.la \
+@HAVE_BIN_TRUE@	../../lib/libfst.la
 am__farextract_SOURCES_DIST = farextract.cc
 @HAVE_BIN_TRUE@am_farextract_OBJECTS = farextract.$(OBJEXT)
 farextract_OBJECTS = $(am_farextract_OBJECTS)
@@ -145,13 +153,13 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libfstfar_la_SOURCES) $(libfstfarscript_la_SOURCES) \
 	$(farcompilestrings_SOURCES) $(farcreate_SOURCES) \
-	$(farextract_SOURCES) $(farinfo_SOURCES) \
+	$(farequal_SOURCES) $(farextract_SOURCES) $(farinfo_SOURCES) \
 	$(farprintstrings_SOURCES)
 DIST_SOURCES = $(libfstfar_la_SOURCES) \
 	$(am__libfstfarscript_la_SOURCES_DIST) \
 	$(am__farcompilestrings_SOURCES_DIST) \
-	$(am__farcreate_SOURCES_DIST) $(am__farextract_SOURCES_DIST) \
-	$(am__farinfo_SOURCES_DIST) \
+	$(am__farcreate_SOURCES_DIST) $(am__farequal_SOURCES_DIST) \
+	$(am__farextract_SOURCES_DIST) $(am__farinfo_SOURCES_DIST) \
 	$(am__farprintstrings_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
@@ -290,6 +298,7 @@ libfstfar_la_LDFLAGS = -version-info 0:0:0
 
 @HAVE_BIN_TRUE@farcompilestrings_SOURCES = farcompilestrings.cc
 @HAVE_BIN_TRUE@farcreate_SOURCES = farcreate.cc
+@HAVE_BIN_TRUE@farequal_SOURCES = farequal.cc
 @HAVE_BIN_TRUE@farextract_SOURCES = farextract.cc
 @HAVE_BIN_TRUE@farinfo_SOURCES = farinfo.cc
 @HAVE_BIN_TRUE@farprintstrings_SOURCES = farprintstrings.cc
@@ -411,6 +420,9 @@ farcompilestrings$(EXEEXT): $(farcompilestrings_OBJECTS) $(farcompilestrings_DEP
 farcreate$(EXEEXT): $(farcreate_OBJECTS) $(farcreate_DEPENDENCIES) 
 	@rm -f farcreate$(EXEEXT)
 	$(CXXLINK) $(farcreate_OBJECTS) $(farcreate_LDADD) $(LIBS)
+farequal$(EXEEXT): $(farequal_OBJECTS) $(farequal_DEPENDENCIES) 
+	@rm -f farequal$(EXEEXT)
+	$(CXXLINK) $(farequal_OBJECTS) $(farequal_LDADD) $(LIBS)
 farextract$(EXEEXT): $(farextract_OBJECTS) $(farextract_DEPENDENCIES) 
 	@rm -f farextract$(EXEEXT)
 	$(CXXLINK) $(farextract_OBJECTS) $(farextract_LDADD) $(LIBS)
@@ -430,6 +442,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/compile-strings.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/farcompilestrings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/farcreate.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/farequal.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/farextract.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/farinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/farprintstrings.Po@am__quote@

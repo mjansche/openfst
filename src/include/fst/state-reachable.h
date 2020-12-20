@@ -55,11 +55,12 @@ class IntervalReachVisitor {
       : fst_(fst),
         isets_(isets),
         state2index_(state2index),
-        index_(state2index->empty() ? 1 : -1) {
+        index_(state2index->empty() ? 1 : -1),
+        error_(false) {
     isets_->clear();
   }
 
-  void InitVisit(const Fst<A> &fst) {}
+  void InitVisit(const Fst<A> &fst) { error_ = false; }
 
   bool InitState(StateId s, StateId r) {
     while (isets_->size() <= s)
@@ -71,12 +72,18 @@ class IntervalReachVisitor {
       // Create tree interval
       vector<Interval> *intervals = (*isets_)[s].Intervals();
       if (index_ < 0) {  // Use state2index_ map to set index
-        if (fst_.NumArcs(s) > 0)
-          LOG(FATAL) << "IntervalReachVisitor: state2index map must be empty "
+        if (fst_.NumArcs(s) > 0) {
+          FSTERROR() << "IntervalReachVisitor: state2index map must be empty "
                      << "for this FST";
+          error_ = true;
+          return false;
+        }
         I index = (*state2index_)[s];
-        if (index < 0)
-          LOG(FATAL) << "IntervalReachVisitor: state2index map incomplete";
+        if (index < 0) {
+          FSTERROR() << "IntervalReachVisitor: state2index map incomplete";
+          error_ = true;
+          return false;
+        }
         intervals->push_back(Interval(index, index + 1));
       } else {           // Use pre-order index
         intervals->push_back(Interval(index_, index_ + 1));
@@ -91,8 +98,9 @@ class IntervalReachVisitor {
   }
 
   bool BackArc(StateId s, const A &arc) {
-    LOG(FATAL) << "IntervalReachVisitor: cyclic input";
-    return true;
+    FSTERROR() << "IntervalReachVisitor: cyclic input";
+    error_ = true;
+    return false;
   }
 
   bool ForwardOrCrossArc(StateId s, const A &arc) {
@@ -113,11 +121,14 @@ class IntervalReachVisitor {
 
   void FinishVisit() {}
 
+  bool Error() const { return error_; }
+
  private:
   const Fst<A> &fst_;
   vector< IntervalSet<I> > *isets_;
   vector<I> *state2index_;
   I index_;
+  bool error_;
 };
 
 
@@ -134,14 +145,17 @@ class StateReachable {
   typedef typename A::Weight Weight;
   typedef typename IntervalSet<I>::Interval Interval;
 
-  StateReachable(const Fst<A> &fst) {
+  StateReachable(const Fst<A> &fst)
+      : error_(false) {
     IntervalReachVisitor<Arc> reach_visitor(fst, &isets_, &state2index_);
     DfsVisit(fst, &reach_visitor);
+    if (reach_visitor.Error()) error_ = true;
   }
 
   StateReachable(const StateReachable<A> &reachable) {
-    LOG(FATAL) << "Copy constructor for state reachable class "
+    FSTERROR() << "Copy constructor for state reachable class "
                << "not yet implemented.";
+    error_ = true;
   }
 
   // Set current state.
@@ -153,8 +167,11 @@ class StateReachable {
       return false;
 
     I i =  state2index_[s];
-    if (i < 0)
-      LOG(FATAL) << "StateReachable: state non-final: " << s;
+    if (i < 0) {
+      FSTERROR() << "StateReachable: state non-final: " << s;
+      error_ = true;
+      return false;
+    }
     return isets_[s_].Member(i);
   }
 
@@ -165,10 +182,14 @@ class StateReachable {
   // to the final states as intervals of the final state indices.
   const vector< IntervalSet<I> > &IntervalSets() { return isets_; }
 
+  bool Error() const { return error_; }
+
  private:
   StateId s_;                                 // Current state
   vector< IntervalSet<I> > isets_;            // Interval sets per state
   vector<I> state2index_;                     // Finds index for a final state
+  bool error_;
+
   void operator=(const StateReachable<A> &);  // Disallow
 };
 

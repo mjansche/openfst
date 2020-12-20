@@ -104,6 +104,11 @@ bool Verify(const Fst<Arc> &fst, bool allow_negative_labels = false) {
     }
   }
   uint64 fst_props = fst.Properties(kFstProperties, false);
+  if (fst_props & kError) {
+    LOG(ERROR) << "Verify: Fst error property is set";
+    return false;
+  }
+
   uint64 known_props;
   uint64 test_props = ComputeProperties(fst, kFstProperties, &known_props,
                                         false);

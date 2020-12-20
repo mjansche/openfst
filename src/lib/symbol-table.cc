@@ -156,8 +156,11 @@ SymbolTableImpl* SymbolTableImpl::Read(istream &strm,
   ReadType(strm, &impl->available_key_);
   int64 size;
   ReadType(strm, &size);
-  if (!strm)
+  if (!strm) {
     LOG(ERROR) << "SymbolTable::Read: read failed";
+    delete impl;
+    return 0;
+  }
 
   string symbol;
   int64 key;
@@ -165,8 +168,11 @@ SymbolTableImpl* SymbolTableImpl::Read(istream &strm,
   for (size_t i = 0; i < size; ++i) {
     ReadType(strm, &symbol);
     ReadType(strm, &key);
-    if (!strm)
+    if (!strm) {
       LOG(ERROR) << "SymbolTable::Read: read failed";
+      delete impl;
+      return 0;
+    }
 
     char *csymbol = new char[symbol.size() + 1];
     strcpy(csymbol, symbol.c_str());

@@ -81,6 +81,7 @@ class SparsePowerWeight : public SparseTupleWeight<W, K> {
  public:
   using SparseTupleWeight<W, K>::Zero;
   using SparseTupleWeight<W, K>::One;
+  using SparseTupleWeight<W, K>::NoWeight;
   using SparseTupleWeight<W, K>::Quantize;
   using SparseTupleWeight<W, K>::Reverse;
 
@@ -106,6 +107,12 @@ class SparsePowerWeight : public SparseTupleWeight<W, K> {
   static const SparsePowerWeight<W, K> &One() {
     static const SparsePowerWeight<W, K> one(SparseTupleWeight<W, K>::One());
     return one;
+  }
+
+  static const SparsePowerWeight<W, K> &NoWeight() {
+    static const SparsePowerWeight<W, K> no_weight(
+        SparseTupleWeight<W, K>::NoWeight());
+    return no_weight;
   }
 
   // Overide this: Overwrite the Type method to reflect the key type

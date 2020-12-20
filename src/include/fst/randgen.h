@@ -216,6 +216,8 @@ class ArcSampler {
 
   void Reset() { sample_iter_ = sample_map_.begin(); }
 
+  bool Error() const { return false; }
+
  private:
   const Fst<A> &fst_;
   const S &arc_selector_;
@@ -283,6 +285,8 @@ class ArcSampler<A, FastLogProbArcSelector<A> > {
   pair<size_t, size_t> Value() const { return *sample_iter_; }
   void Reset() { sample_iter_ = sample_map_.begin(); }
 
+  bool Error() const { return accumulator_->Error(); }
+
  private:
   const Fst<A> &fst_;
   const S &arc_selector_;
@@ -325,7 +329,6 @@ class RandGenFstImpl : public CacheImpl<B> {
  public:
   using FstImpl<B>::SetType;
   using FstImpl<B>::SetProperties;
-  using FstImpl<B>::Properties;
   using FstImpl<B>::SetInputSymbols;
   using FstImpl<B>::SetOutputSymbols;
 
@@ -416,6 +419,17 @@ class RandGenFstImpl : public CacheImpl<B> {
     if (!HasArcs(s))
       Expand(s);
     return CacheImpl<B>::NumOutputEpsilons(s);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) &&
+        (fst_->Properties(kError, false) || arc_sampler_->Error())) {
+      SetProperties(kError, kError);
+    }
+    return FstImpl<Arc>::Properties(mask);
   }
 
   void InitArcIterator(StateId s, ArcIteratorData<B> *data) {
@@ -602,6 +616,8 @@ class RandGenVisitor {
     ofst_->DeleteStates();
     ofst_->SetInputSymbols(ifst.InputSymbols());
     ofst_->SetOutputSymbols(ifst.OutputSymbols());
+    if (ifst.Properties(kError, false))
+      ofst_->SetProperties(kError, kError);
     path_.clear();
   }
 
@@ -617,8 +633,9 @@ class RandGenVisitor {
   }
 
   bool BackArc(StateId s, const IArc &arc) {
-    LOG(FATAL) << "RandGenVisitor: cyclic input";
-    return true;
+    FSTERROR() << "RandGenVisitor: cyclic input";
+    ofst_->SetProperties(kError, kError);
+    return false;
   }
 
   bool ForwardOrCrossArc(StateId s, const IArc &arc) {

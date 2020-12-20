@@ -53,7 +53,6 @@ class RationalFstImpl : public FstImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
-  using FstImpl<A>::Properties;
   using FstImpl<A>::WriteHeader;
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
@@ -106,6 +105,15 @@ class RationalFstImpl : public FstImpl<A> {
 
   size_t NumOutputEpsilons(StateId s) {
     return Replace()->NumOutputEpsilons(s);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && Replace()->Properties(kError, false))
+      SetProperties(kError, kError);
+    return FstImpl<Arc>::Properties(mask);
   }
 
   // Implementation of UnionFst(fst1,fst2)
@@ -185,7 +193,7 @@ class RationalFstImpl : public FstImpl<A> {
   void AddUnion(const Fst<A> &fst) {
     if (replace_)
       delete replace_;
-    uint64 props1 = Properties();
+    uint64 props1 = FstImpl<A>::Properties();
     uint64 props2 = fst.Properties(kFstProperties, false);
     VectorFst<A> afst;
     afst.AddState();
@@ -203,7 +211,7 @@ class RationalFstImpl : public FstImpl<A> {
   void AddConcat(const Fst<A> &fst, bool append) {
     if (replace_)
       delete replace_;
-    uint64 props1 = Properties();
+    uint64 props1 = FstImpl<A>::Properties();
     uint64 props2 = fst.Properties(kFstProperties, false);
     VectorFst<A> afst;
     afst.AddState();
@@ -224,23 +232,18 @@ class RationalFstImpl : public FstImpl<A> {
   void AddClosure(ClosureType closure_type) {
     if (replace_)
       delete replace_;
-    uint64 props = Properties();
+    uint64 props = FstImpl<A>::Properties();
     Closure(&rfst_, closure_type);
     SetProperties(ClosureProperties(props, closure_type == CLOSURE_STAR, true),
                   kCopyProperties);
   }
 
-  // Create the underlying ReplaceFst. No mutation can be performed
-  // after that.
-  void InitReplace() {
-    fst_tuples_[0].second = rfst_.Copy();
-    replace_ = new ReplaceFst<A>(fst_tuples_, replace_options_);
-  }
-
   // Returns the underlying ReplaceFst.
-  ReplaceFst<A> *Replace() {
-    if (!replace_)
-      InitReplace();
+  ReplaceFst<A> *Replace() const {
+    if (!replace_) {
+      fst_tuples_[0].second = rfst_.Copy();
+      replace_ = new ReplaceFst<A>(fst_tuples_, replace_options_);
+    }
     return replace_;
   }
 
@@ -248,8 +251,8 @@ class RationalFstImpl : public FstImpl<A> {
   VectorFst<A> rfst_;   // rational topology machine; uses neg. nonterminals
   Label nonterminals_;  // # of nonterminals used
   // Contains the nonterminals and their corresponding FSTs.
-  vector<pair<Label, const Fst<A>*> > fst_tuples_;
-  ReplaceFst<A> *replace_;             // Underlying ReplaceFst
+  mutable vector<pair<Label, const Fst<A>*> > fst_tuples_;
+  mutable ReplaceFst<A> *replace_;        // Underlying ReplaceFst
   ReplaceFstOptions<A> replace_options_;  // Options for creating 'replace_'
 
   void operator=(const RationalFstImpl<A> &impl);    // disallow

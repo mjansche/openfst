@@ -117,7 +117,8 @@ typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
 // set containing the start states of both acceptors. A disjoint tree
 // forest (the union-find algorithm) is used to represent the sets of
 // states. The algorithm returns 'false' if one of the constructed
-// sets contains both final and non-final states.
+// sets contains both final and non-final states. Returns optional error
+// value (when FLAGS_error_fatal = false).
 //
 // Complexity: quasi-linear, i.e. O(n G(n)), where
 //   n = |S1| + |S2| is the number of states in both acceptors
@@ -127,22 +128,31 @@ typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
 template <class Arc>
 bool Equivalent(const Fst<Arc> &fst1,
                 const Fst<Arc> &fst2,
-                double delta = kDelta) {
+                double delta = kDelta, bool *error = 0) {
   typedef typename Arc::Weight Weight;
+  if (error) *error = false;
+
   // Check that the symbol table are compatible
   if (!CompatSymbols(fst1.InputSymbols(), fst2.InputSymbols()) ||
-      !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols()))
-      LOG(FATAL) << "Equivalent: input/output symbol tables of 1st argument "
-                 << "do not match input/output symbol tables of 2nd argument";
+      !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols())) {
+    FSTERROR() << "Equivalent: input/output symbol tables of 1st argument "
+               << "do not match input/output symbol tables of 2nd argument";
+    if (error) *error = true;
+    return false;
+  }
   // Check properties first:
   uint64 props = kNoEpsilons | kIDeterministic | kAcceptor;
   if (fst1.Properties(props, true) != props) {
-    LOG(FATAL) << "Equivalent: first argument not an"
+    FSTERROR() << "Equivalent: first argument not an"
                << " epsilon-free deterministic acceptor";
+    if (error) *error = true;
+    return false;
   }
   if (fst2.Properties(props, true) != props) {
-    LOG(FATAL) << "Equivalent: second argument not an"
+    FSTERROR() << "Equivalent: second argument not an"
                << " epsilon-free deterministic acceptor";
+    if (error) *error = true;
+    return false;
   }
 
   if ((fst1.Properties(kUnweighted , true) != kUnweighted)
@@ -175,10 +185,6 @@ bool Equivalent(const Fst<Arc> &fst1,
   eq_classes.MakeSet(s1);
   eq_classes.MakeSet(s2);
 
-  // Early return if the start states differ w.r.t. being final.
-  if (Util::IsFinal(fst1, s1) != Util::IsFinal(fst2, s2)) {
-    return false;
-  }
   // Data structure for the (partial) acceptor transition function of
   // fst1 and fst2: input labels mapped to pairs of MappedId's
   // representing destination states of the corresponding arcs in fst1
@@ -192,11 +198,17 @@ bool Equivalent(const Fst<Arc> &fst1,
   // Pairs of MappedId's to be processed, organized in a queue.
   deque<pair<MappedId, MappedId> > q;
 
+  bool ret = true;
+  // Early return if the start states differ w.r.t. being final.
+  if (Util::IsFinal(fst1, s1) != Util::IsFinal(fst2, s2)) {
+    ret = false;
+  }
+
   // Main loop: explores the two acceptors in a breadth-first manner,
   // updating the equivalence relation on the statesets. Loop
   // invariant: each block of states contains either final states only
   // or non-final states only.
-  for (q.push_back(make_pair(s1, s2)); !q.empty(); q.pop_front()) {
+  for (q.push_back(make_pair(s1, s2)); ret && !q.empty(); q.pop_front()) {
     s1 = q.front().first;
     s2 = q.front().second;
 
@@ -241,13 +253,20 @@ bool Equivalent(const Fst<Arc> &fst1,
         const pair<MappedId, MappedId> &p = arc_iter->second;
         if (Util::IsFinal(fst1, p.first) != Util::IsFinal(fst2, p.second)) {
           // Detected inconsistency: return false.
-          return false;
+          ret = false;
+          break;
         }
         q.push_back(p);
       }
     }
   }
-  return true;
+
+  if (fst1.Properties(kError, false) || fst2.Properties(kError, false)) {
+    if (error) *error = true;
+    return false;
+  }
+
+  return ret;
 }
 
 }  // namespace fst

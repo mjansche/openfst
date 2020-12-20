@@ -28,6 +28,7 @@
 #include <fst/compat.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/util.h>
 #include <fst/generic-register.h>
 

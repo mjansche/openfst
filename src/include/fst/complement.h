@@ -49,7 +49,6 @@ class ComplementFstImpl : public FstImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
-  using FstImpl<A>::Properties;
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
@@ -80,6 +79,9 @@ class ComplementFstImpl : public FstImpl<A> {
   ~ComplementFstImpl() { delete fst_; }
 
   StateId Start() const {
+    if (Properties(kError))
+      return kNoStateId;
+
     StateId start = fst_->Start();
     if (start != kNoStateId)
       return start + 1;
@@ -110,6 +112,17 @@ class ComplementFstImpl : public FstImpl<A> {
     return s == 0 ? 0 : fst_->NumOutputEpsilons(s - 1);
   }
 
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && fst_->Properties(kError, false))
+      SetProperties(kError, kError);
+    return FstImpl<Arc>::Properties(mask);
+  }
+
+
  private:
   const Fst<A> *fst_;
 
@@ -129,6 +142,8 @@ class ComplementFst : public ImplToFst< ComplementFstImpl<A> > {
   friend class StateIterator< ComplementFst<A> >;
   friend class ArcIterator< ComplementFst<A> >;
 
+  using ImplToFst< ComplementFstImpl<A> >::GetImpl;
+
   typedef A Arc;
   typedef typename A::StateId StateId;
   typedef typename A::Label Label;
@@ -137,9 +152,11 @@ class ComplementFst : public ImplToFst< ComplementFstImpl<A> > {
   explicit ComplementFst(const Fst<A> &fst)
       : ImplToFst<Impl>(new Impl(fst)) {
     uint64 props = kUnweighted | kNoEpsilons | kIDeterministic | kAcceptor;
-    if (fst.Properties(props, true) != props)
-      LOG(FATAL) << "ComplementFst: argument not an unweighted"
-                 << " epsilon-free deterministic acceptor";
+    if (fst.Properties(props, true) != props) {
+      FSTERROR() << "ComplementFst: argument not an unweighted "
+                 << "epsilon-free deterministic acceptor";
+      GetImpl()->SetProperties(kError, kError);
+    }
   }
 
   // See Fst<>::Copy() for doc.

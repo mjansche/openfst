@@ -60,6 +60,7 @@ class IntersectFst : public ComposeFst<A> {
   using ComposeFst<A>::CreateBase;
   using ComposeFst<A>::CreateBase1;
   using ComposeFst<A>::Properties;
+  using ImplToFst< ComposeFstImplBase<A> >::GetImpl;
   using ImplToFst< ComposeFstImplBase<A> >::SetImpl;
 
   typedef A Arc;
@@ -68,15 +69,25 @@ class IntersectFst : public ComposeFst<A> {
 
   IntersectFst(const Fst<A> &fst1, const Fst<A> &fst2,
                const CacheOptions opts = CacheOptions()) {
-    AcceptorCheck(fst1, fst2);
+    bool acceptors = fst1.Properties(kAcceptor, true) &&
+        fst2.Properties(kAcceptor, true);
     SetImpl(CreateBase(fst1, fst2, opts));
+    if (!acceptors) {
+      FSTERROR() << "IntersectFst: input FSTs are not acceptors";
+      GetImpl()->SetProperties(kError);
+    }
   }
 
   template <class M, class F, class T>
   IntersectFst(const Fst<A> &fst1, const Fst<A> &fst2,
                const IntersectFstOptions<A, M, F, T> &opts) {
-    AcceptorCheck(fst1, fst2);
+    bool acceptors = fst1.Properties(kAcceptor, true) &&
+        fst2.Properties(kAcceptor, true);
     SetImpl(CreateBase1(fst1, fst2, opts));
+    if (!acceptors) {
+      FSTERROR() << "IntersectFst: input FSTs are not acceptors";
+      GetImpl()->SetProperties(kError);
+    }
   }
 
   // See Fst<>::Copy() for doc.
@@ -86,12 +97,6 @@ class IntersectFst : public ComposeFst<A> {
   // Get a copy of this IntersectFst. See Fst<>::Copy() for further doc.
   virtual IntersectFst<A> *Copy(bool safe = false) const {
     return new IntersectFst<A>(*this, safe);
-  }
-
- private:
-  void AcceptorCheck(const Fst<Arc> &fst1, const Fst<Arc> &fst2) {
-    if (!fst1.Properties(kAcceptor, true) || !fst2.Properties(kAcceptor, true))
-      LOG(FATAL) << "IntersectFst: input FSTs are not acceptors";
   }
 };
 

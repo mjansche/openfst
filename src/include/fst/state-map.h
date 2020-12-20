@@ -143,10 +143,16 @@ void StateMap(const Fst<A> &ifst, MutableFst<B> *ofst, C* mapper) {
   else if (mapper->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS)
     ofst->SetOutputSymbols(0);
 
-  if (ifst.Start() == kNoStateId)
+  uint64 iprops = ifst.Properties(kCopyProperties, false);
+
+  if (ifst.Start() == kNoStateId) {
+    if (iprops & kError) ofst->SetProperties(kError, kError);
     return;
+  }
 
   // Add all states.
+  if (ifst.Properties(kExpanded, false))
+    ofst->ReserveStates(CountStates(ifst));
   for (StateIterator< Fst<A> > siter(ifst); !siter.Done(); siter.Next())
     ofst->AddState();
 
@@ -160,7 +166,6 @@ void StateMap(const Fst<A> &ifst, MutableFst<B> *ofst, C* mapper) {
     ofst->SetFinal(s, mapper->Final(s));
   }
 
-  uint64 iprops = ifst.Properties(kCopyProperties, false);
   uint64 oprops = ofst->Properties(kFstProperties, false);
   ofst->SetProperties(mapper->Properties(iprops) | oprops, kFstProperties);
 }
@@ -183,7 +188,6 @@ class StateMapFstImpl : public CacheImpl<B> {
  public:
   using FstImpl<B>::SetType;
   using FstImpl<B>::SetProperties;
-  using FstImpl<B>::Properties;
   using FstImpl<B>::SetInputSymbols;
   using FstImpl<B>::SetOutputSymbols;
 
@@ -272,6 +276,16 @@ class StateMapFstImpl : public CacheImpl<B> {
     if (!HasArcs(s))
       Expand(s);
     CacheImpl<B>::InitArcIterator(s, data);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && (fst_->Properties(kError, false) ||
+                            (mapper_->Properties(0) & kError)))
+      SetProperties(kError, kError);
+    return FstImpl<Arc>::Properties(mask);
   }
 
   void Expand(StateId s) {

@@ -219,10 +219,11 @@ class LookAheadComposeFilter {
         flags_(lookahead_type_ == MATCH_OUTPUT ?
                filter_.GetMatcher1()->Flags() :
                filter_.GetMatcher2()->Flags()) {
-    if (lookahead_type_ == MATCH_NONE)
-        LOG(FATAL) << "LookAheadComposeFilter: 1st argument cannot "
-                   << "match/look-ahead on output labels and 2nd argument "
-                   << "cannot match/look-ahead on input labels.";
+    if (lookahead_type_ == MATCH_NONE) {
+      FSTERROR() << "LookAheadComposeFilter: 1st argument cannot "
+                 << "match/look-ahead on output labels and 2nd argument "
+                 << "cannot match/look-ahead on input labels.";
+    }
     selector_.GetMatcher()->InitLookAheadFst(selector_.GetFst());
   }
 
@@ -267,8 +268,11 @@ class LookAheadComposeFilter {
     return selector_;
   }
 
-  uint64 Properties(uint64 props) const {
-    return filter_.Properties(props);
+  uint64 Properties(uint64 inprops) const {
+    uint64 outprops = filter_.Properties(inprops);
+    if (lookahead_type_ == MATCH_NONE)
+      outprops |= kError;
+    return outprops;
   }
 
   uint32 LookAheadFlags() const { return flags_; }

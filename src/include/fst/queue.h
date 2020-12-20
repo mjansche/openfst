@@ -76,7 +76,7 @@ class QueueBase {
  public:
   typedef S StateId;
 
-  QueueBase(QueueType type) : queue_type_(type) {}
+  QueueBase(QueueType type) : queue_type_(type), error_(false) {}
   virtual ~QueueBase() {}
   StateId Head() const { return Head_(); }
   void Enqueue(StateId s) { Enqueue_(s); }
@@ -85,6 +85,8 @@ class QueueBase {
   bool Empty() const { return Empty_(); }
   void Clear() { Clear_(); }
   QueueType Type() { return queue_type_; }
+  bool Error() const { return error_; }
+  void SetError(bool error) { error_ = error; }
 
  private:
   // This allows base-class virtual access to non-virtual derived-
@@ -98,6 +100,7 @@ class QueueBase {
   virtual void Clear_() = 0;
 
   QueueType queue_type_;
+  bool error_;
 };
 
 
@@ -314,15 +317,16 @@ class TopOrderQueue : public QueueBase<S> {
   // to limit the transitions considered in that computation (e.g., only
   // the epsilon graph).
   template <class Arc, class ArcFilter>
-
   TopOrderQueue(const Fst<Arc> &fst, ArcFilter filter)
       : QueueBase<S>(TOP_ORDER_QUEUE), front_(0), back_(kNoStateId),
         order_(0), state_(0) {
     bool acyclic;
     TopOrderVisitor<Arc> top_order_visitor(&order_, &acyclic);
     DfsVisit(fst, &top_order_visitor, filter);
-    if (!acyclic)
-      LOG(FATAL) << "TopOrderQueue: fst is not acyclic.";
+    if (!acyclic) {
+      FSTERROR() << "TopOrderQueue: fst is not acyclic.";
+      QueueBase<S>::SetError(true);
+    }
     state_.resize(order_.size(), kNoStateId);
   }
 
@@ -450,8 +454,6 @@ class SccQueue : public QueueBase<S> {
                 ((front_ > trivial_queue_.size())
                  || (trivial_queue_[front_] == kNoStateId)))))
       ++front_;
-    if (front_ > back_)
-      LOG(FATAL) << "SccQueue: head of empty queue";
     if ((*queue_)[front_])
       return (*queue_)[front_]->Head();
     else
@@ -472,8 +474,6 @@ class SccQueue : public QueueBase<S> {
   }
 
   void Dequeue() {
-    if (front_ > back_)
-      LOG(FATAL) << "SccQueue: dequeue of empty queue";
     if ((*queue_)[front_])
       (*queue_)[front_]->Dequeue();
     else if (front_ < trivial_queue_.size())
@@ -486,7 +486,7 @@ class SccQueue : public QueueBase<S> {
   }
 
   bool Empty() const {
-    if (front_ < back_)   // Queue scc # back_ not empty unless back_==front_
+    if (front_ < back_)  // Queue scc # back_ not empty unless back_==front_
       return false;
     else if (front_ > back_)
       return true;
@@ -601,7 +601,6 @@ public:
                     << ": using trivial discipline";
             break;
           case SHORTEST_FIRST_QUEUE:
-            CHECK(comp);
             queues_[i] = new ShortestFirstQueue<StateId, Compare, false>(*comp);
             VLOG(3) << "AutoQueue: SCC #" << i <<
               ": using shortest-first discipline";

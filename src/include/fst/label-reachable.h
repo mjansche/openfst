@@ -59,7 +59,7 @@ class LabelReachableData {
 
   unordered_map<L, L> *Label2Index() {
     if (!have_relabel_data_)
-      LOG(FATAL) << "LabelReachableData: no relabeling data";
+      FSTERROR() << "LabelReachableData: no relabeling data";
     return &label2index_;
   }
 
@@ -156,7 +156,8 @@ class LabelReachable {
         data_(new LabelReachableData<Label>(reach_input, keep_relabel_data)),
         accumulator_(s ? s : new S()),
         ncalls_(0),
-        nintervals_(0) {
+        nintervals_(0),
+        error_(false) {
     StateId ins = fst_->NumStates();
     TransformFst();
     FindIntervals(ins);
@@ -169,7 +170,8 @@ class LabelReachable {
       data_(data),
       accumulator_(s ? s : new S()),
       ncalls_(0),
-      nintervals_(0) {
+      nintervals_(0),
+      error_(false) {
     data_->IncrRefCount();
   }
 
@@ -179,7 +181,8 @@ class LabelReachable {
       data_(reachable.data_),
       accumulator_(new S(*reachable.accumulator_)),
       ncalls_(0),
-      nintervals_(0) {
+      nintervals_(0),
+      error_(reachable.error_) {
     data_->IncrRefCount();
   }
 
@@ -195,7 +198,7 @@ class LabelReachable {
 
   // Relabels w.r.t labels that give compact label sets.
   Label Relabel(Label label) {
-    if (label == 0)
+    if (label == 0 || error_)
       return label;
     unordered_map<Label, Label> &label2index = *data_->Label2Index();
     Label &relabel = label2index[label];
@@ -230,28 +233,44 @@ class LabelReachable {
   }
 
   // Returns relabeling pairs (cf. relabel.h::Relabel()).
+  // If 'avoid_collisions' is true, extra pairs are added to
+  // ensure no collisions when relabeling automata that have
+  // labels unseen here.
   void RelabelPairs(vector<pair<Label, Label> > *pairs,
-                    bool keep_final_label = false) {
+                    bool avoid_collisions = false) {
     pairs->clear();
     unordered_map<Label, Label> &label2index = *data_->Label2Index();
+    // Maps labels to their new values in [1, label2index().size()]
     for (typename unordered_map<Label, Label>::const_iterator
              it = label2index.begin(); it != label2index.end(); ++it)
       if (it->second != data_->FinalLabel())
         pairs->push_back(pair<Label, Label>(it->first, it->second));
+    if (avoid_collisions) {
+      // Ensures any label in [1, label2index().size()] is mapped either
+      // by the above step or to label2index() + 1 (to avoid collisions).
+      for (int i = 1; i <= label2index.size(); ++i) {
+        typename unordered_map<Label, Label>::const_iterator
+            it = label2index.find(i);
+        if (it == label2index.end() || it->second == data_->FinalLabel())
+          pairs->push_back(pair<Label, Label>(i, label2index.size() + 1));
+      }
+    }
   }
 
   // Set current state. Optionally set state associated
   // with arc iterator to be passed to Reach.
   void SetState(StateId s, StateId aiter_s = kNoStateId) {
     s_ = s;
-    if (aiter_s != kNoStateId)
+    if (aiter_s != kNoStateId) {
       accumulator_->SetState(aiter_s);
+      if (accumulator_->Error()) error_ = true;
+    }
   }
 
   // Can reach this label from current state?
   // Original labels must be transformed by the Relabel methods above.
   bool Reach(Label label) {
-    if (label == 0)
+    if (label == 0 || error_)
       return false;
     vector< IntervalSet<Label> > &isets = *data_->IntervalSets();
     return isets[s_].Member(label);
@@ -260,6 +279,7 @@ class LabelReachable {
 
   // Can reach final state (via epsilon transitions) from this state?
   bool ReachFinal() {
+    if (error_) return false;
     vector< IntervalSet<Label> > &isets = *data_->IntervalSets();
     return isets[s_].Member(data_->FinalLabel());
   }
@@ -270,6 +290,7 @@ class LabelReachable {
   template <class F>
   void ReachInit(const F &fst, bool copy = false) {
     accumulator_->Init(fst, copy);
+    if (accumulator_->Error()) error_ = true;
   }
 
   // Can reach any arc iterator label between iterator positions
@@ -280,6 +301,7 @@ class LabelReachable {
   template <class Iterator>
   bool Reach(Iterator *aiter, ssize_t aiter_begin,
              ssize_t aiter_end, bool aiter_input, bool compute_weight) {
+    if (error_) return false;
     vector< IntervalSet<Label> > &isets = *data_->IntervalSets();
     const vector<Interval> *intervals = isets[s_].Intervals();
     ++ncalls_;
@@ -376,6 +398,8 @@ class LabelReachable {
 
   LabelReachableData<Label> *GetData() const { return data_; }
 
+  bool Error() const { return error_ || accumulator_->Error(); }
+
  private:
   // Redirects labeled arcs (input or output labels determined by
   // ReachInput()) to new label-specific final states.  Each original
@@ -442,6 +466,11 @@ class LabelReachable {
 
   void FindIntervals(StateId ins) {
     StateReachable<A, Label> state_reachable(*fst_);
+    if (state_reachable.Error()) {
+      error_ = true;
+      return;
+    }
+
     vector<Label> &state2index = state_reachable.State2Index();
     vector< IntervalSet<Label> > &isets = *data_->IntervalSets();
     isets = state_reachable.IntervalSets();
@@ -526,6 +555,7 @@ class LabelReachable {
 
   double ncalls_;
   double nintervals_;
+  bool error_;
 
   void operator=(const LabelReachable<A, S> &);   // Disallow
 };

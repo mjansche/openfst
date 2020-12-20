@@ -32,16 +32,17 @@ using std::vector;
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/script/weight-class.h>
 
 namespace fst {
 namespace script {
 
-void ReadPotentials(const string &weight_type,
+bool ReadPotentials(const string &weight_type,
                     const string& filename,
                     vector<WeightClass>* potential);
 
-void WritePotentials(const string& filename,
+bool WritePotentials(const string& filename,
                      const vector<WeightClass>& potential);
 
 }  // namespace script

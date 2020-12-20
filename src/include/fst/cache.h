@@ -315,7 +315,11 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   }
 
   // Is the start state cached?
-  bool HasStart() const { return cache_start_; }
+  bool HasStart() const {
+    if (!cache_start_ && Properties(kError))
+      cache_start_ = true;
+    return cache_start_;
+  }
 
   // Is the final weight of state s cached?
   bool HasFinal(StateId s) const {
@@ -457,7 +461,7 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   C *allocator_;                             // used to allocate new states
 
  private:
-  bool cache_start_;                         // Is the start state cached?
+  mutable bool cache_start_;                 // Is the start state cached?
   StateId nknown_states_;                    // # of known states
   vector<bool> expanded_states_;             // states that have been expanded
   mutable StateId min_unexpanded_state_id_;  // minimum never-expanded state Id

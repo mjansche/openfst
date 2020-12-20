@@ -142,7 +142,11 @@ void ArcMap(MutableFst<A> *fst, C* mapper) {
       case MAP_NO_SUPERFINAL:
       default: {
         A final_arc = (*mapper)(A(0, 0, fst->Final(s), kNoStateId));
-        CHECK(final_arc.ilabel == 0 && final_arc.olabel == 0);
+        if (final_arc.ilabel != 0 || final_arc.olabel != 0) {
+          FSTERROR() << "ArcMap: non-zero arc labels for superfinal arc";
+          fst->SetProperties(kError, kError);
+        }
+
         fst->SetFinal(s, final_arc.weight);
         break;
       }
@@ -209,14 +213,23 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C* mapper) {
   else if (mapper->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS)
     ofst->SetOutputSymbols(0);
 
-  if (ifst.Start() == kNoStateId)
+  uint64 iprops = ifst.Properties(kCopyProperties, false);
+
+  if (ifst.Start() == kNoStateId) {
+    if (iprops & kError) ofst->SetProperties(kError, kError);
     return;
+  }
+
+  MapFinalAction final_action = mapper->FinalAction();
+  if (ifst.Properties(kExpanded, false)) {
+    ofst->ReserveStates(CountStates(ifst) +
+                        final_action == MAP_NO_SUPERFINAL ? 0 : 1);
+  }
 
   // Add all states.
   for (StateIterator< Fst<A> > siter(ifst); !siter.Done(); siter.Next())
     ofst->AddState();
 
-  MapFinalAction final_action = mapper->FinalAction();
   StateId superfinal = kNoStateId;
   if (final_action == MAP_REQUIRE_SUPERFINAL) {
     superfinal = ofst->AddState();
@@ -227,6 +240,7 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C* mapper) {
     if (s == ifst.Start())
       ofst->SetStart(s);
 
+    ofst->ReserveArcs(s, ifst.NumArcs(s));
     for (ArcIterator< Fst<A> > aiter(ifst, s); !aiter.Done(); aiter.Next())
       ofst->AddArc(s, (*mapper)(aiter.Value()));
 
@@ -234,7 +248,10 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C* mapper) {
       case MAP_NO_SUPERFINAL:
       default: {
         B final_arc = (*mapper)(A(0, 0, ifst.Final(s), kNoStateId));
-        CHECK(final_arc.ilabel == 0 && final_arc.olabel == 0);
+        if (final_arc.ilabel != 0 || final_arc.olabel != 0) {
+          FSTERROR() << "ArcMap: non-zero arc labels for superfinal arc";
+          ofst->SetProperties(kError, kError);
+        }
         ofst->SetFinal(s, final_arc.weight);
         break;
       }
@@ -265,7 +282,6 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C* mapper) {
       }
     }
   }
-  uint64 iprops = ifst.Properties(kCopyProperties, false);
   uint64 oprops = ofst->Properties(kFstProperties, false);
   ofst->SetProperties(mapper->Properties(iprops) | oprops, kFstProperties);
 }
@@ -296,7 +312,6 @@ class ArcMapFstImpl : public CacheImpl<B> {
  public:
   using FstImpl<B>::SetType;
   using FstImpl<B>::SetProperties;
-  using FstImpl<B>::Properties;
   using FstImpl<B>::SetInputSymbols;
   using FstImpl<B>::SetOutputSymbols;
 
@@ -366,7 +381,10 @@ class ArcMapFstImpl : public CacheImpl<B> {
         default: {
           B final_arc = (*mapper_)(A(0, 0, fst_->Final(FindIState(s)),
                                         kNoStateId));
-          CHECK(final_arc.ilabel == 0 && final_arc.olabel == 0);
+          if (final_arc.ilabel != 0 || final_arc.olabel != 0) {
+            FSTERROR() << "ArcMapFst: non-zero arc labels for superfinal arc";
+            SetProperties(kError, kError);
+          }
           SetFinal(s, final_arc.weight);
           break;
         }
@@ -408,6 +426,16 @@ class ArcMapFstImpl : public CacheImpl<B> {
     if (!HasArcs(s))
       Expand(s);
     return CacheImpl<B>::NumOutputEpsilons(s);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && (fst_->Properties(kError, false) ||
+                            (mapper_->Properties(0) & kError)))
+      SetProperties(kError, kError);
+    return FstImpl<Arc>::Properties(mask);
   }
 
   void InitArcIterator(StateId s, ArcIteratorData<B> *data) {
@@ -786,7 +814,7 @@ struct FromGallicMapper {
   typedef typename GallicArc<A, S>::Weight GW;
 
   FromGallicMapper(Label superfinal_label = 0)
-      : superfinal_label_(superfinal_label) {}
+      : superfinal_label_(superfinal_label), error_(false) {}
 
   A operator()(const FromArc &arc) const {
     // 'Super-non-final' arc.
@@ -799,10 +827,11 @@ struct FromGallicMapper {
 
     Label l = w1.Size() == 1 ? iter1.Value() : 0;
 
-    CHECK(l != kStringInfinity);
-    CHECK(l != kStringBad);
-    CHECK(arc.ilabel == arc.olabel);
-    CHECK(w1.Size() <= 1);
+    if (l == kStringInfinity || l == kStringBad ||
+        arc.ilabel != arc.olabel || w1.Size() > 1) {
+      FSTERROR() << "FromGallicMapper: unrepesentable weight";
+      error_ = true;
+    }
 
     if (arc.ilabel == 0 && l != 0 && arc.nextstate == kNoStateId)
       return A(superfinal_label_, l, w2, arc.nextstate);
@@ -816,13 +845,17 @@ struct FromGallicMapper {
 
   MapSymbolsAction OutputSymbolsAction() const { return MAP_CLEAR_SYMBOLS;}
 
-  uint64 Properties(uint64 props) const {
-    return props & kOLabelInvariantProperties &
-      kWeightInvariantProperties & kAddSuperFinalProperties;
+  uint64 Properties(uint64 inprops) const {
+    uint64 outprops = inprops & kOLabelInvariantProperties &
+        kWeightInvariantProperties & kAddSuperFinalProperties;
+    if (error_)
+      outprops |= kError;
+    return outprops;
   }
 
  private:
   Label superfinal_label_;
+  mutable bool error_;
 };
 
 
@@ -839,7 +872,8 @@ struct GallicToNewSymbolsMapper {
   typedef typename GallicArc<A, S>::Weight GW;
 
   GallicToNewSymbolsMapper(MutableFst<ToArc> *fst)
-      : fst_(fst), lmax_(0), osymbols_(fst->OutputSymbols()), isymbols_(0) {
+      : fst_(fst), lmax_(0), osymbols_(fst->OutputSymbols()),
+        isymbols_(0), error_(false) {
     fst_->DeleteStates();
     state_ = fst_->AddState();
     fst_->SetStart(state_);
@@ -890,9 +924,10 @@ struct GallicToNewSymbolsMapper {
       }
     }
 
-    CHECK(l != kStringInfinity);
-    CHECK(l != kStringBad);
-    CHECK(arc.ilabel == arc.olabel);
+    if (l == kStringInfinity || l == kStringBad || arc.ilabel != arc.olabel) {
+      FSTERROR() << "GallicToNewSymbolMapper: unrepesentable weight";
+      error_ = true;
+    }
 
     return A(arc.ilabel, l, w2, arc.nextstate);
   }
@@ -903,9 +938,12 @@ struct GallicToNewSymbolsMapper {
 
   MapSymbolsAction OutputSymbolsAction() const { return MAP_CLEAR_SYMBOLS; }
 
-  uint64 Properties(uint64 props) const {
-    return props & kOLabelInvariantProperties &
-      kWeightInvariantProperties & kAddSuperFinalProperties;
+  uint64 Properties(uint64 inprops) const {
+    uint64 outprops = inprops & kOLabelInvariantProperties &
+        kWeightInvariantProperties & kAddSuperFinalProperties;
+    if (error_)
+      outprops |= kError;
+    return outprops;
   }
 
  private:
@@ -924,6 +962,7 @@ struct GallicToNewSymbolsMapper {
   StateId state_;
   const SymbolTable *osymbols_;
   SymbolTable *isymbols_;
+  mutable bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(GallicToNewSymbolsMapper);
 };

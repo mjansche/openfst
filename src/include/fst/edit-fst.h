@@ -531,8 +531,9 @@ class EditFstImpl : public FstImpl<A> {
   }
 
   void DeleteStates(const vector<StateId>& dstates) {
-    LOG(ERROR) << ": EditFstImpl::DeleteStates(const std::vector<StateId>&): "
+    FSTERROR() << ": EditFstImpl::DeleteStates(const std::vector<StateId>&): "
                << " not implemented";
+    SetProperties(kError, kError);
   }
 
   // Deletes all states in this fst.
@@ -735,6 +736,14 @@ class EditFst :
   static EditFst<A, WrappedFstT, MutableFstT> *Read(const string &filename) {
     Impl* impl = ImplToExpandedFst<Impl, MutableFst<A> >::Read(filename);
     return impl ? new EditFst<A, WrappedFstT, MutableFstT>(impl) : 0;
+  }
+
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return GetImpl()->Write(strm, opts);
+  }
+
+  virtual bool Write(const string &filename) const {
+    return Fst<A>::WriteFile(filename);
   }
 
   virtual void InitStateIterator(StateIteratorData<Arc> *data) const {

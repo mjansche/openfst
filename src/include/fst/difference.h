@@ -60,6 +60,7 @@ template <class A>
 class DifferenceFst : public ComposeFst<A> {
  public:
   using ImplToFst< ComposeFstImplBase<A> >::SetImpl;
+  using ImplToFst< ComposeFstImplBase<A> >::GetImpl;
 
   using ComposeFst<A>::CreateBase1;
 
@@ -70,9 +71,6 @@ class DifferenceFst : public ComposeFst<A> {
   // A - B = A ^ B'.
   DifferenceFst(const Fst<A> &fst1, const Fst<A> &fst2,
                 const CacheOptions &opts = CacheOptions()) {
-    if (!fst1.Properties(kAcceptor, true))
-      LOG(FATAL) << "DifferenceFst: 1st argument not an acceptor";
-
     typedef RhoMatcher< Matcher<Fst<A> > > R;
 
     ComplementFst<A> cfst(fst2);
@@ -81,14 +79,16 @@ class DifferenceFst : public ComposeFst<A> {
                                   new R(cfst, MATCH_INPUT,
                                         ComplementFst<A>::kRhoLabel));
     SetImpl(CreateBase1(fst1, cfst, copts));
+
+    if (!fst1.Properties(kAcceptor, true)) {
+      FSTERROR() << "DifferenceFst: 1st argument not an acceptor";
+      GetImpl()->SetProperties(kError, kError);
+    }
  }
 
   template <class M, class F, class T>
   DifferenceFst(const Fst<A> &fst1, const Fst<A> &fst2,
                 const DifferenceFstOptions<A, M, F, T> &opts) {
-    if (!fst1.Properties(kAcceptor, true))
-      LOG(FATAL) << "DifferenceFst: 1st argument not an acceptor";
-
     typedef RhoMatcher<M> R;
 
     ComplementFst<A> cfst(fst2);
@@ -99,6 +99,11 @@ class DifferenceFst : public ComposeFst<A> {
                            MATCHER_REWRITE_ALWAYS, opts.matcher2);
 
     SetImpl(CreateBase1(fst1, cfst, copts));
+
+    if (!fst1.Properties(kAcceptor, true)) {
+      FSTERROR() << "DifferenceFst: 1st argument not an acceptor";
+      GetImpl()->SetProperties(kError, kError);
+    }
   }
 
   // See Fst<>::Copy() for doc.

@@ -33,6 +33,7 @@ using std::vector;
 #include <fst/compat.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 
 #include <map>
@@ -501,6 +502,20 @@ SymbolTable *RelabelSymbolTable(const SymbolTable *table,
 
   return new_table;
 }
+
+// Symbol Table Serialization
+inline void SymbolTableToString(const SymbolTable *table, string *result) {
+  ostringstream ostrm;
+  table->Write(ostrm);
+  *result = ostrm.str();
+}
+
+inline SymbolTable *StringToSymbolTable(const string &s) {
+  istringstream istrm(s);
+  return SymbolTable::Read(istrm, SymbolTableReadOptions());
+}
+
+
 
 }  // namespace fst
 

@@ -54,6 +54,7 @@ class MutableFst : public ExpandedFst<A> {
   virtual void SetFinal(StateId, Weight) = 0;   // Set a state's final weight
   virtual void SetProperties(uint64 props,
                              uint64 mask) = 0;  // Set property bits wrt mask
+
   virtual StateId AddState() = 0;               // Add a state, return its ID
   virtual void AddArc(StateId, const A &arc) = 0;   // Add an arc to state
 
@@ -266,6 +267,11 @@ class ImplToMutableFst : public ImplToExpandedFst<I, F> {
   }
 
   virtual void SetProperties(uint64 props, uint64 mask) {
+    // Can skip mutate check if extrinsic properties don't change,
+    // since it is then safe to update all (shallow) copies
+    uint64 exprops = kExtrinsicProperties & mask;
+    if (GetImpl()->Properties(exprops) != (props & exprops))
+      MutateCheck();
     GetImpl()->SetProperties(props, mask);
   }
 
@@ -360,7 +366,8 @@ class ImplToMutableFst : public ImplToExpandedFst<I, F> {
   ImplToMutableFst<I, F>  &operator=(const ImplToMutableFst<I, F> &fst);
 
   ImplToMutableFst<I, F> &operator=(const Fst<Arc> &fst) {
-    LOG(FATAL) << "ImplToMutableFst: Assignment operator disallowed";
+    FSTERROR() << "ImplToMutableFst: Assignment operator disallowed";
+    GetImpl()->SetProperties(kError, kError);
     return *this;
   }
 };

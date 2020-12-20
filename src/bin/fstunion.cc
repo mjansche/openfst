@@ -25,6 +25,7 @@
 #include <fst/script/union.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 int main(int argc, char **argv) {
   using fst::script::FstClass;

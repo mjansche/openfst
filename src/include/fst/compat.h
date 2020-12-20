@@ -39,10 +39,7 @@
 #include <fst/lock.h>
 #include <fst/flags.h>
 #include <fst/log.h>
-
-#ifdef HAVE_ICU
 #include <fst/icu.h>
-#endif
 
 using std::cin;
 using std::cout;
@@ -112,24 +109,6 @@ class CheckSummer {
 
   DISALLOW_COPY_AND_ASSIGN(CheckSummer);
 };
-
-// Define the UTF8 string conversion function to throw an error
-// when the ICU Library is missing or disabled.
-#ifndef HAVE_ICU
-
-template <class Label>
-bool UTF8StringToLabels(const string&, std::vector<Label>*) {
-  LOG(ERROR) << "UTF8StringToLabels: ICU Library required for UTF8 handling";
-  return false;
-}
-
-template <class Label>
-bool LabelsToUTF8String(const std::vector<Label>&, string*) {
-  LOG(ERROR) << "LabelsToUTF8String: ICU Library required for UTF8 handling";
-  return false;
-}
-
-#endif  // HAVE_ICU
 
 }  // namespace fst
 

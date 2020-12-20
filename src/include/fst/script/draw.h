@@ -22,6 +22,7 @@
 #include <fst/script/draw-impl.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 namespace fst {
 namespace script {

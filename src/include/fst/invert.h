@@ -54,11 +54,13 @@ template <class A> struct InvertMapper {
 // where V = # of states and E = # of arcs.
 template<class Arc> inline
 void Invert(MutableFst<Arc> *fst) {
-  ArcMap(fst, InvertMapper<Arc>());
   SymbolTable *input = fst->InputSymbols() ? fst->InputSymbols()->Copy() : 0;
-  fst->SetInputSymbols(fst->OutputSymbols());
+  SymbolTable *output = fst->OutputSymbols() ? fst->OutputSymbols()->Copy() : 0;
+  ArcMap(fst, InvertMapper<Arc>());
+  fst->SetInputSymbols(output);
   fst->SetOutputSymbols(input);
   delete input;
+  delete output;
 }
 
 

@@ -39,19 +39,24 @@ namespace fst {
 // of the two FSTs the sum of the weights of all the successful paths
 // sharing the same input and output labels as the considered randomly
 // generated path and checks that these two values are within
-// 'delta'.
+// 'delta'. Returns optional error value (when FLAGS_error_fatal = false).
 template<class Arc, class ArcSelector>
 bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
                     ssize_t num_paths, float delta,
-                    const RandGenOptions<ArcSelector> &opts) {
+                    const RandGenOptions<ArcSelector> &opts,
+                    bool *error = 0) {
   typedef typename Arc::Weight Weight;
+  if (error) *error = false;
 
   // Check that the symbol table are compatible
   if (!CompatSymbols(fst1.InputSymbols(), fst2.InputSymbols()) ||
-      !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols()))
-      LOG(FATAL) << "RandEquivalent: input/output symbol tables of 1st "
-                 << "argument do not match input/output symbol tables of 2nd "
-                 << "argument";
+      !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols())) {
+    FSTERROR() << "RandEquivalent: input/output symbol tables of 1st "
+               << "argument do not match input/output symbol tables of 2nd "
+               << "argument";
+    if (error) *error = true;
+    return false;
+  }
 
   ILabelCompare<Arc> icomp;
   OLabelCompare<Arc> ocomp;
@@ -62,6 +67,7 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   ArcSort(&sfst1, icomp);
   ArcSort(&sfst2, icomp);
 
+  bool ret = true;
   for (ssize_t n = 0; n < num_paths; ++n) {
     VectorFst<Arc> path;
     const Fst<Arc> &fst = rand() % 2 ? sfst1 : sfst2;
@@ -95,23 +101,32 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
     if (!ApproxEqual(sum1, sum2, delta)) {
         VLOG(1) << "Sum1 = " << sum1;
         VLOG(1) << "Sum2 = " << sum2;
-        return false;
+        ret = false;
+        break;
     }
   }
-  return true;
+
+  if (fst1.Properties(kError, false) || fst2.Properties(kError, false)) {
+    if (error) *error = true;
+    return false;
+  }
+
+  return ret;
 }
 
 
 // Test if two FSTs are equivalent by randomly generating 'num_paths' paths
 // of length no more than 'path_length' using the seed 'seed' in these FSTs.
+// Returns optional error value (when FLAGS_error_fatal = false).
 template <class Arc>
 bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
                     ssize_t num_paths, float delta = kDelta,
-                    int seed = time(0), int path_length = INT_MAX) {
+                    int seed = time(0), int path_length = INT_MAX,
+                    bool *error = 0) {
   UniformArcSelector<Arc> uniform_selector(seed);
   RandGenOptions< UniformArcSelector<Arc> >
       opts(uniform_selector, path_length);
-  return RandEquivalent(fst1, fst2, num_paths, delta, opts);
+  return RandEquivalent(fst1, fst2, num_paths, delta, opts, error);
 }
 
 

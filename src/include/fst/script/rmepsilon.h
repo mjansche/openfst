@@ -122,7 +122,8 @@ void RmEpsilonHelper(MutableFst<Arc> *fst,
       break;
     }
     default:
-      LOG(FATAL) << "Unknown or unsupported queue type: " << opts.queue_type;
+      FSTERROR() << "Unknown or unsupported queue type: " << opts.queue_type;
+      fst->SetProperties(kError, kError);
   }
 }
 
@@ -174,9 +175,7 @@ void RmEpsilon(RmEpsilonArgs3 *args) {
 
   RmEpsilonHelper(fst, &weights, opts);
 
-  // Copy the vector<arc::weight> back into the vector<weightclass>
-  CHECK(args->arg2);
-
+  // Copy the weights back
   args->arg2->resize(weights.size());
   for (unsigned i = 0; i < weights.size(); ++i) {
     (*args->arg2)[i] = WeightClass(weights[i]);

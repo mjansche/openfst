@@ -40,6 +40,7 @@ class PowerWeight : public TupleWeight<W, n> {
  public:
   using TupleWeight<W, n>::Zero;
   using TupleWeight<W, n>::One;
+  using TupleWeight<W, n>::NoWeight;
   using TupleWeight<W, n>::Quantize;
   using TupleWeight<W, n>::Reverse;
 
@@ -60,6 +61,11 @@ class PowerWeight : public TupleWeight<W, n> {
   static const PowerWeight<W, n> &One() {
     static const PowerWeight<W, n> one(TupleWeight<W, n>::One());
     return one;
+  }
+
+  static const PowerWeight<W, n> &NoWeight() {
+    static const PowerWeight<W, n> no_weight(TupleWeight<W, n>::NoWeight());
+    return no_weight;
   }
 
   static const string &Type() {

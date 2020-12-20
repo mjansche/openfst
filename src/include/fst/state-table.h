@@ -199,6 +199,8 @@ class ErasableStateTable : public ErasableBiTable<typename T::StateId, T, F> {
 //   const StateTuple<StateId> &Tuple(StateId) const;
 //   // # of stored tuples.
 //   StateId Size() const;
+//   // Return true if error encountered
+//   bool Error() const;
 // };
 
 // Represents the composition state.
@@ -268,6 +270,8 @@ class GenericComposeStateTable : public H {
 
   GenericComposeStateTable(const GenericComposeStateTable<A, F> &table) {}
 
+  bool Error() const { return false; }
+
  private:
   void operator=(const GenericComposeStateTable<A, F> &table);  // disallow
 };
@@ -281,9 +285,9 @@ class ComposeFingerprint {
   typedef F FilterState;
   typedef ComposeStateTuple<S, F> StateTuple;
 
-  // Required, but here useless, constructor.
-  ComposeFingerprint() {
-    LOG(FATAL) << "TupleFingerprint: # of FST state must be provided.";
+  // Required but suboptimal constructor.
+  ComposeFingerprint() : mult1_(8192), mult2_(8192) {
+    LOG(WARNING) << "TupleFingerprint: # of FST states should be provided.";
   }
 
   // Constructor is provided the sizes of the input FSTs
@@ -350,6 +354,8 @@ VectorStateTable<ComposeStateTuple<typename A::StateId, F>,
                          ComposeFingerprint<StateId, F> >
         (new ComposeFingerprint<StateId, F>(table.Fingerprint())) {}
 
+  bool Error() const { return false; }
+
  private:
   void operator=(const ProductComposeStateTable<A, F> &table);  // disallow
 };
@@ -370,18 +376,26 @@ VectorStateTable<ComposeStateTuple<typename A::StateId, F>,
   typedef F FilterState;
   typedef ComposeStateTuple<StateId, F> StateTuple;
 
-  StringDetComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2) {
+  StringDetComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2)
+      : error_(false) {
     uint64 props1 = kString;
     uint64 props2 = kIDeterministic | kNoIEpsilons;
     if (fst1.Properties(props1, true) != props1 ||
-        fst2.Properties(props2, true) != props2)
-      LOG(FATAL) << "StringDetComposeStateTable: fst1 not a string or"
+        fst2.Properties(props2, true) != props2) {
+      FSTERROR() << "StringDetComposeStateTable: fst1 not a string or"
                  << " fst2 not input deterministic and epsilon-free";
+      error_ = true;
+    }
   }
 
-  StringDetComposeStateTable(const StringDetComposeStateTable<A, F> &table) {}
+  StringDetComposeStateTable(const StringDetComposeStateTable<A, F> &table)
+   : error_(table.error_) {}
+
+  bool Error() const { return error_; }
 
  private:
+  bool error_;
+
   void operator=(const StringDetComposeStateTable<A, F> &table);  // disallow
 };
 
@@ -402,18 +416,26 @@ VectorStateTable<ComposeStateTuple<typename A::StateId, F>,
   typedef F FilterState;
   typedef ComposeStateTuple<StateId, F> StateTuple;
 
-  DetStringComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2) {
+  DetStringComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2)
+      :error_(false) {
     uint64 props1 = kODeterministic | kNoOEpsilons;
     uint64 props2 = kString;
     if (fst1.Properties(props1, true) != props1 ||
-        fst2.Properties(props2, true) != props2)
-      LOG(FATAL) << "StringDetComposeStateTable: fst2 not a string or"
+        fst2.Properties(props2, true) != props2) {
+      FSTERROR() << "StringDetComposeStateTable: fst2 not a string or"
                  << " fst1 not output deterministic and epsilon-free";
+      error_ = true;
+    }
   }
 
-  DetStringComposeStateTable(const DetStringComposeStateTable<A, F> &table) {}
+  DetStringComposeStateTable(const DetStringComposeStateTable<A, F> &table)
+      : error_(table.error_) {}
+
+  bool Error() const { return error_; }
 
  private:
+  bool error_;
+
   void operator=(const DetStringComposeStateTable<A, F> &table);  // disallow
 };
 
@@ -435,6 +457,8 @@ ErasableStateTable<ComposeStateTuple<typename A::StateId, F>,
   ErasableComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2) {}
 
   ErasableComposeStateTable(const ErasableComposeStateTable<A, F> &table) {}
+
+  bool Error() const { return false; }
 
  private:
   void operator=(const ErasableComposeStateTable<A, F> &table);  // disallow

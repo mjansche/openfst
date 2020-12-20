@@ -59,6 +59,7 @@ void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
       fst->AddArc(s, Arc(0, 0, final, start));
   }
   if (closure_type == CLOSURE_STAR) {
+    fst->ReserveStates(fst->NumStates() + 1);
     StateId nstart = fst->AddState();
     fst->SetStart(nstart);
     fst->SetFinal(nstart, Weight::One());

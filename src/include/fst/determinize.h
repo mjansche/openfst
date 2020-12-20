@@ -72,19 +72,20 @@ class LabelCommonDivisor {
     StringWeightIterator<L, S> iter1(w1);
     StringWeightIterator<L, S> iter2(w2);
 
-    if (!(StringWeight<L, S>::Properties() & kLeftSemiring))
-      LOG(FATAL) << "LabelCommonDivisor: Weight needs to be left semiring";
-
-    if (w1.Size() == 0 || w2.Size() == 0)
+    if (!(StringWeight<L, S>::Properties() & kLeftSemiring)) {
+      FSTERROR() << "LabelCommonDivisor: Weight needs to be left semiring";
+      return Weight::NoWeight();
+    } else if (w1.Size() == 0 || w2.Size() == 0) {
       return Weight::One();
-    else if (w1 == Weight::Zero())
+    } else if (w1 == Weight::Zero()) {
       return Weight(iter2.Value());
-    else if (w2 == Weight::Zero())
+    } else if (w2 == Weight::Zero()) {
       return Weight(iter1.Value());
-    else if (iter1.Value() == iter2.Value())
+    } else if (iter1.Value() == iter2.Value()) {
       return Weight(iter1.Value());
-    else
+    } else {
       return Weight::One();
+    }
   }
 };
 
@@ -222,7 +223,7 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
 
   virtual Weight ComputeFinal(StateId s) = 0;
 
-  const Fst<A> &GetFst() { return *fst_; }
+  const Fst<A> &GetFst() const { return *fst_; }
 
  private:
   const Fst<A> *fst_;            // Input Fst
@@ -236,6 +237,7 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
 template <class A, class D>
 class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
  public:
+  using FstImpl<A>::SetProperties;
   using DeterminizeFstImplBase<A>::GetFst;
   using DeterminizeFstImplBase<A>::SetArcs;
 
@@ -263,11 +265,15 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
         out_dist_(out_dist),
         common_divisor_(common_divisor),
         subset_hash_(0, SubsetKey(), SubsetEqual(&elements_)) {
-    if (!fst.Properties(kAcceptor, true))
-     LOG(FATAL)  << "DeterminizeFst: argument not an acceptor";
-    if (!(Weight::Properties() & kLeftSemiring))
-      LOG(FATAL) << "DeterminizeFst: Weight needs to be left distributive: "
+    if (!fst.Properties(kAcceptor, true)) {
+      FSTERROR()  << "DeterminizeFst: argument not an acceptor";
+      SetProperties(kError, kError);
+    }
+    if (!(Weight::Properties() & kLeftSemiring)) {
+      FSTERROR() << "DeterminizeFst: Weight needs to be left distributive: "
                  << Weight::Type();
+      SetProperties(kError, kError);
+    }
     if (out_dist_)
       out_dist_->clear();
   }
@@ -275,12 +281,14 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
   DeterminizeFsaImpl(const DeterminizeFsaImpl<A, D> &impl)
       : DeterminizeFstImplBase<A>(impl),
         delta_(impl.delta_),
-        in_dist_(impl.in_dist_),
-        out_dist_(impl.out_dist_),
+        in_dist_(0),
+        out_dist_(0),
         common_divisor_(impl.common_divisor_),
         subset_hash_(0, SubsetKey(), SubsetEqual(&elements_)) {
-    if (out_dist_)
-      LOG(FATAL) << "DeterminizeFsaImpl: cannot copy with out_dist vector";
+    if (impl.out_dist_) {
+      FSTERROR() << "DeterminizeFsaImpl: cannot copy with out_dist vector";
+      SetProperties(kError, kError);
+    }
   }
 
   virtual ~DeterminizeFsaImpl() {
@@ -290,6 +298,15 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
 
   virtual DeterminizeFsaImpl<A, D> *Copy() {
     return new DeterminizeFsaImpl<A, D>(*this);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && (GetFst().Properties(kError, false)))
+      SetProperties(kError, kError);
+    return FstImpl<A>::Properties(mask);
   }
 
   virtual StateId ComputeStart() {
@@ -311,7 +328,9 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
       Element &element = *siter;
       final = Plus(final, Times(element.weight,
                                 GetFst().Final(element.state_id)));
-      }
+      if (!final.Member())
+        SetProperties(kError, kError);
+    }
     return final;
   }
 
@@ -421,6 +440,8 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
         // Found duplicate state: sums state weight and deletes dup.
         matching_element->weight = Plus(matching_element->weight,
                                         dest_element.weight);
+        if (!matching_element->weight.Member())
+          SetProperties(kError, kError);
         ++diter;
         dest_subset->erase_after(oiter);
       } else {
@@ -551,6 +572,7 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
 template <class A, StringType S>
 class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
  public:
+  using FstImpl<A>::SetProperties;
   using DeterminizeFstImplBase<A>::GetFst;
   using CacheBaseImpl< CacheState<A> >::GetCacheGc;
   using CacheBaseImpl< CacheState<A> >::GetCacheLimit;
@@ -587,6 +609,16 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
 
   virtual DeterminizeFstImpl<A, S> *Copy() {
     return new DeterminizeFstImpl<A, S>(*this);
+  }
+
+  uint64 Properties() const { return Properties(kFstProperties); }
+
+  // Set error if found; return FST impl properties.
+  uint64 Properties(uint64 mask) const {
+    if ((mask & kError) && (GetFst().Properties(kError, false) ||
+                            from_fst_->Properties(kError, false)))
+      SetProperties(kError, kError);
+    return FstImpl<A>::Properties(mask);
   }
 
   virtual StateId ComputeStart() { return from_fst_->Start(); }
@@ -672,9 +704,11 @@ class DeterminizeFst : public ImplToFst< DeterminizeFstImplBase<A> >  {
       const Fst<A> &fst,
       const vector<Weight> &in_dist, vector<Weight> *out_dist,
       const DeterminizeFstOptions<A> &opts = DeterminizeFstOptions<A>()) {
-    if (!fst.Properties(kAcceptor, true))
-      LOG(FATAL) << "DeterminizeFst:"
+    if (!fst.Properties(kAcceptor, true)) {
+      FSTERROR() << "DeterminizeFst:"
                  << " distance to final states computed for acceptors only";
+      GetImpl()->SetProperties(kError, kError);
+    }
     typedef DefaultCommonDivisor<Weight> D;
     SetImpl(new DeterminizeFsaImpl<A, D>(fst, D(), &in_dist, out_dist, opts));
   }

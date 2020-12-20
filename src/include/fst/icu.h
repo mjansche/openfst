@@ -13,88 +13,101 @@
 // limitations under the License.
 //
 // Copyright 2005-2010 Google, Inc.
-// Author: roubert@google.com (Fredrik Roubert)
-
-// Wrapper class for UErrorCode, with conversion operators for direct use in
-// ICU C and C++ APIs.
+// Author: sorenj@google.com (Jeffrey Sorensen)
+//         roubert@google.com (Fredrik Roubert)
 //
-// Features:
-// - The constructor initializes the internal UErrorCode to U_ZERO_ERROR,
-//   removing one common source of errors.
-// - Same use in C APIs taking a UErrorCode* (pointer) and C++ taking
-//   UErrorCode& (reference), via conversion operators.
-// - Automatic checking for success when it goes out of scope. On failure,
-//   the destructor will LOG(FATAL) an error message.
-//
-// Most of ICU will handle errors gracefully and provide sensible fallbacks.
-// Using IcuErrorCode, it is therefore possible to write very compact code
-// that does sensible things on failure and provides logging for debugging.
-//
-// Example:
-//
-// IcuErrorCode icuerrorcode;
-// return collator.compareUTF8(a, b, icuerrorcode) == UCOL_EQUAL;
+// This library implements an unrestricted Thompson/Pike UTF-8 parser and
+// serializer.  UTF-8 is a restricted subset of this byte stream encoding.  See
+// http://en.wikipedia.org/wiki/UTF-8 for a good description of the encoding
+// details.
 
 #ifndef FST_LIB_ICU_H_
 #define FST_LIB_ICU_H_
 
-#include <unicode/errorcode.h>
-#include <unicode/unistr.h>
-#include <unicode/ustring.h>
-#include <unicode/utf8.h>
-
-class IcuErrorCode : public icu::ErrorCode {
- public:
-  IcuErrorCode() {}
-  virtual ~IcuErrorCode() { if (isFailure()) handleFailure(); }
-
-  // Redefine 'errorName()' in order to be compatible with ICU version 4.2
-  const char* errorName() const {
-    return u_errorName(errorCode);
-  }
-
- protected:
-  virtual void handleFailure() const {
-    LOG(FATAL) << errorName();
-}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(IcuErrorCode);
-};
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 namespace fst {
 
 template <class Label>
 bool UTF8StringToLabels(const string &str, vector<Label> *labels) {
-  const char *c_str = str.c_str();
-  int32_t length = str.size();
-  UChar32 c;
+  const char *data = str.data();
+  size_t length = str.size();
   for (int32_t i = 0; i < length; /* no update */) {
-    U8_NEXT(c_str, i, length, c);
-    if (c < 0) {
-      LOG(ERROR) << "UTF8StringToLabels: Invalid character found: " << c;
-      return false;
+    char c = data[i++];
+    if ((c & 0x80) == 0) {
+      labels->push_back(c);
+    } else {
+      if ((c & 0xc0) == 0x80) {
+        LOG(ERROR) << "UTF8StringToLabels: continuation byte as lead byte";
+        return false;
+      }
+      int32_t count = (c >= 0xc0) + (c >= 0xe0) + (c >= 0xf0) + (c >= 0xf8) +
+                      (c >= 0xfc);
+      int32_t code = c & ((1 << (6 - count)) - 1);
+      while (count != 0) {
+        if (i == length) {
+          LOG(ERROR) << "UTF8StringToLabels: truncated utf-8 byte sequence";
+          return false;
+        }
+        char cb = data[i++];
+        if ((cb & 0xc0) != 0x80) {
+          LOG(ERROR) << "UTF8StringToLabels: missing/invalid continuation byte";
+          return false;
+        }
+        code = (code << 6) | (cb & 0x3f);
+        count--;
+      }
+      if (code < 0) {
+        // This should not be able to happen.
+        LOG(ERROR) << "UTF8StringToLabels: Invalid character found: " << c;
+        return false;
+      }
+      labels->push_back(code);
     }
-    labels->push_back(c);
   }
   return true;
 }
 
 template <class Label>
 bool LabelsToUTF8String(const vector<Label> &labels, string *str) {
-  icu::UnicodeString u_str;
-  char c_str[5];
+  ostringstream ostr;
   for (size_t i = 0; i < labels.size(); ++i) {
-    u_str.setTo(labels[i]);
-    IcuErrorCode error;
-    u_strToUTF8(c_str, 5, NULL, u_str.getTerminatedBuffer(), -1, error);
-    if (error.isFailure()) {
-      LOG(ERROR) << "LabelsToUTF8String: Bad encoding: "
-                 << error.errorName();
+    int32_t code = labels[i];
+    if (code < 0) {
+      LOG(ERROR) << "LabelsToUTF8String: Invalid character found: " << code;
       return false;
+    } else if (code < 0x80) {
+      ostr << static_cast<char>(code);
+    } else if (code < 0x800) {
+      ostr << static_cast<char>((code >> 6) | 0xc0);
+      ostr << static_cast<char>((code & 0x3f) | 0x80);
+    } else if (code < 0x10000) {
+      ostr << static_cast<char>((code >> 12) | 0xe0);
+      ostr << static_cast<char>(((code >> 6) & 0x3f) | 0x80);
+      ostr << static_cast<char>((code & 0x3f) | 0x80);
+    } else if (code < 0x200000) {
+      ostr << static_cast<char>((code >> 18) | 0xf0);
+      ostr << static_cast<char>(((code >> 12) & 0x3f) | 0x80);
+      ostr << static_cast<char>(((code >> 6) & 0x3f) | 0x80);
+      ostr << static_cast<char>((code & 0x3f) | 0x80);
+    } else if (code < 0x4000000) {
+      ostr << static_cast<char>((code >> 24) | 0xf8);
+      ostr << static_cast<char>(((code >> 18) & 0x3f) | 0x80);
+      ostr << static_cast<char>(((code >> 12) & 0x3f) | 0x80);
+      ostr << static_cast<char>(((code >> 6) & 0x3f) | 0x80);
+      ostr << static_cast<char>((code & 0x3f) | 0x80);
+    } else {
+      ostr << static_cast<char>((code >> 30) | 0xfc);
+      ostr << static_cast<char>(((code >> 24) & 0x3f) | 0x80);
+      ostr << static_cast<char>(((code >> 18) & 0x3f) | 0x80);
+      ostr << static_cast<char>(((code >> 12) & 0x3f) | 0x80);
+      ostr << static_cast<char>(((code >> 6) & 0x3f) | 0x80);
+      ostr << static_cast<char>((code & 0x3f) | 0x80);
     }
-    *str += c_str;
   }
+  *str = ostr.str();
   return true;
 }
 

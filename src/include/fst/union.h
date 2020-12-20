@@ -46,14 +46,30 @@ void Union(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  StateId start2 = fst2.Start();
-  if (start2 == kNoStateId)
+  // Check that the symbol tables are compatible
+  if (!CompatSymbols(fst1->InputSymbols(), fst2.InputSymbols()) ||
+      !CompatSymbols(fst1->OutputSymbols(), fst2.OutputSymbols())) {
+    FSTERROR() << "Union: input/output symbol tables of 1st argument "
+               << "do not match input/output symbol tables of 2nd argument";
+    fst1->SetProperties(kError, kError);
     return;
+  }
 
   StateId numstates1 = fst1->NumStates();
   bool initial_acyclic1 = fst1->Properties(kInitialAcyclic, true);
   uint64 props1 = fst1->Properties(kFstProperties, false);
   uint64 props2 = fst2.Properties(kFstProperties, false);
+
+  StateId start2 = fst2.Start();
+  if (start2 == kNoStateId) {
+    if (props2 & kError) fst1->SetProperties(kError, kError);
+    return;
+  }
+
+  if (fst2.Properties(kExpanded, false)) {
+    fst1->ReserveStates(
+        numstates1 + CountStates(fst2) + (initial_acyclic1 ? 0 : 1));
+  }
 
   for (StateIterator< Fst<Arc> > siter(fst2);
        !siter.Done();
@@ -61,6 +77,7 @@ void Union(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
     StateId s1 = fst1->AddState();
     StateId s2 = siter.Value();
     fst1->SetFinal(s1, fst2.Final(s2));
+    fst1->ReserveArcs(s1, fst2.NumArcs(s2));
     for (ArcIterator< Fst<Arc> > aiter(fst2, s2);
          !aiter.Done();
          aiter.Next()) {

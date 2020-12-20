@@ -157,7 +157,7 @@ class PdtParenReachable {
         return;
       DFSearch(start, start);
     } else {
-      LOG(FATAL) << "PdtParenReachable: open paren info not implemented";
+      FSTERROR() << "PdtParenReachable: open paren info not implemented";
     }
   }
 
@@ -252,8 +252,10 @@ bool PdtParenReachable<A>::DFSearch(StateId s, StateId start) {
         }
       }
     } else {                                       // non-paren
-      if(!DFSearch(arc.nextstate, start))
-        LOG(FATAL) << "PdtReachable: Underlying cyclicity not supported";
+      if(!DFSearch(arc.nextstate, start)) {
+        FSTERROR() << "PdtReachable: Underlying cyclicity not supported";
+        return true;
+      }
     }
   }
   ComputeStateSet(s);

@@ -37,7 +37,6 @@ namespace fst {
 template<class Arc>
 SymbolTable *PruneSymbolTable(const Fst<Arc> &fst, const SymbolTable &syms,
                               bool input) {
-  CHECK_NE(syms.NumSymbols(), 0);  // Cannot prune an empty symbol table
   unordered_set<typename Arc::Label> seen;
   seen.insert(0);  // Always keep epslion
   StateIterator<Fst<Arc> > siter(fst);

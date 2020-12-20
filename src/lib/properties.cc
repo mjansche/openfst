@@ -36,7 +36,7 @@ namespace fst {
 
 // Properties for a concatenatively-closed FST.
 uint64 ClosureProperties(uint64 inprops, bool star, bool delayed) {
-  uint64 outprops = (kAcceptor | kUnweighted | kAccessible) & inprops;
+  uint64 outprops = (kError | kAcceptor | kUnweighted | kAccessible) & inprops;
   if (!delayed)
        outprops |= (kExpanded | kMutable | kCoAccessible |
                     kNotTopSorted | kNotString) & inprops;
@@ -52,7 +52,8 @@ uint64 ComplementProperties(uint64 inprops) {
   uint64 outprops = kAcceptor | kUnweighted | kNoEpsilons |
                     kNoIEpsilons | kNoOEpsilons |
                     kIDeterministic | kODeterministic | kAccessible;
-  outprops |= (kILabelSorted | kOLabelSorted | kInitialCyclic) & inprops;
+  outprops |= (kError | kILabelSorted | kOLabelSorted | kInitialCyclic) &
+      inprops;
   if (inprops & kAccessible)
     outprops |= kNotILabelSorted | kNotOLabelSorted | kCyclic;
   return outprops;
@@ -60,15 +61,15 @@ uint64 ComplementProperties(uint64 inprops) {
 
 // Properties for a composed FST.
 uint64 ComposeProperties(uint64 inprops1, uint64 inprops2) {
-  uint64 outprops;
+  uint64 outprops = kError & (inprops1 | inprops2);
   if (inprops1 & kAcceptor && inprops2 & kAcceptor) {
-    outprops = kAcceptor | kAccessible;
+    outprops |= kAcceptor | kAccessible;
     outprops |= (kNoEpsilons | kNoIEpsilons | kNoOEpsilons | kAcyclic |
                  kInitialAcyclic) & inprops1 & inprops2;
     if (kNoIEpsilons & inprops1 & inprops2)
       outprops |= (kIDeterministic | kODeterministic) & inprops1 & inprops2;
   } else {
-    outprops = kAccessible;
+    outprops |= kAccessible;
     outprops |= (kAcceptor | kNoIEpsilons | kAcyclic | kInitialAcyclic) &
         inprops1 & inprops2;
     if (kNoIEpsilons & inprops1 & inprops2)
@@ -81,6 +82,7 @@ uint64 ComposeProperties(uint64 inprops1, uint64 inprops2) {
 uint64 ConcatProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
   uint64 outprops =
     (kAcceptor | kUnweighted | kAcyclic) & inprops1 & inprops2;
+  outprops |= kError & (inprops1 | inprops2);
 
   bool empty1 = delayed;  // Can fst1 be the empty machine?
   bool empty2 = delayed;  // Can fst2 be the empty machine?
@@ -115,7 +117,7 @@ uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label) {
   uint64 outprops = kAccessible;
   if (((kAcceptor | kNoIEpsilons) & inprops) || has_subsequential_label)
     outprops |= kIDeterministic;
-  outprops |= (kAcceptor | kNoEpsilons | kAcyclic |
+  outprops |= (kError | kAcceptor | kNoEpsilons | kAcyclic |
                kInitialAcyclic | kCoAccessible | kString) & inprops;
   if (inprops & kAccessible)
      outprops |= (kNotAcceptor | kEpsilons | kIEpsilons | kOEpsilons |
@@ -129,7 +131,7 @@ uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label) {
 
 // Properties for factored weight FST.
 uint64 FactorWeightProperties(uint64 inprops) {
-  uint64 outprops = (kExpanded | kMutable | kAcceptor |
+  uint64 outprops = (kExpanded | kMutable | kError | kAcceptor |
                      kAcyclic | kAccessible | kCoAccessible) & inprops;
   if (inprops & kAccessible)
     outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
@@ -141,7 +143,7 @@ uint64 FactorWeightProperties(uint64 inprops) {
 
 // Properties for an inverted FST.
 uint64 InvertProperties(uint64 inprops) {
-  uint64 outprops = (kExpanded | kMutable | kAcceptor | kNotAcceptor |
+  uint64 outprops = (kExpanded | kMutable | kError | kAcceptor | kNotAcceptor |
                      kEpsilons | kNoEpsilons | kWeighted | kUnweighted |
                      kCyclic | kAcyclic | kInitialCyclic | kInitialAcyclic |
                      kTopSorted | kNotTopSorted |
@@ -180,7 +182,7 @@ uint64 InvertProperties(uint64 inprops) {
 // Properties for a projected FST.
 uint64 ProjectProperties(uint64 inprops, bool project_input) {
   uint64 outprops = kAcceptor;
-  outprops |= (kExpanded | kMutable | kWeighted | kUnweighted |
+  outprops |= (kExpanded | kMutable | kError | kWeighted | kUnweighted |
                kCyclic | kAcyclic | kInitialCyclic | kInitialAcyclic |
                kTopSorted | kNotTopSorted | kAccessible | kNotAccessible |
                kCoAccessible | kNotCoAccessible |
@@ -230,6 +232,7 @@ uint64 ProjectProperties(uint64 inprops, bool project_input) {
 // Properties for a randgen FST.
 uint64 RandGenProperties(uint64 inprops, bool weighted) {
   uint64 outprops = kAcyclic | kInitialAcyclic | kAccessible;
+  outprops |= inprops & kError;
   if (weighted) {
     outprops |= kTopSorted;
     outprops |= (kAcceptor | kNoEpsilons |
@@ -251,6 +254,8 @@ uint64 ReplaceProperties(const vector<uint64>& inprops,
   if (inprops.size() == 0)
     return kNullProperties;
   uint64 outprops = 0;
+  for (size_t i = 0; i < inprops.size(); ++i)
+    outprops |= kError & inprops[i];
   uint64 access_props = no_empty_fsts ? kAccessible | kCoAccessible : 0;
   for (size_t i = 0; i < inprops.size(); ++i)
     access_props &= (inprops[i] & (kAccessible | kCoAccessible));
@@ -307,7 +312,7 @@ uint64 ReplaceProperties(const vector<uint64>& inprops,
 
 // Properties for a relabeled FST.
 uint64 RelabelProperties(uint64 inprops) {
-  uint64 outprops = (kExpanded | kMutable |
+  uint64 outprops = (kExpanded | kMutable | kError |
                      kWeighted | kUnweighted |
                      kCyclic | kAcyclic |
                      kInitialCyclic | kInitialAcyclic |
@@ -321,7 +326,7 @@ uint64 RelabelProperties(uint64 inprops) {
 // Properties for a reversed FST. (the superinitial state limits this set)
 uint64 ReverseProperties(uint64 inprops) {
   uint64 outprops =
-    (kExpanded | kMutable | kAcceptor | kNotAcceptor | kEpsilons |
+    (kExpanded | kMutable | kError | kAcceptor | kNotAcceptor | kEpsilons |
      kIEpsilons | kOEpsilons | kWeighted | kUnweighted |
      kCyclic | kAcyclic) & inprops;
   return outprops;
@@ -337,7 +342,7 @@ uint64 ReweightProperties(uint64 inprops) {
 // Properties for an epsilon-removed FST.
 uint64 RmEpsilonProperties(uint64 inprops, bool delayed) {
   uint64 outprops = kNoEpsilons;
-  outprops |= (kAcceptor | kAcyclic | kInitialAcyclic) & inprops;
+  outprops |= (kError | kAcceptor | kAcyclic | kInitialAcyclic) & inprops;
   if (inprops & kAcceptor)
     outprops |= kNoIEpsilons | kNoOEpsilons;
   if (!delayed) {
@@ -358,8 +363,8 @@ uint64 ShortestPathProperties(uint64 props) {
 
 // Properties for a synchronized FST.
 uint64 SynchronizeProperties(uint64 inprops) {
-  uint64 outprops = (kAcceptor | kAcyclic | kAccessible | kCoAccessible |
-                     kUnweighted) & inprops;
+  uint64 outprops = (kError | kAcceptor | kAcyclic | kAccessible |
+                     kCoAccessible | kUnweighted) & inprops;
   if (inprops & kAccessible)
     outprops |= (kCyclic | kNotCoAccessible | kWeighted) & inprops;
   return outprops;
@@ -369,6 +374,9 @@ uint64 SynchronizeProperties(uint64 inprops) {
 uint64 UnionProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
   uint64 outprops = (kAcceptor | kUnweighted | kAcyclic | kAccessible)
                     & inprops1 & inprops2;
+  outprops |= kError & (inprops1 | inprops2);
+  outprops |= kInitialAcyclic;
+
   bool empty1 = delayed;  // Can fst1 be the empty machine?
   bool empty2 = delayed;  // Can fst2 be the empty machine?
   if (!delayed) {
@@ -397,7 +405,7 @@ uint64 UnionProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
 // Property string names (indexed by bit position).
 const char *PropertyNames[] = {
   // binary
-  "expanded", "mutable", "", "", "", "", "", "",
+  "expanded", "mutable", "error", "", "", "", "", "",
   "", "", "", "", "", "", "", "",
   // trinary
   "acceptor", "not acceptor",

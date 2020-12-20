@@ -100,7 +100,7 @@ struct CompactFstOptions : public CacheOptions {
 // simply raised an error when called:
 //
 // Compactor::Compactor() {
-//   LOG(FATAL) << "Compactor: no default constructor";
+//   FSTERROR() << "Compactor: no default constructor";
 // }
 
 
@@ -139,7 +139,8 @@ class CompactFstData {
         nstates_(0),
         ncompacts_(0),
         narcs_(0),
-        start_(kNoStateId) {}
+        start_(kNoStateId),
+        error_(false) {}
 
   template <class A, class Compactor>
   CompactFstData(const Fst<A> &fst, const Compactor &compactor);
@@ -172,6 +173,8 @@ class CompactFstData {
   int IncrRefCount() { return ref_count_.Incr(); }
   int DecrRefCount() { return ref_count_.Decr(); }
 
+  bool Error() const { return error_; }
+
  private:
   // Byte alignment for states and arcs in file format (version 1 only)
   static const int kFileAlign = 16;
@@ -183,6 +186,7 @@ class CompactFstData {
   size_t narcs_;
   ssize_t start_;
   RefCounter ref_count_;
+  bool error_;
 };
 
 template <class E, class U>
@@ -191,14 +195,14 @@ const int CompactFstData<E, U>::kFileAlign;
 
 template <class E, class U>
 template <class A, class C>
-CompactFstData<E, U>::CompactFstData(const Fst<A> &fst,
-                                     const C &compactor)
+CompactFstData<E, U>::CompactFstData(const Fst<A> &fst, const C &compactor)
     : states_(0),
       compacts_(0),
       nstates_(0),
       ncompacts_(0),
       narcs_(0),
-      start_(kNoStateId) {
+      start_(kNoStateId),
+      error_(false) {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
   start_ = fst.Start();
@@ -223,8 +227,11 @@ CompactFstData<E, U>::CompactFstData(const Fst<A> &fst,
   } else {
     states_ = 0;
     ncompacts_ = nstates_ * compactor.Size();
-    if ((narcs_ + nfinals) != ncompacts_)
-      LOG(FATAL) << "CompactFstData: compactor incompatible with fst";
+    if ((narcs_ + nfinals) != ncompacts_) {
+      FSTERROR() << "CompactFstData: compactor incompatible with fst";
+      error_ = true;
+      return;
+    }
     compacts_ = new CompactElement[ncompacts_];
   }
   size_t pos = 0, fpos = 0;
@@ -237,32 +244,41 @@ CompactFstData<E, U>::CompactFstData(const Fst<A> &fst,
                                                 fst.Final(s), kNoStateId));
     for (ArcIterator< Fst<A> > aiter(fst, s);
          !aiter.Done();
-         aiter.Next())
+         aiter.Next()) {
       compacts_[pos++] = compactor.Compact(s, aiter.Value());
-    if ((compactor.Size() != -1) && ((pos - fpos) != compactor.Size()))
-      LOG(FATAL) << "CompactFstData: compactor incompatible with fst";
+    }
+    if ((compactor.Size() != -1) && ((pos - fpos) != compactor.Size())) {
+      FSTERROR() << "CompactFstData: compactor incompatible with fst";
+      error_ = true;
+      return;
+    }
   }
-  if (pos != ncompacts_)
-      LOG(FATAL) << "CompactFstData: compactor incompatible with fst";
+  if (pos != ncompacts_) {
+    FSTERROR() << "CompactFstData: compactor incompatible with fst";
+    error_ = true;
+    return;
+  }
 }
 
 template <class E, class U>
 template <class Iterator, class C>
 CompactFstData<E, U>::CompactFstData(const Iterator &begin,
-                                        const Iterator &end,
-                                        const C &compactor)
+                                     const Iterator &end,
+                                     const C &compactor)
     : states_(0),
       compacts_(0),
       nstates_(0),
       ncompacts_(0),
       narcs_(0),
-      start_(kNoStateId) {
+      start_(kNoStateId),
+      error_(false) {
   typedef typename C::Arc Arc;
   typedef typename Arc::Weight Weight;
-  // For strings, allow implicit final weight. Empty input is the empty string.
   if (compactor.Size() != -1) {
     ncompacts_ = distance(begin, end);
     if (compactor.Size() == 1) {
+      // For strings, allow implicit final weight.
+      // Empty input is the empty string.
       if (ncompacts_ == 0) {
         ++ncompacts_;
       } else {
@@ -272,9 +288,12 @@ CompactFstData<E, U>::CompactFstData(const Iterator &begin,
           ++ncompacts_;
       }
     }
-    if (ncompacts_ % compactor.Size())
-      LOG(FATAL) << "CompactFstData: size of input container incompatible"
+    if (ncompacts_ % compactor.Size()) {
+      FSTERROR() << "CompactFstData: size of input container incompatible"
                  << " with compactor";
+      error_ = true;
+      return;
+    }
     if (ncompacts_ == 0)
       return;
     start_ = 0;
@@ -321,8 +340,11 @@ CompactFstData<E, U>::CompactFstData(const Iterator &begin,
           compacts_[i++] = *it;
       }
     }
-    if ((s != nstates_) || (i != ncompacts_))
-      LOG(FATAL) << "CompactFstData: ill-formed input container";
+    if ((s != nstates_) || (i != ncompacts_)) {
+      FSTERROR() << "CompactFstData: ill-formed input container";
+      error_ = true;
+      return;
+    }
   }
 }
 
@@ -340,8 +362,10 @@ CompactFstData<E, U> *CompactFstData<E, U>::Read(
 
   if (compactor.Size() == -1) {
     data->states_ = new Unsigned[data->nstates_ + 1];
-    if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) && !AlignInput(strm, kFileAlign)) {
+    if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) &&
+        !AlignInput(strm, kFileAlign)) {
       LOG(ERROR) << "CompactFst::Read: Alignment failed: " << opts.source;
+      delete data;
       return 0;
     }
     // TODO: memory map this
@@ -349,6 +373,7 @@ CompactFstData<E, U> *CompactFstData<E, U>::Read(
     strm.read(reinterpret_cast<char *>(data->states_), b);
     if (!strm) {
       LOG(ERROR) << "CompactFst::Read: Read failed: " << opts.source;
+      delete data;
       return 0;
     }
   } else {
@@ -360,13 +385,16 @@ CompactFstData<E, U> *CompactFstData<E, U>::Read(
   data->compacts_ = new CompactElement[data->ncompacts_];
   // TODO: memory map this
   size_t b = data->ncompacts_ * sizeof(CompactElement);
-  if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) && !AlignInput(strm, kFileAlign)) {
+  if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) &&
+      !AlignInput(strm, kFileAlign)) {
     LOG(ERROR) << "CompactFst::Read: Alignment failed: " << opts.source;
+    delete data;
     return 0;
   }
   strm.read(reinterpret_cast<char *>(data->compacts_), b);
   if (!strm) {
     LOG(ERROR) << "CompactFst::Read: Read failed: " << opts.source;
+    delete data;
     return 0;
   }
   return data;
@@ -524,7 +552,10 @@ class CompactFstImpl : public CacheImpl<A> {
     return CacheImpl<A>::Final(s);
   }
 
-  StateId NumStates() const { return data_->NumStates();}
+  StateId NumStates() const {
+    if (Properties(kError)) return 0;
+    return data_->NumStates();
+  }
 
   size_t NumArcs(StateId s) {
     if (HasArcs(s))
@@ -563,8 +594,6 @@ class CompactFstImpl : public CacheImpl<A> {
   }
 
   size_t CountEpsilons(StateId s, bool output_epsilons) {
-    CHECK((!output_epsilons && Properties(kILabelSorted)) ||
-          (output_epsilons && Properties(kOLabelSorted)));
     size_t begin =  compactor_->Size() == -1 ?
         data_->States(s) : s * compactor_->Size();
     size_t end = compactor_->Size() == -1 ?
@@ -588,8 +617,10 @@ class CompactFstImpl : public CacheImpl<A> {
                                        const FstReadOptions &opts) {
     CompactFstImpl<A, C, U> *impl = new CompactFstImpl<A, C, U>();
     FstHeader hdr;
-    if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr))
+    if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
+      delete impl;
       return 0;
+    }
 
     // Ensures compatibility
     if (hdr.Version() == kAlignedFileVersion)
@@ -689,13 +720,18 @@ class CompactFstImpl : public CacheImpl<A> {
     type += "_";
     type += compactor_->Type();
     SetType(type);
-    uint64 copy_properties = fst.Properties(kCopyProperties, true);
-    if (!compactor_->Compatible(fst))
-      LOG(FATAL) << "CompactFstImpl: input fst incompatible with compactor";
-    SetProperties(copy_properties | kStaticProperties);
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
     data_ = new CompactFstData<CompactElement, U>(fst, *compactor_);
+    if (data_->Error())
+      SetProperties(kError, kError);
+    uint64 copy_properties = fst.Properties(kCopyProperties, true);
+    if ((copy_properties & kError) || !compactor_->Compatible(fst)) {
+      FSTERROR() << "CompactFstImpl: input fst incompatible with compactor";
+      SetProperties(kError, kError);
+      return;
+    }
+    SetProperties(copy_properties | kStaticProperties);
   }
 
   template <class Iterator>
@@ -711,6 +747,8 @@ class CompactFstImpl : public CacheImpl<A> {
     SetType(type);
     SetProperties(kStaticProperties | compactor_->Properties());
     data_ = new CompactFstData<CompactElement, U>(b, e, *compactor_);
+    if (data_->Error())
+      SetProperties(kError, kError);
   }
 
   // Properties always true of this Fst class
@@ -815,6 +853,14 @@ class CompactFst : public ImplToExpandedFst< CompactFstImpl<A, C, U> > {
   static CompactFst<A, C, U> *Read(const string &filename) {
     Impl* impl = ImplToExpandedFst<Impl>::Read(filename);
     return impl ? new CompactFst<A, C, U>(impl) : 0;
+  }
+
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return GetImpl()->Write(strm, opts);
+  }
+
+  virtual bool Write(const string &filename) const {
+    return Fst<A>::WriteFile(filename);
   }
 
   virtual void InitStateIterator(StateIteratorData<A> *data) const {

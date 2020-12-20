@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <fst/util.h>
 
 #include <algorithm>
@@ -59,12 +60,15 @@ class STListWriter {
   explicit STListWriter(const string filename)
       : stream_(
           filename.empty() ? &std::cout :
-          new ofstream(filename.c_str(), ofstream::out | ofstream::binary)) {
+          new ofstream(filename.c_str(), ofstream::out | ofstream::binary)),
+        error_(false) {
     WriteType(*stream_, kSTListMagicNumber);
     WriteType(*stream_, kSTListFileVersion);
-    if (!stream_)
-      LOG(FATAL) << "STListWriter::STListWriter: error writing to file: "
+    if (!stream_) {
+      FSTERROR() << "STListWriter::STListWriter: error writing to file: "
                  << filename;
+      error_ = true;
+    }
   }
 
   static STListWriter<T, W> *Create(const string &filename) {
@@ -72,14 +76,20 @@ class STListWriter {
   }
 
   void Add(const string &key, const T &t) {
-    if (key == "")
-      LOG(FATAL) << "STListWriter::Add: key empty: " << key;
-    else if (key < last_key_)
-      LOG(FATAL) << "STListWriter::Add: key disorder: " << key;
+    if (key == "") {
+      FSTERROR() << "STListWriter::Add: key empty: " << key;
+      error_ = true;
+    } else if (key < last_key_) {
+      FSTERROR() << "STListWriter::Add: key disorder: " << key;
+      error_ = true;
+    }
+    if (error_) return;
     last_key_ = key;
     WriteType(*stream_, key);
     entry_writer_(*stream_, t);
   }
+
+  bool Error() const { return error_; }
 
   ~STListWriter() {
     WriteType(*stream_, string());
@@ -91,6 +101,7 @@ class STListWriter {
   EntryWriter entry_writer_;  // Write functor for 'EntryType'
   ostream *stream_;           // Output stream
   string last_key_;           // Last key
+  bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STListWriter);
 };
@@ -111,8 +122,8 @@ class STListReader {
   typedef R EntryReader;
 
   explicit STListReader(const vector<string> &filenames)
-      : sources_(filenames), entry_(0) {
-    streams_.resize(filenames.size());
+      : sources_(filenames), entry_(0), error_(false) {
+    streams_.resize(filenames.size(), 0);
     bool has_stdin = false;
     for (size_t i = 0; i < filenames.size(); ++i) {
       if (filenames[i].empty()) {
@@ -121,8 +132,10 @@ class STListReader {
           sources_[i] = "stdin";
           has_stdin = true;
         } else {
-          LOG(FATAL) << "STListReader::STListReader: stdin should only "
+          FSTERROR() << "STListReader::STListReader: stdin should only "
                      << "appear once in the input file list.";
+          error_ = true;
+          return;
         }
       } else {
         streams_[i] = new ifstream(
@@ -131,25 +144,36 @@ class STListReader {
       int32 magic_number = 0, file_version = 0;
       ReadType(*streams_[i], &magic_number);
       ReadType(*streams_[i], &file_version);
-      if (magic_number != kSTListMagicNumber)
-        LOG(FATAL) << "STListReader::STTableReader: wrong file type: "
+      if (magic_number != kSTListMagicNumber) {
+        FSTERROR() << "STListReader::STTableReader: wrong file type: "
                    << filenames[i];
-      if (file_version != kSTListFileVersion)
-        LOG(FATAL) << "STListReader::STTableReader: wrong file version: "
+        error_ = true;
+        return;
+      }
+      if (file_version != kSTListFileVersion) {
+        FSTERROR() << "STListReader::STTableReader: wrong file version: "
                    << filenames[i];
+        error_ = true;
+        return;
+      }
       string key;
       ReadType(*streams_[i], &key);
       if (!key.empty())
         heap_.push(make_pair(key, i));
-      if (!*streams_[i])
-        LOG(FATAL) << "STTableReader: error reading file: " << sources_[i];
+      if (!*streams_[i]) {
+        FSTERROR() << "STTableReader: error reading file: " << sources_[i];
+        error_ = true;
+        return;
+      }
     }
     if (heap_.empty()) return;
     size_t current = heap_.top().second;
     entry_ = entry_reader_(*streams_[current]);
-    if (!*streams_[current])
-      LOG(FATAL) << "STTableReader: error reading entry for key: "
+    if (!entry_ || !*streams_[current]) {
+      FSTERROR() << "STTableReader: error reading entry for key: "
                  << heap_.top().first << ", file: " << sources_[current];
+      error_ = true;
+    }
   }
 
   ~STListReader() {
@@ -172,28 +196,34 @@ class STListReader {
   }
 
   void Reset() {
-    LOG(FATAL)
+    FSTERROR()
         << "STListReader::Reset: stlist does not support reset operation";
+    error_ = true;
   }
 
   bool Find(const string &key) {
-    LOG(FATAL)
+    FSTERROR()
         << "STListReader::Find: stlist does not support find operation";
+    error_ = true;
     return false;
   }
 
   bool Done() const {
-    return heap_.empty();
+    return error_ || heap_.empty();
   }
 
   void Next() {
+    if (error_) return;
     size_t current = heap_.top().second;
     string key;
     heap_.pop();
     ReadType(*(streams_[current]), &key);
-    if (!*streams_[current])
-      LOG(FATAL) << "STTableReader: error reading file: "
+    if (!*streams_[current]) {
+      FSTERROR() << "STTableReader: error reading file: "
                  << sources_[current];
+      error_ = true;
+      return;
+    }
     if (!key.empty())
       heap_.push(make_pair(key, current));
 
@@ -202,10 +232,11 @@ class STListReader {
       if (entry_)
         delete entry_;
       entry_ = entry_reader_(*streams_[current]);
-      if (!*streams_[current])
-        LOG(FATAL) << "STTableReader: error reading entry for key: "
+      if (!entry_ || !*streams_[current]) {
+        FSTERROR() << "STTableReader: error reading entry for key: "
                    << heap_.top().first << ", file: " << sources_[current];
-
+        error_ = true;
+      }
     }
   }
 
@@ -217,6 +248,8 @@ class STListReader {
     return *entry_;
   }
 
+  bool Error() const { return error_; }
+
  private:
   EntryReader entry_reader_;   // Read functor for 'EntryType'
   vector<istream*> streams_;   // Input streams
@@ -225,6 +258,7 @@ class STListReader {
     pair<string, size_t>, vector<pair<string, size_t> >,
     greater<pair<string, size_t> > > heap_;  // (Key, stream id) heap
   mutable EntryType *entry_;   // Pointer to the currently read entry
+  bool error_;
 
   DISALLOW_COPY_AND_ASSIGN(STListReader);
 };

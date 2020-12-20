@@ -486,8 +486,11 @@ void MergeStates(
 template <class A>
 void AcceptorMinimize(MutableFst<A>* fst) {
   typedef typename A::StateId StateId;
-  if (!(fst->Properties(kAcceptor | kUnweighted, true)))
-    LOG(FATAL) << "Input Fst is not an unweighted acceptor";
+  if (!(fst->Properties(kAcceptor | kUnweighted, true))) {
+    FSTERROR() << "FST is not an unweighted acceptor";
+    fst->SetProperties(kError, kError);
+    return;
+  }
 
   // connect fst before minimization, handles disconnected states
   Connect(fst);
@@ -530,8 +533,11 @@ void Minimize(MutableFst<A>* fst,
               float delta = kDelta) {
   uint64 props = fst->Properties(kAcceptor | kIDeterministic|
                                  kWeighted | kUnweighted, true);
-  if (!(props & kIDeterministic))
-    LOG(FATAL) << "Input Fst is not deterministic";
+  if (!(props & kIDeterministic)) {
+    FSTERROR() << "FST is not deterministic";
+    fst->SetProperties(kError, kError);
+    return;
+  }
 
   if (!(props & kAcceptor)) {  // weighted transducer
     VectorFst< GallicArc<A, STRING_LEFT> > gfst;

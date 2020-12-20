@@ -100,12 +100,14 @@ class WeightClass {
 
   string to_string() const {
     switch (element_type_) {
-      case ZERO: return "ZERO";
-      case ONE: return "ONE";
-      case OTHER: return impl_->to_string();
+      case ZERO:
+        return "ZERO";
+      case ONE:
+        return "ONE";
+      default:
+      case OTHER:
+        return impl_->to_string();
     }
-
-    LOG(FATAL);
   }
 
   bool operator == (const WeightClass &other) const {

@@ -27,12 +27,15 @@ using std::pair; using std::make_pair;
 namespace fst {
 namespace script {
 
-void ReadPotentials(const string &weight_type,
+// Reads vector of weights; returns true on success.
+bool ReadPotentials(const string &weight_type,
                     const string& filename,
                     vector<WeightClass>* potential) {
   ifstream strm(filename.c_str());
-  if (!strm)
-    LOG(FATAL) << "ReadPotentials: Can't open file: " << filename;
+  if (!strm) {
+    LOG(ERROR) << "ReadPotentials: Can't open file: " << filename;
+    return false;
+  }
 
   const int kLineLen = 8096;
   char line[kLineLen];
@@ -45,9 +48,11 @@ void ReadPotentials(const string &weight_type,
     SplitToVector(line, "\n\t ", &col, true);
     if (col.size() == 0 || col[0][0] == '\0')  // empty line
       continue;
-    if (col.size() != 2)
-      LOG(FATAL) << "ReadPotentials: Bad number of columns, "
+    if (col.size() != 2) {
+      LOG(ERROR) << "ReadPotentials: Bad number of columns, "
                  << "file = " << filename << ", line = " << nline;
+      return false;
+    }
 
     ssize_t s = StrToInt64(col[0], filename, nline, false);
     WeightClass weight(weight_type, col[1]);
@@ -56,15 +61,20 @@ void ReadPotentials(const string &weight_type,
       potential->push_back(WeightClass::Zero());
     (*potential)[s] = weight;
   }
+  return true;
 }
 
-void WritePotentials(const string& filename,
+// Writes vector of weights; returns true on success.
+bool WritePotentials(const string& filename,
                      const vector<WeightClass>& potential) {
   ostream *strm = &std::cout;
   if (!filename.empty()) {
     strm = new ofstream(filename.c_str());
-    if (!*strm)
-      LOG(FATAL) << "WritePotentials: Can't open file: " << filename;
+    if (!*strm) {
+      LOG(ERROR) << "WritePotentials: Can't open file: " << filename;
+      delete strm;
+      return false;
+    }
   }
 
   strm->precision(9);
@@ -72,10 +82,12 @@ void WritePotentials(const string& filename,
     *strm << s << "\t" << potential[s] << "\n";
 
   if (!*strm)
-    LOG(FATAL) << "WritePotentials: Write failed: "
+    LOG(ERROR) << "WritePotentials: Write failed: "
                << (filename.empty() ? "standard output" : filename);
+  bool ret = *strm;
   if (strm != &std::cout)
     delete strm;
+  return ret;
 }
 
 
