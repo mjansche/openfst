@@ -153,7 +153,7 @@ class STListReader {
 
   ~STListReader() {
     for (size_t i = 0; i < streams_.size(); ++i) {
-      if (streams_[i] != std::cin)
+      if (streams_[i] != &std::cin)
         delete streams_[i];
     }
     if (entry_)
