@@ -235,7 +235,7 @@ WRITE_STL_ASSOC_TYPE(std::unordered_map);
 // Utilities for converting between int64 or Weight and string.
 
 int64 StrToInt64(const string &s, const string &src, size_t nline,
-                 bool allow_negative, bool *error = 0);
+                 bool allow_negative, bool *error = nullptr);
 
 template <typename Weight>
 Weight StrToWeight(const string &s, const string &src, size_t nline) {
@@ -287,7 +287,7 @@ bool ReadIntPairs(const string &filename, std::vector<std::pair<I, I>> *pairs,
     std::vector<char *> col;
     SplitToVector(line, "\n\t ", &col, true);
     // empty line or comment?
-    if (col.size() == 0 || col[0][0] == '\0' || col[0][0] == '#') continue;
+    if (col.empty() || col[0][0] == '\0' || col[0][0] == '#') continue;
     if (col.size() != 2) {
       LOG(ERROR) << "ReadIntPairs: Bad number of columns, "
                  << "file = " << filename << ", line = " << nline;
@@ -310,16 +310,16 @@ bool WriteIntPairs(const string &filename,
                    const std::vector<std::pair<I, I>> &pairs) {
   std::ostream *strm = &std::cout;
   if (!filename.empty()) {
-    strm = new std::ofstream(filename.c_str());
+    strm = new std::ofstream(filename);
     if (!*strm) {
       LOG(ERROR) << "WriteIntPairs: Can't open file: " << filename;
       return false;
     }
   }
 
-  for (ssize_t n = 0; n < pairs.size(); ++n)
+  for (ssize_t n = 0; n < pairs.size(); ++n) {
     *strm << pairs[n].first << "\t" << pairs[n].second << "\n";
-
+  }
   if (!*strm) {
     LOG(ERROR) << "WriteIntPairs: Write failed: "
                << (filename.empty() ? "standard output" : filename);
@@ -396,10 +396,11 @@ class CompactSet {
   }
 
   const_iterator Find(Key key) const {
-    if (min_key_ == NoKey || key < min_key_ || max_key_ < key)
+    if (min_key_ == NoKey || key < min_key_ || max_key_ < key) {
       return set_.end();
-    else
+    } else {
       return set_.find(key);
+    }
   }
 
   bool Member(Key key) const {
@@ -408,7 +409,7 @@ class CompactSet {
     } else if (min_key_ != NoKey && max_key_ + 1 == min_key_ + set_.size()) {
       return true;  // dense range
     } else {
-      return set_.find(key) != set_.end();
+      return set_.count(key);
     }
   }
 

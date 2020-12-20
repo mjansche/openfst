@@ -5,6 +5,7 @@
 // FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/connect.h>
 

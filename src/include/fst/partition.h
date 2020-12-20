@@ -115,8 +115,9 @@ class Partition {
       CHECK(old_class.no_head == element_id);
       old_class.no_head = element.next_element;
     }
-    if (element.next_element >= 0)
+    if (element.next_element >= 0) {
       elements[element.next_element].prev_element = element.prev_element;
+    }
     // Adds to new class.
     Add(element_id, class_id);
   }
@@ -127,8 +128,9 @@ class Partition {
   void SplitOn(T element_id) {
     Element *elements = &(elements_[0]);
     Element &element = elements[element_id];
-    if (element.yes == yes_counter_)
+    if (element.yes == yes_counter_) {
       return;  // Already in the 'yes' set; nothing to do.
+    }
     T class_id = element.class_id;
     Class &this_class = classes_[class_id];
     // Excises the element from the 'no' list of its class.
@@ -260,8 +262,9 @@ class Partition {
       }
       Element *elements = &(elements_[0]);
       // Updates the 'class_id' of all the elements we moved.
-      for (T e = new_class.no_head; e >= 0; e = elements[e].next_element)
+      for (T e = new_class.no_head; e >= 0; e = elements[e].next_element) {
         elements[e].class_id = new_class_id;
+      }
       return new_class_id;
     }
   }

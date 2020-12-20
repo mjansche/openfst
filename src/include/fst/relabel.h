@@ -218,7 +218,7 @@ class RelabelFstImpl : public CacheImpl<A> {
     SetType("relabel");
 
     // create input label map
-    if (ipairs.size() > 0) {
+    if (!ipairs.empty()) {
       for (size_t i = 0; i < ipairs.size(); ++i) {
         input_map_[ipairs[i].first] = ipairs[i].second;
       }
@@ -226,7 +226,7 @@ class RelabelFstImpl : public CacheImpl<A> {
     }
 
     // create output label map
-    if (opairs.size() > 0) {
+    if (!opairs.empty()) {
       for (size_t i = 0; i < opairs.size(); ++i) {
         output_map_[opairs[i].first] = opairs[i].second;
       }
@@ -283,8 +283,6 @@ class RelabelFstImpl : public CacheImpl<A> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~RelabelFstImpl() override { delete fst_; }
-
   StateId Start() {
     if (!HasStart()) {
       StateId s = fst_->Start();
@@ -325,8 +323,9 @@ class RelabelFstImpl : public CacheImpl<A> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) && fst_->Properties(kError, false))
+    if ((mask & kError) && fst_->Properties(kError, false)) {
       SetProperties(kError, kError);
+    }
     return FstImpl<Arc>::Properties(mask);
   }
 
@@ -363,14 +362,12 @@ class RelabelFstImpl : public CacheImpl<A> {
   }
 
  private:
-  const Fst<A>* fst_;
+  std::unique_ptr<const Fst<A>> fst_;
 
   std::unordered_map<Label, Label> input_map_;
   std::unordered_map<Label, Label> output_map_;
   bool relabel_input_;
   bool relabel_output_;
-
-  void operator=(const RelabelFstImpl<A>&);  // disallow
 };
 
 //
@@ -450,7 +447,7 @@ class RelabelFst : public ImplToFst<RelabelFstImpl<A>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const RelabelFst<A>& fst);  // disallow
+  RelabelFst& operator=(const RelabelFst& fst) = delete;
 };
 
 // Specialization for RelabelFst.
@@ -488,7 +485,8 @@ class StateIterator<RelabelFst<A>> : public StateIteratorBase<A> {
   StateIterator<Fst<A>> siter_;
   StateId s_;
 
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
+  StateIterator(const StateIterator&) = delete;
+  StateIterator& operator=(const StateIterator&) = delete;
 };
 
 // Specialization for RelabelFst.
@@ -501,9 +499,6 @@ class ArcIterator<RelabelFst<A>> : public CacheArcIterator<RelabelFst<A>> {
       : CacheArcIterator<RelabelFst<A>>(fst.GetImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>

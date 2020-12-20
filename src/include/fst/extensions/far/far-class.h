@@ -6,6 +6,7 @@
 #ifndef FST_EXTENSIONS_FAR_FAR_CLASS_H_
 #define FST_EXTENSIONS_FAR_FAR_CLASS_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -145,8 +146,6 @@ class FarReaderClass {
   explicit FarReaderClass(FarReaderClassImpl<A> *impl) : impl_(impl) {}
 
   std::unique_ptr<FarReaderImplBase> impl_;
-
-  DISALLOW_COPY_AND_ASSIGN(FarReaderClass);
 };
 
 // These exist solely for registration purposes; users should call the
@@ -263,8 +262,6 @@ class FarWriterClass {
   explicit FarWriterClass(FarWriterClassImpl<A> *impl) : impl_(impl) {}
 
   std::unique_ptr<FarWriterImplBase> impl_;
-
-  DISALLOW_COPY_AND_ASSIGN(FarWriterClass);
 };
 
 // This exists solely for registration purposes; users should call the

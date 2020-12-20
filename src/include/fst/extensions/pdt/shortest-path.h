@@ -261,7 +261,8 @@ class PdtShortestPathData {
   mutable SearchData null_search_data_;     // Null search data
   bool finished_;                           // Read-only access when true
 
-  DISALLOW_COPY_AND_ASSIGN(PdtShortestPathData);
+  PdtShortestPathData(const PdtShortestPathData &) = delete;
+  PdtShortestPathData &operator=(const PdtShortestPathData &) = delete;
 };
 
 // Deletes inaccessible search data from a given 'start' (open paren dest)
@@ -388,7 +389,6 @@ class PdtShortestPath {
     VLOG(1) << "# of input states: " << CountStates(*ifst_);
     VLOG(1) << "# of enqueued: " << nenqueued_;
     VLOG(1) << "cpmm size: " << close_paren_multimap_.size();
-    delete ifst_;
   }
 
   void ShortestPath(MutableFst<Arc> *ofst) {
@@ -434,7 +434,7 @@ class PdtShortestPath {
   void GetPath();
   Arc GetPathArc(SearchState s, SearchState p, Label paren_id, bool open);
 
-  Fst<Arc> *ifst_;
+  std::unique_ptr<Fst<Arc>> ifst_;
   MutableFst<Arc> *ofst_;
   const std::vector<std::pair<Label, Label>> &parens_;
   bool keep_parens_;
@@ -448,8 +448,6 @@ class PdtShortestPath {
   PdtBalanceData<Arc> balance_data_;
   ssize_t nenqueued_;
   bool error_;
-
-  DISALLOW_COPY_AND_ASSIGN(PdtShortestPath);
 };
 
 template <class Arc, class Queue>

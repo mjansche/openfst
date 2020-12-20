@@ -140,7 +140,7 @@ void DfsVisit(const F &fst, V *visitor, ArcFilter filter,
           visitor->FinishState(s, p, &piter.Value());
           piter.Next();
         } else {
-          visitor->FinishState(s, kNoStateId, 0);
+          visitor->FinishState(s, kNoStateId, nullptr);
         }
         continue;
       }

@@ -34,9 +34,9 @@ SymbolTable *PruneSymbolTable(const Fst<Arc> &fst, const SymbolTable &syms,
   }
   SymbolTable *pruned = new SymbolTable(syms.Name() + "_pruned");
   for (SymbolTableIterator stiter(syms); !stiter.Done(); stiter.Next()) {
-    typename Arc::Label label = stiter.Value();
-    if (seen.find(label) != seen.end()) {
-      pruned->AddSymbol(stiter.Symbol(), stiter.Value());
+    const typename Arc::Label label = stiter.Value();
+    if (seen.count(label)) {
+      pruned->AddSymbol(stiter.Symbol(), label);
     }
   }
   return pruned;
@@ -56,15 +56,14 @@ SymbolTable *CompactSymbolTable(const SymbolTable &syms);
 // tables.  You can reconcile them in the following way:
 //   Fst<Arc> a, b;
 //   bool relabel;
-//   SymbolTable *bnew = MergeSymbolTable(a.OutputSymbols(),
-//                                        b.InputSymbols(), &relabel);
+//   std::unique_ptr<SymbolTable> bnew(MergeSymbolTable(a.OutputSymbols(),
+//                                     b.InputSymbols(), &relabel);
 //   if (relabel) {
-//     Relabel(b, bnew, NULL);
+//     Relabel(b, bnew.get(), NULL);
 //   }
 //   b.SetInputSymbols(bnew);
-//   delete bnew;
 SymbolTable *MergeSymbolTable(const SymbolTable &left, const SymbolTable &right,
-                              bool *right_relabel_output = 0);
+                              bool *right_relabel_output = nullptr);
 
 // Read the symbol table from any Fst::Read()able file, without loading the
 // corresponding Fst.  Returns NULL if the Fst does not contain a symbol table

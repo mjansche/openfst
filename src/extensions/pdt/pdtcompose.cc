@@ -3,8 +3,10 @@
 //
 // Composes a PDT and an FST.
 
+#include <string>
 #include <vector>
 
+#include <fst/extensions/pdt/getters.h>
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
 #include <fst/script/connect.h>
@@ -56,16 +58,9 @@ int main(int argc, char **argv) {
   s::VectorFstClass ofst(ifst1->ArcType());
 
   fst::PdtComposeFilter compose_filter;
-
-  if (FLAGS_compose_filter == "expand") {
-    compose_filter = fst::EXPAND_FILTER;
-  } else if (FLAGS_compose_filter == "expand_paren") {
-    compose_filter = fst::EXPAND_PAREN_FILTER;
-  } else if (FLAGS_compose_filter == "paren") {
-    compose_filter = fst::PAREN_FILTER;
-  } else {
-    LOG(ERROR) << argv[0]
-               << "Unknown compose filter type: " << FLAGS_compose_filter;
+  if (!s::GetPdtComposeFilter(FLAGS_compose_filter, &compose_filter)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported compose filter type: "
+               << FLAGS_compose_filter;
     return 1;
   }
 

@@ -8,10 +8,13 @@
 #ifndef FST_LIB_UNION_WEIGHT_H_
 #define FST_LIB_UNION_WEIGHT_H_
 
+#include <cstdlib>
+
 #include <iostream>
 #include <sstream>
 #include <stack>
 #include <string>
+#include <utility>
 
 #include <fst/weight.h>
 
@@ -110,9 +113,8 @@ class UnionWeight {
     return type;
   }
 
-  static uint64 Properties() {
-    uint64 props = W::Properties();
-    return props &
+  static constexpr uint64 Properties() {
+    return W::Properties() &
            (kLeftSemiring | kRightSemiring | kCommutative | kIdempotent);
   }
 
@@ -142,10 +144,11 @@ class UnionWeight {
   size_t Size() const { return first_.Member() ? rest_.size() + 1 : 0; }
 
   const W &Back() const {
-    if (rest_.empty())
+    if (rest_.empty()) {
       return first_;
-    else
+    } else {
       return rest_.back();
+    }
   }
 
   // When srt is true, assumes elements added sorted wrt Compare and
@@ -162,15 +165,16 @@ class UnionWeight {
 
  private:
   W &Back() {
-    if (rest_.empty())
+    if (rest_.empty()) {
       return first_;
-    else
+    } else {
       return rest_.back();
+    }
   }
 
-  UnionWeight(W w1, W w2) : first_(w1), rest_(1, w2) {}
+  UnionWeight(W w1, W w2) : first_(std::move(w1)), rest_(1, w2) {}
 
-  W first_;       // first weight in set
+  W first_;            // first weight in set
   std::list<W> rest_;  // remaining weights in set
 };
 
@@ -208,19 +212,21 @@ class UnionWeightIterator {
       : first_(w.first_), rest_(w.rest_), init_(true), iter_(rest_.begin()) {}
 
   bool Done() const {
-    if (init_)
+    if (init_) {
       return !first_.Member();
-    else
+    } else {
       return iter_ == rest_.end();
+    }
   }
 
   const W &Value() const { return init_ ? first_ : *iter_; }
 
   void Next() {
-    if (init_)
+    if (init_) {
       init_ = false;
-    else
+    } else {
       ++iter_;
+    }
   }
 
   void Reset() {
@@ -233,8 +239,6 @@ class UnionWeightIterator {
   const std::list<W> &rest_;
   bool init_;  // in the initialized state?
   typename std::list<W>::const_iterator iter_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnionWeightIterator);
 };
 
 // Traverses union weight in backward direction.
@@ -252,10 +256,11 @@ class UnionWeightReverseIterator {
   const L &Value() const { return iter_ == rest_.rend() ? first_ : *iter_; }
 
   void Next() {
-    if (iter_ == rest_.rend())
+    if (iter_ == rest_.rend()) {
       fin_ = true;
-    else
+    } else {
       ++iter_;
+    }
   }
 
   void Reset() {
@@ -268,8 +273,6 @@ class UnionWeightReverseIterator {
   const std::list<L> &rest_;
   bool fin_;  // in the final state?
   typename std::list<L>::const_reverse_iterator iter_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnionWeightReverseIterator);
 };
 
 // UnionWeight member functions follow that require
@@ -312,8 +315,9 @@ inline bool UnionWeight<W, O>::Member() const {
 template <class W, class O>
 inline UnionWeight<W, O> UnionWeight<W, O>::Quantize(float delta) const {
   UnionWeight<W, O> w;
-  for (UnionWeightIterator<W, O> iter(*this); !iter.Done(); iter.Next())
+  for (UnionWeightIterator<W, O> iter(*this); !iter.Done(); iter.Next()) {
     w.PushBack(iter.Value().Quantize(delta), true);
+  }
   return w;
 }
 
@@ -331,8 +335,10 @@ inline typename UnionWeight<W, O>::ReverseWeight UnionWeight<W, O>::Reverse()
 template <class W, class O>
 inline size_t UnionWeight<W, O>::Hash() const {
   size_t h = 0;
+  const int lshift = 5;
+  const int rshift = CHAR_BIT * sizeof(size_t) - lshift;
   for (UnionWeightIterator<W, O> iter(*this); !iter.Done(); iter.Next())
-    h ^= h << 1 ^ iter.Value().Hash();
+    h = h << lshift ^ h >> rshift ^ iter.Value().Hash();
   return h;
 }
 
@@ -345,8 +351,9 @@ inline bool operator==(const UnionWeight<W, O> &w1,
   UnionWeightIterator<W, O> iter1(w1);
   UnionWeightIterator<W, O> iter2(w2);
 
-  for (; !iter1.Done(); iter1.Next(), iter2.Next())
+  for (; !iter1.Done(); iter1.Next(), iter2.Next()) {
     if (iter1.Value() != iter2.Value()) return false;
+  }
 
   return true;
 }
@@ -367,8 +374,9 @@ inline bool ApproxEqual(const UnionWeight<W, O> &w1,
   UnionWeightIterator<W, O> iter1(w1);
   UnionWeightIterator<W, O> iter2(w2);
 
-  for (; !iter1.Done(); iter1.Next(), iter2.Next())
+  for (; !iter1.Done(); iter1.Next(), iter2.Next()) {
     if (!ApproxEqual(iter1.Value(), iter2.Value(), delta)) return false;
+  }
 
   return true;
 }
@@ -446,8 +454,9 @@ template <class W, class O>
 inline UnionWeight<W, O> Times(const UnionWeight<W, O> &w1,
                                const UnionWeight<W, O> &w2) {
   if (!w1.Member() || !w2.Member()) return UnionWeight<W, O>::NoWeight();
-  if (w1 == UnionWeight<W, O>::Zero() || w2 == UnionWeight<W, O>::Zero())
+  if (w1 == UnionWeight<W, O>::Zero() || w2 == UnionWeight<W, O>::Zero()) {
     return UnionWeight<W, O>::Zero();
+  }
 
   UnionWeightIterator<W, O> iter1(w1);
   UnionWeightIterator<W, O> iter2(w2);
@@ -455,8 +464,9 @@ inline UnionWeight<W, O> Times(const UnionWeight<W, O> &w1,
   UnionWeight<W, O> prod1;
   for (; !iter1.Done(); iter1.Next()) {
     UnionWeight<W, O> prod2;
-    for (; !iter2.Done(); iter2.Next())
+    for (; !iter2.Done(); iter2.Next()) {
       prod2.PushBack(Times(iter1.Value(), iter2.Value()), true);
+    }
     prod1 = Plus(prod1, prod2);
     iter2.Reset();
   }
@@ -467,24 +477,60 @@ template <class W, class O>
 inline UnionWeight<W, O> Divide(const UnionWeight<W, O> &w1,
                                 const UnionWeight<W, O> &w2, DivideType typ) {
   if (!w1.Member() || !w2.Member()) return UnionWeight<W, O>::NoWeight();
-  if (w1 == UnionWeight<W, O>::Zero() || w2 == UnionWeight<W, O>::Zero())
+  if (w1 == UnionWeight<W, O>::Zero() || w2 == UnionWeight<W, O>::Zero()) {
     return UnionWeight<W, O>::Zero();
+  }
 
   UnionWeightIterator<W, O> iter1(w1);
   UnionWeightReverseIterator<W, O> iter2(w2);
   UnionWeight<W, O> quot;
 
   if (w1.Size() == 1) {
-    for (; !iter2.Done(); iter2.Next())
+    for (; !iter2.Done(); iter2.Next()) {
       quot.PushBack(Divide(iter1.Value(), iter2.Value(), typ), true);
+    }
   } else if (w2.Size() == 1) {
-    for (; !iter1.Done(); iter1.Next())
+    for (; !iter1.Done(); iter1.Next()) {
       quot.PushBack(Divide(iter1.Value(), iter2.Value(), typ), true);
+    }
   } else {
     quot = UnionWeight<W, O>::NoWeight();
   }
   return quot;
 }
+
+// This function object generates weights over the union of weights for
+// the underlying generators for the template weight types. This is intended
+// primarily for testing.
+template <class W, class O>
+class WeightGenerate<UnionWeight<W, O>> {
+ public:
+  using Weight = UnionWeight<W, O>;
+  using Generate = WeightGenerate<W>;
+
+  explicit WeightGenerate(bool allow_zero = true,
+                          size_t num_random_weights = kNumRandomWeights)
+      : generate_(false), allow_zero_(allow_zero),
+        num_random_weights_(num_random_weights) {}
+
+  Weight operator()() const {
+    int n = rand() % (num_random_weights_ + 1);  // NOLINT
+    if (allow_zero_ && n == num_random_weights_) {
+      return Weight::Zero();
+    } else if (n % 2 == 0) {
+      return Weight(generate_());
+    } else {
+      return Plus(Weight(generate_()), Weight(generate_()));
+    }
+  }
+
+ private:
+  Generate generate_;
+  // Permits Zero() and zero divisors.
+  bool allow_zero_;
+  // The number of alternative random weights.
+  const size_t num_random_weights_;
+};
 
 }  // namespace fst
 

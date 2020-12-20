@@ -5,6 +5,7 @@
 // and arcs and property values (see properties.h).
 
 #include <memory>
+#include <string>
 
 #include <fst/script/info.h>
 

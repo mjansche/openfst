@@ -42,10 +42,8 @@ class ConstFstImpl : public FstImpl<A> {
   typedef U Unsigned;
 
   ConstFstImpl()
-      : states_region_(0),
-        arcs_region_(0),
-        states_(0),
-        arcs_(0),
+      : states_(nullptr),
+        arcs_(nullptr),
         nstates_(0),
         narcs_(0),
         start_(kNoStateId) {
@@ -60,11 +58,6 @@ class ConstFstImpl : public FstImpl<A> {
   }
 
   explicit ConstFstImpl(const Fst<A> &fst);
-
-  ~ConstFstImpl() override {
-    delete arcs_region_;
-    delete states_region_;
-  }
 
   StateId Start() const { return start_; }
 
@@ -85,16 +78,16 @@ class ConstFstImpl : public FstImpl<A> {
 
   // Provide information needed for generic state iterator
   void InitStateIterator(StateIteratorData<A> *data) const {
-    data->base = 0;
+    data->base = nullptr;
     data->nstates = nstates_;
   }
 
   // Provide information needed for the generic arc iterator
   void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    data->base = 0;
+    data->base = nullptr;
     data->arcs = arcs_ + states_[s].pos;
     data->narcs = states_[s].narcs;
-    data->ref_count = 0;
+    data->ref_count = nullptr;
   }
 
  private:
@@ -120,15 +113,16 @@ class ConstFstImpl : public FstImpl<A> {
   // Minimum file format version supported
   static const int kMinFileVersion = 1;
 
-  MappedFile *states_region_;  // Mapped file for states
-  MappedFile *arcs_region_;    // Mapped file for arcs
+  std::unique_ptr<MappedFile> states_region_;  // Mapped file for states
+  std::unique_ptr<MappedFile> arcs_region_;    // Mapped file for arcs
   State *states_;              // States represenation
   A *arcs_;                    // Arcs representation
   StateId nstates_;            // Number of states
   size_t narcs_;               // Number of arcs (per FST)
   StateId start_;              // Initial state
 
-  DISALLOW_COPY_AND_ASSIGN(ConstFstImpl);
+  ConstFstImpl(const ConstFstImpl &) = delete;
+  ConstFstImpl &operator=(const ConstFstImpl &) = delete;
 };
 
 template <class A, class U>
@@ -157,11 +151,12 @@ ConstFstImpl<A, U>::ConstFstImpl(const Fst<A> &fst) : nstates_(0), narcs_(0) {
   for (StateIterator<Fst<A>> siter(fst); !siter.Done(); siter.Next()) {
     ++nstates_;
     StateId s = siter.Value();
-    for (ArcIterator<Fst<A>> aiter(fst, s); !aiter.Done(); aiter.Next())
+    for (ArcIterator<Fst<A>> aiter(fst, s); !aiter.Done(); aiter.Next()) {
       ++narcs_;
+    }
   }
-  states_region_ = MappedFile::Allocate(nstates_ * sizeof(*states_));
-  arcs_region_ = MappedFile::Allocate(narcs_ * sizeof(*arcs_));
+  states_region_.reset(MappedFile::Allocate(nstates_ * sizeof(*states_)));
+  arcs_region_.reset(MappedFile::Allocate(narcs_ * sizeof(*arcs_)));
   states_ = reinterpret_cast<State *>(states_region_->mutable_data());
   arcs_ = reinterpret_cast<A *>(arcs_region_->mutable_data());
   size_t pos = 0;
@@ -191,52 +186,48 @@ ConstFstImpl<A, U>::ConstFstImpl(const Fst<A> &fst) : nstates_(0), narcs_(0) {
 template <class A, class U>
 ConstFstImpl<A, U> *ConstFstImpl<A, U>::Read(std::istream &strm,
                                              const FstReadOptions &opts) {
-  ConstFstImpl<A, U> *impl = new ConstFstImpl<A, U>;
+  std::unique_ptr<ConstFstImpl<A, U>> impl(new ConstFstImpl<A, U>());
   FstHeader hdr;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
-    delete impl;
-    return 0;
+    return nullptr;
   }
   impl->start_ = hdr.Start();
   impl->nstates_ = hdr.NumStates();
   impl->narcs_ = hdr.NumArcs();
 
   // Ensures compatibility
-  if (hdr.Version() == kAlignedFileVersion)
+  if (hdr.Version() == kAlignedFileVersion) {
     hdr.SetFlags(hdr.GetFlags() | FstHeader::IS_ALIGNED);
+  }
 
   if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) && !AlignInput(strm)) {
     LOG(ERROR) << "ConstFst::Read: Alignment failed: " << opts.source;
-    delete impl;
-    return 0;
+    return nullptr;
   }
 
   size_t b = impl->nstates_ * sizeof(typename ConstFstImpl<A, U>::State);
-  impl->states_region_ =
-      MappedFile::Map(&strm, opts.mode == FstReadOptions::MAP, opts.source, b);
-  if (!strm || impl->states_region_ == nullptr) {
+  impl->states_region_.reset(
+      MappedFile::Map(&strm, opts.mode == FstReadOptions::MAP, opts.source, b));
+  if (!strm || !impl->states_region_) {
     LOG(ERROR) << "ConstFst::Read: Read failed: " << opts.source;
-    delete impl;
-    return 0;
+    return nullptr;
   }
   impl->states_ =
       reinterpret_cast<State *>(impl->states_region_->mutable_data());
   if ((hdr.GetFlags() & FstHeader::IS_ALIGNED) && !AlignInput(strm)) {
     LOG(ERROR) << "ConstFst::Read: Alignment failed: " << opts.source;
-    delete impl;
-    return 0;
+    return nullptr;
   }
 
   b = impl->narcs_ * sizeof(A);
-  impl->arcs_region_ =
-      MappedFile::Map(&strm, opts.mode == FstReadOptions::MAP, opts.source, b);
-  if (!strm || impl->arcs_region_ == nullptr) {
+  impl->arcs_region_.reset(
+      MappedFile::Map(&strm, opts.mode == FstReadOptions::MAP, opts.source, b));
+  if (!strm || !impl->arcs_region_) {
     LOG(ERROR) << "ConstFst::Read: Read failed: " << opts.source;
-    delete impl;
-    return 0;
+    return nullptr;
   }
   impl->arcs_ = reinterpret_cast<A *>(impl->arcs_region_->mutable_data());
-  return impl;
+  return impl.release();
 }
 
 // Simple concrete immutable FST.  This class attaches interface to
@@ -320,7 +311,7 @@ class ConstFst : public ImplToExpandedFst<ConstFstImpl<A, U>> {
     return nullptr;
   }
 
-  void operator=(const ConstFst<A, U> &fst);  // disallow
+  ConstFst &operator=(const ConstFst &fst) = delete;
 };
 
 // Writes Fst in Const format, potentially with a pass over the machine
@@ -434,8 +425,6 @@ class StateIterator<ConstFst<A, U>> {
  private:
   StateId nstates_;
   StateId s_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Specialization for ConstFst; see generic version in fst.h
@@ -471,8 +460,6 @@ class ArcIterator<ConstFst<A, U>> {
   const A *arcs_;
   size_t narcs_;
   size_t i_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 // A useful alias when using StdArc.

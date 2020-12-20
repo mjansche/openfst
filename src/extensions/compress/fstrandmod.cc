@@ -5,12 +5,12 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <memory>
 #include <string>
 
 #include <fst/extensions/compress/randmod.h>
 
 #include <fst/fstlib.h>
-#include <fst/random-weight.h>
 #include <fst/util.h>
 
 DEFINE_int32(seed, time(0), "Random seed");
@@ -18,13 +18,13 @@ DEFINE_int32(states, 10, "# of states");
 DEFINE_int32(labels, 2, "# of labels");
 DEFINE_int32(classes, 1, "# of probability distributions");
 DEFINE_bool(transducer, false, "Output a transducer");
-
 DEFINE_bool(weights, false, "Output a weighted FST");
 
 int main(int argc, char **argv) {
   using fst::StdVectorFst;
   using fst::StdArc;
-  using fst::TropicalWeightGenerator;
+  using fst::TropicalWeight;
+  using fst::WeightGenerate;
 
   string usage = "Generates a random FST.\n\n  Usage: ";
   usage += argv[0];
@@ -46,11 +46,11 @@ int main(int argc, char **argv) {
   int num_labels = (rand() % FLAGS_labels) + 1;    // NOLINT
 
   StdVectorFst fst;
-  TropicalWeightGenerator *weight_gen = nullptr;
-  if (FLAGS_weights)
-    weight_gen = new TropicalWeightGenerator(FLAGS_seed, false);
-  fst::RandMod<StdArc, TropicalWeightGenerator> rand_mod(
-      num_states, num_classes, num_labels, FLAGS_transducer, weight_gen);
+  using TropicalWeightGenerate = WeightGenerate<TropicalWeight>;
+  std::unique_ptr<TropicalWeightGenerate> generate(FLAGS_weights ?
+      new TropicalWeightGenerate(false) : nullptr);
+  fst::RandMod<StdArc, TropicalWeightGenerate> rand_mod(num_states,
+      num_classes, num_labels, FLAGS_transducer, generate.get());
   rand_mod.Generate(&fst);
   fst.Write(out_name);
   return 0;

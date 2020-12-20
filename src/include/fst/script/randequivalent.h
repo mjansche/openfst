@@ -7,7 +7,7 @@
 #include <fst/randequivalent.h>
 #include <fst/script/arg-packs.h>
 #include <fst/script/fst-class.h>
-#include <fst/script/randgen.h>  // for RandArcSelection
+#include <fst/script/script-impl.h>
 
 namespace fst {
 namespace script {

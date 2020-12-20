@@ -15,7 +15,6 @@ namespace script {
 template <class Arc>
 void Connect(MutableFstClass *fst) {
   MutableFst<Arc> *typed_fst = fst->GetMutableFst<Arc>();
-
   Connect(typed_fst);
 }
 

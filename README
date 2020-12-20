@@ -31,7 +31,7 @@ INSTALLATION:
   excludes the command line utilities.
 
   Configuring with --enable-python will attempt to install the Python module
-  to whichever 'site-packages' (or 'dist-packages', on Debian or Ubuntu)
+  to whichever site-packages (or dist-packages, on Debian or Ubuntu)
   is found during configuration.
 
   The flag --with-libfstdir specifies where FST extensions should be
@@ -40,7 +40,14 @@ INSTALLATION:
   Compiling with -Wall -Wno-sign-compare under g++ should give no
   warnings from this library.
 
-USAGE:
+  If you encounter an error about loading shared objects when attempting to use
+  the library immediately after installation, (e.g, `...cannot open shared
+  object file...`) you may need to refresh your system's shared object cache.
+  On Linux, this is accomplished by invoking ldconfig; the corresponding
+  command on Mac OS X is called update_dyld_shared_cache. Both of these require
+  superuser privileges (and so should be executed with sudo or similar).
+
+USAxxxh
   Assuming you've installed under the default /usr/local, the FST binaries are
   found on /usr/local/bin.
 

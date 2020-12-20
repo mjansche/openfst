@@ -5,6 +5,8 @@
 
 #include <fstream>
 #include <istream>
+#include <memory>
+#include <string>
 
 #include <fst/script/compile.h>
 

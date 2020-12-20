@@ -4,7 +4,9 @@
 // Find shortest path(s) in an FST.
 
 #include <memory>
+#include <string>
 
+#include <fst/script/getters.h>
 #include <fst/script/shortest-path.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
@@ -46,25 +48,13 @@ int main(int argc, char **argv) {
 
   VectorFstClass ofst(ifst->ArcType());
 
-  fst::QueueType qt;
-  if (FLAGS_queue_type == "auto") {
-    qt = fst::AUTO_QUEUE;
-  } else if (FLAGS_queue_type == "fifo") {
-    qt = fst::FIFO_QUEUE;
-  } else if (FLAGS_queue_type == "lifo") {
-    qt = fst::LIFO_QUEUE;
-  } else if (FLAGS_queue_type == "shortest") {
-    qt = fst::SHORTEST_FIRST_QUEUE;
-  } else if (FLAGS_queue_type == "state") {
-    qt = fst::STATE_ORDER_QUEUE;
-  } else if (FLAGS_queue_type == "top") {
-    qt = fst::TOP_ORDER_QUEUE;
-  } else {
+  fst::QueueType queue_type;
+  if (!s::GetQueueType(FLAGS_queue_type, &queue_type)) {
     LOG(ERROR) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
     return 1;
   }
 
-  s::ShortestPathOptions opts(qt, FLAGS_nshortest, FLAGS_unique, false,
+  s::ShortestPathOptions opts(queue_type, FLAGS_nshortest, FLAGS_unique, false,
                               FLAGS_delta, false, weight_threshold,
                               FLAGS_nstate);
 

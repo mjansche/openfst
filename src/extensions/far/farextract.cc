@@ -3,8 +3,11 @@
 //
 // Extracts component FSTs from an finite-state archive.
 
+#include <string>
+#include <vector>
+
 #include <fst/extensions/far/farscript.h>
-#include <fst/extensions/far/main.h>
+#include <fst/extensions/far/util.h>
 
 DEFINE_string(filename_prefix, "", "Prefix to append to filenames");
 DEFINE_string(filename_suffix, "", "Suffix to append to filenames");
@@ -27,14 +30,15 @@ int main(int argc, char **argv) {
   SET_FLAGS(usage.c_str(), &argc, &argv, true);
   fst::ExpandArgs(argc, argv, &argc, &argv);
 
-  std::vector<string> ifilenames;
+  std::vector<string> in_fnames;
   for (int i = 1; i < argc; ++i)
-    ifilenames.push_back(strcmp(argv[i], "") != 0 ? argv[i] : "");
-  if (ifilenames.empty()) ifilenames.push_back("");
+    in_fnames.push_back(argv[i]);
+  if (in_fnames.empty()) in_fnames.push_back("");
 
-  const string &arc_type = fst::LoadArcTypeFromFar(ifilenames[0]);
+  const string &arc_type = s::LoadArcTypeFromFar(in_fnames[0]);
+  if (arc_type.empty()) return 1;
 
-  s::FarExtract(ifilenames, arc_type, FLAGS_generate_filenames, FLAGS_keys,
+  s::FarExtract(in_fnames, arc_type, FLAGS_generate_filenames, FLAGS_keys,
                 FLAGS_key_separator, FLAGS_range_delimiter,
                 FLAGS_filename_prefix, FLAGS_filename_suffix);
 

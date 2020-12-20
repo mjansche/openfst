@@ -1,10 +1,10 @@
 // See www.openfst.org for extensive documentation on this weighted
 // finite-state transducer library.
 
-#include <fst/script/script-impl.h>
-#include <fst/extensions/far/main.h>
 #include <fst/extensions/far/far-class.h>
 
+#include <fst/script/script-impl.h>
+#include <fst/extensions/far/script-impl.h>
 
 namespace fst {
 namespace script {

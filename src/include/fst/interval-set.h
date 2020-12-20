@@ -244,10 +244,11 @@ void IntervalSet<T, S>::Intersect(const IntervalSet<T, S> &iset,
       ointervals->emplace_back(std::max(it1->begin, it2->begin),
                                std::min(it1->end, it2->end));
       count += ointervals->back().end - ointervals->back().begin;
-      if (it1->end < it2->end)
+      if (it1->end < it2->end) {
         ++it1;
-      else
+      } else {
         ++it2;
+      }
     }
   }
   oset->intervals_.SetCount(count);
@@ -385,7 +386,9 @@ template <typename T, class S>
 ostream &operator<<(ostream &strm, const IntervalSet<T, S> &s) {
   strm << "{";
   for (int i = 0; i < s.Size(); ++i) {
-    if (i > 0) strm << ",";
+    if (i > 0) {
+      strm << ",";
+    }
     const auto &interval = s.Intervals()[i];
     strm << "[" << interval.begin << "," << interval.end << ")";
   }

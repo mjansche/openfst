@@ -44,7 +44,7 @@ struct ShortestPathOptions
         unique(u),
         has_distance(hasdist),
         first_path(fp),
-        weight_threshold(w),
+        weight_threshold(std::move(w)),
         state_threshold(s) {}
 };
 
@@ -153,6 +153,7 @@ bool SingleShortestPath(
 
   Queue *state_queue = opts.state_queue;
   StateId source = opts.source == kNoStateId ? ifst.Start() : opts.source;
+  bool final_seen = false;
   Weight f_distance = Weight::Zero();
 
   distance->clear();
@@ -189,6 +190,11 @@ bool SingleShortestPath(
     state_queue->Dequeue();
     enqueued[s] = false;
     Weight sd = (*distance)[s];
+    if (opts.first_path && final_seen && f_distance == Plus(f_distance, sd)) {
+      // If we are using a shortest queue, no other path is going to be shorter
+      // than f_distance at this point.
+      break;
+    }
     if (ifst.Final(s) != Weight::Zero()) {
       Weight w = Times(sd, ifst.Final(s));
       if (f_distance != Plus(f_distance, w)) {
@@ -198,7 +204,7 @@ bool SingleShortestPath(
       if (!f_distance.Member()) {
         return false;
       }
-      if (opts.first_path) break;
+      final_seen = true;
     }
     for (ArcIterator<Fst<Arc>> aiter(ifst, s); !aiter.Done(); aiter.Next()) {
       const Arc &arc = aiter.Value();
@@ -348,12 +354,12 @@ void NShortestPath(const Fst<RevArc> &ifst, MutableFst<Arc> *ofst,
     return;
   }
   ofst->SetStart(ofst->AddState());
-  StateId final = ofst->AddState();
-  ofst->SetFinal(final, Weight::One());
-  while (pairs.size() <= final)
+  StateId final_state = ofst->AddState();
+  ofst->SetFinal(final_state, Weight::One());
+  while (pairs.size() <= final_state)
     pairs.push_back(Pair(kNoStateId, Weight::Zero()));
-  pairs[final] = Pair(ifst.Start(), Weight::One());
-  heap.push_back(final);
+  pairs[final_state] = Pair(ifst.Start(), Weight::One());
+  heap.push_back(final_state);
   Weight limit = Times(distance[ifst.Start()], weight_threshold);
 
   while (!heap.empty()) {
@@ -366,13 +372,16 @@ void NShortestPath(const Fst<RevArc> &ifst, MutableFst<Arc> *ofst,
                                                            : Weight::Zero();
 
     if (less(limit, Times(d, p.second)) ||
-        (state_threshold != kNoStateId && ofst->NumStates() >= state_threshold))
+        (state_threshold != kNoStateId &&
+         ofst->NumStates() >= state_threshold)) {
       continue;
+    }
 
     while (r.size() <= p.first + 1) r.push_back(0);
     ++r[p.first + 1];
-    if (p.first == superfinal)
+    if (p.first == superfinal) {
       ofst->AddArc(ofst->Start(), Arc(0, 0, Weight::One(), state));
+    }
     if ((p.first == superfinal) && (r[p.first + 1] == n)) break;
     if (r[p.first + 1] > n) continue;
     if (p.first == superfinal) continue;
@@ -476,8 +485,9 @@ void ShortestPath(
        aiter.Next()) {
     const ReverseArc &arc = aiter.Value();
     StateId s = arc.nextstate - 1;
-    if (s < distance->size())
+    if (s < distance->size()) {
       d = Plus(d, Times(arc.weight.Reverse(), (*distance)[s]));
+    }
   }
   distance->insert(distance->begin(), d);
 

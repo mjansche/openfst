@@ -5,6 +5,7 @@
 // input FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/util.h>
 #include <fst/script/fst-class.h>

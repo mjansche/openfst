@@ -3,8 +3,11 @@
 //
 // Prints some basic information about the FSTs in an FST archive.
 
+#include <string>
+#include <vector>
+
 #include <fst/extensions/far/farscript.h>
-#include <fst/extensions/far/main.h>
+#include <fst/extensions/far/util.h>
 
 DEFINE_string(begin_key, "",
               "First key to extract (def: first key in archive)");
@@ -25,11 +28,14 @@ int main(int argc, char **argv) {
   SET_FLAGS(usage.c_str(), &argc, &argv, true);
   fst::ExpandArgs(argc, argv, &argc, &argv);
 
-  std::vector<string> filenames;
+  std::vector<string> in_fnames;
   for (int i = 1; i < argc; ++i)
-    filenames.push_back(strcmp(argv[i], "") != 0 ? argv[i] : "");
-  if (filenames.empty()) filenames.push_back("");
+    in_fnames.push_back(argv[i]);
+  if (in_fnames.empty()) in_fnames.push_back("");
 
-  s::FarInfo(filenames, fst::LoadArcTypeFromFar(filenames[0]),
-             FLAGS_begin_key, FLAGS_end_key, FLAGS_list_fsts);
+  string arc_type = s::LoadArcTypeFromFar(in_fnames[0]);
+  if (arc_type.empty()) return 1;
+
+  s::FarInfo(in_fnames, arc_type, FLAGS_begin_key, FLAGS_end_key,
+             FLAGS_list_fsts);
 }

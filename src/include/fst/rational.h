@@ -53,30 +53,31 @@ class RationalFstImpl : public FstImpl<A> {
   typedef typename A::Label Label;
 
   explicit RationalFstImpl(const RationalFstOptions &opts)
-      : nonterminals_(0), replace_(0), replace_options_(opts, 0) {
+      : nonterminals_(0), replace_options_(opts, 0) {
     SetType("rational");
-    fst_tuples_.push_back(std::pair<Label, const Fst<A> *>(0, 0));
+    fst_tuples_.push_back(std::make_pair(0, nullptr));
   }
 
   RationalFstImpl(const RationalFstImpl<A> &impl)
       : rfst_(impl.rfst_),
         nonterminals_(impl.nonterminals_),
 
-        replace_(impl.replace_ ? impl.replace_->Copy(true) : 0),
+        replace_(impl.replace_ ? impl.replace_->Copy(true) : nullptr),
         replace_options_(impl.replace_options_) {
     SetType("rational");
     fst_tuples_.reserve(impl.fst_tuples_.size());
-    for (size_t i = 0; i < impl.fst_tuples_.size(); ++i)
+    for (size_t i = 0; i < impl.fst_tuples_.size(); ++i) {
       fst_tuples_.push_back(std::make_pair(
           impl.fst_tuples_[i].first,
           impl.fst_tuples_[i].second ? impl.fst_tuples_[i].second->Copy(true)
-                                     : 0));
+                                     : nullptr));
+    }
   }
 
   ~RationalFstImpl() override {
-    for (size_t i = 0; i < fst_tuples_.size(); ++i)
-      if (fst_tuples_[i].second) delete fst_tuples_[i].second;
-    if (replace_) delete replace_;
+    for (size_t i = 0; i < fst_tuples_.size(); ++i) {
+      delete fst_tuples_[i].second;
+    }
   }
 
   StateId Start() { return Replace()->Start(); }
@@ -95,14 +96,15 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) && Replace()->Properties(kError, false))
+    if ((mask & kError) && Replace()->Properties(kError, false)) {
       SetProperties(kError, kError);
+    }
     return FstImpl<Arc>::Properties(mask);
   }
 
   // Implementation of UnionFst(fst1,fst2)
   void InitUnion(const Fst<A> &fst1, const Fst<A> &fst2) {
-    if (replace_) delete replace_;
+    replace_.reset();
     uint64 props1 = fst1.Properties(kFstProperties, false);
     uint64 props2 = fst2.Properties(kFstProperties, false);
     SetInputSymbols(fst1.InputSymbols());
@@ -123,7 +125,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of ConcatFst(fst1,fst2)
   void InitConcat(const Fst<A> &fst1, const Fst<A> &fst2) {
-    if (replace_) delete replace_;
+    replace_.reset();
     uint64 props1 = fst1.Properties(kFstProperties, false);
     uint64 props2 = fst2.Properties(kFstProperties, false);
     SetInputSymbols(fst1.InputSymbols());
@@ -145,7 +147,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of ClosureFst(fst, closure_type)
   void InitClosure(const Fst<A> &fst, ClosureType closure_type) {
-    if (replace_) delete replace_;
+    replace_.reset();
     uint64 props = fst.Properties(kFstProperties, false);
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
@@ -172,7 +174,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of Union(Fst &, RationalFst *)
   void AddUnion(const Fst<A> &fst) {
-    if (replace_) delete replace_;
+    replace_.reset();
     uint64 props1 = FstImpl<A>::Properties();
     uint64 props2 = fst.Properties(kFstProperties, false);
     VectorFst<A> afst;
@@ -189,7 +191,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of Concat(Fst &, RationalFst *)
   void AddConcat(const Fst<A> &fst, bool append) {
-    if (replace_) delete replace_;
+    replace_.reset();
     uint64 props1 = FstImpl<A>::Properties();
     uint64 props2 = fst.Properties(kFstProperties, false);
     VectorFst<A> afst;
@@ -199,17 +201,18 @@ class RationalFstImpl : public FstImpl<A> {
     afst.SetFinal(1, Weight::One());
     ++nonterminals_;
     afst.AddArc(0, A(0, -nonterminals_, Weight::One(), 1));
-    if (append)
+    if (append) {
       Concat(&rfst_, afst);
-    else
+    } else {
       Concat(afst, &rfst_);
+    }
     fst_tuples_.push_back(std::make_pair(-nonterminals_, fst.Copy()));
     SetProperties(ConcatProperties(props1, props2, true), kCopyProperties);
   }
 
   // Implementation of Closure(RationalFst *, closure_type)
   void AddClosure(ClosureType closure_type) {
-    if (replace_) delete replace_;
+    replace_.reset();
     uint64 props = FstImpl<A>::Properties();
     Closure(&rfst_, closure_type);
     SetProperties(ClosureProperties(props, closure_type == CLOSURE_STAR, true),
@@ -217,12 +220,13 @@ class RationalFstImpl : public FstImpl<A> {
   }
 
   // Returns the underlying ReplaceFst.
+  // Maintains ownership of the underlying object.
   ReplaceFst<A> *Replace() const {
     if (!replace_) {
       fst_tuples_[0].second = rfst_.Copy();
-      replace_ = new ReplaceFst<A>(fst_tuples_, replace_options_);
+      replace_.reset(new ReplaceFst<A>(fst_tuples_, replace_options_));
     }
-    return replace_;
+    return replace_.get();
   }
 
  private:
@@ -230,10 +234,8 @@ class RationalFstImpl : public FstImpl<A> {
   Label nonterminals_;  // # of nonterminals used
   // Contains the nonterminals and their corresponding FSTs.
   mutable std::vector<std::pair<Label, const Fst<A> *>> fst_tuples_;
-  mutable ReplaceFst<A> *replace_;        // Underlying ReplaceFst
+  mutable std::unique_ptr<ReplaceFst<A>> replace_;  // Underlying ReplaceFst
   ReplaceFstOptions<A> replace_options_;  // Options for creating 'replace_'
-
-  void operator=(const RationalFstImpl<A> &impl);  // disallow
 };
 
 // Parent class for the delayed rational operations - delayed union,
@@ -277,7 +279,7 @@ class RationalFst : public ImplToFst<RationalFstImpl<A>> {
       : ImplToFst<Impl>(fst, safe) {}
 
  private:
-  void operator=(const RationalFst<A> &fst);  // disallow
+  RationalFst &operator=(const RationalFst &fst) = delete;
 };
 
 // Specialization for RationalFst.

@@ -5,8 +5,10 @@ Michael Riley      <riley@google.com>
 
 Contributors:
 
-These contributions range from fundamental algorithmic contributions (e.g., Mehryar Mohri) to implementation of core components and extensions.
+These contributions range from fundamental algorithmic contributions (e.g.,
+Mehryar Mohri) to implementation of core components and extensions.
 
+Tom Bagby                 <tombagby@google.com>
 Dan Bikel                 <dbikel@google.com>
 Dan Povey                 <dpovey@gmail.com>
 Kyle Gorman               <kbg@google.com>

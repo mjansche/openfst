@@ -14,13 +14,13 @@ namespace fst {
 namespace script {
 
 typedef args::Package<const FstClass &, const string &> ConvertInnerArgs;
+
 typedef args::WithReturnValue<FstClass *, ConvertInnerArgs> ConvertArgs;
 
 template <class Arc>
 void Convert(ConvertArgs *args) {
   const Fst<Arc> &fst = *(args->args.arg1.GetFst<Arc>());
   const string &new_type = args->args.arg2;
-
   std::unique_ptr<Fst<Arc>> result(Convert(fst, new_type));
   args->retval = result ? new FstClass(*result) : nullptr;
 }

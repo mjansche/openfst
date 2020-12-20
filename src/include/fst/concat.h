@@ -52,8 +52,9 @@ void Concat(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
   }
 
   StateId numstates1 = fst1->NumStates();
-  if (fst2.Properties(kExpanded, false))
+  if (fst2.Properties(kExpanded, false)) {
     fst1->ReserveStates(numstates1 + CountStates(fst2));
+  }
 
   for (StateIterator<Fst<Arc>> siter2(fst2); !siter2.Done(); siter2.Next()) {
     StateId s1 = fst1->AddState();
@@ -69,15 +70,17 @@ void Concat(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
 
   StateId start2 = fst2.Start();
   for (StateId s1 = 0; s1 < numstates1; ++s1) {
-    Weight final = fst1->Final(s1);
-    if (final != Weight::Zero()) {
+    const Weight final_weight = fst1->Final(s1);
+    if (final_weight != Weight::Zero()) {
       fst1->SetFinal(s1, Weight::Zero());
-      if (start2 != kNoStateId)
-        fst1->AddArc(s1, Arc(0, 0, final, start2 + numstates1));
+      if (start2 != kNoStateId) {
+        fst1->AddArc(s1, Arc(0, 0, final_weight, start2 + numstates1));
+      }
     }
   }
-  if (start2 != kNoStateId)
+  if (start2 != kNoStateId) {
     fst1->SetProperties(ConcatProperties(props1, props2), kFstProperties);
+  }
 }
 
 // Computes the concatentation of two FSTs.  This version modifies its
@@ -113,15 +116,18 @@ void Concat(const Fst<Arc> &fst1, MutableFst<Arc> *fst2) {
   }
 
   StateId numstates2 = fst2->NumStates();
-  if (fst1.Properties(kExpanded, false))
+  if (fst1.Properties(kExpanded, false)) {
     fst2->ReserveStates(numstates2 + CountStates(fst1));
+  }
 
   for (StateIterator<Fst<Arc>> siter(fst1); !siter.Done(); siter.Next()) {
     StateId s1 = siter.Value();
     StateId s2 = fst2->AddState();
-    Weight final = fst1.Final(s1);
-    fst2->ReserveArcs(s2, fst1.NumArcs(s1) + (final != Weight::Zero() ? 1 : 0));
-    if (final != Weight::Zero()) fst2->AddArc(s2, Arc(0, 0, final, start2));
+    const Weight final_weight = fst1.Final(s1);
+    fst2->ReserveArcs(
+        s2, fst1.NumArcs(s1) + (final_weight != Weight::Zero() ? 1 : 0));
+    if (final_weight != Weight::Zero())
+      fst2->AddArc(s2, Arc(0, 0, final_weight, start2));
     for (ArcIterator<Fst<Arc>> aiter(fst1, s1); !aiter.Done(); aiter.Next()) {
       Arc arc = aiter.Value();
       arc.nextstate += numstates2;
@@ -130,8 +136,9 @@ void Concat(const Fst<Arc> &fst1, MutableFst<Arc> *fst2) {
   }
   StateId start1 = fst1.Start();
   fst2->SetStart(start1 == kNoStateId ? fst2->AddState() : start1 + numstates2);
-  if (start1 != kNoStateId)
+  if (start1 != kNoStateId) {
     fst2->SetProperties(ConcatProperties(props1, props2), kFstProperties);
+  }
 }
 
 // Computes the concatentation of two FSTs. This version modifies its

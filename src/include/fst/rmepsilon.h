@@ -42,11 +42,11 @@ class RmEpsilonOptions
       : ShortestDistanceOptions<Arc, Queue, EpsilonArcFilter<Arc>>(
             q, EpsilonArcFilter<Arc>(), kNoStateId, d),
         connect(c),
-        weight_threshold(w),
+        weight_threshold(std::move(w)),
         state_threshold(n) {}
 
  private:
-  RmEpsilonOptions();  // disallow
+  RmEpsilonOptions() = delete;
 };
 
 // Computation state of the epsilon-removal algorithm.
@@ -129,7 +129,8 @@ class RmEpsilonState {
   Weight final_;       // Final weight of state being expanded
   StateId expand_id_;  // Unique ID for each call to Expand
 
-  DISALLOW_COPY_AND_ASSIGN(RmEpsilonState);
+  RmEpsilonState(const RmEpsilonState &) = delete;
+  RmEpsilonState &operator=(const RmEpsilonState &) = delete;
 };
 
 template <class Arc, class Queue>
@@ -163,18 +164,17 @@ void RmEpsilonState<Arc, Queue>::Expand(typename Arc::StateId source) {
         if (!visited_[arc.nextstate]) eps_queue_.push(arc.nextstate);
       } else {
         Element element(arc.ilabel, arc.olabel, arc.nextstate);
-        auto it = element_map_.find(element);
-        if (it == element_map_.end()) {
-          element_map_.insert(std::pair<Element, std::pair<StateId, size_t>>(
-              element, std::pair<StateId, size_t>(expand_id_, arcs_.size())));
+        auto insert_result = element_map_.insert(
+            std::make_pair(element, std::make_pair(expand_id_, arcs_.size())));
+        if (insert_result.second) {
           arcs_.push_back(arc);
         } else {
-          if (((*it).second).first == expand_id_) {
-            Weight &w = arcs_[((*it).second).second].weight;
+          if (insert_result.first->second.first == expand_id_) {
+            Weight &w = arcs_[insert_result.first->second.second].weight;
             w = Plus(w, arc.weight);
           } else {
-            ((*it).second).first = expand_id_;
-            ((*it).second).second = arcs_.size();
+            insert_result.first->second.first = expand_id_;
+            insert_result.first->second.second = arcs_.size();
             arcs_.push_back(arc);
           }
         }
@@ -217,8 +217,9 @@ void RmEpsilon(MutableFst<Arc> *fst,
   noneps_in[fst->Start()] = true;
   for (StateId i = 0; i < fst->NumStates(); ++i) {
     for (ArcIterator<Fst<Arc>> aiter(*fst, i); !aiter.Done(); aiter.Next()) {
-      if (aiter.Value().ilabel != 0 || aiter.Value().olabel != 0)
+      if (aiter.Value().ilabel != 0 || aiter.Value().olabel != 0) {
         noneps_in[aiter.Value().nextstate] = true;
+      }
     }
   }
 
@@ -245,7 +246,7 @@ void RmEpsilon(MutableFst<Arc> *fst,
   } else {
     uint64 props;
     std::vector<StateId> scc;
-    SccVisitor<Arc> scc_visitor(&scc, 0, 0, &props);
+    SccVisitor<Arc> scc_visitor(&scc, nullptr, nullptr, &props);
     DfsVisit(*fst, &scc_visitor, EpsilonArcFilter<Arc>());
     std::vector<StateId> first(scc.size(), kNoStateId);
     std::vector<StateId> next(scc.size(), kNoStateId);
@@ -253,9 +254,11 @@ void RmEpsilon(MutableFst<Arc> *fst,
       if (first[scc[i]] != kNoStateId) next[i] = first[scc[i]];
       first[scc[i]] = i;
     }
-    for (StateId i = 0; i < first.size(); i++)
-      for (StateId j = first[i]; j != kNoStateId; j = next[j])
+    for (StateId i = 0; i < first.size(); i++) {
+      for (StateId j = first[i]; j != kNoStateId; j = next[j]) {
         states.push_back(j);
+      }
+    }
   }
 
   RmEpsilonState<Arc, Queue> rmeps_state(*fst, distance, opts);
@@ -292,11 +295,13 @@ void RmEpsilon(MutableFst<Arc> *fst,
       kFstProperties);
 
   if (opts.weight_threshold != Weight::Zero() ||
-      opts.state_threshold != kNoStateId)
+      opts.state_threshold != kNoStateId) {
     Prune(fst, opts.weight_threshold, opts.state_threshold);
+  }
   if (opts.connect && opts.weight_threshold == Weight::Zero() &&
-      opts.state_threshold == kNoStateId)
+      opts.state_threshold == kNoStateId) {
     Connect(fst);
+  }
 }
 
 // Removes epsilon-transitions (when both the input and output label
@@ -338,7 +343,7 @@ void RmEpsilon(MutableFst<Arc> *fst, bool connect = true,
 struct RmEpsilonFstOptions : CacheOptions {
   float delta;
 
-  RmEpsilonFstOptions(const CacheOptions &opts, float delta = kDelta)
+  explicit RmEpsilonFstOptions(const CacheOptions &opts, float delta = kDelta)
       : CacheOptions(opts), delta(delta) {}
 
   explicit RmEpsilonFstOptions(float delta = kDelta) : delta(delta) {}
@@ -394,8 +399,6 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~RmEpsilonFstImpl() override { delete fst_; }
-
   StateId Start() {
     if (!HasStart()) {
       SetStart(fst_->Start());
@@ -430,8 +433,9 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
     if ((mask & kError) &&
-        (fst_->Properties(kError, false) || rmeps_state_.Error()))
+        (fst_->Properties(kError, false) || rmeps_state_.Error())) {
       SetProperties(kError, kError);
+    }
     return FstImpl<A>::Properties(mask);
   }
 
@@ -452,13 +456,11 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
   }
 
  private:
-  const Fst<A> *fst_;
+  std::unique_ptr<const Fst<A>> fst_;
   float delta_;
   std::vector<Weight> distance_;
   FifoQueue<StateId> queue_;
   RmEpsilonState<A, FifoQueue<StateId>> rmeps_state_;
-
-  void operator=(const RmEpsilonFstImpl<A> &);  // disallow
 };
 
 // Removes epsilon-transitions (when both the input and output label
@@ -518,7 +520,7 @@ class RmEpsilonFst : public ImplToFst<RmEpsilonFstImpl<A>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const RmEpsilonFst<A> &fst);  // disallow
+  RmEpsilonFst &operator=(const RmEpsilonFst &fst) = delete;
 };
 
 // Specialization for RmEpsilonFst.
@@ -541,9 +543,6 @@ class ArcIterator<RmEpsilonFst<A>>
       : CacheArcIterator<RmEpsilonFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>

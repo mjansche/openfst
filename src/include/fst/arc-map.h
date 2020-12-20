@@ -94,11 +94,13 @@ void ArcMap(MutableFst<A> *fst, C *mapper) {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  if (mapper->InputSymbolsAction() == MAP_CLEAR_SYMBOLS)
-    fst->SetInputSymbols(0);
+  if (mapper->InputSymbolsAction() == MAP_CLEAR_SYMBOLS) {
+    fst->SetInputSymbols(nullptr);
+  }
 
-  if (mapper->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS)
-    fst->SetOutputSymbols(0);
+  if (mapper->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS) {
+    fst->SetOutputSymbols(nullptr);
+  }
 
   if (fst->Start() == kNoStateId) return;
 
@@ -152,9 +154,10 @@ void ArcMap(MutableFst<A> *fst, C *mapper) {
         if (s != superfinal) {
           A final_arc = (*mapper)(A(0, 0, fst->Final(s), kNoStateId));
           if (final_arc.ilabel != 0 || final_arc.olabel != 0 ||
-              final_arc.weight != Weight::Zero())
+              final_arc.weight != Weight::Zero()) {
             fst->AddArc(s, A(final_arc.ilabel, final_arc.olabel,
                              final_arc.weight, superfinal));
+          }
           fst->SetFinal(s, Weight::Zero());
         }
         break;
@@ -181,15 +184,17 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C *mapper) {
 
   ofst->DeleteStates();
 
-  if (mapper->InputSymbolsAction() == MAP_COPY_SYMBOLS)
+  if (mapper->InputSymbolsAction() == MAP_COPY_SYMBOLS) {
     ofst->SetInputSymbols(ifst.InputSymbols());
-  else if (mapper->InputSymbolsAction() == MAP_CLEAR_SYMBOLS)
-    ofst->SetInputSymbols(0);
+  } else if (mapper->InputSymbolsAction() == MAP_CLEAR_SYMBOLS) {
+    ofst->SetInputSymbols(nullptr);
+  }
 
-  if (mapper->OutputSymbolsAction() == MAP_COPY_SYMBOLS)
+  if (mapper->OutputSymbolsAction() == MAP_COPY_SYMBOLS) {
     ofst->SetOutputSymbols(ifst.OutputSymbols());
-  else if (mapper->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS)
-    ofst->SetOutputSymbols(0);
+  } else if (mapper->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS) {
+    ofst->SetOutputSymbols(nullptr);
+  }
 
   uint64 iprops = ifst.Properties(kCopyProperties, false);
 
@@ -205,8 +210,9 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C *mapper) {
   }
 
   // Add all states.
-  for (StateIterator<Fst<A>> siter(ifst); !siter.Done(); siter.Next())
+  for (StateIterator<Fst<A>> siter(ifst); !siter.Done(); siter.Next()) {
     ofst->AddState();
+  }
 
   StateId superfinal = kNoStateId;
   if (final_action == MAP_REQUIRE_SUPERFINAL) {
@@ -218,8 +224,9 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C *mapper) {
     if (s == ifst.Start()) ofst->SetStart(s);
 
     ofst->ReserveArcs(s, ifst.NumArcs(s));
-    for (ArcIterator<Fst<A>> aiter(ifst, s); !aiter.Done(); aiter.Next())
+    for (ArcIterator<Fst<A>> aiter(ifst, s); !aiter.Done(); aiter.Next()) {
       ofst->AddArc(s, (*mapper)(aiter.Value()));
+    }
 
     switch (final_action) {
       case MAP_NO_SUPERFINAL:
@@ -251,9 +258,10 @@ void ArcMap(const Fst<A> &ifst, MutableFst<B> *ofst, C *mapper) {
       case MAP_REQUIRE_SUPERFINAL: {
         B final_arc = (*mapper)(A(0, 0, ifst.Final(s), kNoStateId));
         if (final_arc.ilabel != 0 || final_arc.olabel != 0 ||
-            final_arc.weight != B::Weight::Zero())
+            final_arc.weight != B::Weight::Zero()) {
           ofst->AddArc(s, B(final_arc.ilabel, final_arc.olabel,
                             final_arc.weight, superfinal));
+        }
         ofst->SetFinal(s, B::Weight::Zero());
         break;
       }
@@ -276,7 +284,7 @@ struct ArcMapFstOptions : public CacheOptions {
   // mappers are cheap and therefore we save memory by not doing
   // caching.
   ArcMapFstOptions() : CacheOptions(true, 0) {}
-  ArcMapFstOptions(const CacheOptions &opts) : CacheOptions(opts) {}
+  explicit ArcMapFstOptions(const CacheOptions &opts) : CacheOptions(opts) {}
 };
 
 template <class A, class B, class C>
@@ -337,7 +345,6 @@ class ArcMapFstImpl : public CacheImpl<B> {
   }
 
   ~ArcMapFstImpl() override {
-    delete fst_;
     if (own_mapper_) delete mapper_;
   }
 
@@ -366,10 +373,11 @@ class ArcMapFstImpl : public CacheImpl<B> {
           } else {
             B final_arc =
                 (*mapper_)(A(0, 0, fst_->Final(FindIState(s)), kNoStateId));
-            if (final_arc.ilabel == 0 && final_arc.olabel == 0)
+            if (final_arc.ilabel == 0 && final_arc.olabel == 0) {
               SetFinal(s, final_arc.weight);
-            else
+            } else {
               SetFinal(s, Weight::Zero());
+            }
           }
           break;
         }
@@ -401,9 +409,10 @@ class ArcMapFstImpl : public CacheImpl<B> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) &&
-        (fst_->Properties(kError, false) || (mapper_->Properties(0) & kError)))
+    if ((mask & kError) && (fst_->Properties(kError, false) ||
+                            (mapper_->Properties(0) & kError))) {
       SetProperties(kError, kError);
+    }
     return FstImpl<Arc>::Properties(mask);
   }
 
@@ -428,7 +437,8 @@ class ArcMapFstImpl : public CacheImpl<B> {
     }
 
     // Check for superfinal arcs.
-    if (!HasFinal(s) || Final(s) == Weight::Zero()) switch (final_action_) {
+    if (!HasFinal(s) || Final(s) == Weight::Zero()) {
+      switch (final_action_) {
         case MAP_NO_SUPERFINAL:
         default:
           break;
@@ -446,12 +456,14 @@ class ArcMapFstImpl : public CacheImpl<B> {
           B final_arc =
               (*mapper_)(A(0, 0, fst_->Final(FindIState(s)), kNoStateId));
           if (final_arc.ilabel != 0 || final_arc.olabel != 0 ||
-              final_arc.weight != B::Weight::Zero())
+              final_arc.weight != B::Weight::Zero()) {
             PushArc(s, B(final_arc.ilabel, final_arc.olabel, final_arc.weight,
                          superfinal_));
+          }
           break;
         }
       }
+    }
     SetArcs(s);
   }
 
@@ -459,15 +471,17 @@ class ArcMapFstImpl : public CacheImpl<B> {
   void Init() {
     SetType("map");
 
-    if (mapper_->InputSymbolsAction() == MAP_COPY_SYMBOLS)
+    if (mapper_->InputSymbolsAction() == MAP_COPY_SYMBOLS) {
       SetInputSymbols(fst_->InputSymbols());
-    else if (mapper_->InputSymbolsAction() == MAP_CLEAR_SYMBOLS)
-      SetInputSymbols(0);
+    } else if (mapper_->InputSymbolsAction() == MAP_CLEAR_SYMBOLS) {
+      SetInputSymbols(nullptr);
+    }
 
-    if (mapper_->OutputSymbolsAction() == MAP_COPY_SYMBOLS)
+    if (mapper_->OutputSymbolsAction() == MAP_COPY_SYMBOLS) {
       SetOutputSymbols(fst_->OutputSymbols());
-    else if (mapper_->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS)
-      SetOutputSymbols(0);
+    } else if (mapper_->OutputSymbolsAction() == MAP_CLEAR_SYMBOLS) {
+      SetOutputSymbols(nullptr);
+    }
 
     if (fst_->Start() == kNoStateId) {
       final_action_ = MAP_NO_SUPERFINAL;
@@ -482,34 +496,34 @@ class ArcMapFstImpl : public CacheImpl<B> {
 
   // Maps from output state to input state.
   StateId FindIState(StateId s) {
-    if (superfinal_ == kNoStateId || s < superfinal_)
+    if (superfinal_ == kNoStateId || s < superfinal_) {
       return s;
-    else
+    } else {
       return s - 1;
+    }
   }
 
   // Maps from input state to output state.
   StateId FindOState(StateId is) {
     StateId os;
-    if (superfinal_ == kNoStateId || is < superfinal_)
+    if (superfinal_ == kNoStateId || is < superfinal_) {
       os = is;
-    else
+    } else {
       os = is + 1;
+    }
 
     if (os >= nstates_) nstates_ = os + 1;
 
     return os;
   }
 
-  const Fst<A> *fst_;
+  std::unique_ptr<const Fst<A>> fst_;
   C *mapper_;
   bool own_mapper_;
   MapFinalAction final_action_;
 
   StateId superfinal_;
   StateId nstates_;
-
-  void operator=(const ArcMapFstImpl<A, B, C> &);  // disallow
 };
 
 // Maps an arc type A to an arc type B using Mapper function object
@@ -561,7 +575,7 @@ class ArcMapFst : public ImplToFst<ArcMapFstImpl<A, B, C>> {
   using ImplToFst<Impl>::GetMutableImpl;
 
  private:
-  void operator=(const ArcMapFst<A, B, C> &fst);  // disallow
+  ArcMapFst &operator=(const ArcMapFst &fst) = delete;
 };
 
 // Specialization for ArcMapFst.
@@ -621,8 +635,6 @@ class StateIterator<ArcMapFst<A, B, C>> : public StateIteratorBase<B> {
   StateIterator<Fst<A>> siter_;
   StateId s_;
   bool superfinal_;  // true if there is a superfinal state and not done
-
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Specialization for ArcMapFst.
@@ -636,9 +648,6 @@ class ArcIterator<ArcMapFst<A, B, C>>
       : CacheArcIterator<ArcMapFst<A, B, C>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A, class B, class C>
@@ -781,19 +790,20 @@ struct ToGallicMapper {
 
   ToArc operator()(const A &arc) const {
     // 'Super-final' arc.
-    if (arc.nextstate == kNoStateId && arc.weight != AW::Zero())
+    if (arc.nextstate == kNoStateId && arc.weight != AW::Zero()) {
       return ToArc(0, 0, GW(SW::One(), arc.weight), kNoStateId);
     // 'Super-non-final' arc.
-    else if (arc.nextstate == kNoStateId)
+    } else if (arc.nextstate == kNoStateId) {
       return ToArc(0, 0, GW::Zero(), kNoStateId);
     // Epsilon label.
-    else if (arc.olabel == 0)
+    } else if (arc.olabel == 0) {
       return ToArc(arc.ilabel, arc.ilabel, GW(SW::One(), arc.weight),
                    arc.nextstate);
     // Regular label.
-    else
+    } else {
       return ToArc(arc.ilabel, arc.ilabel, GW(SW(arc.olabel), arc.weight),
                    arc.nextstate);
+    }
   }
 
   MapFinalAction FinalAction() const { return MAP_NO_SUPERFINAL; }
@@ -817,13 +827,14 @@ struct FromGallicMapper {
   typedef typename A::Weight AW;
   typedef typename GallicArc<A, G>::Weight GW;
 
-  FromGallicMapper(Label superfinal_label = 0)
+  explicit FromGallicMapper(Label superfinal_label = 0)
       : superfinal_label_(superfinal_label), error_(false) {}
 
   A operator()(const FromArc &arc) const {
     // 'Super-non-final' arc.
-    if (arc.nextstate == kNoStateId && arc.weight == GW::Zero())
+    if (arc.nextstate == kNoStateId && arc.weight == GW::Zero()) {
       return A(arc.ilabel, 0, AW::Zero(), kNoStateId);
+    }
 
     Label l = kNoLabel;
     AW w;
@@ -835,10 +846,11 @@ struct FromGallicMapper {
       error_ = true;
     }
 
-    if (arc.ilabel == 0 && l != 0 && arc.nextstate == kNoStateId)
+    if (arc.ilabel == 0 && l != 0 && arc.nextstate == kNoStateId) {
       return A(superfinal_label_, l, w, arc.nextstate);
-    else
+    } else {
       return A(arc.ilabel, l, w, arc.nextstate);
+    }
   }
 
   MapFinalAction FinalAction() const { return MAP_ALLOW_SUPERFINAL; }
@@ -858,8 +870,9 @@ struct FromGallicMapper {
   template <GallicType GT>
   static bool Extract(const GallicWeight<Label, AW, GT> &gallic_weight,
                       typename A::Weight *weight, typename A::Label *label) {
-    StringWeight<Label, GALLIC_STRING_TYPE(GT)> w1 = gallic_weight.Value1();
-    AW w2 = gallic_weight.Value2();
+    const StringWeight<Label, GALLIC_STRING_TYPE(GT)> &w1 =
+        gallic_weight.Value1();
+    const AW &w2 = gallic_weight.Value2();
     StringWeightIterator<Label, GALLIC_STRING_TYPE(GT)> iter1(w1);
 
     Label l = w1.Size() == 1 ? iter1.Value() : 0;
@@ -898,11 +911,11 @@ struct GallicToNewSymbolsMapper {
   typedef typename A::Weight AW;
   typedef typename GallicArc<A, G>::Weight GW;
 
-  GallicToNewSymbolsMapper(MutableFst<ToArc> *fst)
+  explicit GallicToNewSymbolsMapper(MutableFst<ToArc> *fst)
       : fst_(fst),
         lmax_(0),
         osymbols_(fst->OutputSymbols()),
-        isymbols_(0),
+        isymbols_(nullptr),
         error_(false) {
     fst_->DeleteStates();
     state_ = fst_->AddState();
@@ -912,16 +925,18 @@ struct GallicToNewSymbolsMapper {
       string name = osymbols_->Name() + "_from_gallic";
       fst_->SetInputSymbols(new SymbolTable(name));
       isymbols_ = fst_->MutableInputSymbols();
-      isymbols_->AddSymbol(osymbols_->Find((int64)0), 0);
+      const int64 zero = 0;
+      isymbols_->AddSymbol(osymbols_->Find(zero), 0);
     } else {
-      fst_->SetInputSymbols(0);
+      fst_->SetInputSymbols(nullptr);
     }
   }
 
   A operator()(const FromArc &arc) {
     // 'Super-non-final' arc.
-    if (arc.nextstate == kNoStateId && arc.weight == GW::Zero())
+    if (arc.nextstate == kNoStateId && arc.weight == GW::Zero()) {
       return A(arc.ilabel, 0, AW::Zero(), kNoStateId);
+    }
 
     SW w1 = arc.weight.Value1();
     AW w2 = arc.weight.Value2();
@@ -930,12 +945,12 @@ struct GallicToNewSymbolsMapper {
     if (w1.Size() == 0) {
       l = 0;
     } else {
-      auto miter = map_.find(w1);
-      if (miter != map_.end()) {
-        l = (*miter).second;
+      auto insert_result = map_.insert(std::make_pair(w1, kNoLabel));
+      if (!insert_result.second) {
+        l = insert_result.first->second;
       } else {
         l = ++lmax_;
-        map_.insert(std::pair<const SW, Label>(w1, l));
+        insert_result.first->second = l;
         StringWeightIterator<Label, GALLIC_STRING_TYPE(G)> iter1(w1);
         StateId n;
         string s;
@@ -944,7 +959,9 @@ struct GallicToNewSymbolsMapper {
           n = i == w1.Size() - 1 ? state_ : fst_->AddState();
           fst_->AddArc(p, ToArc(i ? 0 : l, iter1.Value(), AW::One(), n));
           if (isymbols_) {
-            if (i) s = s + "_";
+            if (i) {
+              s = s + "_";
+            }
             s = s + osymbols_->Find(iter1.Value());
           }
         }
@@ -988,8 +1005,6 @@ struct GallicToNewSymbolsMapper {
   const SymbolTable *osymbols_;
   SymbolTable *isymbols_;
   mutable bool error_;
-
-  DISALLOW_COPY_AND_ASSIGN(GallicToNewSymbolsMapper);
 };
 
 // Mapper to add a constant to all weights.
@@ -999,7 +1014,7 @@ struct PlusMapper {
   typedef A ToArc;
   typedef typename A::Weight Weight;
 
-  explicit PlusMapper(Weight w) : weight_(w) {}
+  explicit PlusMapper(Weight w) : weight_(std::move(w)) {}
 
   A operator()(const A &arc) const {
     if (arc.weight == Weight::Zero()) return arc;
@@ -1028,7 +1043,7 @@ struct TimesMapper {
   typedef A ToArc;
   typedef typename A::Weight Weight;
 
-  explicit TimesMapper(Weight w) : weight_(w) {}
+  explicit TimesMapper(Weight w) : weight_(std::move(w)) {}
 
   A operator()(const A &arc) const {
     if (arc.weight == Weight::Zero()) return arc;

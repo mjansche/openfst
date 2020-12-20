@@ -54,8 +54,6 @@ class MPdtInfo {
   int64 nopen_paren_states_[nlevels];
   int64 nclose_paren_states_[nlevels];
   bool error_;
-
-  DISALLOW_COPY_AND_ASSIGN(MPdtInfo);
 };
 
 template <class A, int nlevels>

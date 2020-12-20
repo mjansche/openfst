@@ -27,8 +27,9 @@ class UnionFind {
   // Finds the representative of the set 'item' belongs to.
   // Performs path compression if needed.
   T FindSet(T item) {
-    if (item >= parent_.size() || item == fail_ || parent_[item] == fail_)
+    if (item >= parent_.size() || item == fail_ || parent_[item] == fail_) {
       return fail_;
+    }
 
     T *p = &parent_[item];
     for (; *p != item; item = *p, p = &parent_[item]) {
@@ -83,7 +84,8 @@ class UnionFind {
       }
     }
   }
-  DISALLOW_COPY_AND_ASSIGN(UnionFind);
+  UnionFind(const UnionFind &) = delete;
+  UnionFind &operator=(const UnionFind &) = delete;
 };
 
 }  // namespace fst

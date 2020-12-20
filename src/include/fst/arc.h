@@ -7,6 +7,7 @@
 #define FST_LIB_ARC_H_
 
 #include <string>
+#include <utility>
 
 
 #include <fst/expectation-weight.h>
@@ -33,7 +34,7 @@ class ArcTpl {
 
   ArcTpl() {}
 
-  static const string &Type(void) {
+  static const string &Type() {
     static const string type =
         (Weight::Type() == "tropical") ? "standard" : Weight::Type();
     return type;
@@ -61,7 +62,7 @@ class StringArc {
   typedef int StateId;
 
   StringArc(Label i, Label o, Weight w, StateId s)
-      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+      : ilabel(i), olabel(o), weight(std::move(w)), nextstate(s) {}
 
   StringArc() {}
 
@@ -91,9 +92,9 @@ struct GallicArc {
   GallicArc() {}
 
   GallicArc(Label i, Label o, Weight w, StateId s)
-      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+      : ilabel(i), olabel(o), weight(std::move(w)), nextstate(s) {}
 
-  GallicArc(const A &arc)
+  explicit GallicArc(const A &arc)
       : ilabel(arc.ilabel),
         olabel(arc.ilabel),
         weight(arc.olabel, arc.weight),
@@ -128,7 +129,7 @@ struct ReverseArc {
   typedef typename A::StateId StateId;
 
   ReverseArc(Label i, Label o, Weight w, StateId s)
-      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+      : ilabel(i), olabel(o), weight(std::move(w)), nextstate(s) {}
 
   ReverseArc() {}
 
@@ -151,7 +152,7 @@ struct LexicographicArc {
   typedef int StateId;
 
   LexicographicArc(Label i, Label o, Weight w, StateId s)
-      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+      : ilabel(i), olabel(o), weight(std::move(w)), nextstate(s) {}
 
   LexicographicArc() {}
 
@@ -202,7 +203,7 @@ struct PowerArc {
   PowerArc() {}
 
   PowerArc(Label i, Label o, Weight w, StateId s)
-      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+      : ilabel(i), olabel(o), weight(std::move(w)), nextstate(s) {}
 
   static const string &Type() {  // Arc type name
     static string type;

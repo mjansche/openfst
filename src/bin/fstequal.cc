@@ -3,6 +3,9 @@
 //
 // Two FSTS are equal iff their exit status is zero.
 
+#include <memory>
+#include <string>
+
 #include <fst/script/equal.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");

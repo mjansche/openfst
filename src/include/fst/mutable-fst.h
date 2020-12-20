@@ -76,15 +76,15 @@ class MutableFst : public ExpandedFst<A> {
   static MutableFst<A> *Read(std::istream &strm, const FstReadOptions &opts) {
     FstReadOptions ropts(opts);
     FstHeader hdr;
-    if (ropts.header)
+    if (ropts.header) {
       hdr = *opts.header;
-    else {
-      if (!hdr.Read(strm, opts.source)) return 0;
+    } else {
+      if (!hdr.Read(strm, opts.source)) return nullptr;
       ropts.header = &hdr;
     }
     if (!(hdr.Properties() & kMutable)) {
       LOG(ERROR) << "MutableFst::Read: Not a MutableFst: " << ropts.source;
-      return 0;
+      return nullptr;
     }
     FstRegister<A> *registr = FstRegister<A>::GetRegister();
     const typename FstRegister<A>::Reader reader =
@@ -92,10 +92,10 @@ class MutableFst : public ExpandedFst<A> {
     if (!reader) {
       LOG(ERROR) << "MutableFst::Read: Unknown FST type \"" << hdr.FstType()
                  << "\" (arc type = \"" << A::Type() << "\"): " << ropts.source;
-      return 0;
+      return nullptr;
     }
     Fst<A> *fst = reader(strm, ropts);
-    if (!fst) return 0;
+    if (!fst) return nullptr;
     return static_cast<MutableFst<A> *>(fst);
   }
 
@@ -111,24 +111,25 @@ class MutableFst : public ExpandedFst<A> {
                                 std::ios_base::in | std::ios_base::binary);
         if (!strm) {
           LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
-          return 0;
+          return nullptr;
         }
         return Read(strm, FstReadOptions(filename));
       } else {
         return Read(std::cin, FstReadOptions("standard input"));
       }
     } else {  // Converts to 'convert_type' if not mutable.
-      Fst<A> *ifst = Fst<A>::Read(filename);
-      if (!ifst) return 0;
+      std::unique_ptr<Fst<A>> ifst(Fst<A>::Read(filename));
+      if (!ifst) return nullptr;
       if (ifst->Properties(kMutable, false)) {
-        return static_cast<MutableFst *>(ifst);
+        return static_cast<MutableFst *>(ifst.release());
       } else {
-        Fst<A> *ofst = Convert(*ifst, convert_type);
-        delete ifst;
+        std::unique_ptr<Fst<A>> ofst(Convert(*ifst, convert_type));
+        ifst.reset();
         if (!ofst) return nullptr;
-        if (!ofst->Properties(kMutable, false))
+        if (!ofst->Properties(kMutable, false)) {
           LOG(ERROR) << "MutableFst: Bad convert type: " << convert_type;
-        return static_cast<MutableFst *>(ofst);
+        }
+        return static_cast<MutableFst *>(ofst.release());
       }
     }
   }
@@ -194,7 +195,8 @@ class MutableArcIterator {
 
  private:
   MutableArcIteratorData<Arc> data_;
-  DISALLOW_COPY_AND_ASSIGN(MutableArcIterator);
+  MutableArcIterator(const MutableArcIterator &) = delete;
+  MutableArcIterator &operator=(const MutableArcIterator &) = delete;
 };
 
 namespace internal {

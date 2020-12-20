@@ -24,7 +24,7 @@ void RmFinalEpsilon(MutableFst<A>* fst) {
   std::vector<bool> access;
   std::vector<bool> coaccess;
   uint64 props = 0;
-  SccVisitor<A> scc_visitor(0, &access, &coaccess, &props);
+  SccVisitor<A> scc_visitor(nullptr, &access, &coaccess, &props);
   DfsVisit(*fst, &scc_visitor);
 
   // Find potential list of removable final states. These are final states

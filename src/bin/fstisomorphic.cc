@@ -6,6 +6,7 @@
 // automata.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/isomorphic.h>
 

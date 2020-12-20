@@ -16,7 +16,6 @@ typedef args::Package<MutableFstClass *, ProjectType> ProjectArgs;
 template <class Arc>
 void Project(ProjectArgs *args) {
   MutableFst<Arc> *ofst = args->arg1->GetMutableFst<Arc>();
-
   Project(ofst, args->arg2);
 }
 

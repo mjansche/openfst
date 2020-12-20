@@ -3,9 +3,11 @@
 //
 // Creates a finite-state archive from input FSTs.
 
+#include <string>
+#include <vector>
+
 #include <fst/extensions/far/farscript.h>
-#include <fst/extensions/far/far.h>
-#include <fst/extensions/far/main.h>
+#include <fst/extensions/far/util.h>
 #include <fstream>
 
 DEFINE_string(key_prefix, "", "Prefix to append to keys");
@@ -32,13 +34,13 @@ int main(int argc, char **argv) {
   std::vector<string> in_fnames;
   if (FLAGS_file_list_input) {
     for (int i = 1; i < argc - 1; ++i) {
-      std::ifstream istrm(strcmp(argv[i], "") != 0 ? argv[i] : "");
+      std::ifstream istrm(argv[i]);
       string str;
       while (getline(istrm, str)) in_fnames.push_back(str);
     }
   } else {
     for (int i = 1; i < argc - 1; ++i)
-      in_fnames.push_back(strcmp(argv[i], "") != 0 ? argv[i] : "");
+      in_fnames.push_back(argv[i]);
   }
   if (in_fnames.empty())
     in_fnames.push_back(argc == 2 && strcmp(argv[1], "-") != 0 ? argv[1] : "");
@@ -46,7 +48,9 @@ int main(int argc, char **argv) {
   string out_fname =
       argc > 2 && strcmp(argv[argc - 1], "-") != 0 ? argv[argc - 1] : "";
 
-  string arc_type = fst::LoadArcTypeFromFst(in_fnames[0]);
+  string arc_type = s::LoadArcTypeFromFst(in_fnames[0]);
+  if (arc_type.empty()) return 1;
+
   fst::FarType far_type = fst::FarTypeFromString(FLAGS_far_type);
 
   s::FarCreate(in_fnames, out_fname, arc_type, FLAGS_generate_keys, far_type,

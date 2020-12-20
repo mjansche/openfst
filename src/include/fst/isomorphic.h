@@ -28,18 +28,15 @@ class Isomorphism {
         error_(false),
         comp_(delta, &error_) {}
 
-  ~Isomorphism() {
-    delete fst1_;
-    delete fst2_;
-  }
-
   // Checks if input FSTs are isomorphic
   bool IsIsomorphic() {
-    if (fst1_->Start() == kNoStateId && fst2_->Start() == kNoStateId)
+    if (fst1_->Start() == kNoStateId && fst2_->Start() == kNoStateId) {
       return true;
+    }
 
-    if (fst1_->Start() == kNoStateId || fst2_->Start() == kNoStateId)
+    if (fst1_->Start() == kNoStateId || fst2_->Start() == kNoStateId) {
       return false;
+    }
 
     PairState(fst1_->Start(), fst2_->Start());
     while (!queue_.empty()) {
@@ -79,10 +76,11 @@ class Isomorphism {
   // Maintains state correspondences and queue.
   bool PairState(StateId s1, StateId s2) {
     if (state_pairs_.size() <= s1) state_pairs_.resize(s1 + 1, kNoStateId);
-    if (state_pairs_[s1] == s2)
+    if (state_pairs_[s1] == s2) {
       return true;  // already seen this pair
-    else if (state_pairs_[s1] != kNoStateId)
+    } else if (state_pairs_[s1] != kNoStateId) {
       return false;  // s1 already paired with another s2
+    }
 
     state_pairs_[s1] = s2;
     queue_.push_back(std::make_pair(s1, s2));
@@ -92,8 +90,8 @@ class Isomorphism {
   // Checks if state pair is isomorphic
   bool IsIsomorphicState(StateId s1, StateId s2);
 
-  Fst<Arc> *fst1_;
-  Fst<Arc> *fst2_;
+  std::unique_ptr<Fst<Arc>> fst1_;
+  std::unique_ptr<Fst<Arc>> fst2_;
   float delta_;                          // Weight equality delta
   std::vector<Arc> arcs1_;               // for sorting arcs on FST1
   std::vector<Arc> arcs2_;               // for sorting arcs on FST2
@@ -101,8 +99,6 @@ class Isomorphism {
   std::list<std::pair<StateId, StateId>> queue_;  // queue of states to process
   bool error_;                           // error flag
   ArcCompare comp_;
-
-  DISALLOW_COPY_AND_ASSIGN(Isomorphism);
 };
 
 template <class Arc>
@@ -173,7 +169,7 @@ bool Isomorphism<Arc>::IsIsomorphicState(StateId s1, StateId s2) {
 // FLAGS_error_fatal = false).
 template <class Arc>
 bool Isomorphic(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                float delta = kDelta, bool *error = 0) {
+                float delta = kDelta, bool *error = nullptr) {
   Isomorphism<Arc> iso(fst1, fst2, delta);
   bool ret = iso.IsIsomorphic();
   if (iso.Error()) {

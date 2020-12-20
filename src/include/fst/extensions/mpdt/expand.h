@@ -100,7 +100,6 @@ class MPdtExpandFstImpl : public CacheImpl<A> {
   }
 
   ~MPdtExpandFstImpl() override {
-    delete fst_;
     if (own_stack_) delete stack_;
     if (own_state_table_) delete state_table_;
   }
@@ -179,7 +178,7 @@ class MPdtExpandFstImpl : public CacheImpl<A> {
   }
 
  private:
-  const Fst<A> *fst_;
+  std::unique_ptr<const Fst<A>> fst_;
 
   MPdtStack<StackId, Label> *stack_;
   PdtStateTable<StateId, StackId> *state_table_;
@@ -187,7 +186,7 @@ class MPdtExpandFstImpl : public CacheImpl<A> {
   bool own_state_table_;
   bool keep_parentheses_;
 
-  void operator=(const MPdtExpandFstImpl<A> &);  // disallow
+  MPdtExpandFstImpl &operator=(const MPdtExpandFstImpl &) = delete;
 };
 
 // Expands a multi-pushdown transducer (MPDT) encoded as an FST into an FST.
@@ -257,7 +256,7 @@ class MPdtExpandFst : public ImplToFst<MPdtExpandFstImpl<A>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const MPdtExpandFst<A> &fst);  // Disallow
+  void operator=(const MPdtExpandFst<A> &fst) = delete;
 };
 
 // Specialization for ExpandFst.
@@ -280,9 +279,6 @@ class ArcIterator<MPdtExpandFst<A>>
       : CacheArcIterator<MPdtExpandFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->ExpandState(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>

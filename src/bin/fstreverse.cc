@@ -4,6 +4,7 @@
 // Reverses the paths in an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/fst-class.h>
 #include <fst/script/reverse.h>

@@ -46,8 +46,9 @@ uint64 ComplementProperties(uint64 inprops) {
                     kODeterministic | kAccessible;
   outprops |=
       (kError | kILabelSorted | kOLabelSorted | kInitialCyclic) & inprops;
-  if (inprops & kAccessible)
+  if (inprops & kAccessible) {
     outprops |= kNotILabelSorted | kNotOLabelSorted | kCyclic;
+  }
   return outprops;
 }
 
@@ -59,14 +60,16 @@ uint64 ComposeProperties(uint64 inprops1, uint64 inprops2) {
     outprops |= (kNoEpsilons | kNoIEpsilons | kNoOEpsilons | kAcyclic |
                  kInitialAcyclic) &
                 inprops1 & inprops2;
-    if (kNoIEpsilons & inprops1 & inprops2)
+    if (kNoIEpsilons & inprops1 & inprops2) {
       outprops |= (kIDeterministic | kODeterministic) & inprops1 & inprops2;
+    }
   } else {
     outprops |= kAccessible;
     outprops |= (kAcceptor | kNoIEpsilons | kAcyclic | kInitialAcyclic) &
                 inprops1 & inprops2;
-    if (kNoIEpsilons & inprops1 & inprops2)
+    if (kNoIEpsilons & inprops1 & inprops2) {
       outprops |= kIDeterministic & inprops1 & inprops2;
+    }
   }
   return outprops;
 }
@@ -85,23 +88,25 @@ uint64 ConcatProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
     outprops |= (kNotTopSorted | kNotString) & inprops2;
   }
   if (!empty1) outprops |= (kInitialAcyclic | kInitialCyclic) & inprops1;
-  if (!delayed || inprops1 & kAccessible)
-    outprops |=
-        (kNotAcceptor | kNonIDeterministic | kNonODeterministic | kEpsilons |
-         kIEpsilons | kOEpsilons | kNotILabelSorted | kNotOLabelSorted |
-         kWeighted | kWeightedCycles | kCyclic | kNotAccessible |
-         kNotCoAccessible) & inprops1;
+  if (!delayed || inprops1 & kAccessible) {
+    outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
+                 kEpsilons | kIEpsilons | kOEpsilons | kNotILabelSorted |
+                 kNotOLabelSorted | kWeighted | kWeightedCycles | kCyclic |
+                 kNotAccessible | kNotCoAccessible) &
+                inprops1;
+  }
   if ((inprops1 & (kAccessible | kCoAccessible)) ==
           (kAccessible | kCoAccessible) &&
       !empty1) {
     outprops |= kAccessible & inprops2;
     if (!empty2) outprops |= kCoAccessible & inprops2;
-    if (!delayed || inprops2 & kAccessible)
-      outprops |=
-          (kNotAcceptor | kNonIDeterministic | kNonODeterministic | kEpsilons |
-           kIEpsilons | kOEpsilons | kNotILabelSorted | kNotOLabelSorted |
-           kWeighted | kWeightedCycles | kCyclic | kNotAccessible |
-           kNotCoAccessible) & inprops2;
+    if (!delayed || inprops2 & kAccessible) {
+      outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
+                   kEpsilons | kIEpsilons | kOEpsilons | kNotILabelSorted |
+                   kNotOLabelSorted | kWeighted | kWeightedCycles | kCyclic |
+                   kNotAccessible | kNotCoAccessible) &
+                  inprops2;
+    }
   }
   return outprops;
 }
@@ -118,13 +123,16 @@ uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label,
   outprops |= (kError | kAcceptor | kAcyclic | kInitialAcyclic | kCoAccessible |
                kString) &
               inprops;
-  if ((inprops & kNoIEpsilons) && distinct_psubsequential_labels)
+  if ((inprops & kNoIEpsilons) && distinct_psubsequential_labels) {
     outprops |= kNoEpsilons & inprops;
-  if (inprops & kAccessible)
+  }
+  if (inprops & kAccessible) {
     outprops |= (kIEpsilons | kOEpsilons | kCyclic) & inprops;
+  }
   if (inprops & kAcceptor) outprops |= (kNoIEpsilons | kNoOEpsilons) & inprops;
-  if ((inprops & kNoIEpsilons) && has_subsequential_label)
+  if ((inprops & kNoIEpsilons) && has_subsequential_label) {
     outprops |= kNoIEpsilons;
+  }
   return outprops;
 }
 
@@ -133,11 +141,12 @@ uint64 FactorWeightProperties(uint64 inprops) {
   uint64 outprops = (kExpanded | kMutable | kError | kAcceptor | kAcyclic |
                      kAccessible | kCoAccessible) &
                     inprops;
-  if (inprops & kAccessible)
+  if (inprops & kAccessible) {
     outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
                  kEpsilons | kIEpsilons | kOEpsilons | kCyclic |
                  kNotILabelSorted | kNotOLabelSorted) &
                 inprops;
+  }
   return outprops;
 }
 
@@ -227,13 +236,17 @@ uint64 RandGenProperties(uint64 inprops, bool weighted) {
 // Properties for a replace FST.
 uint64 ReplaceProperties(const std::vector<uint64>& inprops, ssize_t root,
                          bool epsilon_on_call, bool epsilon_on_return,
-                         bool replace_transducer, bool no_empty_fsts) {
-  if (inprops.size() == 0) return kNullProperties;
+                         bool out_epsilon_on_call, bool out_epsilon_on_return,
+                         bool replace_transducer, bool no_empty_fsts,
+                         bool all_ilabel_sorted, bool all_olabel_sorted,
+                         bool all_negative_or_dense) {
+  if (inprops.empty()) return kNullProperties;
   uint64 outprops = 0;
   for (size_t i = 0; i < inprops.size(); ++i) outprops |= kError & inprops[i];
   uint64 access_props = no_empty_fsts ? kAccessible | kCoAccessible : 0;
-  for (size_t i = 0; i < inprops.size(); ++i)
+  for (size_t i = 0; i < inprops.size(); ++i) {
     access_props &= (inprops[i] & (kAccessible | kCoAccessible));
+  }
   if (access_props == (kAccessible | kCoAccessible)) {
     outprops |= access_props;
     if (inprops[root] & kInitialCyclic) outprops |= kInitialCyclic;
@@ -270,6 +283,31 @@ uint64 ReplaceProperties(const std::vector<uint64>& inprops, ssize_t root,
   if (acyclic) outprops |= kAcyclic;
   if (unweighted) outprops |= kUnweighted;
   if (inprops[root] & kInitialAcyclic) outprops |= kInitialAcyclic;
+
+  // We assume that all terminals are positive.  The resulting
+  // ReplaceFst is known to be kILabelSorted when: (1) all sub-FSTs are
+  // kILabelSorted, (2) the input label of the return arc is epsilon,
+  // and (3) one of the 3 following conditions is satisfied:
+  //  1. the input label of the call arc is not epsilon
+  //  2. all non-terminals are negative, or
+  //  3. all non-terninals are positive and form a dense range containing 1.
+  if (all_ilabel_sorted && epsilon_on_return &&
+      (!epsilon_on_call || all_negative_or_dense)) {
+    outprops |= kILabelSorted;
+  }
+
+  // Similarly, the resulting ReplaceFst is known to be
+  // kOLabelSorted when: (1) all sub-FSTs are kOLabelSorted, (2) the output
+  // label of the return arc is epsilon, and (3) one of the 3 following
+  // conditions is satisfied:
+  //  1. the output label of the call arc is not epsilon
+  //  2. all non-terminals are negative, or
+  //  3. all non-terninals are positive and form a dense range containing 1.
+  if (all_olabel_sorted && out_epsilon_on_return &&
+      (!out_epsilon_on_call || all_negative_or_dense)) {
+    outprops |= kOLabelSorted;
+  }
+
   return outprops;
 }
 
@@ -356,18 +394,20 @@ uint64 UnionProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
     outprops |= kCoAccessible & inprops1 & inprops2;
   }
   // Note kNotCoAccessible does not hold because of kInitialAcyclic opt.
-  if (!delayed || inprops1 & kAccessible)
-    outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
-                 kEpsilons | kIEpsilons | kOEpsilons | kNotILabelSorted |
-                 kNotOLabelSorted | kWeighted | kWeightedCycles | kCyclic |
-                 kNotAccessible) &
-                inprops1;
-  if (!delayed || inprops2 & kAccessible)
+  if (!delayed || inprops1 & kAccessible) {
+    outprops |=
+        (kNotAcceptor | kNonIDeterministic | kNonODeterministic | kEpsilons |
+         kIEpsilons | kOEpsilons | kNotILabelSorted | kNotOLabelSorted |
+         kWeighted | kWeightedCycles | kCyclic | kNotAccessible) &
+        inprops1;
+  }
+  if (!delayed || inprops2 & kAccessible) {
     outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
                  kEpsilons | kIEpsilons | kOEpsilons | kNotILabelSorted |
                  kNotOLabelSorted | kWeighted | kWeightedCycles | kCyclic |
                  kNotAccessible | kNotCoAccessible) &
                 inprops2;
+  }
   return outprops;
 }
 

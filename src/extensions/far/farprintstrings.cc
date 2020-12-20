@@ -3,7 +3,11 @@
 //
 // Outputs as strings the string FSTs in a finite-state archive.
 
+#include <string>
+#include <vector>
+
 #include <fst/extensions/far/farscript.h>
+#include <fst/extensions/far/util.h>
 
 DEFINE_string(filename_prefix, "", "Prefix to append to filenames");
 DEFINE_string(filename_suffix, "", "Suffix to append to filenames");
@@ -36,15 +40,16 @@ int main(int argc, char **argv) {
   SET_FLAGS(usage.c_str(), &argc, &argv, true);
   fst::ExpandArgs(argc, argv, &argc, &argv);
 
-  std::vector<string> ifilenames;
+  std::vector<string> in_fnames;
   for (int i = 1; i < argc; ++i)
-    ifilenames.push_back(strcmp(argv[i], "") != 0 ? argv[i] : "");
-  if (ifilenames.empty()) ifilenames.push_back("");
+    in_fnames.push_back(argv[i]);
+  if (in_fnames.empty()) in_fnames.push_back("");
 
-  string arc_type = fst::LoadArcTypeFromFar(ifilenames[0]);
+  string arc_type = s::LoadArcTypeFromFar(in_fnames[0]);
+  if (arc_type.empty()) return 1;
 
-  s::FarPrintStrings(
-      ifilenames, arc_type, fst::StringToFarEntryType(FLAGS_entry_type),
+  s::FarPrintStrings(in_fnames, arc_type,
+      fst::StringToFarEntryType(FLAGS_entry_type),
       fst::StringToFarTokenType(FLAGS_token_type), FLAGS_begin_key,
       FLAGS_end_key, FLAGS_print_key, FLAGS_print_weight, FLAGS_symbols,
       FLAGS_initial_symbols, FLAGS_generate_filenames, FLAGS_filename_prefix,

@@ -13,6 +13,8 @@
 #ifndef FST_LIB_LEXICOGRAPHIC_WEIGHT_H_
 #define FST_LIB_LEXICOGRAPHIC_WEIGHT_H_
 
+#include <cstdlib>
+
 #include <string>
 
 #include <fst/pair-weight.h>
@@ -35,11 +37,13 @@ class LexicographicWeight : public PairWeight<W1, W2> {
   using PairWeight<W1, W2>::Reverse;
 
   typedef LexicographicWeight<typename W1::ReverseWeight,
-                              typename W2::ReverseWeight> ReverseWeight;
+                              typename W2::ReverseWeight>
+      ReverseWeight;
 
   LexicographicWeight() {}
 
-  LexicographicWeight(const PairWeight<W1, W2> &w) : PairWeight<W1, W2>(w) {}
+  explicit LexicographicWeight(const PairWeight<W1, W2> &w)
+      : PairWeight<W1, W2>(w) {}
 
   LexicographicWeight(W1 w1, W2 w2) : PairWeight<W1, W2>(w1, w2) {
     uint64 props = kPath;
@@ -55,19 +59,18 @@ class LexicographicWeight : public PairWeight<W1, W2> {
     }
   }
 
-  static const LexicographicWeight<W1, W2> &Zero() {
-    static const LexicographicWeight<W1, W2> zero(PairWeight<W1, W2>::Zero());
+  static const LexicographicWeight &Zero() {
+    static const LexicographicWeight zero(PairWeight<W1, W2>::Zero());
     return zero;
   }
 
-  static const LexicographicWeight<W1, W2> &One() {
-    static const LexicographicWeight<W1, W2> one(PairWeight<W1, W2>::One());
+  static const LexicographicWeight &One() {
+    static const LexicographicWeight one(PairWeight<W1, W2>::One());
     return one;
   }
 
-  static const LexicographicWeight<W1, W2> &NoWeight() {
-    static const LexicographicWeight<W1, W2> no_weight(
-        PairWeight<W1, W2>::NoWeight());
+  static const LexicographicWeight &NoWeight() {
+    static const LexicographicWeight no_weight(PairWeight<W1, W2>::NoWeight());
     return no_weight;
   }
 
@@ -84,25 +87,27 @@ class LexicographicWeight : public PairWeight<W1, W2> {
     return false;
   }
 
-  LexicographicWeight<W1, W2> Quantize(float delta = kDelta) const {
-    return PairWeight<W1, W2>::Quantize();
+  LexicographicWeight Quantize(float delta = kDelta) const {
+    return LexicographicWeight(PairWeight<W1, W2>::Quantize());
   }
 
-  ReverseWeight Reverse() const { return PairWeight<W1, W2>::Reverse(); }
+  ReverseWeight Reverse() const {
+    return ReverseWeight(PairWeight<W1, W2>::Reverse());
+  }
 
-  static uint64 Properties() {
-    uint64 props1 = W1::Properties();
-    uint64 props2 = W2::Properties();
-    return props1 & props2 & (kLeftSemiring | kRightSemiring | kPath |
-                              kIdempotent | kCommutative);
+  static constexpr uint64 Properties() {
+    return W1::Properties() & W2::Properties() &
+           (kLeftSemiring | kRightSemiring | kPath | kIdempotent |
+            kCommutative);
   }
 };
 
 template <class W1, class W2>
 inline LexicographicWeight<W1, W2> Plus(const LexicographicWeight<W1, W2> &w,
                                         const LexicographicWeight<W1, W2> &v) {
-  if (!w.Member() || !v.Member())
+  if (!w.Member() || !v.Member()) {
     return LexicographicWeight<W1, W2>::NoWeight();
+  }
   NaturalLess<W1> less1;
   NaturalLess<W2> less2;
   if (less1(w.Value1(), v.Value1())) return w;
@@ -126,6 +131,41 @@ inline LexicographicWeight<W1, W2> Divide(const LexicographicWeight<W1, W2> &w,
   return LexicographicWeight<W1, W2>(Divide(w.Value1(), v.Value1(), typ),
                                      Divide(w.Value2(), v.Value2(), typ));
 }
+
+// This function object generates weights by calling the underlying generators
+// for the templated weight types, like all other pair weight types. However,
+// for lexicographic weights, we cannot generate zeroes for the two subweights
+// separately: weights are members iff both members are zero or both members
+// are non-zero. This is intended primarily for testing.
+template <class W1, class W2>
+class WeightGenerate<LexicographicWeight<W1, W2>> {
+ public:
+  using Weight = LexicographicWeight<W1, W1>;
+  using Generate1 = WeightGenerate<W1>;
+  using Generate2 = WeightGenerate<W2>;
+
+  explicit WeightGenerate(bool allow_zero = true,
+                          size_t num_random_weights = kNumRandomWeights)
+      : generator1_(false, num_random_weights),
+        generator2_(false, num_random_weights), allow_zero_(allow_zero),
+        num_random_weights_(num_random_weights) {}
+
+  Weight operator()() const {
+    if (allow_zero_) {
+      int n = rand() % (num_random_weights_ + 1);  // NOLINT
+      if (n == num_random_weights_) return Weight(W1::Zero(), W2::Zero());
+    }
+    return Weight(generator1_(), generator2_());
+  }
+
+ private:
+  Generate1 generator1_;
+  Generate2 generator2_;
+  // Permits Zero() and zero divisors.
+  bool allow_zero_;
+  // The number of alternative random weights.
+  const size_t num_random_weights_;
+};
 
 }  // namespace fst
 

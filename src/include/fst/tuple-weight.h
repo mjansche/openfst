@@ -28,11 +28,12 @@ class TupleWeight {
 
   template <class Iterator>
   TupleWeight(Iterator begin, Iterator end) {
-    for (Iterator iter = begin; iter != end; ++iter)
+    for (Iterator iter = begin; iter != end; ++iter) {
       values_[iter - begin] = *iter;
+    }
   }
 
-  TupleWeight(const W &w) {
+  explicit TupleWeight(const W &w) {
     for (size_t i = 0; i < n; ++i) values_[i] = w;
   }
 
@@ -112,8 +113,9 @@ template <class W, unsigned int n>
 inline bool operator!=(const TupleWeight<W, n> &w1,
                        const TupleWeight<W, n> &w2) {
   bool not_equal = false;
-  for (size_t i = 0; (i < n) && !not_equal; ++i)
+  for (size_t i = 0; (i < n) && !not_equal; ++i) {
     not_equal = not_equal || (w1.Value(i) != w2.Value(i));
+  }
   return not_equal;
 }
 
@@ -121,8 +123,9 @@ template <class W, unsigned int n>
 inline bool ApproxEqual(const TupleWeight<W, n> &w1,
                         const TupleWeight<W, n> &w2, float delta = kDelta) {
   bool approx_equal = true;
-  for (size_t i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i) {
     approx_equal = approx_equal && ApproxEqual(w1.Value(i), w2.Value(i), delta);
+  }
   return approx_equal;
 }
 

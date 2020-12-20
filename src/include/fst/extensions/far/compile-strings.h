@@ -5,12 +5,14 @@
 #define FST_EXTENSIONS_FAR_COMPILE_STRINGS_H_
 
 #include <libgen.h>
+
+#include <fstream>
 #include <istream>
 #include <string>
 #include <vector>
 
-#include <fstream>
 #include <fst/extensions/far/far.h>
+#include <fstream>
 #include <fst/string.h>
 
 namespace fst {
@@ -29,7 +31,7 @@ class StringReader {
   typedef A Arc;
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
-  typedef typename StringCompiler<A>::TokenType TokenType;
+  typedef StringTokenType TokenType;
 
   enum EntryType { LINE = 1, FILE = 2 };
 
@@ -73,33 +75,31 @@ class StringReader {
   }
 
   VectorFst<A> *GetVectorFst(bool keep_symbols = false) {
-    VectorFst<A> *fst = new VectorFst<A>;
+    std::unique_ptr<VectorFst<A>> fst(new VectorFst<A>());
     if (keep_symbols) {
       fst->SetInputSymbols(symbols_);
       fst->SetOutputSymbols(symbols_);
     }
-    if (compiler_(content_, fst)) {
-      return fst;
+    if (compiler_(content_, fst.get())) {
+      return fst.release();
     } else {
-      delete fst;
       return nullptr;
     }
   }
 
   CompactStringFst<A> *GetCompactFst(bool keep_symbols = false) {
-    CompactStringFst<A> *fst;
+    std::unique_ptr<CompactStringFst<A>> fst;
     if (keep_symbols) {
       VectorFst<A> tmp;
       tmp.SetInputSymbols(symbols_);
       tmp.SetOutputSymbols(symbols_);
-      fst = new CompactStringFst<A>(tmp);
+      fst.reset(new CompactStringFst<A>(tmp));
     } else {
-      fst = new CompactStringFst<A>;
+      fst.reset(new CompactStringFst<A>());
     }
-    if (compiler_(content_, fst)) {
-      return fst;
+    if (compiler_(content_, fst.get())) {
+      return fst.release();
     } else {
-      delete fst;
       return nullptr;
     }
   }
@@ -115,7 +115,8 @@ class StringReader {
   StringCompiler<A> compiler_;
   string content_;  // The actual content of the input stream's next FST.
 
-  DISALLOW_COPY_AND_ASSIGN(StringReader);
+  StringReader(const StringReader &) = delete;
+  StringReader &operator=(const StringReader &) = delete;
 };
 
 // Compute the minimal length required to encode each line number as a decimal
@@ -141,13 +142,13 @@ void FarCompileStrings(const std::vector<string> &in_fnames,
     return;
   }
 
-  typename StringCompiler<Arc>::TokenType token_type;
+  StringTokenType token_type;
   if (tt == FTT_SYMBOL) {
-    token_type = StringCompiler<Arc>::SYMBOL;
+    token_type = StringTokenType::SYMBOL;
   } else if (tt == FTT_BYTE) {
-    token_type = StringCompiler<Arc>::BYTE;
+    token_type = StringTokenType::BYTE;
   } else if (tt == FTT_UTF8) {
-    token_type = StringCompiler<Arc>::UTF8;
+    token_type = StringTokenType::UTF8;
   } else {
     FSTERROR() << "FarCompileStrings: Unknown token type";
     return;
@@ -163,12 +164,12 @@ void FarCompileStrings(const std::vector<string> &in_fnames,
     return;
   }
 
-  const SymbolTable *syms = 0;
+  std::unique_ptr<const SymbolTable> syms;
   typename Arc::Label unknown_label = kNoLabel;
   if (!symbols_fname.empty()) {
     SymbolTableTextOptions opts;
     opts.allow_negative = allow_negative_labels;
-    syms = SymbolTable::ReadText(symbols_fname, opts);
+    syms.reset(SymbolTable::ReadText(symbols_fname, opts));
     if (!syms) {
       LOG(ERROR) << "FarCompileStrings: Error reading symbol table: "
                  << symbols_fname;
@@ -184,40 +185,47 @@ void FarCompileStrings(const std::vector<string> &in_fnames,
     }
   }
 
-  FarWriter<Arc> *far_writer = FarWriter<Arc>::Create(out_fname, far_type);
+  std::unique_ptr<FarWriter<Arc>> far_writer(
+      FarWriter<Arc>::Create(out_fname, far_type));
   if (!far_writer) return;
 
-  for (int i = 0, n = 0; i < in_fnames.size(); ++i) {
-    if (generate_keys == 0 && in_fnames[i].empty()) {
+  int n = 0;
+  for (const auto &in_fname : in_fnames) {
+    if (generate_keys == 0 && in_fname.empty()) {
       FSTERROR() << "FarCompileStrings: Read from a file instead of stdin or"
                  << " set the --generate_keys flags.";
-      delete far_writer;
-      delete syms;
       return;
     }
     int key_size =
         generate_keys ? generate_keys : (entry_type == StringReader<Arc>::FILE
-                                             ? 1
-                                             : KeySize(in_fnames[i].c_str()));
-    std::istream *istrm =
-        in_fnames[i].empty() ? &std::cin : new std::ifstream(in_fnames[i]);
+                                             ? 1 : KeySize(in_fname.c_str()));
+
+    std::ifstream fstrm;
+    if (!in_fname.empty()) {
+      fstrm.open(in_fname);
+      if (!fstrm) {
+        FSTERROR() << "FarCompileStrings: Can't open file: " << in_fname;
+        return;
+      }
+    }
+    std::istream &istrm = fstrm.is_open() ? fstrm : std::cin;
 
     bool keep_syms = keep_symbols;
     for (StringReader<Arc> reader(
-             *istrm, in_fnames[i].empty() ? "stdin" : in_fnames[i], entry_type,
-             token_type, allow_negative_labels, syms, unknown_label);
+             istrm, in_fname.empty() ? "stdin" : in_fname, entry_type,
+             token_type, allow_negative_labels, syms.get(), unknown_label);
          !reader.Done(); reader.Next()) {
       ++n;
-      const Fst<Arc> *fst;
-      if (compact)
-        fst = reader.GetCompactFst(keep_syms);
-      else
-        fst = reader.GetVectorFst(keep_syms);
+      std::unique_ptr<const Fst<Arc>> fst;
+      if (compact) {
+        fst.reset(reader.GetCompactFst(keep_syms));
+      } else {
+        fst.reset(reader.GetVectorFst(keep_syms));
+      }
       if (initial_symbols) keep_syms = false;
       if (!fst) {
         FSTERROR() << "FarCompileStrings: Compiling string number " << n
-                   << " in file " << in_fnames[i]
-                   << " failed with token_type = "
+                   << " in file " << in_fname << " failed with token_type = "
                    << (tt == FTT_BYTE
                            ? "byte"
                            : (tt == FTT_UTF8
@@ -227,9 +235,6 @@ void FarCompileStrings(const std::vector<string> &in_fnames,
                    << (fet == FET_LINE
                            ? "line"
                            : (fet == FET_FILE ? "file" : "unknown"));
-        delete far_writer;
-        delete syms;
-        if (!in_fnames[i].empty()) delete istrm;
         return;
       }
       std::ostringstream keybuf;
@@ -240,8 +245,8 @@ void FarCompileStrings(const std::vector<string> &in_fnames,
       if (generate_keys > 0) {
         key = keybuf.str();
       } else {
-        char *filename = new char[in_fnames[i].size() + 1];
-        strcpy(filename, in_fnames[i].c_str());
+        char *filename = new char[in_fname.size() + 1];
+        strcpy(filename, in_fname.c_str());
         key = basename(filename);
         if (entry_type != StringReader<Arc>::FILE) {
           key += "-";
@@ -250,13 +255,9 @@ void FarCompileStrings(const std::vector<string> &in_fnames,
         delete[] filename;
       }
       far_writer->Add(key_prefix + key + key_suffix, *fst);
-      delete fst;
     }
     if (generate_keys == 0) n = 0;
-    if (!in_fnames[i].empty()) delete istrm;
   }
-
-  delete far_writer;
 }
 
 }  // namespace fst

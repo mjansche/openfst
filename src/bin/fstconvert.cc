@@ -4,6 +4,7 @@
 // Converts an FST to another type.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/convert.h>
 

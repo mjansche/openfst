@@ -29,7 +29,7 @@ class FstDrawer {
 
   FstDrawer(const Fst<A> &fst, const SymbolTable *isyms,
             const SymbolTable *osyms, const SymbolTable *ssyms, bool accep,
-            string title, float width, float height, bool portrait,
+            const string &title, float width, float height, bool portrait,
             bool vertical, float ranksep, float nodesep, int fontsize,
             int precision, bool show_weight_one)
       : fst_(fst),
@@ -196,7 +196,8 @@ class FstDrawer {
   int precision_;
   bool show_weight_one_;
 
-  DISALLOW_COPY_AND_ASSIGN(FstDrawer);
+  FstDrawer(const FstDrawer &) = delete;
+  FstDrawer &operator=(const FstDrawer &) = delete;
 };
 
 }  // namespace fst

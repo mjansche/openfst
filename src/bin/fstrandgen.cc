@@ -3,13 +3,19 @@
 //
 // Generates random paths through an FST.
 
-#include <memory>
+#include <unistd.h>
 
+#include <ctime>
+
+#include <memory>
+#include <string>
+
+#include <fst/script/getters.h>
 #include <fst/script/randgen.h>
 
 DEFINE_int32(max_length, INT_MAX, "Maximum path length");
 DEFINE_int32(npath, 1, "Number of paths to generate");
-DEFINE_int32(seed, time(0), "Random seed");
+DEFINE_int32(seed, time(nullptr) + getpid(), "Random seed");
 DEFINE_string(select, "uniform",
               "Selection type: one of: "
               " \"uniform\", \"log_prob\" (when appropriate),"
@@ -46,16 +52,9 @@ int main(int argc, char **argv) {
   VectorFstClass ofst(ifst->ArcType());
 
   s::RandArcSelection ras;
-
-  if (FLAGS_select == "uniform") {
-    ras = s::UNIFORM_ARC_SELECTOR;
-  } else if (FLAGS_select == "log_prob") {
-    ras = s::LOG_PROB_ARC_SELECTOR;
-  } else if (FLAGS_select == "fast_log_prob") {
-    ras = s::FAST_LOG_PROB_ARC_SELECTOR;
-  } else {
-    LOG(ERROR) << argv[0] << ": Unknown selection type \"" << FLAGS_select
-               << "\"\n";
+  if (!s::GetRandArcSelection(FLAGS_select, &ras)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported select type "
+               << FLAGS_select;
     return 1;
   }
 

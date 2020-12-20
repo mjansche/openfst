@@ -7,15 +7,10 @@
 #include <fst/randgen.h>
 #include <fst/script/arg-packs.h>
 #include <fst/script/fst-class.h>
+#include <fst/script/script-impl.h>
 
 namespace fst {
 namespace script {
-
-enum RandArcSelection {
-  UNIFORM_ARC_SELECTOR,
-  LOG_PROB_ARC_SELECTOR,
-  FAST_LOG_PROB_ARC_SELECTOR
-};
 
 typedef args::Package<const FstClass &, MutableFstClass *, time_t,
                       const RandGenOptions<RandArcSelection> &> RandGenArgs;

@@ -7,7 +7,6 @@
 #define FST_TEST_ALGO_TEST_H_
 
 #include <fst/fstlib.h>
-#include <fst/random-weight.h>
 #include "./rand-fst.h"
 
 DECLARE_int32(repeat);  // defined in ./algo_test.cc
@@ -75,7 +74,7 @@ class WeightedTester {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
-  WeightedTester(int seed, const Fst<Arc> &zero_fst, const Fst<Arc> &one_fst,
+  WeightedTester(time_t seed, const Fst<Arc> &zero_fst, const Fst<Arc> &one_fst,
                  const Fst<Arc> &univ_fst, WeightGenerator *weight_generator)
       : seed_(seed),
         zero_fst_(zero_fst),
@@ -530,8 +529,8 @@ class WeightedTester {
 
       if (S1.Properties(kNoOEpsilons, false) &&
           S2.Properties(kNoIEpsilons, false)) {
-        ComposeFst<Arc> C5(
-            S1, S2, ComposeFstOptions<Arc, M, NullComposeFilter<M>>());
+        ComposeFst<Arc> C5(S1, S2,
+                           ComposeFstOptions<Arc, M, NullComposeFilter<M>>());
         CHECK(Equiv(C1, C5));
       }
     }
@@ -892,7 +891,7 @@ class WeightedTester {
     // Ensures seed used once per instantiation.
     static UniformArcSelector<A> uniform_selector(seed_);
     RandGenOptions<UniformArcSelector<A>> opts(uniform_selector,
-                                                kRandomPathLength);
+                                               kRandomPathLength);
     return RandEquivalent(fst1, fst2, kNumRandomPaths, kTestDelta, opts);
   }
 
@@ -924,7 +923,7 @@ class WeightedTester {
     // Ensures seed used once per instantiation.
     static UniformArcSelector<A> uniform_selector(seed_);
     RandGenOptions<UniformArcSelector<A>> opts(uniform_selector,
-                                                kRandomPathLength);
+                                               kRandomPathLength);
 
     VectorFst<Arc> path, paths1, paths2;
     for (ssize_t n = 0; n < kNumRandomPaths; ++n) {
@@ -959,37 +958,29 @@ class WeightedTester {
     return ApproxEqual(Plus(sum1, sum2), sum1, kTestDelta);
   }
 
-  // Random seed
+  // Random seed.
   int seed_;
-
   // FST with no states
   VectorFst<Arc> zero_fst_;
-
   // FST with one state that accepts epsilon.
   VectorFst<Arc> one_fst_;
-
   // FST with one state that accepts all strings.
   VectorFst<Arc> univ_fst_;
-
   // Generates weights used in testing.
   WeightGenerator *weight_generator_;
-
   // Maximum random path length.
   static const int kRandomPathLength;
-
   // Number of random paths to explore.
   static const int kNumRandomPaths;
-
   // Maximum number of nshortest paths.
   static const int kNumRandomShortestPaths;
-
   // Maximum number of nshortest states.
   static const int kNumShortestStates;
-
   // Delta for equivalence tests.
   static const float kTestDelta;
 
-  DISALLOW_COPY_AND_ASSIGN(WeightedTester);
+  WeightedTester(const WeightedTester &) = delete;
+  WeightedTester &operator=(const WeightedTester &) = delete;
 };
 
 template <class A, class WG>
@@ -1278,8 +1269,6 @@ class UnweightedTester<StdArc> {
 
   // FSA with one state that accepts all strings.
   VectorFst<Arc> univ_fsa_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnweightedTester);
 };
 
 // This class tests a variety of identities and properties that must
@@ -1389,7 +1378,8 @@ class AlgoTester {
   // Number of random paths to explore.
   static const int kNumRandomPaths;
 
-  DISALLOW_COPY_AND_ASSIGN(AlgoTester);
+  AlgoTester(const AlgoTester &) = delete;
+  AlgoTester &operator=(const AlgoTester &) = delete;
 };
 
 template <class A, class G>

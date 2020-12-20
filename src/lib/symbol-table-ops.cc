@@ -13,8 +13,8 @@ SymbolTable *MergeSymbolTable(const SymbolTable &left, const SymbolTable &right,
   // MergeSymbolTable detects several special cases.  It will return a reference
   // copied version of SymbolTable of left or right if either symbol table is
   // a superset of the other.
-  SymbolTable *merged =
-      new SymbolTable("merge_" + left.Name() + "_" + right.Name());
+  std::unique_ptr<SymbolTable> merged(
+      new SymbolTable("merge_" + left.Name() + "_" + right.Name()));
   // copy everything from the left symbol table
   bool left_has_all = true, right_has_all = true, relabel = false;
   SymbolTableIterator liter(left);
@@ -30,8 +30,7 @@ SymbolTable *MergeSymbolTable(const SymbolTable &left, const SymbolTable &right,
     }
   }
   if (right_has_all) {
-    delete merged;
-    if (right_relabel_output != NULL) {
+    if (right_relabel_output) {
       *right_relabel_output = relabel;
     }
     return right.Copy();
@@ -58,18 +57,17 @@ SymbolTable *MergeSymbolTable(const SymbolTable &left, const SymbolTable &right,
     // there is a hole and we can add this symbol with its id
     merged->AddSymbol(riter.Symbol(), riter.Value());
   }
-  if (right_relabel_output != NULL) {
+  if (right_relabel_output) {
     *right_relabel_output = relabel;
   }
   if (left_has_all) {
-    delete merged;
     return left.Copy();
   }
   // Add all symbols that conflicted, in order
   for (int i = 0; i < conflicts.size(); ++i) {
     merged->AddSymbol(conflicts[i]);
   }
-  return merged;
+  return merged.release();
 }
 
 SymbolTable *CompactSymbolTable(const SymbolTable &syms) {
@@ -92,40 +90,38 @@ SymbolTable *FstReadSymbols(const string &filename, bool input_symbols) {
                         std::ios_base::in | std::ios_base::binary);
   if (!in) {
     LOG(ERROR) << "FstReadSymbols: Can't open file " << filename;
-    return NULL;
+    return nullptr;
   }
   FstHeader hdr;
   if (!hdr.Read(in, filename)) {
     LOG(ERROR) << "FstReadSymbols: Couldn't read header from " << filename;
-    return NULL;
+    return nullptr;
   }
   if (hdr.GetFlags() & FstHeader::HAS_ISYMBOLS) {
-    SymbolTable *isymbols = SymbolTable::Read(in, filename);
-    if (isymbols == NULL) {
+    std::unique_ptr<SymbolTable> isymbols(SymbolTable::Read(in, filename));
+    if (isymbols == nullptr) {
       LOG(ERROR) << "FstReadSymbols: Could not read input symbols from "
                  << filename;
-      return NULL;
+      return nullptr;
     }
     if (input_symbols) {
-      return isymbols;
+      return isymbols.release();
     }
-    delete isymbols;
   }
   if (hdr.GetFlags() & FstHeader::HAS_OSYMBOLS) {
-    SymbolTable *osymbols = SymbolTable::Read(in, filename);
-    if (osymbols == NULL) {
+    std::unique_ptr<SymbolTable> osymbols(SymbolTable::Read(in, filename));
+    if (osymbols == nullptr) {
       LOG(ERROR) << "FstReadSymbols: Could not read output symbols from "
                  << filename;
-      return NULL;
+      return nullptr;
     }
     if (!input_symbols) {
-      return osymbols;
+      return osymbols.release();
     }
-    delete osymbols;
   }
   LOG(ERROR) << "FstReadSymbols: The file " << filename
              << " doesn't contain the requested symbols";
-  return NULL;
+  return nullptr;
 }
 
 bool AddAuxiliarySymbols(const string &prefix, int64 start_label,

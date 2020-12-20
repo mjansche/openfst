@@ -4,8 +4,9 @@
 // Intersects two FSTs.
 
 #include <memory>
+#include <string>
 
-#include <fst/script/connect.h>
+#include <fst/script/getters.h>
 #include <fst/script/intersect.h>
 
 DEFINE_string(compose_filter, "auto",
@@ -47,18 +48,9 @@ int main(int argc, char **argv) {
   VectorFstClass ofst(ifst1->ArcType());
 
   fst::ComposeFilter compose_filter;
-
-  if (FLAGS_compose_filter == "alt_sequence") {
-    compose_filter = fst::ALT_SEQUENCE_FILTER;
-  } else if (FLAGS_compose_filter == "auto") {
-    compose_filter = fst::AUTO_FILTER;
-  } else if (FLAGS_compose_filter == "match") {
-    compose_filter = fst::MATCH_FILTER;
-  } else if (FLAGS_compose_filter == "sequence") {
-    compose_filter = fst::SEQUENCE_FILTER;
-  } else {
-    LOG(ERROR) << argv[0]
-               << "Unknown compose filter type: " << FLAGS_compose_filter;
+  if (!s::GetComposeFilter(FLAGS_compose_filter, &compose_filter)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported compose filter type: "
+               << FLAGS_compose_filter;
     return 1;
   }
 

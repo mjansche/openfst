@@ -207,7 +207,8 @@ class FstCompiler {
   bool allow_negative_labels_;  // not recommended; may cause conflicts
   bool add_symbols_;            // add to symbol tables on-the fly
 
-  DISALLOW_COPY_AND_ASSIGN(FstCompiler);
+  FstCompiler(const FstCompiler &) = delete;
+  FstCompiler &operator=(const FstCompiler &) = delete;
 };
 
 }  // namespace fst

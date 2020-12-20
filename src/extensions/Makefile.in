@@ -145,8 +145,8 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = compact compress const far linear lookahead mpdt ngram \
-	pdt python
+DIST_SUBDIRS = compact compress const far linear lookahead pdt mpdt \
+	ngram python
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -315,13 +315,13 @@ top_srcdir = @top_srcdir@
 @HAVE_PYTHON_TRUE@fardir = far
 @HAVE_LINEAR_TRUE@lineardir = linear
 @HAVE_LOOKAHEAD_TRUE@lookaheaddir = lookahead
+@HAVE_MPDT_TRUE@pdtdir = pdt
+@HAVE_PDT_TRUE@pdtdir = pdt
 @HAVE_MPDT_TRUE@mpdtdir = mpdt
 @HAVE_NGRAM_TRUE@ngramdir = ngram
 @HAVE_PYTHON_TRUE@pywrapfstdir = python
-@HAVE_PDT_TRUE@pdtdir = pdt
-SUBDIRS = $(compactdir) $(compressdir) $(constdir) $(fardir) \
-          $(lineardir) $(lookaheaddir) $(mpdtdir) $(ngramdir) $(pdtdir) \
-          $(pywrapfstdir)
+SUBDIRS = $(compactdir) $(compressdir) $(constdir) $(fardir) $(lineardir) \
+				  $(lookaheaddir) $(pdtdir) $(mpdtdir) $(ngramdir) $(pywrapfstdir)
 
 all: all-recursive
 

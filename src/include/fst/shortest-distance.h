@@ -290,8 +290,9 @@ void ShortestDistance(const Fst<Arc> &fst,
       distance->resize(1, Arc::Weight::NoWeight());
       return;
     }
-    while (distance->size() < rdistance.size() - 1)
+    while (distance->size() < rdistance.size() - 1) {
       distance->push_back(rdistance[distance->size() + 1].Reverse());
+    }
   }
 }
 
@@ -306,17 +307,20 @@ typename Arc::Weight ShortestDistance(const Fst<Arc> &fst,
   std::vector<Weight> distance;
   if (Weight::Properties() & kRightSemiring) {
     ShortestDistance(fst, &distance, false, delta);
-    if (distance.size() == 1 && !distance[0].Member())
+    if (distance.size() == 1 && !distance[0].Member()) {
       return Arc::Weight::NoWeight();
+    }
     Weight sum = Weight::Zero();
-    for (StateId s = 0; s < distance.size(); ++s)
+    for (StateId s = 0; s < distance.size(); ++s) {
       sum = Plus(sum, Times(distance[s], fst.Final(s)));
+    }
     return sum;
   } else {
     ShortestDistance(fst, &distance, true, delta);
     StateId s = fst.Start();
-    if (distance.size() == 1 && !distance[0].Member())
+    if (distance.size() == 1 && !distance[0].Member()) {
       return Arc::Weight::NoWeight();
+    }
     return s != kNoStateId && s < distance.size() ? distance[s]
                                                   : Weight::Zero();
   }

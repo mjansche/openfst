@@ -299,7 +299,8 @@ EditFstData<A, WrappedFstT, MutableFstT>::Read(std::istream &strm,
       new EditFstData<A, WrappedFstT, MutableFstT>();
   // next read in MutabelFstT machine that stores edits
   FstReadOptions edits_opts(opts);
-  edits_opts.header = 0;  // Contained header was written out, so read it in.
+  // Contained header was written out, so read it in.
+  edits_opts.header = nullptr;
 
   // Because our internal representation of edited states is a solid object
   // of type MutableFstT (defaults to VectorFst<A>) and not a pointer,
@@ -308,19 +309,19 @@ EditFstData<A, WrappedFstT, MutableFstT>::Read(std::istream &strm,
   // MutableFstT::operator= to assign the object (not the pointer) to the
   // edits_ data member (which will increase the ref count by 1 on the impl)
   // and, finally, delete the heap-allocated object.
-  MutableFstT *edits = MutableFstT::Read(strm, edits_opts);
+  std::unique_ptr<MutableFstT> edits(MutableFstT::Read(strm, edits_opts));
   if (!edits) {
-    return 0;
+    return nullptr;
   }
   data->edits_ = *edits;
-  delete edits;
+  edits.reset();
   // finally, read in rest of private data members
   ReadType(strm, &data->external_to_internal_ids_);
   ReadType(strm, &data->edited_final_weights_);
   ReadType(strm, &data->num_new_states_);
   if (!strm) {
     LOG(ERROR) << "EditFst::Read: read failed: " << opts.source;
-    return 0;
+    return nullptr;
   }
   return data;
 }
@@ -361,9 +362,8 @@ class EditFstImpl : public FstImpl<A> {
   // slower performance (by a constant factor), due to the fact that
   // this class maintains a mapping between external state id's and
   // their internal equivalents.
-  EditFstImpl() {
+  EditFstImpl() : wrapped_(new MutableFstT()) {
     FstImpl<A>::SetType("edit");
-    wrapped_ = new MutableFstT();
     InheritPropertiesFromWrapped();
     data_ = std::make_shared<EditFstData<A, WrappedFstT, MutableFstT>>();
   }
@@ -401,10 +401,6 @@ class EditFstImpl : public FstImpl<A> {
     SetProperties(impl.Properties());
   }
 
-  ~EditFstImpl() override {
-    delete wrapped_;
-  }
-
   // const Fst/ExpandedFst operations, declared in the Fst and ExpandedFst
   // interfaces
   StateId Start() const {
@@ -412,16 +408,16 @@ class EditFstImpl : public FstImpl<A> {
     return edited_start == kNoStateId ? wrapped_->Start() : edited_start;
   }
 
-  Weight Final(StateId s) const { return data_->Final(s, wrapped_); }
+  Weight Final(StateId s) const { return data_->Final(s, wrapped_.get()); }
 
-  size_t NumArcs(StateId s) const { return data_->NumArcs(s, wrapped_); }
+  size_t NumArcs(StateId s) const { return data_->NumArcs(s, wrapped_.get()); }
 
   size_t NumInputEpsilons(StateId s) const {
-    return data_->NumInputEpsilons(s, wrapped_);
+    return data_->NumInputEpsilons(s, wrapped_.get());
   }
 
   size_t NumOutputEpsilons(StateId s) const {
-    return data_->NumOutputEpsilons(s, wrapped_);
+    return data_->NumOutputEpsilons(s, wrapped_.get());
   }
 
   StateId NumStates() const {
@@ -468,7 +464,7 @@ class EditFstImpl : public FstImpl<A> {
   // Sets the final state for this fst.
   void SetFinal(StateId s, Weight w) {
     MutateCheck();
-    Weight old_weight = data_->SetFinal(s, w, wrapped_);
+    Weight old_weight = data_->SetFinal(s, w, wrapped_.get());
     SetProperties(SetFinalProperties(FstImpl<A>::Properties(), old_weight, w));
   }
 
@@ -482,7 +478,7 @@ class EditFstImpl : public FstImpl<A> {
   // Adds the specified arc to the specified state of this fst.
   void AddArc(StateId s, const Arc &arc) {
     MutateCheck();
-    const A *prev_arc = data_->AddArc(s, arc, wrapped_);
+    const A *prev_arc = data_->AddArc(s, arc, wrapped_.get());
     SetProperties(AddArcProperties(FstImpl<A>::Properties(), s, arc, prev_arc));
   }
 
@@ -498,14 +494,14 @@ class EditFstImpl : public FstImpl<A> {
   // Removes all but the first n outgoing arcs of the specified state.
   void DeleteArcs(StateId s, size_t n) {
     MutateCheck();
-    data_->DeleteArcs(s, n, wrapped_);
+    data_->DeleteArcs(s, n, wrapped_.get());
     SetProperties(DeleteArcsProperties(FstImpl<A>::Properties()));
   }
 
   // Removes all outgoing arcs from the specified state.
   void DeleteArcs(StateId s) {
     MutateCheck();
-    data_->DeleteArcs(s, wrapped_);
+    data_->DeleteArcs(s, wrapped_.get());
     SetProperties(DeleteArcsProperties(FstImpl<A>::Properties()));
   }
 
@@ -517,19 +513,19 @@ class EditFstImpl : public FstImpl<A> {
 
   // Provides information for the generic state iterator.
   void InitStateIterator(StateIteratorData<Arc> *data) const {
-    data->base = 0;
+    data->base = nullptr;
     data->nstates = NumStates();
   }
 
   // Provides information for the generic arc iterator.
   void InitArcIterator(StateId s, ArcIteratorData<Arc> *data) const {
-    data_->InitArcIterator(s, data, wrapped_);
+    data_->InitArcIterator(s, data, wrapped_.get());
   }
 
   // Provides information for the generic mutable arc iterator.
   void InitMutableArcIterator(StateId s, MutableArcIteratorData<A> *data) {
     MutateCheck();
-    data_->InitMutableArcIterator(s, data, wrapped_);
+    data_->InitMutableArcIterator(s, data, wrapped_.get());
   }
 
  private:
@@ -569,7 +565,7 @@ class EditFstImpl : public FstImpl<A> {
 
   // The fst that this fst wraps.  The purpose of this class is to enable
   // non-destructive edits on this wrapped fst.
-  const WrappedFstT *wrapped_;
+  std::unique_ptr<const WrappedFstT> wrapped_;
   // The mutable data for this EditFst instance, with delegates for all the
   // methods that can mutate data.
   std::shared_ptr<EditFstData<A, WrappedFstT, MutableFstT>> data_;
@@ -583,10 +579,9 @@ const uint64 EditFstImpl<A, WrappedFstT, MutableFstT>::kStaticProperties;
 template <typename A, typename WrappedFstT, typename MutableFstT>
 inline void EditFstImpl<A, WrappedFstT, MutableFstT>::DeleteStates() {
   data_->DeleteStates();
-  delete wrapped_;
   // we are deleting all states, so just forget about pointer to wrapped_
   // and do what default constructor does: set wrapped_ to a new VectorFst
-  wrapped_ = new MutableFstT();
+  wrapped_.reset(new MutableFstT());
   uint64 newProps =
       DeleteAllStatesProperties(FstImpl<A>::Properties(), kStaticProperties);
   FstImpl<A>::SetProperties(newProps);
@@ -599,25 +594,24 @@ EditFstImpl<A, WrappedFstT, MutableFstT>::Read(std::istream &strm,
   EditFstImpl<A, WrappedFstT, MutableFstT> *impl = new EditFstImpl();
   FstHeader hdr;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
-    return 0;
+    return nullptr;
   }
   impl->SetStart(hdr.Start());
 
   // first, read in wrapped fst
   FstReadOptions wrapped_opts(opts);
-  wrapped_opts.header = 0;  // Contained header was written out, so read it in.
-  Fst<A> *wrapped_fst = Fst<A>::Read(strm, wrapped_opts);
+  // Contained header was written out, so read it in.
+  wrapped_opts.header = nullptr;
+  std::unique_ptr<Fst<A>> wrapped_fst(Fst<A>::Read(strm, wrapped_opts));
   if (!wrapped_fst) {
-    return 0;
+    return nullptr;
   }
-  impl->wrapped_ = static_cast<WrappedFstT *>(wrapped_fst);
-
+  impl->wrapped_.reset(static_cast<WrappedFstT *>(wrapped_fst.release()));
   impl->data_ = std::shared_ptr<EditFstData<A, WrappedFstT, MutableFstT>>(
       EditFstData<A, WrappedFstT, MutableFstT>::Read(strm, opts));
 
   if (!impl->data_) {
-    delete wrapped_fst;
-    return 0;
+    return nullptr;
   }
 
   return impl;

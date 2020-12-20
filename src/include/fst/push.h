@@ -26,13 +26,15 @@ template <class Arc>
 typename Arc::Weight ComputeTotalWeight(
     const Fst<Arc> &fst, const std::vector<typename Arc::Weight> &distance,
     bool reverse) {
-  if (reverse)
+  if (reverse) {
     return fst.Start() < distance.size() ? distance[fst.Start()]
                                          : Arc::Weight::Zero();
+  }
 
   typename Arc::Weight sum = Arc::Weight::Zero();
-  for (typename Arc::StateId s = 0; s < distance.size(); ++s)
+  for (typename Arc::StateId s = 0; s < distance.size(); ++s) {
     sum = Plus(sum, Times(distance[s], fst.Final(s)));
+  }
   return sum;
 }
 
@@ -45,9 +47,10 @@ void RemoveWeight(MutableFst<Arc> *fst, typename Arc::Weight w, bool at_final) {
 
   if (at_final) {
     // Remove 'w' from the final states
-    for (StateIterator<MutableFst<Arc>> sit(*fst); !sit.Done(); sit.Next())
+    for (StateIterator<MutableFst<Arc>> sit(*fst); !sit.Done(); sit.Next()) {
       fst->SetFinal(sit.Value(),
                     Divide(fst->Final(sit.Value()), w, DIVIDE_RIGHT));
+    }
   } else {  // at_final == false
     // Remove 'w' from the initial state
     typename Arc::StateId start = fst->Start();
@@ -76,12 +79,14 @@ void Push(MutableFst<Arc> *fst, ReweightType type, float delta = kDelta,
   std::vector<typename Arc::Weight> distance;
   ShortestDistance(*fst, &distance, type == REWEIGHT_TO_INITIAL, delta);
   typename Arc::Weight total_weight = Arc::Weight::One();
-  if (remove_total_weight)
+  if (remove_total_weight) {
     total_weight =
         ComputeTotalWeight(*fst, distance, type == REWEIGHT_TO_INITIAL);
+  }
   Reweight(fst, distance, type);
-  if (remove_total_weight)
+  if (remove_total_weight) {
     RemoveWeight(fst, total_weight, type == REWEIGHT_TO_FINAL);
+  }
 }
 
 const uint32 kPushWeights = 0x0001;
@@ -129,8 +134,9 @@ void Push(const Fst<Arc> &ifst, MutableFst<Arc> *ofst, uint32 ptype,
                                          : Arc::Weight::One());
     }
     Reweight(&gfst, gdistance, rtype);
-    if (ptype & (kPushRemoveTotalWeight | kPushRemoveCommonAffix))
+    if (ptype & (kPushRemoveTotalWeight | kPushRemoveCommonAffix)) {
       RemoveWeight(&gfst, total_weight, rtype == REWEIGHT_TO_FINAL);
+    }
     FactorWeightFst<GallicArc<Arc, gtype>,
                     GallicFactor<typename Arc::Label, typename Arc::Weight,
                                  gtype>> fwfst(gfst);

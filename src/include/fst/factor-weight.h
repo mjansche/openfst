@@ -54,9 +54,10 @@ struct FactorWeightOptions : CacheOptions {
         increment_final_ilabel(iil),
         increment_final_olabel(iol) {}
 
-  FactorWeightOptions(uint32 m = kFactorArcWeights | kFactorFinalWeights,
-                      Label il = 0, Label ol = 0, bool iil = false,
-                      bool iol = false)
+  explicit FactorWeightOptions(uint32 m = kFactorArcWeights |
+                                          kFactorFinalWeights,
+                               Label il = 0, Label ol = 0, bool iil = false,
+                               bool iol = false)
       : delta(kDelta),
         mode(m),
         final_ilabel(il),
@@ -200,7 +201,7 @@ class FactorWeightFstImpl : public CacheImpl<A> {
   struct Element {
     Element() {}
 
-    Element(StateId s, Weight w) : state(s), weight(w) {}
+    Element(StateId s, Weight w) : state(s), weight(std::move(w)) {}
 
     StateId state;  // Input state Id
     Weight weight;  // Residual weight
@@ -222,9 +223,10 @@ class FactorWeightFstImpl : public CacheImpl<A> {
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
 
-    if (mode_ == 0)
+    if (mode_ == 0) {
       LOG(WARNING) << "FactorWeightFst: factor mode is set to 0: "
                    << "factoring neither arc weights nor final weights.";
+    }
   }
 
   FactorWeightFstImpl(const FactorWeightFstImpl<A, F> &impl)
@@ -242,8 +244,6 @@ class FactorWeightFstImpl : public CacheImpl<A> {
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~FactorWeightFstImpl() override { delete fst_; }
-
   StateId Start() {
     if (!HasStart()) {
       StateId s = fst_->Start();
@@ -257,15 +257,16 @@ class FactorWeightFstImpl : public CacheImpl<A> {
   Weight Final(StateId s) {
     if (!HasFinal(s)) {
       const Element &e = elements_[s];
-      // TODO: fix so cast is unnecessary
+      // TODO(sorenj): fix so cast is unnecessary
       Weight w = e.state == kNoStateId
                      ? e.weight
                      : (Weight)Times(e.weight, fst_->Final(e.state));
       FactorIterator f(w);
-      if (!(mode_ & kFactorFinalWeights) || f.Done())
+      if (!(mode_ & kFactorFinalWeights) || f.Done()) {
         SetFinal(s, w);
-      else
+      } else {
         SetFinal(s, Weight::Zero());
+      }
     }
     return CacheImpl<A>::Final(s);
   }
@@ -289,8 +290,9 @@ class FactorWeightFstImpl : public CacheImpl<A> {
 
   // Set error if found; return FST impl properties.
   uint64 Properties(uint64 mask) const override {
-    if ((mask & kError) && fst_->Properties(kError, false))
+    if ((mask & kError) && fst_->Properties(kError, false)) {
       SetProperties(kError, kError);
+    }
     return FstImpl<Arc>::Properties(mask);
   }
 
@@ -311,15 +313,12 @@ class FactorWeightFstImpl : public CacheImpl<A> {
       }
       return unfactored_[e.state];
     } else {
-      auto eit = element_map_.find(e);
-      if (eit != element_map_.end()) {
-        return (*eit).second;
-      } else {
-        StateId s = elements_.size();
+      auto insert_result =
+          element_map_.insert(std::make_pair(e, elements_.size()));
+      if (insert_result.second) {
         elements_.push_back(e);
-        element_map_.insert(std::pair<const Element, StateId>(e, s));
-        return s;
       }
+      return insert_result.first->second;
     }
   }
 
@@ -387,20 +386,18 @@ class FactorWeightFstImpl : public CacheImpl<A> {
   typedef std::unordered_map<Element, StateId, ElementKey, ElementEqual>
       ElementMap;
 
-  const Fst<A> *fst_;
+  std::unique_ptr<const Fst<A>> fst_;
   float delta_;
   uint32 mode_;         // factoring arc and/or final weights
   Label final_ilabel_;  // ilabel of arc created when factoring final w's
   Label final_olabel_;  // olabel of arc created when factoring final w's
-  bool increment_final_ilabel_;  // when factoring final w's results >1 arcs,
-  bool increment_final_olabel_;  // increment labels to make them distinct.
+  bool increment_final_ilabel_;    // when factoring final w's results >1 arcs,
+  bool increment_final_olabel_;    // increment labels to make them distinct.
   std::vector<Element> elements_;  // mapping Fst state to Elements
-  ElementMap element_map_;       // mapping Elements to Fst state
+  ElementMap element_map_;         // mapping Elements to Fst state
   // mapping between old/new 'StateId' for states that do not need to
   // be factored when 'mode_' is '0' or 'kFactorFinalWeights'
   std::vector<StateId> unfactored_;
-
-  void operator=(const FactorWeightFstImpl<A, F> &);  // disallow
 };
 
 template <class A, class F>
@@ -458,7 +455,7 @@ class FactorWeightFst : public ImplToFst<FactorWeightFstImpl<A, F>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const FactorWeightFst<A, F> &fst);  // Disallow
+  FactorWeightFst &operator=(const FactorWeightFst &fst) = delete;
 };
 
 // Specialization for FactorWeightFst.
@@ -481,9 +478,6 @@ class ArcIterator<FactorWeightFst<A, F>>
       : CacheArcIterator<FactorWeightFst<A, F>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A, class F>

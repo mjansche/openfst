@@ -198,7 +198,8 @@ class PdtParenReachable {
   mutable Collection<ssize_t, StateId> state_sets_;  // Reachable states -> ID
   StateSetMap set_map_;                              // ID -> Reachable states
   bool error_;
-  DISALLOW_COPY_AND_ASSIGN(PdtParenReachable);
+  PdtParenReachable(const PdtParenReachable &) = delete;
+  PdtParenReachable &operator=(const PdtParenReachable &) = delete;
 };
 
 // DFS that gathers paren and state set information.

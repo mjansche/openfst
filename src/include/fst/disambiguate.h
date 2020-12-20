@@ -62,8 +62,8 @@ class RelationDeterminizeFilter {
     typedef RelationDeterminizeFilter<A, R> other;
   };
 
-  RelationDeterminizeFilter(const Fst<Arc> &fst)
-      : fst_(fst.Copy()), r_(new R()), s_(kNoStateId), head_(0) {}
+  explicit RelationDeterminizeFilter(const Fst<Arc> &fst)
+      : fst_(fst.Copy()), r_(new R()), s_(kNoStateId), head_(nullptr) {}
 
   // Ownership of the relation is given to this class.
   RelationDeterminizeFilter(const Fst<Arc> &fst, R *r)
@@ -86,17 +86,12 @@ class RelationDeterminizeFilter {
   }
 
   // Copy ctr. The FST can be passed if it has been e.g. (deep) copied.
-  explicit RelationDeterminizeFilter(
-      const RelationDeterminizeFilter<Arc, R> &filter, const Fst<Arc> *fst = 0)
+  RelationDeterminizeFilter(const RelationDeterminizeFilter &filter,
+                            const Fst<Arc> *fst = nullptr)
       : fst_(fst ? fst->Copy() : filter.fst_->Copy()),
         r_(new R(*filter.r_)),
         s_(kNoStateId),
         head_() {}
-
-  ~RelationDeterminizeFilter() {
-    delete fst_;
-    delete r_;
-  }
 
   FilterState Start() const { return FilterState(fst_->Start()); }
 
@@ -135,14 +130,13 @@ class RelationDeterminizeFilter {
   // empty subsets.
   void InitLabelMap(LabelMap *label_map) const;
 
-  Fst<Arc> *fst_;  // Input FST
-  R *r_;           // Relation compatible with the inverse trans. function
+  std::unique_ptr<Fst<Arc>> fst_;  // Input FST
+  // Relation compatible with the inverse trans. function
+  std::unique_ptr<R> r_;
   StateId s_;      // Current state
   const StateTuple *tuple_;  // Current tuple
   bool is_final_;            // Is the current head state final?
   std::vector<StateId> *head_;  // Head state for a given state.
-
-  void operator=(const RelationDeterminizeFilter<Arc, R> &filt);  // disallow
 };
 
 template <class Arc, class R>
@@ -175,8 +169,9 @@ void RelationDeterminizeFilter<Arc, R>::InitLabelMap(
   for (ArcIterator<Fst<Arc>> aiter(*fst_, src_head); !aiter.Done();
        aiter.Next()) {
     const Arc &arc = aiter.Value();
-    if (arc.ilabel == label && arc.nextstate == nextstate)
+    if (arc.ilabel == label && arc.nextstate == nextstate) {
       continue;  // multiarc
+    }
     DeterminizeArc<StateTuple> det_arc(arc);
     det_arc.dest_tuple->filter_state = FilterState(arc.nextstate);
     std::pair<Label, DeterminizeArc<StateTuple>> pr(arc.ilabel, det_arc);
@@ -197,7 +192,7 @@ class Disambiguator {
   // final (super-final transition).
   typedef std::pair<StateId, ssize_t> ArcId;
 
-  Disambiguator() : candidates_(0), merge_(0), error_(false) {}
+  Disambiguator() : error_(false) {}
 
   void Disambiguate(
       const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
@@ -284,7 +279,7 @@ class Disambiguator {
       ComposeFst<Arc> cfst(*fsa, *fsa, opts);
       std::vector<bool> coaccess;
       uint64 props = 0;
-      SccVisitor<Arc> scc_visitor(0, 0, &coaccess, &props);
+      SccVisitor<Arc> scc_visitor(nullptr, nullptr, &coaccess, &props);
       DfsVisit(cfst, &scc_visitor);
       for (StateId s = 0; s < coaccess.size(); ++s) {
         if (coaccess[s]) {
@@ -357,14 +352,15 @@ class Disambiguator {
   // B with the same label and destination state as A, whose source state s'
   // is coreachable with the source state s of A, and for which
   // head(s') < head(s).
-  ArcIdMap *candidates_;
+  std::unique_ptr<ArcIdMap> candidates_;
   // Set of ambiguous transitions to be removed.
   std::set<ArcId> ambiguous_;
   // States to merge due to quantization issues.
-  UnionFind<StateId> *merge_;
+  std::unique_ptr<UnionFind<StateId>> merge_;
   // Marks error condition.
   bool error_;
-  DISALLOW_COPY_AND_ASSIGN(Disambiguator);
+  Disambiguator(const Disambiguator &) = delete;
+  Disambiguator &operator=(const Disambiguator &) = delete;
 };
 
 template <class Arc>
@@ -410,7 +406,7 @@ template <class Arc>
 void Disambiguator<Arc>::FindAmbiguities(const ExpandedFst<Arc> &fst) {
   if (fst.Start() == kNoStateId) return;
 
-  candidates_ = new ArcIdMap(ArcIdCompare(head_));
+  candidates_.reset(new ArcIdMap(ArcIdCompare(head_)));
 
   std::pair<StateId, StateId> start_pr(fst.Start(), fst.Start());
   coreachable_.insert(start_pr);
@@ -437,8 +433,9 @@ void Disambiguator<Arc>::FindAmbiguousPairs(const ExpandedFst<Arc> &fst,
     if (matcher.Find(arc1.ilabel)) {
       for (; !matcher.Done(); matcher.Next()) {
         const Arc &arc2 = matcher.Value();
-        if (arc2.ilabel == kNoLabel)  // implicit epsilon match
+        if (arc2.ilabel == kNoLabel) {  // implicit epsilon match
           continue;
+        }
         ArcId a2(s2, matcher.Position());
 
         // Actual transition is ambiguous
@@ -459,13 +456,12 @@ void Disambiguator<Arc>::FindAmbiguousPairs(const ExpandedFst<Arc> &fst,
           spr = std::make_pair(arc2.nextstate, arc1.nextstate);
         }
         // Not already marked as coreachable?
-        if (coreachable_.find(spr) == coreachable_.end()) {
-          coreachable_.insert(spr);
+        if (coreachable_.insert(spr).second) {
           // Only possible if state split by quantization issues
           if (spr.first != spr.second &&
               head_[spr.first] == head_[spr.second]) {
             if (!merge_) {
-              merge_ = new UnionFind<StateId>(fst.NumStates(), kNoStateId);
+              merge_.reset(new UnionFind<StateId>(fst.NumStates(), kNoStateId));
               merge_->MakeAllSet(fst.NumStates());
             }
             merge_->Union(spr.first, spr.second);
@@ -499,12 +495,12 @@ void Disambiguator<Arc>::MarkAmbiguities() {
   for (auto it = candidates_->begin(); it != candidates_->end(); ++it) {
     ArcId a = it->first;
     ArcId b = it->second;
-    if (ambiguous_.count(b) == 0)  // if b is not to be removed
-      ambiguous_.insert(a);        // ... then a is.
+    if (ambiguous_.count(b) == 0) {  // if b is not to be removed
+      ambiguous_.insert(a);          // ... then a is.
+    }
   }
   coreachable_.clear();
-  delete candidates_;
-  candidates_ = 0;
+  candidates_.reset();
 }
 
 template <class Arc>
@@ -526,10 +522,8 @@ void Disambiguator<Arc>::RemoveSplits(MutableFst<Arc> *ofst) {
 
   // Repeats search for actual ambiguities on modified FST
   coreachable_.clear();
-  delete merge_;
-  merge_ = 0;
-  delete candidates_;
-  candidates_ = 0;
+  merge_.reset();
+  candidates_.reset();
   FindAmbiguities(*ofst);
   if (merge_) {  // shouldn't get here; sanity test
     FSTERROR() << "Disambiguate: Unable to remove spurious ambiguities";

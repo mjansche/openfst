@@ -33,15 +33,15 @@ class ExpandedFst : public Fst<A> {
   static ExpandedFst<A> *Read(std::istream &strm, const FstReadOptions &opts) {
     FstReadOptions ropts(opts);
     FstHeader hdr;
-    if (ropts.header)
+    if (ropts.header) {
       hdr = *opts.header;
-    else {
-      if (!hdr.Read(strm, opts.source)) return 0;
+    } else {
+      if (!hdr.Read(strm, opts.source)) return nullptr;
       ropts.header = &hdr;
     }
     if (!(hdr.Properties() & kExpanded)) {
       LOG(ERROR) << "ExpandedFst::Read: Not an ExpandedFst: " << ropts.source;
-      return 0;
+      return nullptr;
     }
     FstRegister<A> *registr = FstRegister<A>::GetRegister();
     const typename FstRegister<A>::Reader reader =
@@ -49,10 +49,10 @@ class ExpandedFst : public Fst<A> {
     if (!reader) {
       LOG(ERROR) << "ExpandedFst::Read: Unknown FST type \"" << hdr.FstType()
                  << "\" (arc type = \"" << A::Type() << "\"): " << ropts.source;
-      return 0;
+      return nullptr;
     }
     Fst<A> *fst = reader(strm, ropts);
-    if (!fst) return 0;
+    if (!fst) return nullptr;
     return static_cast<ExpandedFst<A> *>(fst);
   }
 
@@ -64,7 +64,7 @@ class ExpandedFst : public Fst<A> {
                               std::ios_base::in | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
-        return 0;
+        return nullptr;
       }
       return Read(strm, FstReadOptions(filename));
     } else {
@@ -139,7 +139,7 @@ class ImplToExpandedFst : public ImplToFst<I, F> {
                               std::ios_base::in | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
-        return 0;
+        return nullptr;
       }
       return I::Read(strm, FstReadOptions(filename));
     } else {
@@ -157,8 +157,9 @@ typename Arc::StateId CountStates(const Fst<Arc> &fst) {
     return efst->NumStates();
   } else {
     typename Arc::StateId nstates = 0;
-    for (StateIterator<Fst<Arc>> siter(fst); !siter.Done(); siter.Next())
+    for (StateIterator<Fst<Arc>> siter(fst); !siter.Done(); siter.Next()) {
       ++nstates;
+    }
     return nstates;
   }
 }
@@ -167,8 +168,9 @@ typename Arc::StateId CountStates(const Fst<Arc> &fst) {
 template <class Arc>
 typename Arc::StateId CountArcs(const Fst<Arc> &fst) {
   size_t narcs = 0;
-  for (StateIterator<Fst<Arc>> siter(fst); !siter.Done(); siter.Next())
+  for (StateIterator<Fst<Arc>> siter(fst); !siter.Done(); siter.Next()) {
     narcs += fst.NumArcs(siter.Value());
+  }
   return narcs;
 }
 

@@ -4,10 +4,11 @@
 // Prints out various information about an MPDT such as number of states, arcs,
 // and parentheses.
 
+#include <string>
 #include <vector>
 
-#include <fst/extensions/mpdt/read_write_utils.h>
 #include <fst/extensions/mpdt/mpdtscript.h>
+#include <fst/extensions/mpdt/read_write_utils.h>
 #include <fst/util.h>
 
 DEFINE_string(mpdt_parentheses, "",

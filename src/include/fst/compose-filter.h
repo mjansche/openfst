@@ -96,11 +96,6 @@ class NullComposeFilter {
         fst1_(matcher1_->GetFst()),
         fst2_(matcher2_->GetFst()) {}
 
-  ~NullComposeFilter() {
-    delete matcher1_;
-    delete matcher2_;
-  }
-
   FilterState Start() const { return FilterState(true); }
 
   void SetState(StateId, StateId, const FilterState &) {}
@@ -113,19 +108,16 @@ class NullComposeFilter {
 
   void FilterFinal(Weight *, Weight *) const {}
 
-  // Return resp matchers. Ownership stays with filter.
-  Matcher1 *GetMatcher1() { return matcher1_; }
-  Matcher2 *GetMatcher2() { return matcher2_; }
+  Matcher1 *GetMatcher1() { return matcher1_.get(); }
+  Matcher2 *GetMatcher2() { return matcher2_.get(); }
 
   uint64 Properties(uint64 props) const { return props; }
 
  private:
-  Matcher1 *matcher1_;
-  Matcher2 *matcher2_;
+  std::unique_ptr<Matcher1> matcher1_;
+  std::unique_ptr<Matcher2> matcher2_;
   const FST1 &fst1_;
   const FST2 &fst2_;
-
-  void operator=(const NullComposeFilter<M1, M2> &);  // disallow
 };
 
 // This filter allows all epsilon matches, potentially resulting in
@@ -165,11 +157,6 @@ class TrivialComposeFilter {
         fst1_(matcher1_->GetFst()),
         fst2_(matcher2_->GetFst()) {}
 
-  ~TrivialComposeFilter() {
-    delete matcher1_;
-    delete matcher2_;
-  }
-
   FilterState Start() const { return FilterState(true); }
 
   void SetState(StateId, StateId, const FilterState &) {}
@@ -180,19 +167,16 @@ class TrivialComposeFilter {
 
   void FilterFinal(Weight *, Weight *) const {}
 
-  // Return resp matchers. Ownership stays with filter.
-  Matcher1 *GetMatcher1() { return matcher1_; }
-  Matcher2 *GetMatcher2() { return matcher2_; }
+  Matcher1 *GetMatcher1() { return matcher1_.get(); }
+  Matcher2 *GetMatcher2() { return matcher2_.get(); }
 
   uint64 Properties(uint64 props) const { return props; }
 
  private:
-  Matcher1 *matcher1_;
-  Matcher2 *matcher2_;
+  std::unique_ptr<Matcher1> matcher1_;
+  std::unique_ptr<Matcher2> matcher2_;
   const FST1 &fst1_;
   const FST2 &fst2_;
-
-  void operator=(const TrivialComposeFilter<M1, M2> &);  // disallow
 };
 
 // This filter requires epsilons on FST1 to be read before epsilons on FST2.
@@ -211,8 +195,8 @@ class SequenceComposeFilter {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  SequenceComposeFilter(const FST1 &fst1, const FST2 &fst2, M1 *matcher1 = 0,
-                        M2 *matcher2 = 0)
+  SequenceComposeFilter(const FST1 &fst1, const FST2 &fst2,
+                        M1 *matcher1 = nullptr, M2 *matcher2 = nullptr)
       : matcher1_(matcher1 ? matcher1 : new M1(fst1, MATCH_OUTPUT)),
         matcher2_(matcher2 ? matcher2 : new M2(fst2, MATCH_INPUT)),
         fst1_(matcher1_->GetFst()),
@@ -229,11 +213,6 @@ class SequenceComposeFilter {
         s2_(kNoStateId),
         f_(kNoStateId) {}
 
-  ~SequenceComposeFilter() {
-    delete matcher1_;
-    delete matcher2_;
-  }
-
   FilterState Start() const { return FilterState(0); }
 
   void SetState(StateId s1, StateId s2, const FilterState &f) {
@@ -249,34 +228,32 @@ class SequenceComposeFilter {
   }
 
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
-    if (arc1->olabel == kNoLabel)
+    if (arc1->olabel == kNoLabel) {
       return alleps1_ ? FilterState::NoState() : noeps1_ ? FilterState(0)
                                                          : FilterState(1);
-    else if (arc2->ilabel == kNoLabel)
+    } else if (arc2->ilabel == kNoLabel) {
       return f_ != FilterState(0) ? FilterState::NoState() : FilterState(0);
-    else
+    } else {
       return arc1->olabel == 0 ? FilterState::NoState() : FilterState(0);
+    }
   }
 
   void FilterFinal(Weight *, Weight *) const {}
 
-  // Return resp matchers. Ownership stays with filter.
-  Matcher1 *GetMatcher1() { return matcher1_; }
-  Matcher2 *GetMatcher2() { return matcher2_; }
+  Matcher1 *GetMatcher1() { return matcher1_.get(); }
+  Matcher2 *GetMatcher2() { return matcher2_.get(); }
 
   uint64 Properties(uint64 props) const { return props; }
 
  private:
-  Matcher1 *matcher1_;
-  Matcher2 *matcher2_;
+  std::unique_ptr<Matcher1> matcher1_;
+  std::unique_ptr<Matcher2> matcher2_;
   const FST1 &fst1_;
   StateId s1_;     // Current fst1_ state;
   StateId s2_;     // Current fst2_ state;
   FilterState f_;  // Current filter state
   bool alleps1_;   // Only epsilons (and non-final) leaving s1_?
   bool noeps1_;    // No epsilons leaving s1_?
-
-  void operator=(const SequenceComposeFilter<M1, M2> &);  // disallow
 };
 
 // This filter requires epsilons on FST2 to be read before epsilons on FST1.
@@ -313,11 +290,6 @@ class AltSequenceComposeFilter {
         s2_(kNoStateId),
         f_(kNoStateId) {}
 
-  ~AltSequenceComposeFilter() {
-    delete matcher1_;
-    delete matcher2_;
-  }
-
   FilterState Start() const { return FilterState(0); }
 
   void SetState(StateId s1, StateId s2, const FilterState &f) {
@@ -333,34 +305,33 @@ class AltSequenceComposeFilter {
   }
 
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
-    if (arc2->ilabel == kNoLabel)
+    if (arc2->ilabel == kNoLabel) {
       return alleps2_ ? FilterState::NoState() : noeps2_ ? FilterState(0)
                                                          : FilterState(1);
-    else if (arc1->olabel == kNoLabel)
+    } else if (arc1->olabel == kNoLabel) {
       return f_ == FilterState(1) ? FilterState::NoState() : FilterState(0);
-    else
+    } else {
       return arc1->olabel == 0 ? FilterState::NoState() : FilterState(0);
+    }
   }
 
   void FilterFinal(Weight *, Weight *) const {}
 
   // Return resp matchers. Ownership stays with filter.
-  Matcher1 *GetMatcher1() { return matcher1_; }
-  Matcher2 *GetMatcher2() { return matcher2_; }
+  Matcher1 *GetMatcher1() { return matcher1_.get(); }
+  Matcher2 *GetMatcher2() { return matcher2_.get(); }
 
   uint64 Properties(uint64 props) const { return props; }
 
  private:
-  Matcher1 *matcher1_;
-  Matcher2 *matcher2_;
+  std::unique_ptr<Matcher1> matcher1_;
+  std::unique_ptr<Matcher2> matcher2_;
   const FST2 &fst2_;
   StateId s1_;     // Current fst1_ state;
   StateId s2_;     // Current fst2_ state;
   FilterState f_;  // Current filter state
   bool alleps2_;   // Only epsilons (and non-final) leaving s2_?
   bool noeps2_;    // No epsilons leaving s2_?
-
-  void operator=(const AltSequenceComposeFilter<M1, M2> &);  // disallow
 };
 
 // This filter requires epsilons on FST1 to be matched with epsilons on FST2
@@ -399,11 +370,6 @@ class MatchComposeFilter {
         s2_(kNoStateId),
         f_(kNoStateId) {}
 
-  ~MatchComposeFilter() {
-    delete matcher1_;
-    delete matcher2_;
-  }
-
   FilterState Start() const { return FilterState(0); }
 
   void SetState(StateId s1, StateId s2, const FilterState &f) {
@@ -424,37 +390,38 @@ class MatchComposeFilter {
   }
 
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
-    if (arc2->ilabel == kNoLabel)  // Epsilon on Fst1
+    if (arc2->ilabel == kNoLabel) {  // Epsilon on Fst1
       return f_ == FilterState(0)
                  ? (noeps2_
                         ? FilterState(0)
                         : (alleps2_ ? FilterState::NoState() : FilterState(1)))
                  : (f_ == FilterState(1) ? FilterState(1)
                                          : FilterState::NoState());
-    else if (arc1->olabel == kNoLabel)  // Epsilon on Fst2
+    } else if (arc1->olabel == kNoLabel) {  // Epsilon on Fst2
       return f_ == FilterState(0)
                  ? (noeps1_
                         ? FilterState(0)
                         : (alleps1_ ? FilterState::NoState() : FilterState(2)))
                  : (f_ == FilterState(2) ? FilterState(2)
                                          : FilterState::NoState());
-    else if (arc1->olabel == 0)  // Epsilon on both
+    } else if (arc1->olabel == 0) {  // Epsilon on both
       return f_ == FilterState(0) ? FilterState(0) : FilterState::NoState();
-    else  // Both are non-epsilons
+    } else {  // Both are non-epsilons
       return FilterState(0);
+    }
   }
 
   void FilterFinal(Weight *, Weight *) const {}
 
   // Return resp matchers. Ownership stays with filter.
-  Matcher1 *GetMatcher1() { return matcher1_; }
-  Matcher2 *GetMatcher2() { return matcher2_; }
+  Matcher1 *GetMatcher1() { return matcher1_.get(); }
+  Matcher2 *GetMatcher2() { return matcher2_.get(); }
 
   uint64 Properties(uint64 props) const { return props; }
 
  private:
-  Matcher1 *matcher1_;
-  Matcher2 *matcher2_;
+  std::unique_ptr<Matcher1> matcher1_;
+  std::unique_ptr<Matcher2> matcher2_;
   const FST1 &fst1_;
   const FST2 &fst2_;
   StateId s1_;              // Current fst1_ state;
@@ -462,8 +429,6 @@ class MatchComposeFilter {
   FilterState f_;           // Current filter state ID
   bool alleps1_, alleps2_;  // Only epsilons (and non-final) leaving s1, s2?
   bool noeps1_, noeps2_;    // No epsilons leaving s1, s2?
-
-  void operator=(const MatchComposeFilter<M1, M2> &);  // disallow
 };
 
 // This filter works with the MultiEpsMatcher to determine if
@@ -528,4 +493,4 @@ class MultiEpsFilter {
 
 }  // namespace fst
 
-#endif  // FST_LIB_COMPOSE_FILTER_H__
+#endif  // FST_LIB_COMPOSE_FILTER_H_

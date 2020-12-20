@@ -78,11 +78,17 @@ class NGramFstImpl : public FstImpl<A> {
 
   NGramFstImpl(const Fst<A> &fst, std::vector<StateId> *order_out);
 
+  explicit NGramFstImpl(const Fst<A> &fst) : NGramFstImpl(fst, nullptr) {}
+
+  NGramFstImpl(const NGramFstImpl &other) {
+    FSTERROR() << "Copying NGramFst Impls is not supported, use safe = false.";
+    SetProperties(kError, kError);
+  }
+
   ~NGramFstImpl() override {
     if (owned_) {
       delete[] data_;
     }
-    delete data_region_;
   }
 
   static NGramFstImpl<A> *Read(std::istream &strm,  // NOLINT
@@ -246,7 +252,7 @@ class NGramFstImpl : public FstImpl<A> {
   // Minimum file format version supported.
   static const int kMinFileVersion = 4;
 
-  MappedFile *data_region_ = nullptr;
+  std::unique_ptr<MappedFile> data_region_;
   const char *data_ = nullptr;
   bool owned_ = false;  // True if we own data_
   StateId start_ = fst::kNoStateId;
@@ -267,8 +273,6 @@ class NGramFstImpl : public FstImpl<A> {
   BitmapIndex context_index_;
   BitmapIndex future_index_;
   BitmapIndex final_index_;
-
-  void operator=(const NGramFstImpl<A> &);  // Disallow
 };
 
 template <typename A>
@@ -643,10 +647,10 @@ NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst,
       (*order_out)[state] = state_number;
     }
 
-    const Weight & final = context_fst.Final(state);
-    if (final != Weight::Zero()) {
+    const Weight final_weight = context_fst.Final(state);
+    if (final_weight != Weight::Zero()) {
       BitmapIndex::Set(final_bits, state_number);
-      final_probs[final_bit] = final;
+      final_probs[final_bit] = final_weight;
       ++final_bit;
     }
 
@@ -693,8 +697,7 @@ inline void NGramFstImpl<A>::Init(const char *data, bool owned,
   if (owned_) {
     delete[] data_;
   }
-  delete data_region_;
-  data_region_ = data_region;
+  data_region_.reset(data_region);
   owned_ = owned;
   data_ = data;
   size_t offset = 0;
@@ -971,13 +974,11 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
 
   mutable Arc arc_;
   mutable uint32 lazy_;
-  const NGramFstImpl<A> *impl_;
+  const NGramFstImpl<A> *impl_;  // Borrowed reference.
   mutable NGramFstInst<A> inst_;
 
   size_t i_;
   uint32 flags_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 /*****************************************************************************/
@@ -1004,8 +1005,6 @@ class StateIterator<NGramFst<A>> : public StateIteratorBase<A> {
   void Reset_() override { Reset(); }
 
   StateId s_, num_states_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 }  // namespace fst

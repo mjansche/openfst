@@ -4,6 +4,7 @@
 // Prunes states and arcs of an FST w.r.t. the shortest path weight.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/prune.h>
 

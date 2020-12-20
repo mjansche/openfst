@@ -86,7 +86,6 @@
 #include <fst/pair-weight.h>
 #include <fst/power-weight.h>
 #include <fst/product-weight.h>
-#include <fst/random-weight.h>
 #include <fst/signed-log-weight.h>
 #include <fst/sparse-power-weight.h>
 #include <fst/sparse-tuple-weight.h>

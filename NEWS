@@ -57,6 +57,14 @@ OpenFst: Release 1.5
     * Mutation methods of the Python Fst object now support chaining (1.5.3)
     * Scripting API and Python weight objects now support semiring arithmetic
       (1.5.3)
+    * Adds RemoveSymbol method to SymbolTable (1.5.4)
+    * Prevents underflow when using LogProbArcSelector in random generation
+      (1.5.4)
+    * Makes random weight generators a single template class (1.5.4)
+    * Makes weight Properties constexpr where possible (1.5.4)
+    * Adds check for error when opening files when compiling strings into FARs
+      (1.5.4)
+    * Adds routines for parsing string flags to the scripting API (1.5.4)
 
 OpenFst: Release 1.4
     * Port to C++11 (1.4.0)

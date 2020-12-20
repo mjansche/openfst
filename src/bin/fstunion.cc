@@ -4,6 +4,7 @@
 // Creates the union of two FSTs.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/union.h>
 

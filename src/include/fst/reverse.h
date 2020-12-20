@@ -41,8 +41,9 @@ void Reverse(const Fst<Arc> &ifst, MutableFst<RevArc> *ofst,
   ofst->DeleteStates();
   ofst->SetInputSymbols(ifst.InputSymbols());
   ofst->SetOutputSymbols(ifst.OutputSymbols());
-  if (ifst.Properties(kExpanded, false))
+  if (ifst.Properties(kExpanded, false)) {
     ofst->ReserveStates(CountStates(ifst) + 1);
+  }
   StateId istart = ifst.Start();
   StateId ostart = kNoStateId;
   StateId offset = 0;
@@ -62,7 +63,7 @@ void Reverse(const Fst<Arc> &ifst, MutableFst<RevArc> *ofst,
 
     if (ostart != kNoStateId && ifst.Final(ostart) != Weight::One()) {
       std::vector<StateId> scc;
-      SccVisitor<Arc> scc_visitor(&scc, 0, 0, &dfs_iprops);
+      SccVisitor<Arc> scc_visitor(&scc, nullptr, nullptr, &dfs_iprops);
       DfsVisit(ifst, &scc_visitor);
       if (count(scc.begin(), scc.end(), scc[ostart]) > 1) {
         ostart = kNoStateId;
@@ -90,9 +91,9 @@ void Reverse(const Fst<Arc> &ifst, MutableFst<RevArc> *ofst,
     while (ofst->NumStates() <= os) ofst->AddState();
     if (is == istart) ofst->SetFinal(os, RevWeight::One());
 
-    Weight final = ifst.Final(is);
-    if ((final != Weight::Zero()) && (offset == 1)) {
-      RevArc oarc(0, 0, final.Reverse(), os);
+    const Weight final_weight = ifst.Final(is);
+    if ((final_weight != Weight::Zero()) && (offset == 1)) {
+      RevArc oarc(0, 0, final_weight.Reverse(), os);
       ofst->AddArc(0, oarc);
     }
 
@@ -100,16 +101,18 @@ void Reverse(const Fst<Arc> &ifst, MutableFst<RevArc> *ofst,
       const Arc &iarc = aiter.Value();
       StateId nos = iarc.nextstate + offset;
       typename RevArc::Weight weight = iarc.weight.Reverse();
-      if (!offset && (nos == ostart))
+      if (!offset && (nos == ostart)) {
         weight = Times(ifst.Final(ostart).Reverse(), weight);
+      }
       RevArc oarc(iarc.ilabel, iarc.olabel, weight, os);
       while (ofst->NumStates() <= nos) ofst->AddState();
       ofst->AddArc(nos, oarc);
     }
   }
   ofst->SetStart(ostart);
-  if (offset == 0 && ostart == istart)
+  if (offset == 0 && ostart == istart) {
     ofst->SetFinal(ostart, ifst.Final(ostart).Reverse());
+  }
 
   uint64 iprops = ifst.Properties(kCopyProperties, false) | dfs_iprops;
   uint64 oprops = ofst->Properties(kFstProperties, false) | dfs_oprops;

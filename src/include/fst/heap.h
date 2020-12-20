@@ -33,7 +33,7 @@ class Heap {
   enum { kNoKey = -1 };
 
   // Initializes with a specific comparator.
-  Heap(Compare comp) : comp_(comp), size_(0) {}
+  explicit Heap(Compare comp) : comp_(comp), size_(0) {}
 
   // Creates a heap with initial size of internal arrays of 0.
   Heap() : size_(0) {}
@@ -145,8 +145,9 @@ class Heap {
     const int l = Left(i);
     const int r = Right(i);
     int largest = (l < size_ && comp_(values_[l], values_[i])) ? l : i;
-    if (r < size_ && comp_(values_[r], values_[largest]) )
+    if (r < size_ && comp_(values_[r], values_[largest])) {
       largest = r;
+    }
 
     if (largest != i) {
       Swap(i, largest);

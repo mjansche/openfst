@@ -4,8 +4,10 @@
 // Determinizes an FST.
 
 #include <memory>
+#include <string>
 
 #include <fst/script/determinize.h>
+#include <fst/script/getters.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
 DEFINE_string(weight, "", "Weight threshold");
@@ -39,14 +41,9 @@ int main(int argc, char **argv) {
   }
 
   fst::DeterminizeType det_type;
-  if (FLAGS_det_type.empty() || FLAGS_det_type[0] == 'f') {
-    det_type = fst::DETERMINIZE_FUNCTIONAL;
-  } else if (FLAGS_det_type[0] == 'n') {
-    det_type = fst::DETERMINIZE_NONFUNCTIONAL;
-  } else if (FLAGS_det_type[0] == 'd') {
-    det_type = fst::DETERMINIZE_DISAMBIGUATE;
-  } else {
-    LOG(ERROR) << argv[0] << ": Unknown determinize type: " << FLAGS_det_type;
+  if (!s::GetDeterminizeType(FLAGS_det_type, &det_type)) {
+    LOG(ERROR) << argv[0] << ": Unknown or unsupported determinization type: "
+                          << FLAGS_det_type;
     return 1;
   }
 

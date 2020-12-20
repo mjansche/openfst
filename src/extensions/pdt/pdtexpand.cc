@@ -3,6 +3,7 @@
 //
 // Expands a (bounded-stack) PDT as an FST.
 
+#include <string>
 #include <vector>
 
 #include <fst/extensions/pdt/pdtscript.h>

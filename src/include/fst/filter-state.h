@@ -7,6 +7,7 @@
 #define FST_LIB_FILTER_STATE_H_
 
 #include <forward_list>
+#include <utility>
 
 #include <fst/fst-decl.h>  // For optional argument declarations
 #include <fst/fst.h>
@@ -71,7 +72,7 @@ template <class W>
 class WeightFilterState {
  public:
   WeightFilterState() : weight_(W::Zero()) {}
-  explicit WeightFilterState(W w) : weight_(w) {}
+  explicit WeightFilterState(W w) : weight_(std::move(w)) {}
 
   static const WeightFilterState NoState() { return WeightFilterState(); }
 

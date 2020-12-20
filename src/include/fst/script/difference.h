@@ -21,7 +21,7 @@ void Difference(DifferenceArgs1 *args) {
   const Fst<Arc> &ifst2 = *(args->arg2.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
 
-  Difference(ifst1, ifst2, ofst, args->arg4);
+  Difference(ifst1, ifst2, ofst, ComposeOptions(args->arg4));
 }
 
 typedef args::Package<const FstClass &, const FstClass &, MutableFstClass *,
@@ -33,7 +33,7 @@ void Difference(DifferenceArgs2 *args) {
   const Fst<Arc> &ifst2 = *(args->arg2.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg3->GetMutableFst<Arc>();
 
-  Difference(ifst1, ifst2, ofst, args->arg4);
+  Difference(ifst1, ifst2, ofst, ComposeOptions(args->arg4));
 }
 
 void Difference(const FstClass &ifst1, const FstClass &ifst2,

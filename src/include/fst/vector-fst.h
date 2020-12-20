@@ -56,8 +56,8 @@ class VectorState {
   size_t NumArcs() const { return arcs_.size(); }
   const A &GetArc(size_t n) const { return arcs_[n]; }
 
-  const A *Arcs() const { return arcs_.size() > 0 ? &arcs_[0] : 0; }
-  A *MutableArcs() { return arcs_.size() > 0 ? &arcs_[0] : 0; }
+  const A *Arcs() const { return !arcs_.empty() ? &arcs_[0] : nullptr; }
+  A *MutableArcs() { return !arcs_.empty() ? &arcs_[0] : nullptr; }
 
   void ReserveArcs(size_t n) { arcs_.reserve(n); }
 
@@ -111,8 +111,6 @@ class VectorState {
   size_t niepsilons_;             // # of input epsilons
   size_t noepsilons_;             // # of output epsilons
   std::vector<A, ArcAllocator> arcs_;  // Arcs represenation
-
-  DISALLOW_COPY_AND_ASSIGN(VectorState);
 };
 
 // States are implemented by STL vectors, templated on the
@@ -128,8 +126,9 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
   VectorFstBaseImpl() : start_(kNoStateId) {}
 
   ~VectorFstBaseImpl() override {
-    for (StateId s = 0; s < states_.size(); ++s)
+    for (StateId s = 0; s < states_.size(); ++s) {
       State::Destroy(states_[s], &state_alloc_);
+    }
   }
 
   StateId Start() const { return start_; }
@@ -202,8 +201,9 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
   }
 
   void DeleteStates() {
-    for (StateId s = 0; s < states_.size(); ++s)
+    for (StateId s = 0; s < states_.size(); ++s) {
       State::Destroy(states_[s], &state_alloc_);
+    }
     states_.clear();
     SetStart(kNoStateId);
   }
@@ -224,16 +224,16 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
 
   // Provide information needed for generic state iterator
   void InitStateIterator(StateIteratorData<Arc> *data) const {
-    data->base = 0;
+    data->base = nullptr;
     data->nstates = states_.size();
   }
 
   // Provide information needed for generic arc iterator
   void InitArcIterator(StateId s, ArcIteratorData<Arc> *data) const {
-    data->base = 0;
+    data->base = nullptr;
     data->narcs = states_[s]->NumArcs();
     data->arcs = states_[s]->Arcs();
-    data->ref_count = 0;
+    data->ref_count = nullptr;
   }
 
  private:
@@ -242,7 +242,8 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
   typename State::StateAllocator state_alloc_;  // for state allocation
   typename State::ArcAllocator arc_alloc_;      // for arc allocation
 
-  DISALLOW_COPY_AND_ASSIGN(VectorFstBaseImpl);
+  VectorFstBaseImpl(const VectorFstBaseImpl &) = delete;
+  VectorFstBaseImpl &operator=(const VectorFstBaseImpl &) = delete;
 };
 
 // This is a VectorFstBaseImpl container that holds VectorState's.  It
@@ -297,8 +298,9 @@ class VectorFstImpl : public VectorFstBaseImpl<S> {
 
   void AddArc(StateId s, const A &arc) {
     State *state = GetState(s);
-    const A *parc =
-        state->NumArcs() == 0 ? 0 : &(state->GetArc(state->NumArcs() - 1));
+    const A *parc = state->NumArcs() == 0
+                        ? nullptr
+                        : &(state->GetArc(state->NumArcs() - 1));
     SetProperties(AddArcProperties(Properties(), s, arc, parc));
     BaseImpl::AddArc(s, arc);
   }
@@ -331,8 +333,6 @@ class VectorFstImpl : public VectorFstBaseImpl<S> {
   static const int kFileVersion = 2;
   // Minimum file format version supported
   static const int kMinFileVersion = 1;
-
-  DISALLOW_COPY_AND_ASSIGN(VectorFstImpl);
 };
 
 template <class S>
@@ -348,8 +348,9 @@ VectorFstImpl<S>::VectorFstImpl(const Fst<A> &fst) {
   SetInputSymbols(fst.InputSymbols());
   SetOutputSymbols(fst.OutputSymbols());
   BaseImpl::SetStart(fst.Start());
-  if (fst.Properties(kExpanded, false))
+  if (fst.Properties(kExpanded, false)) {
     BaseImpl::ReserveStates(CountStates(fst));
+  }
 
   for (StateIterator<Fst<A>> siter(fst); !siter.Done(); siter.Next()) {
     StateId s = siter.Value();
@@ -367,10 +368,9 @@ VectorFstImpl<S>::VectorFstImpl(const Fst<A> &fst) {
 template <class S>
 VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
                                          const FstReadOptions &opts) {
-  VectorFstImpl<S> *impl = new VectorFstImpl;
+  std::unique_ptr<VectorFstImpl<S>> impl(new VectorFstImpl());
   FstHeader hdr;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
-    delete impl;
     return nullptr;
   }
   impl->BaseImpl::SetStart(hdr.Start());
@@ -389,7 +389,6 @@ VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
     ReadType(strm, &narcs);
     if (!strm) {
       LOG(ERROR) << "VectorFst::Read: Read failed: " << opts.source;
-      delete impl;
       return nullptr;
     }
     impl->ReserveArcs(s, narcs);
@@ -401,7 +400,6 @@ VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
       ReadType(strm, &arc.nextstate);
       if (!strm) {
         LOG(ERROR) << "VectorFst::Read: Read failed: " << opts.source;
-        delete impl;
         return nullptr;
       }
       impl->BaseImpl::AddArc(s, arc);
@@ -409,10 +407,9 @@ VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
   }
   if (hdr.NumStates() != kNoStateId && s != hdr.NumStates()) {
     LOG(ERROR) << "VectorFst::Read: Unexpected end of file: " << opts.source;
-    delete impl;
     return nullptr;
   }
-  return impl;
+  return impl.release();
 }
 
 // Converts a string into a weight.
@@ -559,8 +556,6 @@ class StateIterator<VectorFst<A, S>> {
  private:
   StateId nstates_;
   StateId s_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
 // Writes Fst to file, will call CountStates so may involve two passes if
@@ -650,8 +645,6 @@ class ArcIterator<VectorFst<A, S>> {
   const A *arcs_;
   size_t narcs_;
   size_t i_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 // Specialization for VectorFst; see generic version in fst.h
@@ -692,8 +685,9 @@ class MutableArcIterator<VectorFst<A, S>> : public MutableArcIteratorBase<A> {
     if (oarc.olabel == 0) {
       *properties_ &= ~kOEpsilons;
     }
-    if (oarc.weight != Weight::Zero() && oarc.weight != Weight::One())
+    if (oarc.weight != Weight::Zero() && oarc.weight != Weight::One()) {
       *properties_ &= ~kWeighted;
+    }
 
     state_->SetArc(arc, i_);
 
@@ -743,8 +737,6 @@ class MutableArcIterator<VectorFst<A, S>> : public MutableArcIteratorBase<A> {
   State *state_;
   uint64 *properties_;
   size_t i_;
-
-  DISALLOW_COPY_AND_ASSIGN(MutableArcIterator);
 };
 
 // Provide information needed for the generic mutable arc iterator

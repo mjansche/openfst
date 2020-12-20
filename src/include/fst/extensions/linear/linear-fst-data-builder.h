@@ -154,12 +154,13 @@ class LinearFstDataBuilder {
   CompactSet<Label, kNoLabel> all_output_labels_;
   std::map<Label, std::set<Label>> word_output_map_, word_feat_map_;
   std::map<Label, std::set<size_t>> feat_groups_;
-  std::vector<FeatureGroupBuilder<A> *> groups_;
+  std::vector<std::unique_ptr<FeatureGroupBuilder<A>>> groups_;
   size_t max_future_size_;
   Label max_input_label_;
   const SymbolTable *isyms_, *fsyms_, *osyms_;
 
-  DISALLOW_COPY_AND_ASSIGN(LinearFstDataBuilder);
+  LinearFstDataBuilder(const LinearFstDataBuilder &) = delete;
+  LinearFstDataBuilder &operator=(const LinearFstDataBuilder &) = delete;
 };
 
 // Builds a LinearFstData tailored for a LinearClassifierFst. The
@@ -318,7 +319,8 @@ class FeatureGroupBuilder {
   int start_;
   const SymbolTable *fsyms_, *osyms_;
 
-  DISALLOW_COPY_AND_ASSIGN(FeatureGroupBuilder);
+  FeatureGroupBuilder(const FeatureGroupBuilder &) = delete;
+  FeatureGroupBuilder &operator=(const FeatureGroupBuilder &) = delete;
 };
 
 //
@@ -414,7 +416,7 @@ inline int LinearFstDataBuilder<A>::AddGroup(size_t future_size) {
     return -1;
   }
   size_t ret = groups_.size();
-  groups_.push_back(new FeatureGroupBuilder<A>(future_size, fsyms_, osyms_));
+  groups_.emplace_back(new FeatureGroupBuilder<A>(future_size, fsyms_, osyms_));
   if (future_size > max_future_size_) max_future_size_ = future_size;
   return ret;
 }
@@ -518,7 +520,7 @@ LinearFstData<A> *LinearFstDataBuilder<A>::Dump() {
     return nullptr;
   }
 
-  LinearFstData<A> *data = new LinearFstData<A>;
+  std::unique_ptr<LinearFstData<A>> data(new LinearFstData<A>());
   data->max_future_size_ = max_future_size_;
   data->max_input_label_ = max_input_label_;
 
@@ -527,15 +529,12 @@ LinearFstData<A> *LinearFstDataBuilder<A>::Dump() {
   for (int group = 0; group != groups_.size(); ++group) {
     FeatureGroup<A> *new_group = groups_[group]->Dump(max_future_size_);
     if (new_group == nullptr) {
-      for (int i = 0; i < group; ++i) delete data->groups_[i];
-      delete data;
       error_ = true;
       FSTERROR() << "Error in dumping group " << group;
       return nullptr;
     }
-    data->groups_[group] = new_group;
-    delete groups_[group];
-    groups_[group] = nullptr;
+    data->groups_[group].reset(new_group);
+    groups_[group].reset();
     VLOG(1) << "Group " << group << ": " << new_group->Stats();
   }
 
@@ -555,7 +554,6 @@ LinearFstData<A> *LinearFstDataBuilder<A>::Dump() {
            git != jt->second.end(); ++git) {
         size_t group_id = *git;
         if (!data->group_feat_map_.Set(group_id, word, feat)) {
-          delete data;
           error_ = true;
           return nullptr;
         }
@@ -593,7 +591,7 @@ LinearFstData<A> *LinearFstDataBuilder<A>::Dump() {
     data->output_set_.push_back(*it);
 
   error_ = true;  // prevent future calls on this object
-  return data;
+  return data.release();
 }
 
 //
@@ -752,7 +750,7 @@ bool FeatureGroupBuilder<A>::AddWeight(const std::vector<Label> &input,
   size_t opos =
       num_output_start <= future_size_ ? 0 : num_output_start - future_size_;
   // Skip `num_output_end` end-of-sentence marks on both input and output
-  size_t iend = input.size() > 0 ? input.size() - num_output_end : 0,
+  size_t iend = !input.empty() ? input.size() - num_output_end : 0,
          oend = output.size() - num_output_end;
   // Further, when output is empty, keep at most `future_size_`
   // end-of-sentence marks on input.

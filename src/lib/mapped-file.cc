@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <ios>
+#include <memory>
 
 static const size_t kMaxReadChunk = 256 * 1024 * 1024;  // 256 MB
 
@@ -26,13 +27,13 @@ MappedFile::MappedFile(const MemoryRegion& region) : region_(region) {}
 
 MappedFile::~MappedFile() {
   if (region_.size != 0) {
-    if (region_.mmap != NULL) {
+    if (region_.mmap) {
       VLOG(1) << "munmap'ed " << region_.size << " bytes at " << region_.mmap;
       if (munmap(region_.mmap, region_.size) != 0) {
         LOG(ERROR) << "Failed to unmap region: " << strerror(errno);
       }
     } else {
-      if (region_.data != 0) {
+      if (region_.data) {
         operator delete(static_cast<char*>(region_.data) - region_.offset);
       }
     }
@@ -41,7 +42,7 @@ MappedFile::~MappedFile() {
 
 MappedFile* MappedFile::Allocate(size_t size, int align) {
   MemoryRegion region;
-  region.data = 0;
+  region.data = nullptr;
   region.offset = 0;
   if (size > 0) {
     char* buffer = static_cast<char*>(operator new(size + align));
@@ -49,7 +50,7 @@ MappedFile* MappedFile::Allocate(size_t size, int align) {
     region.offset = kArchAlignment - (address % align);
     region.data = buffer + region.offset;
   }
-  region.mmap = 0;
+  region.mmap = nullptr;
   region.size = size;
   return new MappedFile(region);
 }
@@ -76,7 +77,8 @@ MappedFile* MappedFile::Map(std::istream* s, bool memorymap,
       int pagesize = sysconf(_SC_PAGESIZE);
       off_t offset = pos % pagesize;
       off_t upsize = size + offset;
-      void* map = mmap(0, upsize, PROT_READ, MAP_SHARED, fd, pos - offset);
+      void* map =
+          mmap(nullptr, upsize, PROT_READ, MAP_SHARED, fd, pos - offset);
       char* data = reinterpret_cast<char*>(map);
       if (close(fd) == 0 && map != MAP_FAILED) {
         MemoryRegion region;
@@ -84,14 +86,13 @@ MappedFile* MappedFile::Map(std::istream* s, bool memorymap,
         region.size = upsize;
         region.data = reinterpret_cast<void*>(data + offset);
         region.offset = offset;
-        MappedFile* mmf = new MappedFile(region);
+        std::unique_ptr<MappedFile> mmf(new MappedFile(region));
         s->seekg(pos + size, std::ios::beg);
         if (s) {
           VLOG(1) << "mmap'ed region of " << size << " at offset " << pos
                   << " from " << source << " to addr " << map;
-          return mmf;
+          return mmf.release();
         }
-        delete mmf;
       } else {
         LOG(INFO) << "Mapping of file failed: " << strerror(errno);
       }
@@ -104,7 +105,7 @@ MappedFile* MappedFile::Map(std::istream* s, bool memorymap,
   }
 
   // Read the file into the buffer in chunks not larger than kMaxReadChunk.
-  MappedFile* mf = Allocate(size);
+  std::unique_ptr<MappedFile> mf(Allocate(size));
   char* buffer = reinterpret_cast<char*>(mf->mutable_data());
   while (size > 0) {
     const size_t next_size = std::min(size, kMaxReadChunk);
@@ -112,14 +113,13 @@ MappedFile* MappedFile::Map(std::istream* s, bool memorymap,
     if (!s->read(buffer, next_size)) {
       LOG(ERROR) << "Failed to read " << next_size << " bytes at offset "
                  << current_pos << "from \"" << source << "\".";
-      delete mf;
-      return NULL;
+      return nullptr;
     }
     size -= next_size;
     buffer += next_size;
     VLOG(2) << "Read " << next_size << " bytes. " << size << " remaining.";
   }
-  return mf;
+  return mf.release();
 }
 
 }  // namespace fst

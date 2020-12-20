@@ -58,10 +58,11 @@ class StateComparator {
     if (flags_ & kCompareFinal) {
       const size_t xfinal = fst_.Final(x).Hash();
       const size_t yfinal = fst_.Final(y).Hash();
-      if (xfinal < yfinal)
+      if (xfinal < yfinal) {
         return true;
-      else if (xfinal > yfinal)
+      } else if (xfinal > yfinal) {
         return false;
+      }
     }
     if (flags_ & kCompareOutDegree) {
       // Checks for # arcs.
@@ -76,11 +77,13 @@ class StateComparator {
           if (arc1.ilabel < arc2.ilabel) return true;
           if (arc1.ilabel > arc2.ilabel) return false;
           if (partition_.ClassId(arc1.nextstate) <
-              partition_.ClassId(arc2.nextstate))
+              partition_.ClassId(arc2.nextstate)) {
             return true;
+          }
           if (partition_.ClassId(arc1.nextstate) >
-              partition_.ClassId(arc2.nextstate))
+              partition_.ClassId(arc2.nextstate)) {
             return false;
+          }
         }
       }
     }
@@ -126,12 +129,10 @@ class CyclicMinimizer {
   using Weight = typename Arc::Weight;
   using RevA = ReverseArc<A>;
 
-  CyclicMinimizer(const ExpandedFst<A>& fst) {
+  explicit CyclicMinimizer(const ExpandedFst<A>& fst) {
     Initialize(fst);
     Compute(fst);
   }
-
-  ~CyclicMinimizer() { delete aiter_queue_; }
 
   const Partition<StateId>& partition() const { return P_; }
 
@@ -172,7 +173,7 @@ class CyclicMinimizer {
 
   class ArcIterCompare {
    public:
-    ArcIterCompare(const Partition<StateId>& partition)
+    explicit ArcIterCompare(const Partition<StateId>& partition)
         : partition_(partition) {}
 
     ArcIterCompare(const ArcIterCompare& comp) : partition_(comp.partition_) {}
@@ -187,7 +188,7 @@ class CyclicMinimizer {
     const Partition<StateId> &partition_;
   };
 
-  typedef priority_queue<ArcIter*, std::vector<ArcIter*>, ArcIterCompare>
+  typedef std::priority_queue<ArcIter*, std::vector<ArcIter*>, ArcIterCompare>
       ArcIterQueue;
 
  private:
@@ -226,8 +227,9 @@ class CyclicMinimizer {
       // to reduce the maximum amount of memory used.
     }
     P_.AllocateClasses(next_class);
-    for (StateId s = 0; s < num_states; ++s)
+    for (StateId s = 0; s < num_states; ++s) {
       P_.Add(s, state_to_initial_class[s]);
+    }
     for (StateId c = 0; c < next_class; ++c) L_.Enqueue(c);
     VLOG(5) << "Initial Partition: " << P_.NumClasses();
   }
@@ -247,7 +249,7 @@ class CyclicMinimizer {
     PrePartition(fst);
     // Allocates arc iterator queue.
     ArcIterCompare comp(P_);
-    aiter_queue_ = new ArcIterQueue(comp);
+    aiter_queue_.reset(new ArcIterQueue(comp));
   }
   // Partitions all classes with destination C.
   void Split(ClassId C) {
@@ -255,17 +257,17 @@ class CyclicMinimizer {
     // inserts into priority queue.
     for (PartitionIterator<StateId> siter(P_, C); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
-      if (Tr_.NumArcs(s + 1))
+      if (Tr_.NumArcs(s + 1)) {
         aiter_queue_->push(new ArcIterator<Fst<RevA>>(Tr_, s + 1));
+      }
     }
     // Now pops arc iterator from queue, splits entering equivalence class, and
     // re-inserts updated iterator into queue.
     Label prev_label = -1;
     while (!aiter_queue_->empty()) {
-      ArcIterator<Fst<RevA>>* aiter = aiter_queue_->top();
+      std::unique_ptr<ArcIterator<Fst<RevA>>> aiter(aiter_queue_->top());
       aiter_queue_->pop();
       if (aiter->Done()) {
-        delete aiter;
         continue;
       }
       const RevA &arc = aiter->Value();
@@ -277,9 +279,8 @@ class CyclicMinimizer {
       prev_label = from_label;
       aiter->Next();
       if (aiter->Done()) {
-        delete aiter;
       } else {
-        aiter_queue_->push(aiter);
+        aiter_queue_->push(aiter.release());
       }
     }
     P_.FinalizeSplit(&L_);
@@ -305,7 +306,7 @@ class CyclicMinimizer {
   VectorFst<RevA> Tr_;
   // Priority queue of open arc iterators for all states in the splitter
   // equivalence class.
-  ArcIterQueue* aiter_queue_;
+  std::unique_ptr<ArcIterQueue> aiter_queue_;
 };
 
 // Computes equivalence classes for acyclic Fsts. The implementation details
@@ -324,7 +325,7 @@ class AcyclicMinimizer {
   using ClassId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
 
-  AcyclicMinimizer(const ExpandedFst<A>& fst) {
+  explicit AcyclicMinimizer(const ExpandedFst<A>& fst) {
     Initialize(fst);
     Refine(fst);
   }
@@ -356,8 +357,9 @@ class AcyclicMinimizer {
 
     // Invoked when forward or cross arc examined (to finished state).
     bool ForwardOrCrossArc(StateId s, const A& arc) {
-      if (height_[arc.nextstate] + 1 > height_[s])
+      if (height_[arc.nextstate] + 1 > height_[s]) {
         height_[s] = height_[arc.nextstate] + 1;
+      }
       return true;
     }
 
@@ -411,12 +413,10 @@ class AcyclicMinimizer {
       PartitionIterator<StateId> siter(partition_, h);
       equiv_classes[siter.Value()] = h;
       for (siter.Next(); !siter.Done(); siter.Next()) {
-        const StateId s = siter.Value();
-        auto it = equiv_classes.find(s);
-        if (it == equiv_classes.end()) {
-          equiv_classes[s] = partition_.AddClass();
-        } else {
-          equiv_classes[s] = it->second;
+        auto insert_result =
+            equiv_classes.insert(std::make_pair(siter.Value(), kNoStateId));
+        if (insert_result.second) {
+          insert_result.first->second = partition_.AddClass();
         }
       }
       // Creates refined partition.
@@ -569,11 +569,10 @@ void Minimize(MutableFst<A>* fst, MutableFst<A>* sfst = nullptr,
           GallicArc<A, GALLIC_LEFT>,
           GallicFactor<typename A::Label, typename A::Weight, GALLIC_LEFT>>
           fwfst(gfst);
-      SymbolTable* osyms =
-          fst->OutputSymbols() ? fst->OutputSymbols()->Copy() : 0;
+      std::unique_ptr<SymbolTable> osyms(
+          fst->OutputSymbols() ? fst->OutputSymbols()->Copy() : nullptr);
       ArcMap(fwfst, fst, FromGallicMapper<A, GALLIC_LEFT>());
-      fst->SetOutputSymbols(osyms);
-      delete osyms;
+      fst->SetOutputSymbols(osyms.get());
     } else {
       sfst->SetOutputSymbols(fst->OutputSymbols());
       GallicToNewSymbolsMapper<A, GALLIC_LEFT> mapper(sfst);

@@ -336,7 +336,10 @@ uint64 RandGenProperties(uint64 inprops, bool weighted);
 uint64 RelabelProperties(uint64 inprops);
 uint64 ReplaceProperties(const std::vector<uint64> &inprops, ssize_t root,
                          bool epsilon_on_call, bool epsilon_on_return,
-                         bool replace_transducer, bool no_empty_fst);
+                         bool out_epsilon_on_call, bool out_epsilon_on_return,
+                         bool replace_transducer, bool no_empty_fst,
+                         bool all_ilabel_sorted, bool all_olabel_sorted,
+                         bool all_negative_or_dense);
 uint64 ReverseProperties(uint64 inprops, bool has_superinitial);
 uint64 ReweightProperties(uint64 inprops);
 uint64 RmEpsilonProperties(uint64 inprops, bool delayed = false);
@@ -416,7 +419,7 @@ uint64 AddArcProperties(uint64 inprops, typename A::StateId s, const A &arc,
     outprops |= kOEpsilons;
     outprops &= ~kNoOEpsilons;
   }
-  if (prev_arc != 0) {
+  if (prev_arc) {
     if (prev_arc->ilabel > arc.ilabel) {
       outprops |= kNotILabelSorted;
       outprops &= ~kILabelSorted;

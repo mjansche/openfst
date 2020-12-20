@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <string>
 #include <utility>
@@ -85,7 +86,8 @@ class STListWriter {
   string last_key_;           // Last key
   bool error_;
 
-  DISALLOW_COPY_AND_ASSIGN(STListWriter);
+  STListWriter(const STListWriter &) = delete;
+  STListWriter &operator=(const STListWriter &) = delete;
 };
 
 // String-type list reading class for object of type 'T' using functor 'R'
@@ -103,7 +105,7 @@ class STListReader {
   typedef R EntryReader;
 
   explicit STListReader(const std::vector<string> &filenames)
-      : sources_(filenames), entry_(nullptr), error_(false) {
+      : sources_(filenames), error_(false) {
     streams_.resize(filenames.size(), 0);
     bool has_stdin = false;
     for (size_t i = 0; i < filenames.size(); ++i) {
@@ -148,7 +150,7 @@ class STListReader {
     }
     if (heap_.empty()) return;
     size_t current = heap_.top().second;
-    entry_ = entry_reader_(*streams_[current]);
+    entry_.reset(entry_reader_(*streams_[current]));
     if (!entry_ || !*streams_[current]) {
       FSTERROR() << "STListReader: Error reading entry for key: "
                  << heap_.top().first << ", file: " << sources_[current];
@@ -160,7 +162,6 @@ class STListReader {
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != &std::cin) delete streams_[i];
     }
-    if (entry_) delete entry_;
   }
 
   static STListReader<T, R> *Open(const string &filename) {
@@ -202,8 +203,7 @@ class STListReader {
 
     if (!heap_.empty()) {
       current = heap_.top().second;
-      if (entry_) delete entry_;
-      entry_ = entry_reader_(*streams_[current]);
+      entry_.reset(entry_reader_(*streams_[current]));
       if (!entry_ || !*streams_[current]) {
         FSTERROR() << "STListReader: Error reading entry for key: "
                    << heap_.top().first << ", file: " << sources_[current];
@@ -214,7 +214,7 @@ class STListReader {
 
   const string &GetKey() const { return heap_.top().first; }
 
-  const EntryType *GetEntry() const { return entry_; }
+  const EntryType *GetEntry() const { return entry_.get(); }
 
   bool Error() const { return error_; }
 
@@ -225,10 +225,11 @@ class STListReader {
   priority_queue<
       std::pair<string, size_t>, std::vector<std::pair<string, size_t>>,
       std::greater<std::pair<string, size_t>>> heap_;  // (Key, stream id) heap
-  mutable EntryType *entry_;  // Pointer to the currently read entry
+  mutable std::unique_ptr<EntryType> entry_;  // the currently read entry
   bool error_;
 
-  DISALLOW_COPY_AND_ASSIGN(STListReader);
+  STListReader(const STListReader &) = delete;
+  STListReader &operator=(const STListReader &) = delete;
 };
 
 // String-type list header reading function template on the entry header

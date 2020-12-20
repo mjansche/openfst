@@ -51,8 +51,6 @@ class LinearFstData {
   LinearFstData()
       : max_future_size_(0), max_input_label_(1), input_attribs_(1) {}
 
-  ~LinearFstData();
-
   // Appends the state tuple of the start state to `output`, where
   // each tuple holds the node ids of a trie for each feature group.
   void EncodeStartState(std::vector<Label> *output) const {
@@ -131,26 +129,19 @@ class LinearFstData {
 
   size_t max_future_size_;
   Label max_input_label_;
-  std::vector<const FeatureGroup<A> *> groups_;
+  std::vector<std::unique_ptr<const FeatureGroup<A>>> groups_;
   std::vector<InputAttribute> input_attribs_;
   std::vector<Label> output_pool_, output_set_;
   GroupFeatureMap group_feat_map_;
 
-  DISALLOW_COPY_AND_ASSIGN(LinearFstData);
+  LinearFstData(const LinearFstData &) = delete;
+  LinearFstData &operator=(const LinearFstData &) = delete;
 };
 
 template <class A>
 const typename A::Label LinearFstData<A>::kStartOfSentence = -3;
 template <class A>
 const typename A::Label LinearFstData<A>::kEndOfSentence = -2;
-
-template <class A>
-LinearFstData<A>::~LinearFstData() {
-  for (size_t i = 0; i < groups_.size(); ++i) {
-    const FeatureGroup<A> *group = groups_[i];
-    delete group;
-  }
-}
 
 template <class A>
 template <class Iterator>
@@ -164,8 +155,7 @@ void LinearFstData<A>::TakeTransition(Iterator buffer_end,
   DCHECK(olabel > 0 || olabel == kStartOfSentence);
   size_t group_id = 0;
   for (Iterator it = trie_state_begin; it != trie_state_end; ++it, ++group_id) {
-    const FeatureGroup<A> *group = groups_[group_id];
-    size_t delay = group->Delay();
+    size_t delay = groups_[group_id]->Delay();
     // On the buffer, there may also be `kStartOfSentence` from the
     // initial empty buffer.
     Label real_ilabel = delay == 0 ? ilabel : *(buffer_end - delay);
@@ -210,7 +200,7 @@ LinearFstData<A>::PossibleOutputLabels(Label word) const {
 
 template <class A>
 inline LinearFstData<A> *LinearFstData<A>::Read(std::istream &strm) {  // NOLINT
-  LinearFstData<A> *data = new LinearFstData<A>;
+  std::unique_ptr<LinearFstData<A>> data(new LinearFstData<A>());
   ReadType(strm, &(data->max_future_size_));
   ReadType(strm, &(data->max_input_label_));
   // Feature groups
@@ -218,16 +208,15 @@ inline LinearFstData<A> *LinearFstData<A>::Read(std::istream &strm) {  // NOLINT
   ReadType(strm, &num_groups);
   data->groups_.resize(num_groups);
   for (size_t i = 0; i < num_groups; ++i)
-    data->groups_[i] = FeatureGroup<A>::Read(strm);
+    data->groups_[i].reset(FeatureGroup<A>::Read(strm));
   // Other data
   ReadType(strm, &(data->input_attribs_));
   ReadType(strm, &(data->output_pool_));
   ReadType(strm, &(data->output_set_));
   ReadType(strm, &(data->group_feat_map_));
   if (strm) {
-    return data;
+    return data.release();
   } else {
-    delete data;
     return nullptr;
   }
 }
@@ -240,8 +229,7 @@ inline std::ostream &LinearFstData<A>::Write(
   // Feature groups
   WriteType(strm, groups_.size());
   for (size_t i = 0; i < groups_.size(); ++i) {
-    const FeatureGroup<A> *group = groups_[i];
-    group->Write(strm);
+    groups_[i]->Write(strm);
   }
   // Other data
   WriteType(strm, input_attribs_);
@@ -321,13 +309,12 @@ class FeatureGroup {
     ReadType(strm, &start);
     Trie trie;
     ReadType(strm, &trie);
-    FeatureGroup<A> *ret = new FeatureGroup<A>(delay, start);
+    std::unique_ptr<FeatureGroup<A>> ret(new FeatureGroup<A>(delay, start));
     ret->trie_.swap(trie);
     ReadType(strm, &ret->next_state_);
     if (strm) {
-      return ret;
+      return ret.release();
     } else {
-      delete ret;
       return nullptr;
     }
   }
@@ -397,7 +384,8 @@ class FeatureGroup {
   // back-off state.
   std::vector<int> next_state_;
 
-  DISALLOW_COPY_AND_ASSIGN(FeatureGroup);
+  FeatureGroup(const FeatureGroup &) = delete;
+  FeatureGroup &operator=(const FeatureGroup &) = delete;
 };
 
 template <class A>

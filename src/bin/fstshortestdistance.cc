@@ -4,8 +4,10 @@
 // Find shortest distances in an FST.
 
 #include <memory>
+#include <string>
 #include <vector>
 
+#include <fst/script/getters.h>
 #include <fst/script/shortest-distance.h>
 #include <fst/script/text-io.h>
 
@@ -40,36 +42,23 @@ int main(int argc, char **argv) {
 
   std::vector<WeightClass> distance;
 
-  fst::QueueType qt;
-
-  if (FLAGS_queue_type == "auto") {
-    qt = fst::AUTO_QUEUE;
-  } else if (FLAGS_queue_type == "fifo") {
-    qt = fst::FIFO_QUEUE;
-  } else if (FLAGS_queue_type == "lifo") {
-    qt = fst::LIFO_QUEUE;
-  } else if (FLAGS_queue_type == "shortest") {
-    qt = fst::SHORTEST_FIRST_QUEUE;
-  } else if (FLAGS_queue_type == "state") {
-    qt = fst::STATE_ORDER_QUEUE;
-  } else if (FLAGS_queue_type == "top") {
-    qt = fst::TOP_ORDER_QUEUE;
-  } else {
+  fst::QueueType queue_type;
+  if (!s::GetQueueType(FLAGS_queue_type, &queue_type)) {
     LOG(ERROR) << argv[0]
                << ": Unknown or unsupported queue type: " << FLAGS_queue_type;
     return 1;
   }
 
-  if (FLAGS_reverse && qt != fst::AUTO_QUEUE) {
-    LOG(ERROR) << argv[0] << ": Non-default queue with reverse not supported.";
+  if (FLAGS_reverse && queue_type != fst::AUTO_QUEUE) {
+    LOG(ERROR) << argv[0] << ": Can't use non-default queue with reverse.";
     return 1;
   }
 
   if (FLAGS_reverse) {
     s::ShortestDistance(*ifst, &distance, FLAGS_reverse, FLAGS_delta);
   } else {
-    s::ShortestDistanceOptions opts(qt, s::ANY_ARC_FILTER, FLAGS_nstate,
-                                    FLAGS_delta);
+    s::ShortestDistanceOptions opts(queue_type, s::ANY_ARC_FILTER,
+                                    FLAGS_nstate, FLAGS_delta);
     s::ShortestDistance(*ifst, &distance, opts);
   }
 

@@ -104,7 +104,7 @@ bool GetModelRecord(const string &model, std::istream &strm,  // NOLINT
 template <class Arc>
 void AddVocab(const string &vocab, SymbolTable *isyms, SymbolTable *fsyms,
               SymbolTable *osyms, LinearFstDataBuilder<Arc> *builder) {
-  std::ifstream in(vocab.c_str());
+  std::ifstream in(vocab);
   if (!in) LOG(FATAL) << "Can't open file: " << vocab;
   size_t num_line = 0, num_added = 0;
   std::vector<string> fields;
@@ -129,7 +129,7 @@ template <class Arc>
 void AddVocab(const string &vocab, SymbolTable *isyms, SymbolTable *fsyms,
               SymbolTable *osyms,
               LinearClassifierFstDataBuilder<Arc> *builder) {
-  std::ifstream in(vocab.c_str());
+  std::ifstream in(vocab);
   if (!in) LOG(FATAL) << "Can't open file: " << vocab;
   size_t num_line = 0, num_added = 0;
   std::vector<string> fields;
@@ -164,7 +164,7 @@ void AddVocab(const string &vocab, SymbolTable *isyms, SymbolTable *fsyms,
 template <class Arc>
 void AddModel(const string &model, SymbolTable *fsyms, SymbolTable *osyms,
               LinearFstDataBuilder<Arc> *builder) {
-  std::ifstream in(model.c_str());
+  std::ifstream in(model);
   if (!in) LOG(FATAL) << "Can't open file: " << model;
   string line;
   std::getline(in, line);
@@ -217,7 +217,7 @@ void AddModel(const string &model, SymbolTable *fsyms, SymbolTable *osyms,
 template <class Arc>
 void AddModel(const string &model, SymbolTable *fsyms, SymbolTable *osyms,
               LinearClassifierFstDataBuilder<Arc> *builder) {
-  std::ifstream in(model.c_str());
+  std::ifstream in(model);
   if (!in) LOG(FATAL) << "Can't open file: " << model;
   string line;
   std::getline(in, line);

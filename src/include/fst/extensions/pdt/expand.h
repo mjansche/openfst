@@ -101,7 +101,6 @@ class PdtExpandFstImpl : public CacheImpl<A> {
   }
 
   ~PdtExpandFstImpl() override {
-    delete fst_;
     if (own_stack_) delete stack_;
     if (own_state_table_) delete state_table_;
   }
@@ -181,15 +180,13 @@ class PdtExpandFstImpl : public CacheImpl<A> {
   }
 
  private:
-  const Fst<A> *fst_;
+  std::unique_ptr<const Fst<A>> fst_;
 
   PdtStack<StackId, Label> *stack_;
   PdtStateTable<StateId, StackId> *state_table_;
   bool own_stack_;
   bool own_state_table_;
   bool keep_parentheses_;
-
-  void operator=(const PdtExpandFstImpl<A> &);  // disallow
 };
 
 // Expands a pushdown transducer (PDT) encoded as an FST into an FST.
@@ -255,7 +252,7 @@ class PdtExpandFst : public ImplToFst<PdtExpandFstImpl<A>> {
   using ImplToFst<Impl>::GetImpl;
   using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const PdtExpandFst<A> &fst);  // Disallow
+  void operator=(const PdtExpandFst<A> &fst) = delete;
 };
 
 // Specialization for ExpandFst.
@@ -277,9 +274,6 @@ class ArcIterator<PdtExpandFst<A>> : public CacheArcIterator<PdtExpandFst<A>> {
       : CacheArcIterator<PdtExpandFst<A>>(fst.GetMutableImpl(), s) {
     if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->ExpandState(s);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
 template <class A>
@@ -337,21 +331,15 @@ class PdtPrunedExpand {
         error_(false) {
     Reverse(*ifst_, parens, &rfst_);
     VectorFst<Arc> path;
-    reverse_shortest_path_ =
+    reverse_shortest_path_.reset(
         new SP(rfst_, parens,
-               PdtShortestPathOptions<A, FifoQueue<StateId>>(true, false));
+               PdtShortestPathOptions<A, FifoQueue<StateId>>(true, false)));
     reverse_shortest_path_->ShortestPath(&path);
     error_ = (path.Properties(kError, true) == kError);
-    balance_data_ = reverse_shortest_path_->GetBalanceData()->Reverse(
-        rfst_.NumStates(), 10, -1);
+    balance_data_.reset(reverse_shortest_path_->GetBalanceData()->Reverse(
+        rfst_.NumStates(), 10, -1));
 
     InitCloseParenMultimap(parens);
-  }
-
-  ~PdtPrunedExpand() {
-    delete ifst_;
-    delete reverse_shortest_path_;
-    delete balance_data_;
   }
 
   bool Error() const { return error_; }
@@ -444,7 +432,7 @@ class PdtPrunedExpand {
   bool ProcCloseParen(StateId s, const A &arc);
   void ProcDestStates(StateId s, StackId si);
 
-  Fst<A> *ifst_;                       // Input PDT
+  std::unique_ptr<Fst<A>> ifst_;       // Input PDT
   VectorFst<Arc> rfst_;                // Reversed PDT
   bool keep_parentheses_;              // Keep parentheses in ofst?
   StateTable state_table_;             // State table for efst_
@@ -460,8 +448,9 @@ class PdtPrunedExpand {
 
   typedef PdtShortestPath<Arc, FifoQueue<StateId>> SP;
   typedef typename SP::CloseParenMultimap ParenMultimap;
-  SP *reverse_shortest_path_;           // Shortest path for rfst_
-  PdtBalanceData<Arc> *balance_data_;   // Not owned by shortest_path_
+  std::unique_ptr<SP> reverse_shortest_path_;  // Shortest path for rfst_
+  std::unique_ptr<PdtBalanceData<Arc>>
+      balance_data_;                    // Not owned by shortest_path_
   ParenMultimap close_paren_multimap_;  // Maps open paren arcs to
   // balancing close paren arcs.
 
@@ -694,10 +683,11 @@ void PdtPrunedExpand<A>::ProcStart() {
 // is below threshold.
 template <class A>
 void PdtPrunedExpand<A>::ProcFinal(StateId s) {
-  Weight final = efst_.Final(s);
-  if ((final == Weight::Zero()) || less_(limit_, Times(Distance(s), final)))
+  const Weight final_weight = efst_.Final(s);
+  if ((final_weight == Weight::Zero()) ||
+      less_(limit_, Times(Distance(s), final_weight)))
     return;
-  ofst_->SetFinal(s, final);
+  ofst_->SetFinal(s, final_weight);
 }
 
 // Returns true when arc (or meta-arc) 'arc' out of 's' in 'efst_' is

@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 
+
 #include <fst/weight.h>
 
 
@@ -27,9 +28,9 @@ namespace fst {
 template <class W, class K>
 class SparseTupleWeightIterator;
 
-// Arbitrary dimension tuple weight, stored as a sorted linked-list
-// W is any weight class,
-// K is the key value type. kNoKey(-1) is reserved for internal use
+// Arbitrary dimension tuple weight, stored as a sorted linked-list.
+// W is any weight class, and K is the key value type. kNoKey(-1) is reserved
+// for internal use.
 template <class W, class K = int>
 class SparseTupleWeight {
  public:
@@ -51,9 +52,9 @@ class SparseTupleWeight {
     Push(key, w);
   }
 
-  SparseTupleWeight(const W &w) { Init(w); }
+  explicit SparseTupleWeight(const W &w) { Init(w); }
 
-  SparseTupleWeight(const SparseTupleWeight<W, K> &w) {
+  SparseTupleWeight(const SparseTupleWeight &w) {
     Init(w.DefaultValue());
     SetDefaultValue(w.DefaultValue());
     for (SparseTupleWeightIterator<W, K> it(w); !it.Done(); it.Next()) {
@@ -61,18 +62,18 @@ class SparseTupleWeight {
     }
   }
 
-  static const SparseTupleWeight<W, K> &Zero() {
-    static SparseTupleWeight<W, K> zero;
+  static const SparseTupleWeight &Zero() {
+    static SparseTupleWeight zero;
     return zero;
   }
 
-  static const SparseTupleWeight<W, K> &One() {
-    static SparseTupleWeight<W, K> one(W::One());
+  static const SparseTupleWeight &One() {
+    static SparseTupleWeight one(W::One());
     return one;
   }
 
-  static const SparseTupleWeight<W, K> &NoWeight() {
-    static SparseTupleWeight<W, K> no_weight(W::NoWeight());
+  static const SparseTupleWeight &NoWeight() {
+    static SparseTupleWeight no_weight(W::NoWeight());
     return no_weight;
   }
 
@@ -88,7 +89,7 @@ class SparseTupleWeight {
     return WriteType(strm, rest_);
   }
 
-  SparseTupleWeight<W, K> &operator=(const SparseTupleWeight<W, K> &w) {
+  SparseTupleWeight &operator=(const SparseTupleWeight &w) {
     if (this == &w) return *this;  // check for w = w
     Init(w.DefaultValue());
     for (SparseTupleWeightIterator<W, K> it(w); !it.Done(); it.Next()) {
@@ -116,8 +117,8 @@ class SparseTupleWeight {
     return size_t(h);
   }
 
-  SparseTupleWeight<W, K> Quantize(float delta = kDelta) const {
-    SparseTupleWeight<W, K> w;
+  SparseTupleWeight Quantize(float delta = kDelta) const {
+    SparseTupleWeight w;
     for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
       w.Push(it.Value().first, it.Value().second.Quantize(delta));
     }
@@ -125,11 +126,11 @@ class SparseTupleWeight {
   }
 
   ReverseWeight Reverse() const {
-    SparseTupleWeight<W, K> w;
+    SparseTupleWeight w;
     for (SparseTupleWeightIterator<W, K> it(*this); !it.Done(); it.Next()) {
       w.Push(it.Value().first, it.Value().second.Reverse());
     }
-    return w;
+    return ReverseWeight(w);
   }
 
   // Common initializer among constructors.
@@ -143,10 +144,11 @@ class SparseTupleWeight {
   }
 
   size_t Size() const {
-    if (first_.first == kNoKey)
+    if (first_.first == kNoKey) {
       return 0;
-    else
+    } else {
       return rest_.size() + 1;
+    }
   }
 
   inline void Push(const K &k, const W &w, bool default_value_check = true) {
@@ -190,19 +192,21 @@ class SparseTupleWeightIterator {
       : first_(w.first_), rest_(w.rest_), init_(true), iter_(rest_.begin()) {}
 
   bool Done() const {
-    if (init_)
+    if (init_) {
       return first_.first == SparseTupleWeight<W, K>::kNoKey;
-    else
+    } else {
       return iter_ == rest_.end();
+    }
   }
 
   const Pair &Value() const { return init_ ? first_ : *iter_; }
 
   void Next() {
-    if (init_)
+    if (init_) {
       init_ = false;
-    else
+    } else {
       ++iter_;
+    }
   }
 
   void Reset() {
@@ -215,8 +219,6 @@ class SparseTupleWeightIterator {
   const std::list<Pair> &rest_;
   bool init_;  // in the initialized state?
   typename std::list<Pair>::const_iterator iter_;
-
-  DISALLOW_COPY_AND_ASSIGN(SparseTupleWeightIterator);
 };
 
 template <class W, class K, class M>

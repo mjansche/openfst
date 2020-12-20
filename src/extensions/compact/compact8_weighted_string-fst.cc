@@ -8,7 +8,6 @@ using fst::FstRegisterer;
 using fst::CompactWeightedStringFst;
 using fst::LogArc;
 using fst::StdArc;
-using fst::WeightedStringCompactor;
 
 static FstRegisterer<
     CompactWeightedStringFst<StdArc, uint8>>

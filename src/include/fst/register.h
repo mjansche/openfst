@@ -30,7 +30,7 @@ struct FstRegisterEntry {
 
   Reader reader;
   Converter converter;
-  FstRegisterEntry() : reader(0), converter(0) {}
+  FstRegisterEntry() : reader(nullptr), converter(nullptr) {}
   FstRegisterEntry(Reader r, Converter c) : reader(r), converter(c) {}
 };
 

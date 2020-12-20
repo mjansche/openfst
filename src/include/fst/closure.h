@@ -36,9 +36,10 @@ void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
   StateId start = fst->Start();
   for (StateIterator<MutableFst<Arc>> siter(*fst); !siter.Done();
        siter.Next()) {
-    StateId s = siter.Value();
-    Weight final = fst->Final(s);
-    if (final != Weight::Zero()) fst->AddArc(s, Arc(0, 0, final, start));
+    const StateId s = siter.Value();
+    const Weight final_weight = fst->Final(s);
+    if (final_weight != Weight::Zero())
+      fst->AddArc(s, Arc(0, 0, final_weight, start));
   }
   if (closure_type == CLOSURE_STAR) {
     fst->ReserveStates(fst->NumStates() + 1);

@@ -33,11 +33,13 @@ inline bool CompatProperties(uint64 props1, uint64 props2) {
   uint64 incompat_props = (props1 & known_props) ^ (props2 & known_props);
   if (incompat_props) {
     uint64 prop = 1;
-    for (int i = 0; i < 64; ++i, prop <<= 1)
-      if (prop & incompat_props)
+    for (int i = 0; i < 64; ++i, prop <<= 1) {
+      if (prop & incompat_props) {
         LOG(ERROR) << "CompatProperties: Mismatch: " << PropertyNames[i]
                    << ": props1 = " << (props1 & prop ? "true" : "false")
                    << ", props2 = " << (props2 & prop ? "true" : "false");
+      }
+    }
     return false;
   } else {
     return true;
@@ -98,15 +100,18 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
     comp_props |= kAcceptor | kNoEpsilons | kNoIEpsilons | kNoOEpsilons |
                   kILabelSorted | kOLabelSorted | kUnweighted | kTopSorted |
                   kString;
-    if (mask & (kIDeterministic | kNonIDeterministic))
+    if (mask & (kIDeterministic | kNonIDeterministic)) {
       comp_props |= kIDeterministic;
-    if (mask & (kODeterministic | kNonODeterministic))
+    }
+    if (mask & (kODeterministic | kNonODeterministic)) {
       comp_props |= kODeterministic;
-    if (mask & (dfs_props | kWeightedCycles | kUnweightedCycles))
+    }
+    if (mask & (dfs_props | kWeightedCycles | kUnweightedCycles)) {
       comp_props |= kUnweightedCycles;
+    }
 
-    std::unordered_set<Label> *ilabels = 0;
-    std::unordered_set<Label> *olabels = 0;
+    std::unique_ptr<std::unordered_set<Label>> ilabels;
+    std::unique_ptr<std::unordered_set<Label>> olabels;
 
     StateId nfinal = 0;
     for (StateIterator<Fst<Arc>> siter(fst); !siter.Done(); siter.Next()) {
@@ -114,10 +119,12 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
 
       Arc prev_arc;
       // Create these only if we need to
-      if (mask & (kIDeterministic | kNonIDeterministic))
-        ilabels = new std::unordered_set<Label>;
-      if (mask & (kODeterministic | kNonODeterministic))
-        olabels = new std::unordered_set<Label>;
+      if (mask & (kIDeterministic | kNonIDeterministic)) {
+        ilabels.reset(new std::unordered_set<Label>());
+      }
+      if (mask & (kODeterministic | kNonODeterministic)) {
+        olabels.reset(new std::unordered_set<Label>());
+      }
 
       bool first_arc = true;
       for (ArcIterator<Fst<Arc>> aiter(fst, s); !aiter.Done(); aiter.Next()) {
@@ -185,10 +192,10 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
         comp_props &= ~kString;
       }
 
-      Weight final = fst.Final(s);
+      const Weight final_weight = fst.Final(s);
 
-      if (final != Weight::Zero()) {  // final state
-        if (final != Weight::One()) {
+      if (final_weight != Weight::Zero()) {  // final state
+        if (final_weight != Weight::One()) {
           comp_props |= kWeighted;
           comp_props &= ~kUnweighted;
         }
@@ -199,9 +206,6 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
           comp_props &= ~kString;
         }
       }
-
-      delete ilabels;
-      delete olabels;
     }
 
     if (fst.Start() != kNoStateId && fst.Start() != 0) {
@@ -224,9 +228,10 @@ uint64 TestProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known) {
   if (FLAGS_fst_verify_properties) {
     uint64 stored_props = fst.Properties(kFstProperties, false);
     uint64 computed_props = ComputeProperties(fst, mask, known, false);
-    if (!CompatProperties(stored_props, computed_props))
+    if (!CompatProperties(stored_props, computed_props)) {
       FSTERROR() << "TestProperties: stored Fst properties incorrect"
                  << " (stored: props1, computed: props2)";
+    }
     return computed_props;
   } else {
     return ComputeProperties(fst, mask, known, true);

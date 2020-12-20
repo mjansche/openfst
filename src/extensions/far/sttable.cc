@@ -7,7 +7,7 @@
 namespace fst {
 
 bool IsSTTable(const string &filename) {
-  std::ifstream strm(filename.c_str());
+  std::ifstream strm(filename);
   if (!strm.good()) return false;
 
   int32 magic_number = 0;

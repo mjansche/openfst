@@ -27,7 +27,7 @@ SymbolTableTextOptions::SymbolTableTextOptions()
 SymbolTableImpl* SymbolTableImpl::ReadText(std::istream& strm,
                                            const string& filename,
                                            const SymbolTableTextOptions& opts) {
-  SymbolTableImpl* impl = new SymbolTableImpl(filename);
+  std::unique_ptr<SymbolTableImpl> impl(new SymbolTableImpl(filename));
 
   int64 nline = 0;
   char line[kLineLen];
@@ -36,15 +36,15 @@ SymbolTableImpl* SymbolTableImpl::ReadText(std::istream& strm,
     std::vector<char*> col;
     string separator = opts.fst_field_separator + "\n";
     SplitToVector(line, separator.c_str(), &col, true);
-    if (col.size() == 0)  // empty line
+    if (col.empty()) {  // empty line
       continue;
+    }
     if (col.size() != 2) {
       LOG(ERROR) << "SymbolTable::ReadText: Bad number of columns ("
                  << col.size() << "), "
                  << "file = " << filename << ", line = " << nline << ":<"
                  << line << ">";
-      delete impl;
-      return 0;
+      return nullptr;
     }
     const char* symbol = col[0];
     const char* value = col[1];
@@ -55,13 +55,12 @@ SymbolTableImpl* SymbolTableImpl::ReadText(std::istream& strm,
       LOG(ERROR) << "SymbolTable::ReadText: Bad non-negative integer \""
                  << value << "\", "
                  << "file = " << filename << ", line = " << nline;
-      delete impl;
-      return 0;
+      return nullptr;
     }
     impl->AddSymbol(symbol, key);
   }
 
-  return impl;
+  return impl.release();
 }
 
 void SymbolTableImpl::MaybeRecomputeCheckSum() const {
@@ -72,8 +71,9 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
 
   // We'll aquire an exclusive lock to recompute the checksums.
   MutexLock check_sum_lock(&check_sum_mutex_);
-  if (check_sum_finalized_)  // Another thread (coming in around the same time
-    return;                  // might have done it already).  So we recheck.
+  if (check_sum_finalized_) {  // Another thread (coming in around the same time
+    return;                    // might have done it already).  So we recheck.
+  }
 
   // Calculate the original label-agnostic check sum.
   CheckSummer check_sum;
@@ -131,6 +131,51 @@ int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
   return key;
 }
 
+// TODO(rybach): Consider a more efficient implementation which re-uses holes in
+// the dense-key range or re-arranges the dense-key range from time to time.
+void SymbolTableImpl::RemoveSymbol(const int64 key) {
+  int64 idx = key;
+  if (key < 0 || key >= dense_key_limit_) {
+    auto iter = key_map_.find(key);
+    if (iter == key_map_.end()) return;
+    idx = iter->second;
+    key_map_.erase(iter);
+  }
+  if (idx < 0 || idx >= symbols_.size()) return;
+
+  symbols_.RemoveSymbol(idx);
+
+  // Removed one symbol, all indexes > idx are shifted by -1.
+  for (auto& k : key_map_) {
+    if (k.second > idx) --k.second;
+  }
+
+  if (key >= 0 && key < dense_key_limit_) {
+    // Removal put a hole in the dense key range. Adjust range to [0, key).
+    const int64 new_dense_key_limit = key;
+    for (int64 i = key + 1; i < dense_key_limit_; ++i) {
+      key_map_[i] = i - 1;
+    }
+    // Move existing values in idx_key to new place.
+    idx_key_.resize(symbols_.size() - new_dense_key_limit);
+    for (int64 i = symbols_.size(); i >= dense_key_limit_; --i) {
+      idx_key_[i - new_dense_key_limit - 1] = idx_key_[i - dense_key_limit_];
+    }
+    // Add indexes for previously dense keys.
+    for (int64 i = new_dense_key_limit; i < dense_key_limit_ - 1; ++i) {
+      idx_key_[i - new_dense_key_limit] = i + 1;
+    }
+    dense_key_limit_ = new_dense_key_limit;
+  } else {
+    // Remove entry for removed index in idx_key.
+    for (int64 i = idx - dense_key_limit_; i < idx_key_.size() - 1; ++i) {
+      idx_key_[i] = idx_key_[i + 1];
+    }
+    idx_key_.pop_back();
+  }
+  if (key == available_key_ - 1) available_key_ = key;
+}
+
 SymbolTableImpl* SymbolTableImpl::Read(std::istream& strm,
                                        const SymbolTableReadOptions& opts) {
   int32 magic_number = 0;
@@ -141,13 +186,12 @@ SymbolTableImpl* SymbolTableImpl::Read(std::istream& strm,
   }
   string name;
   ReadType(strm, &name);
-  SymbolTableImpl* impl = new SymbolTableImpl(name);
+  std::unique_ptr<SymbolTableImpl> impl(new SymbolTableImpl(name));
   ReadType(strm, &impl->available_key_);
   int64 size;
   ReadType(strm, &size);
   if (strm.fail()) {
     LOG(ERROR) << "SymbolTable::Read: Read failed";
-    delete impl;
     return nullptr;
   }
 
@@ -159,12 +203,11 @@ SymbolTableImpl* SymbolTableImpl::Read(std::istream& strm,
     ReadType(strm, &key);
     if (strm.fail()) {
       LOG(ERROR) << "SymbolTable::Read: Read failed";
-      delete impl;
       return nullptr;
     }
     impl->AddSymbol(symbol, key);
   }
-  return impl;
+  return impl.release();
 }
 
 bool SymbolTableImpl::Write(std::ostream& strm) const {
@@ -190,8 +233,9 @@ const int64 SymbolTable::kNoSymbol;
 
 void SymbolTable::AddTable(const SymbolTable& table) {
   MutateCheck();
-  for (SymbolTableIterator iter(table); !iter.Done(); iter.Next())
+  for (SymbolTableIterator iter(table); !iter.Done(); iter.Next()) {
     impl_->AddSymbol(iter.Symbol());
+  }
 }
 
 bool SymbolTable::WriteText(std::ostream& strm,
@@ -243,7 +287,8 @@ DenseSymbolMap::~DenseSymbolMap() {
 
 std::pair<int64, bool> DenseSymbolMap::InsertOrFind(const string& key) {
   static const float kMaxOccupancyRatio = 0.75;  // Grow when 75% full.
-  if (symbols_.size() >= kMaxOccupancyRatio * buckets_.size()) Rehash();
+  if (symbols_.size() >= kMaxOccupancyRatio * buckets_.size())
+    Rehash(buckets_.size() * 2);
   size_t idx = str_hash_(key) & hash_mask_;
   while (buckets_[idx] != empty_) {
     const int64 stored_value = buckets_[idx];
@@ -270,9 +315,8 @@ int64 DenseSymbolMap::Find(const string& key) const {
   return buckets_[idx];
 }
 
-void DenseSymbolMap::Rehash() {
-  size_t sz = buckets_.size();
-  buckets_.resize(2 * sz);
+void DenseSymbolMap::Rehash(size_t num_buckets) {
+  buckets_.resize(num_buckets);
   hash_mask_ = buckets_.size() - 1;
   std::uninitialized_fill(buckets_.begin(), buckets_.end(), empty_);
   for (int i = 0; i < symbols_.size(); i++) {
@@ -289,6 +333,12 @@ const char* DenseSymbolMap::NewSymbol(const string& sym) {
   char* newstr = new char[num];
   memcpy(newstr, sym.c_str(), num);
   return newstr;
+}
+
+void DenseSymbolMap::RemoveSymbol(size_t idx) {
+  delete[] symbols_[idx];
+  symbols_.erase(symbols_.begin() + idx);
+  Rehash(buckets_.size());
 }
 
 }  // namespace internal

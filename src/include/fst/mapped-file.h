@@ -59,7 +59,8 @@ class MappedFile {
   explicit MappedFile(const MemoryRegion& region);
 
   MemoryRegion region_;
-  DISALLOW_COPY_AND_ASSIGN(MappedFile);
+  MappedFile(const MappedFile&) = delete;
+  MappedFile& operator=(const MappedFile&) = delete;
 };
 }  // namespace fst
 

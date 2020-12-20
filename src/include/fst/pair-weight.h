@@ -10,6 +10,7 @@
 #include <climits>
 #include <stack>
 #include <string>
+#include <utility>
 
 #include <fst/weight.h>
 
@@ -28,7 +29,7 @@ class PairWeight {
 
   PairWeight(const PairWeight &w) : value1_(w.value1_), value2_(w.value2_) {}
 
-  PairWeight(W1 w1, W2 w2) : value1_(w1), value2_(w2) {}
+  PairWeight(W1 w1, W2 w2) : value1_(std::move(w1)), value2_(std::move(w2)) {}
 
   static const PairWeight<W1, W2> &Zero() {
     static const PairWeight<W1, W2> zero(W1::Zero(), W2::Zero());
@@ -136,6 +137,25 @@ inline std::istream &operator>>(std::istream &strm, PairWeight<W1, W2> &w) {
 
   return strm;
 }
+
+// This function object returns weights by calling the underlying generators
+// and forming a pair. This is intended primarily for testing.
+template <class W1, class W2>
+class WeightGenerate<PairWeight<W1, W2>> {
+ public:
+  using Weight = PairWeight<W1, W2>;
+  using Generate1 = WeightGenerate<W1>;
+  using Generate2 = WeightGenerate<W2>;
+
+  explicit WeightGenerate(bool allow_zero = true)
+      : generate1_(allow_zero), generate2_(allow_zero) {}
+
+  Weight operator()() const { return Weight(generate1_(), generate2_()); }
+
+ private:
+  Generate1 generate1_;
+  Generate2 generate2_;
+};
 
 }  // namespace fst
 

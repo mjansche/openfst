@@ -3,10 +3,11 @@
 //
 // Expands a (bounded-stack) MPDT as an FST.
 
+#include <string>
 #include <vector>
 
-#include <fst/extensions/mpdt/read_write_utils.h>
 #include <fst/extensions/mpdt/mpdtscript.h>
+#include <fst/extensions/mpdt/read_write_utils.h>
 #include <fst/util.h>
 
 DEFINE_string(mpdt_parentheses, "",

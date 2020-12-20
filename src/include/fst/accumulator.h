@@ -29,7 +29,7 @@ class DefaultAccumulator {
 
   DefaultAccumulator() {}
 
-  DefaultAccumulator(const DefaultAccumulator<A> &acc, bool safe = false) {}
+  DefaultAccumulator(const DefaultAccumulator &acc, bool safe = false) {}
 
   void Init(const Fst<A> &fst, bool copy = false) {}
 
@@ -41,15 +41,16 @@ class DefaultAccumulator {
   Weight Sum(Weight w, ArcIterator *aiter, ssize_t begin, ssize_t end) {
     Weight sum = w;
     aiter->Seek(begin);
-    for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos)
+    for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos) {
       sum = Plus(sum, aiter->Value().weight);
+    }
     return sum;
   }
 
   bool Error() const { return false; }
 
  private:
-  void operator=(const DefaultAccumulator<A> &);  // Disallow
+  DefaultAccumulator &operator=(const DefaultAccumulator &) = delete;
 };
 
 // This class accumulates arc weights using the log semiring Plus()
@@ -64,7 +65,7 @@ class LogAccumulator {
 
   LogAccumulator() {}
 
-  LogAccumulator(const LogAccumulator<A> &acc, bool safe = false) {}
+  LogAccumulator(const LogAccumulator &acc, bool safe = false) {}
 
   void Init(const Fst<A> &fst, bool copy = false) {}
 
@@ -76,8 +77,9 @@ class LogAccumulator {
   Weight Sum(Weight w, ArcIterator *aiter, ssize_t begin, ssize_t end) {
     Weight sum = w;
     aiter->Seek(begin);
-    for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos)
+    for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos) {
       sum = LogPlus(sum, aiter->Value().weight);
+    }
     return sum;
   }
 
@@ -89,16 +91,17 @@ class LogAccumulator {
   Weight LogPlus(Weight w, Weight v) {
     double f1 = to_log_weight_(w).Value();
     double f2 = to_log_weight_(v).Value();
-    if (f1 > f2)
-      return to_weight_(f2 - LogPosExp(f1 - f2));
-    else
-      return to_weight_(f1 - LogPosExp(f2 - f1));
+    if (f1 > f2) {
+      return to_weight_(Log64Weight(f2 - LogPosExp(f1 - f2)));
+    } else {
+      return to_weight_(Log64Weight(f1 - LogPosExp(f2 - f1)));
+    }
   }
 
   WeightConvert<Weight, Log64Weight> to_log_weight_;
   WeightConvert<Log64Weight, Weight> to_weight_;
 
-  void operator=(const LogAccumulator<A> &);  // Disallow
+  LogAccumulator &operator=(const LogAccumulator &) = delete;
 };
 
 // Interface for shareable data for fast log accumulator copies. Holds pointers
@@ -155,7 +158,8 @@ class FastLogAccumulatorData {
   const int *weight_positions_ptr_;
   int num_positions_;
 
-  DISALLOW_COPY_AND_ASSIGN(FastLogAccumulatorData);
+  FastLogAccumulatorData(const FastLogAccumulatorData &) = delete;
+  FastLogAccumulatorData &operator=(const FastLogAccumulatorData &) = delete;
 };
 
 // FastLogAccumulatorData with mutable storage.
@@ -179,7 +183,9 @@ class MutableFastLogAccumulatorData : public FastLogAccumulatorData {
   vector<double> weights_;
   vector<int> weight_positions_;
 
-  DISALLOW_COPY_AND_ASSIGN(MutableFastLogAccumulatorData);
+  MutableFastLogAccumulatorData(const MutableFastLogAccumulatorData &) = delete;
+  MutableFastLogAccumulatorData &operator=(
+      const MutableFastLogAccumulatorData &) = delete;
 };
 
 // This class accumulates arc weights using the log semiring Plus()
@@ -242,7 +248,7 @@ class FastLogAccumulator {
     // Finds begin and end of pre-stored weights
     ssize_t index_begin = -1, index_end = -1;
     ssize_t stored_begin = end, stored_end = end;
-    if (state_weights_ != nullptr) {
+    if (state_weights_) {
       index_begin = begin > 0 ? (begin - 1) / arc_period_ + 1 : 0;
       index_end = end / arc_period_;
       stored_begin = index_begin * arc_period_;
@@ -252,8 +258,9 @@ class FastLogAccumulator {
     if (begin < stored_begin) {
       ssize_t pos_end = std::min(stored_begin, end);
       aiter->Seek(begin);
-      for (ssize_t pos = begin; pos < pos_end; aiter->Next(), ++pos)
+      for (ssize_t pos = begin; pos < pos_end; aiter->Next(), ++pos) {
         sum = LogPlus(sum, aiter->Value().weight);
+      }
     }
     // Computes sum between pre-stored weights
     if (stored_begin < stored_end) {
@@ -274,8 +281,9 @@ class FastLogAccumulator {
     if (stored_end < end) {
       ssize_t pos_start = std::max(stored_begin, stored_end);
       aiter->Seek(pos_start);
-      for (ssize_t pos = pos_start; pos < end; aiter->Next(), ++pos)
+      for (ssize_t pos = pos_start; pos < end; aiter->Next(), ++pos) {
         sum = LogPlus(sum, aiter->Value().weight);
+      }
     }
     return sum;
   }
@@ -337,28 +345,31 @@ class FastLogAccumulator {
   Weight LogPlus(Weight w, Weight v) const {
     double f1 = to_log_weight_(w).Value();
     double f2 = to_log_weight_(v).Value();
-    if (f1 > f2)
-      return to_weight_(f2 - LogPosExp(f1 - f2));
-    else
-      return to_weight_(f1 - LogPosExp(f2 - f1));
+    if (f1 > f2) {
+      return to_weight_(Log64Weight(f2 - LogPosExp(f1 - f2)));
+    } else {
+      return to_weight_(Log64Weight(f1 - LogPosExp(f2 - f1)));
+    }
   }
 
   double LogPlus(double f1, Weight v) const {
     double f2 = to_log_weight_(v).Value();
-    if (f1 == FloatLimits<double>::PosInfinity())
+    if (f1 == FloatLimits<double>::PosInfinity()) {
       return f2;
-    else if (f1 > f2)
+    } else if (f1 > f2) {
       return f2 - LogPosExp(f1 - f2);
-    else
+    } else {
       return f1 - LogPosExp(f2 - f1);
+    }
   }
 
   // Assumes f1 < f2
   Weight LogMinus(double f1, double f2) const {
-    if (f2 == FloatLimits<double>::PosInfinity())
-      return to_weight_(f1);
-    else
-      return to_weight_(f1 - LogMinusExp(f2 - f1));
+    if (f2 == FloatLimits<double>::PosInfinity()) {
+      return to_weight_(Log64Weight(f1));
+    } else {
+      return to_weight_(Log64Weight(f1 - LogMinusExp(f2 - f1)));
+    }
   }
 
   const WeightConvert<Weight, Log64Weight> to_log_weight_;
@@ -370,7 +381,7 @@ class FastLogAccumulator {
   const double *state_weights_;
   bool error_;
 
-  void operator=(const FastLogAccumulator<A> &);  // Disallow
+  FastLogAccumulator &operator=(const FastLogAccumulator<A> &) = delete;
 };
 
 // Stores shareable data for cache log accumulator copies.
@@ -390,20 +401,15 @@ class CacheLogAccumulatorData {
         cache_limit_(data.cache_limit_),
         cache_size_(0) {}
 
-  ~CacheLogAccumulatorData() {
-    for (auto it = cache_.begin(); it != cache_.end(); ++it)
-      delete it->second.weights;
-  }
-
   bool CacheDisabled() const { return cache_gc_ && cache_limit_ == 0; }
 
   std::vector<double> *GetWeights(StateId s) {
     auto it = cache_.find(s);
     if (it != cache_.end()) {
       it->second.recent = true;
-      return it->second.weights;
+      return it->second.weights.get();
     } else {
-      return 0;
+      return nullptr;
     }
   }
 
@@ -416,7 +422,7 @@ class CacheLogAccumulatorData {
  private:
   // Cached information for a given state.
   struct CacheState {
-    std::vector<double> *weights;  // Accumulated weights for this state.
+    std::unique_ptr<std::vector<double>> weights;  // Accumulated weights.
     bool recent;              // Has this state been accessed since last GC?
 
     CacheState(std::vector<double> *w, bool r) : weights(w), recent(r) {}
@@ -433,7 +439,6 @@ class CacheLogAccumulatorData {
       CacheState &cs = it->second;
       if (free_recent || !cs.recent) {
         cache_size_ -= cs.weights->capacity() * sizeof(double);
-        delete cs.weights;
         cache_.erase(it++);
       } else {
         cs.recent = false;
@@ -448,7 +453,7 @@ class CacheLogAccumulatorData {
   size_t cache_limit_;                   // # of bytes cached
   size_t cache_size_;                    // # of bytes allowed before GC
 
-  void operator=(const CacheLogAccumulatorData<A> &);  // Disallow
+  CacheLogAccumulatorData &operator=(const CacheLogAccumulatorData &) = delete;
 };
 
 // This class accumulates arc weights using the log semiring Plus()
@@ -467,33 +472,26 @@ class CacheLogAccumulator {
   explicit CacheLogAccumulator(ssize_t arc_limit = 10, bool gc = false,
                                size_t gc_limit = 10 * 1024 * 1024)
       : arc_limit_(arc_limit),
-        fst_(0),
         data_(std::make_shared<CacheLogAccumulatorData<A>>(gc, gc_limit)),
         s_(kNoStateId),
         error_(false) {}
 
   CacheLogAccumulator(const CacheLogAccumulator<A> &acc, bool safe = false)
       : arc_limit_(acc.arc_limit_),
-        fst_(acc.fst_ ? acc.fst_->Copy() : 0),
+        fst_(acc.fst_ ? acc.fst_->Copy() : nullptr),
         data_(safe ? std::make_shared<CacheLogAccumulatorData<A>>(*acc.data_)
                    : acc.data_),
         s_(kNoStateId),
         error_(acc.error_) {}
 
-  ~CacheLogAccumulator() {
-    if (fst_) delete fst_;
-  }
-
   // Arg 'arc_limit' specifies minimum # of arcs to pre-compute state.
   void Init(const Fst<A> &fst, bool copy = false) {
-    if (copy) {
-      delete fst_;
-    } else if (fst_) {
+    if (!copy && fst_) {
       FSTERROR() << "CacheLogAccumulator: Initialization error";
       error_ = true;
       return;
     }
-    fst_ = fst.Copy();
+    fst_.reset(fst.Copy());
   }
 
   void SetState(StateId s, int depth = 0) {
@@ -501,19 +499,19 @@ class CacheLogAccumulator {
     s_ = s;
 
     if (data_->CacheDisabled() || error_) {
-      weights_ = 0;
+      weights_ = nullptr;
       return;
     }
 
     if (!fst_) {
       FSTERROR() << "CacheLogAccumulator::SetState: Incorrectly initialized";
       error_ = true;
-      weights_ = 0;
+      weights_ = nullptr;
       return;
     }
 
     weights_ = data_->GetWeights(s);
-    if ((weights_ == 0) && (fst_->NumArcs(s) >= arc_limit_)) {
+    if ((weights_ == nullptr) && (fst_->NumArcs(s) >= arc_limit_)) {
       weights_ = new std::vector<double>;
       weights_->reserve(fst_->NumArcs(s) + 1);
       weights_->push_back(FloatLimits<double>::PosInfinity());
@@ -525,11 +523,12 @@ class CacheLogAccumulator {
 
   template <class Iterator>
   Weight Sum(Weight w, Iterator *aiter, ssize_t begin, ssize_t end) {
-    if (weights_ == 0) {
+    if (weights_ == nullptr) {
       Weight sum = w;
       aiter->Seek(begin);
-      for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos)
+      for (ssize_t pos = begin; pos < end; aiter->Next(), ++pos) {
         sum = LogPlus(sum, aiter->Value().weight);
+      }
       return sum;
     } else {
       if (weights_->size() <= end) {
@@ -543,7 +542,7 @@ class CacheLogAccumulator {
       if (f1 < f2) {
         return LogPlus(w, LogMinus(f1, f2));
       } else {
-        Weight sum = w;
+        const Weight &sum = w;
         // commented out for efficiency; adds Zero()
         /*
         // explicitly computes if cumulative sum lacks precision
@@ -559,7 +558,7 @@ class CacheLogAccumulator {
   // Arc iterator position determines beginning point of lower bound.
   template <class Iterator>
   size_t LowerBound(double w, Iterator *aiter) {
-    if (weights_ != 0) {
+    if (weights_) {
       ssize_t pos = aiter->Position();
       return std::lower_bound(weights_->begin() + pos + 1,
                               weights_->end(), w, std::greater<double>()) -
@@ -591,28 +590,31 @@ class CacheLogAccumulator {
   Weight LogPlus(Weight w, Weight v) {
     double f1 = to_log_weight_(w).Value();
     double f2 = to_log_weight_(v).Value();
-    if (f1 > f2)
-      return to_weight_(f2 - LogPosExp(f1 - f2));
-    else
-      return to_weight_(f1 - LogPosExp(f2 - f1));
+    if (f1 > f2) {
+      return to_weight_(Log64Weight(f2 - LogPosExp(f1 - f2)));
+    } else {
+      return to_weight_(Log64Weight(f1 - LogPosExp(f2 - f1)));
+    }
   }
 
   double LogPlus(double f1, Weight v) {
     double f2 = to_log_weight_(v).Value();
-    if (f1 == FloatLimits<double>::PosInfinity())
+    if (f1 == FloatLimits<double>::PosInfinity()) {
       return f2;
-    else if (f1 > f2)
+    } else if (f1 > f2) {
       return f2 - LogPosExp(f1 - f2);
-    else
+    } else {
       return f1 - LogPosExp(f2 - f1);
+    }
   }
 
   // Assumes f1 < f2
   Weight LogMinus(double f1, double f2) {
-    if (f2 == FloatLimits<double>::PosInfinity())
-      return to_weight_(f1);
-    else
-      return to_weight_(f1 - LogMinusExp(f2 - f1));
+    if (f2 == FloatLimits<double>::PosInfinity()) {
+      return to_weight_(Log64Weight(f1));
+    } else {
+      return to_weight_(Log64Weight(f1 - LogMinusExp(f2 - f1)));
+    }
   }
 
   WeightConvert<Weight, Log64Weight> to_log_weight_;
@@ -620,12 +622,10 @@ class CacheLogAccumulator {
 
   ssize_t arc_limit_;                 // Minimum # of arcs to cache a state
   std::vector<double> *weights_;      // Accumulated weights for cur. state
-  const Fst<A> *fst_;                 // Input fst
+  std::unique_ptr<const Fst<A>> fst_;                // Input fst
   std::shared_ptr<CacheLogAccumulatorData<A>> data_;  // Cache data
   StateId s_;                         // Current state
   bool error_;
-
-  void operator=(const CacheLogAccumulator<A> &);  // Disallow
 };
 
 // Stores shareable data for replace accumulator copies.
@@ -638,15 +638,15 @@ class ReplaceAccumulatorData {
   typedef T StateTable;
   typedef typename T::StateTuple StateTuple;
 
-  ReplaceAccumulatorData() : state_table_(0) {}
+  ReplaceAccumulatorData() : state_table_(nullptr) {}
 
   explicit ReplaceAccumulatorData(
       const std::vector<Accumulator *> &accumulators)
-      : state_table_(0), accumulators_(accumulators) {}
-
-  ~ReplaceAccumulatorData() {
-    for (size_t i = 0; i < fst_array_.size(); ++i) delete fst_array_[i];
-    for (size_t i = 0; i < accumulators_.size(); ++i) delete accumulators_[i];
+      : state_table_(nullptr) {
+    accumulators_.reserve(accumulators.size());
+    for (Accumulator *accumulator : accumulators) {
+      accumulators_.emplace_back(accumulator);
+    }
   }
 
   void Init(const std::vector<std::pair<Label, const Fst<Arc> *>> &fst_tuples,
@@ -655,25 +655,23 @@ class ReplaceAccumulatorData {
     accumulators_.resize(fst_tuples.size());
     for (size_t i = 0; i < accumulators_.size(); ++i) {
       if (!accumulators_[i]) {
-        accumulators_[i] = new Accumulator;
+        accumulators_[i].reset(new Accumulator());
         accumulators_[i]->Init(*(fst_tuples[i].second));
       }
-      fst_array_.push_back(fst_tuples[i].second->Copy());
+      fst_array_.emplace_back(fst_tuples[i].second->Copy());
     }
   }
 
-  const StateTuple &GetTuple(StateId s) const { return state_table_->Tuple(s); }
+  const StateTuple& GetTuple(StateId s) const { return state_table_->Tuple(s); }
 
-  Accumulator *GetAccumulator(size_t i) { return accumulators_[i]; }
+  Accumulator *GetAccumulator(size_t i) { return accumulators_[i].get(); }
 
-  const Fst<Arc> *GetFst(size_t i) const { return fst_array_[i]; }
+  const Fst<Arc> *GetFst(size_t i) const { return fst_array_[i].get(); }
 
  private:
   const T *state_table_;
-  std::vector<Accumulator *> accumulators_;
-  std::vector<const Fst<Arc> *> fst_array_;
-
-  DISALLOW_COPY_AND_ASSIGN(ReplaceAccumulatorData);
+  std::vector<std::unique_ptr<Accumulator>> accumulators_;
+  std::vector<std::unique_ptr<const Fst<Arc>>> fst_array_;
 };
 
 // This class accumulates weights in a ReplaceFst.  The 'Init' method
@@ -694,29 +692,23 @@ class ReplaceAccumulator {
   ReplaceAccumulator()
       : init_(false),
         data_(std::make_shared<ReplaceAccumulatorData<Accumulator, T>>()),
-        aiter_(0),
         error_(false) {}
 
   explicit ReplaceAccumulator(const std::vector<Accumulator *> &accumulators)
       : init_(false),
         data_(std::make_shared<ReplaceAccumulatorData<Accumulator, T>>(
             accumulators)),
-        aiter_(0),
         error_(false) {}
 
   ReplaceAccumulator(const ReplaceAccumulator<Accumulator, T> &acc,
                      bool safe = false)
-      : init_(acc.init_), data_(acc.data_), aiter_(0), error_(acc.error_) {
+      : init_(acc.init_), data_(acc.data_), error_(acc.error_) {
     if (!init_) {
       FSTERROR() << "ReplaceAccumulator: Can't copy unintialized accumulator";
     }
     if (safe) {
       FSTERROR() << "ReplaceAccumulator: Safe copy not supported";
     }
-  }
-
-  ~ReplaceAccumulator() {
-    if (aiter_) delete aiter_;
   }
 
   // Does not take ownership of the state table, the state table
@@ -758,9 +750,8 @@ class ReplaceAccumulator {
       offset_ = 0;
       offset_weight_ = Weight::Zero();
     }
-    if (aiter_) delete aiter_;
-    aiter_ =
-        new ArcIterator<Fst<Arc>>(*data_->GetFst(fst_id_), tuple.fst_state);
+    aiter_.reset(
+        new ArcIterator<Fst<Arc>>(*data_->GetFst(fst_id_), tuple.fst_state));
   }
 
   Weight Sum(Weight w, Weight v) {
@@ -773,8 +764,8 @@ class ReplaceAccumulator {
     if (error_) return Weight::NoWeight();
     Weight sum = begin == end ? Weight::Zero()
                               : data_->GetAccumulator(fst_id_)->Sum(
-                                    w, aiter_, begin ? begin - offset_ : 0,
-                                    end - offset_);
+                                    w, aiter_.get(),
+                                    begin ? begin - offset_ : 0, end - offset_);
     if (begin == 0 && end != 0 && offset_ > 0) sum = Sum(offset_weight_, sum);
     return sum;
   }
@@ -787,10 +778,115 @@ class ReplaceAccumulator {
   Label fst_id_;
   size_t offset_;
   Weight offset_weight_;
-  ArcIterator<Fst<Arc>> *aiter_;
+  std::unique_ptr<ArcIterator<Fst<Arc>>> aiter_;
   bool error_;
+};
 
-  void operator=(const ReplaceAccumulator<Accumulator, T> &);  // Disallow
+// SafeReplaceAccumulator accumulates weights in a ReplaceFst and copies of it
+// are always thread-safe copies.
+template <class Accumulator, class StateTable_>
+class SafeReplaceAccumulator {
+ public:
+  using Arc = typename Accumulator::Arc;
+  using StateId = typename Arc::StateId;
+  using Label = typename Arc::Label;
+  using Weight = typename Arc::Weight;
+  using StateTable = StateTable_;
+  using StateTuple = typename StateTable::StateTuple;
+
+  SafeReplaceAccumulator() {}
+
+  SafeReplaceAccumulator(const SafeReplaceAccumulator& copy, bool safe)
+      : SafeReplaceAccumulator(copy) {}
+
+  explicit SafeReplaceAccumulator(const vector<Accumulator>& accumulators) {
+    for (const Accumulator& acc : accumulators) {
+      accumulators_.emplace_back(acc, true);
+    }
+  }
+
+  void Init(const std::vector<std::pair<Label, const Fst<Arc>*>> &fst_tuples,
+            const StateTable *state_table) {
+    state_table_ = state_table;
+    for (int i = 0; i < fst_tuples.size(); ++i) {
+      if (i == accumulators_.size()) {
+        accumulators_.resize(accumulators_.size() + 1);
+        accumulators_[i].Init(*(fst_tuples[i].second));
+      }
+      fst_array_.emplace_back(fst_tuples[i].second->Copy(true));
+    }
+    init_ = true;
+  }
+
+  void Init(const Fst<Arc> &fst, bool copy = false) {
+    if (!init_) {
+      FSTERROR() << "SafeReplaceAccumulator::Init: Accumulator needs to be"
+                 << " initialized before being passed to LookAheadMatcher";
+      error_ = true;
+    }
+  }
+
+  void SetState(StateId s) {
+    StateTuple tuple = state_table_->Tuple(s);
+    fst_id_ = tuple.fst_id - 1;  // Replace FST ID is 1-based
+    GetAccumulator(fst_id_)->SetState(tuple.fst_state);
+
+    offset_ = 0;
+    offset_weight_ = Weight::Zero();
+    Weight final_weight = GetFst(fst_id_)->Final(tuple.fst_state);
+    if ((tuple.prefix_id != 0) && (final_weight != Weight::Zero())) {
+      offset_ = 1;
+      offset_weight_ = final_weight;
+    }
+    aiter_.Set(*GetFst(fst_id_), tuple.fst_state);
+  }
+
+  Weight Sum(Weight w, Weight v) {
+    if (error_) return Weight::NoWeight();
+    return GetAccumulator(fst_id_)->Sum(w, v);
+  }
+
+  template <class ArcIterator>
+  Weight Sum(Weight w, ArcIterator *aiter, ssize_t begin, ssize_t end) {
+    if (error_) return Weight::NoWeight();
+    if (begin == end) return Weight::Zero();
+    Weight sum = GetAccumulator(fst_id_)->Sum(
+        w, aiter_.get(), begin ? begin - offset_ : 0,
+        end - offset_);
+    if (begin == 0 && end != 0 && offset_ > 0) {
+      sum = Sum(offset_weight_, sum);
+    }
+    return sum;
+  }
+
+  bool Error() const { return error_; }
+
+ private:
+  class ArcIteratorPtr {
+   public:
+    ArcIteratorPtr() {}
+    ArcIteratorPtr(const ArcIteratorPtr& copy) {}
+    void Set(const Fst<Arc>& fst, StateId state_id) {
+      ptr_.reset(new ArcIterator<Fst<Arc>>(fst, state_id));
+    }
+    ArcIterator<Fst<Arc>>* get() { return ptr_.get(); }
+   private:
+    std::unique_ptr<ArcIterator<Fst<Arc>>> ptr_;
+  };
+
+  Accumulator* GetAccumulator(size_t i) { return &accumulators_[i]; }
+  const Fst<Arc>* GetFst(size_t i) const { return fst_array_[i].get(); }
+
+  const StateTable *state_table_;
+  std::vector<Accumulator> accumulators_;
+  std::vector<std::shared_ptr<Fst<Arc>>> fst_array_;
+  ArcIteratorPtr aiter_;
+  bool init_ = false;
+  bool error_ = false;
+
+  Label fst_id_;
+  size_t offset_;
+  Weight offset_weight_;
 };
 
 }  // namespace fst

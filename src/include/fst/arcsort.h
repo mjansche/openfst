@@ -31,7 +31,7 @@ class ArcSortMapper {
 
   // Allows updating Fst argument; pass only if changed.
   ArcSortMapper(const ArcSortMapper<Arc, Compare> &mapper,
-                const Fst<Arc> *fst = 0)
+                const Fst<Arc> *fst = nullptr)
       : fst_(fst ? *fst : mapper.fst_), comp_(mapper.comp_), i_(0) {}
 
   StateId Start() { return fst_.Start(); }
@@ -41,8 +41,9 @@ class ArcSortMapper {
     i_ = 0;
     arcs_.clear();
     arcs_.reserve(fst_.NumArcs(s));
-    for (ArcIterator<Fst<Arc>> aiter(fst_, s); !aiter.Done(); aiter.Next())
+    for (ArcIterator<Fst<Arc>> aiter(fst_, s); !aiter.Done(); aiter.Next()) {
       arcs_.push_back(aiter.Value());
+    }
     std::sort(arcs_.begin(), arcs_.end(), comp_);
   }
 
@@ -60,7 +61,7 @@ class ArcSortMapper {
   std::vector<Arc> arcs_;
   ssize_t i_;  // current arc position
 
-  void operator=(const ArcSortMapper<Arc, Compare> &);  // disallow
+  ArcSortMapper &operator=(const ArcSortMapper &) = delete;
 };
 
 // Sorts the arcs in an FST according to function object 'comp' of

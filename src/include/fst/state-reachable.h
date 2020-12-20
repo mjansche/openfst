@@ -96,8 +96,9 @@ class IntervalReachVisitor {
       (*intervals)[0].end = index_;  // Update tree interval end
     }
     (*isets_)[s].Normalize();
-    if (p != kNoStateId)
+    if (p != kNoStateId) {
       (*isets_)[p].Union((*isets_)[s]);  // Propagate intervals to parent
+    }
   }
 
   void FinishVisit() {}
@@ -127,7 +128,7 @@ class StateReachable {
   typedef typename A::Weight Weight;
   typedef typename IndexIntervalSet::Interval Interval;
 
-  StateReachable(const Fst<A> &fst) : error_(false) {
+  explicit StateReachable(const Fst<A> &fst) : error_(false) {
     if (fst.Properties(kAcyclic, true)) {
       AcyclicStateReachable(fst);
     } else {
@@ -135,7 +136,7 @@ class StateReachable {
     }
   }
 
-  StateReachable(const StateReachable<A> &reachable) {
+  explicit StateReachable(const StateReachable<A> &reachable) {
     FSTERROR() << "Copy constructor for state reachable class "
                << "not implemented.";
     error_ = true;
@@ -217,7 +218,7 @@ class StateReachable {
   std::vector<I> state2index_;         // Finds index for a final state
   bool error_;
 
-  void operator=(const StateReachable<A> &);  // Disallow
+  StateReachable &operator=(const StateReachable &) = delete;
 };
 
 }  // namespace fst

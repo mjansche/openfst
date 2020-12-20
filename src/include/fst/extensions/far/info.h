@@ -7,10 +7,11 @@
 #include <iomanip>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fst/extensions/far/far.h>
-#include <fst/extensions/far/main.h>  // For FarTypeToString
+#include <fst/extensions/far/util.h>
 
 namespace fst {
 
@@ -34,7 +35,11 @@ struct KeyInfo {
   size_t nfinal;
 
   KeyInfo(string k, string t, int64 ns = 0, int64 na = 0, int nf = 0)
-      : key(k), type(t), nstate(ns), narc(na), nfinal(nf) {}
+      : key(std::move(k)),
+        type(std::move(t)),
+        nstate(ns),
+        narc(na),
+        nfinal(nf) {}
 };
 
 template <class Arc>
@@ -50,7 +55,7 @@ void FarInfo(const std::vector<string> &filenames, const string &begin_key,
   size_t nfst = 0, nstate = 0, narc = 0, nfinal = 0;
   std::set<string> fst_types;
   for (; !far_reader->Done(); far_reader->Next()) {
-    string key = far_reader->GetKey();
+    const string &key = far_reader->GetKey();
     if (!end_key.empty() && end_key < key) break;
     ++nfst;
     const Fst<Arc> *fst = far_reader->GetFst();
