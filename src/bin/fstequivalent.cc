@@ -71,6 +71,8 @@ int main(int argc, char **argv) {
       ras = s::UNIFORM_ARC_SELECTOR;
     } else if (FLAGS_select == "log_prob") {
       ras = s::LOG_PROB_ARC_SELECTOR;
+    } else if (FLAGS_select == "fast_log_prob") {
+      ras = s::FAST_LOG_PROB_ARC_SELECTOR;
     } else {
       LOG(ERROR) << argv[0] << ": Unknown selection type \""
                  << FLAGS_select << "\"\n";

@@ -51,9 +51,13 @@ class ExpandFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::HasStart;
-  using CacheBaseImpl< CacheState<A> >::HasFinal;
+  using CacheBaseImpl< CacheState<A> >::AddArc;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
+  using CacheBaseImpl< CacheState<A> >::HasFinal;
+  using CacheBaseImpl< CacheState<A> >::HasStart;
+  using CacheBaseImpl< CacheState<A> >::SetArcs;
+  using CacheBaseImpl< CacheState<A> >::SetFinal;
+  using CacheBaseImpl< CacheState<A> >::SetStart;
 
   typedef A Arc;
   typedef typename A::Label Label;

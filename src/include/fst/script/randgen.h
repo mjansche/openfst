@@ -27,6 +27,7 @@ namespace script {
 enum RandArcSelection {
   UNIFORM_ARC_SELECTOR,
   LOG_PROB_ARC_SELECTOR,
+  FAST_LOG_PROB_ARC_SELECTOR
 };
 
 // This is to prevent log probabilities from working with other than
@@ -57,6 +58,34 @@ struct LogProbArcSelectorGuard<ArcTpl<LogWeightTpl<T> > >
       : LogProbArcSelector<ArcTpl<LogWeightTpl<T> > >(seed) {}
 };
 
+// This is to prevent log probabilities from working with other than
+// StdArc and LogArc
+template<class A>
+struct FastLogProbArcSelectorGuard {
+  typedef typename A::StateId StateId;
+  typedef typename A::Weight Weight;
+
+  explicit FastLogProbArcSelectorGuard(int seed) {
+    LOG(FATAL) << "LogProbArcSelectorGuard: bad weight type: "
+               << Weight::Type();
+  }
+  size_t operator()(const Fst<A> &fst, StateId s) const { return 0; }
+};
+
+template<class T>
+struct FastLogProbArcSelectorGuard<ArcTpl<TropicalWeightTpl<T> > >
+    : public FastLogProbArcSelector<ArcTpl<TropicalWeightTpl<T> > > {
+  FastLogProbArcSelectorGuard(int seed = time(0))
+      : FastLogProbArcSelector<ArcTpl<TropicalWeightTpl<T> > >(seed) {}
+};
+
+template<class T>
+struct FastLogProbArcSelectorGuard<ArcTpl<LogWeightTpl<T> > >
+    : public FastLogProbArcSelector<ArcTpl<LogWeightTpl<T> > > {
+  FastLogProbArcSelectorGuard(int seed = time(0))
+      : FastLogProbArcSelector<ArcTpl<LogWeightTpl<T> > >(seed) {}
+};
+
 typedef args::Package<const FstClass &, MutableFstClass*, int32,
                       const RandGenOptions<RandArcSelection> &> RandGenArgs;
 
@@ -70,6 +99,12 @@ void RandGen(RandGenArgs *args) {
   if (opts.arc_selector == UNIFORM_ARC_SELECTOR) {
     UniformArcSelector<Arc> arc_selector(seed);
     RandGenOptions< UniformArcSelector<Arc> >
+        ropts(arc_selector, opts.max_length,
+              opts.npath);
+    RandGen(ifst, ofst, ropts);
+  } else if (opts.arc_selector == FAST_LOG_PROB_ARC_SELECTOR) {
+    FastLogProbArcSelectorGuard<Arc> arc_selector(seed);
+    RandGenOptions< FastLogProbArcSelectorGuard<Arc> >
         ropts(arc_selector, opts.max_length,
               opts.npath);
     RandGen(ifst, ofst, ropts);

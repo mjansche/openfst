@@ -45,6 +45,8 @@ template <typename T> class slist : public list<T> {
   typedef typename list<T>::iterator iterator;
   typedef typename list<T>::const_iterator const_iterator;
 
+  using list<T>::erase;
+
   iterator erase_after(iterator pos) {
     iterator npos = pos;
     erase(++npos);

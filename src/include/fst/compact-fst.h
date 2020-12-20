@@ -664,7 +664,14 @@ class CompactFstImpl : public CacheImpl<A> {
 
   template <class Iterator>
   void Init(const Iterator &b, const Iterator &e) {
-    string type = "compact_" + compactor_->Type();
+    string type = "compact";
+    if (sizeof(U) != sizeof(uint32)) {
+      string size;
+      Int64ToStr(8 * sizeof(U), &size);
+      type += size;
+    }
+    type += "_";
+    type += compactor_->Type();
     SetType(type);
     SetProperties(kStaticProperties | compactor_->Properties());
     data_ = new CompactFstData<A, C, U>(b, e, *compactor_);

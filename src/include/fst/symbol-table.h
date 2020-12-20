@@ -112,14 +112,14 @@ class SymbolTableImpl {
 
   //
   // Return the key associated with the symbol. If the symbol
-  // does not exists, return -1.
+  // does not exists, return SymbolTable::kNoSymbol.
   int64 Find(const string& symbol) const {
     return Find(symbol.c_str());
   }
 
   //
   // Return the key associated with the symbol. If the symbol
-  // does not exists, return -1.
+  // does not exists, return SymbolTable::kNoSymbol.
   int64 Find(const char* symbol) const {
     map<const char *, int64, StrCmp>::const_iterator it =
         symbol_map_.find(symbol);
@@ -357,13 +357,13 @@ class SymbolTable {
   }
 
   // Return the key associated with the symbol. If the symbol
-  // does not exists, log error and  return -1
+  // does not exists, log error and  return SymbolTable::kNoSymbol
   virtual int64 Find(const string& symbol) const {
     return impl_->Find(symbol);
   }
 
   // Return the key associated with the symbol. If the symbol
-  // does not exists, log error and  return -1
+  // does not exists, log error and  return SymbolTable::kNoSymbol
   virtual int64 Find(const char* symbol) const {
     return impl_->Find(symbol);
   }
