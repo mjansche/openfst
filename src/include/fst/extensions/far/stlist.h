@@ -59,7 +59,7 @@ class STListWriter {
 
   explicit STListWriter(const string filename)
       : stream_(
-          filename.empty() ? &std::cout :
+          filename.empty() ? &cout :
           new ofstream(filename.c_str(), ofstream::out | ofstream::binary)),
         error_(false) {
     WriteType(*stream_, kSTListMagicNumber);
@@ -93,7 +93,7 @@ class STListWriter {
 
   ~STListWriter() {
     WriteType(*stream_, string());
-    if (stream_ != &std::cout)
+    if (stream_ != &cout)
       delete stream_;
   }
 
@@ -128,7 +128,7 @@ class STListReader {
     for (size_t i = 0; i < filenames.size(); ++i) {
       if (filenames[i].empty()) {
         if (!has_stdin) {
-          streams_[i] = &std::cin;
+          streams_[i] = &cin;
           sources_[i] = "stdin";
           has_stdin = true;
         } else {
@@ -178,7 +178,7 @@ class STListReader {
 
   ~STListReader() {
     for (size_t i = 0; i < streams_.size(); ++i) {
-      if (streams_[i] != &std::cin)
+      if (streams_[i] != &cin)
         delete streams_[i];
     }
     if (entry_)

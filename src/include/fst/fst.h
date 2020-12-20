@@ -230,7 +230,7 @@ class Fst {
       }
       return Read(strm, FstReadOptions(filename));
     } else {
-      return Read(std::cin, FstReadOptions("standard input"));
+      return Read(cin, FstReadOptions("standard input"));
     }
   }
 
@@ -268,7 +268,6 @@ class Fst {
   virtual MatcherBase<A> *InitMatcher(MatchType match_type) const;
 
  protected:
-
   bool WriteFile(const string &filename) const {
     if (!filename.empty()) {
       ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
@@ -278,7 +277,7 @@ class Fst {
       }
       return Write(strm, FstWriteOptions(filename));
     } else {
-      return Write(std::cout, FstWriteOptions("standard output"));
+      return Write(cout, FstWriteOptions("standard output"));
     }
   }
 };

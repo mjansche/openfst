@@ -539,17 +539,16 @@ class CompactFstImpl : public CacheImpl<A> {
   }
 
   Weight Final(StateId s) {
-    if (!HasFinal(s)) {
-      Arc arc(kNoLabel, kNoLabel, Weight::Zero(), kNoStateId);
-      if ((compactor_->Size() != -1) ||
-          (data_->States(s) != data_->States(s + 1)))
-        arc = ComputeArc(s,
-                         compactor_->Size() == -1
-                         ? data_->States(s)
-                         : s * compactor_->Size());
-      SetFinal(s, arc.ilabel == kNoLabel ? arc.weight : Weight::Zero());
-    }
-    return CacheImpl<A>::Final(s);
+    if (HasFinal(s))
+      return CacheImpl<A>::Final(s);
+    Arc arc(kNoLabel, kNoLabel, Weight::Zero(), kNoStateId);
+    if ((compactor_->Size() != -1) ||
+        (data_->States(s) != data_->States(s + 1)))
+      arc = ComputeArc(s,
+                       compactor_->Size() == -1
+                       ? data_->States(s)
+                       : s * compactor_->Size());
+    return arc.ilabel == kNoLabel ? arc.weight : Weight::Zero();
   }
 
   StateId NumStates() const {
@@ -678,9 +677,13 @@ class CompactFstImpl : public CacheImpl<A> {
         data_->States(s + 1) : (s + 1) * compactor_->Size();
     for (size_t i = begin; i < end; ++i) {
       const Arc &arc = ComputeArc(s, i);
-      if (arc.ilabel == kNoLabel) continue;
-      PushArc(s, arc);
+      if (arc.ilabel == kNoLabel)
+        SetFinal(s, arc.weight);
+      else
+        PushArc(s, arc);
     }
+    if (!HasFinal(s))
+      SetFinal(s, Weight::Zero());
     SetArcs(s);
   }
 

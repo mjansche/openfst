@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   usage += " in.fst codex [out.fst]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
   if (argc < 3 || argc > 4) {
     ShowUsage();
     return 1;

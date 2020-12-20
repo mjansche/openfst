@@ -173,7 +173,7 @@ class STTableFarWriter : public FarWriter<A> {
  public:
   typedef A Arc;
 
-  static STTableFarWriter *Create(const string filename) {
+  static STTableFarWriter *Create(const string &filename) {
     STTableWriter<Fst<A>, FstWriter<A> > *writer =
         STTableWriter<Fst<A>, FstWriter<A> >::Create(filename);
     return new STTableFarWriter(writer);
@@ -203,7 +203,7 @@ class STListFarWriter : public FarWriter<A> {
  public:
   typedef A Arc;
 
-  static STListFarWriter *Create(const string filename) {
+  static STListFarWriter *Create(const string &filename) {
     STListWriter<Fst<A>, FstWriter<A> > *writer =
         STListWriter<Fst<A>, FstWriter<A> >::Create(filename);
     return new STListFarWriter(writer);
@@ -229,6 +229,43 @@ class STListFarWriter : public FarWriter<A> {
 
 
 template <class A>
+class FstFarWriter : public FarWriter<A> {
+ public:
+  typedef A Arc;
+
+  explicit FstFarWriter(const string &filename)
+      : filename_(filename), error_(false), written_(false) {}
+
+  static FstFarWriter *Create(const string &filename) {
+    return new FstFarWriter(filename);
+  }
+
+  void Add(const string &key, const Fst<A> &fst) {
+    if (written_) {
+      LOG(WARNING) << "FstFarWriter::Add: only one Fst supported,"
+                 << " subsequent entries discarded.";
+    } else {
+      error_ = !fst.Write(filename_);
+      written_ = true;
+    }
+  }
+
+  FarType Type() const { return FAR_FST; }
+
+  bool Error() const { return error_; }
+
+  ~FstFarWriter() {}
+
+ private:
+  string filename_;
+  bool error_;
+  bool written_;
+
+  DISALLOW_COPY_AND_ASSIGN(FstFarWriter);
+};
+
+
+template <class A>
 FarWriter<A> *FarWriter<A>::Create(const string &filename, FarType type) {
   switch(type) {
     case FAR_DEFAULT:
@@ -239,6 +276,9 @@ FarWriter<A> *FarWriter<A>::Create(const string &filename, FarType type) {
       break;
     case FAR_STLIST:
       return STListFarWriter<A>::Create(filename);
+      break;
+    case FAR_FST:
+      return FstFarWriter<A>::Create(filename);
       break;
     default:
       LOG(ERROR) << "FarWriter::Create: unknown far type";
@@ -373,7 +413,7 @@ class FstFarReader : public FarReader<A> {
     for (size_t i = 0; i < keys_.size(); ++i) {
       if (keys_[i].empty()) {
         if (!has_stdin_) {
-          streams_[i] = &std::cin;
+          streams_[i] = &cin;
           //sources_[i] = "stdin";
           has_stdin_ = true;
         } else {

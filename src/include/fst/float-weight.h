@@ -37,19 +37,22 @@ namespace fst {
 template <class T>
 class FloatLimits {
  public:
-  static const T kPosInfinity;
-  static const T kNegInfinity;
-  static const T kNumberBad;
+  static const T PosInfinity() {
+    static const T pos_infinity = numeric_limits<T>::infinity();
+    return pos_infinity;
+  }
+
+  static const T NegInfinity() {
+    static const T neg_infinity = -PosInfinity();
+    return neg_infinity;
+  }
+
+  static const T NumberBad() {
+    static const T number_bad = numeric_limits<T>::quiet_NaN();
+    return number_bad;
+  }
+
 };
-
-template <class T>
-const T FloatLimits<T>::kPosInfinity = numeric_limits<T>::infinity();
-
-template <class T>
-const T FloatLimits<T>::kNegInfinity = -FloatLimits<T>::kPosInfinity;
-
-template <class T>
-const T FloatLimits<T>::kNumberBad = numeric_limits<T>::quiet_NaN();
 
 // weight class to be templated on floating-points types
 template <class T = float>
@@ -151,9 +154,9 @@ inline bool ApproxEqual(const FloatWeightTpl<T> &w1,
 
 template <class T>
 inline ostream &operator<<(ostream &strm, const FloatWeightTpl<T> &w) {
-  if (w.Value() == FloatLimits<T>::kPosInfinity)
+  if (w.Value() == FloatLimits<T>::PosInfinity())
     return strm << "Infinity";
-  else if (w.Value() == FloatLimits<T>::kNegInfinity)
+  else if (w.Value() == FloatLimits<T>::NegInfinity())
     return strm << "-Infinity";
   else if (w.Value() != w.Value())   // Fails for NaN
     return strm << "BadNumber";
@@ -166,9 +169,9 @@ inline istream &operator>>(istream &strm, FloatWeightTpl<T> &w) {
   string s;
   strm >> s;
   if (s == "Infinity") {
-    w = FloatWeightTpl<T>(FloatLimits<T>::kPosInfinity);
+    w = FloatWeightTpl<T>(FloatLimits<T>::PosInfinity());
   } else if (s == "-Infinity") {
-    w = FloatWeightTpl<T>(FloatLimits<T>::kNegInfinity);
+    w = FloatWeightTpl<T>(FloatLimits<T>::NegInfinity());
   } else {
     char *p;
     T f = strtod(s.c_str(), &p);
@@ -196,13 +199,13 @@ class TropicalWeightTpl : public FloatWeightTpl<T> {
   TropicalWeightTpl(const TropicalWeightTpl<T> &w) : FloatWeightTpl<T>(w) {}
 
   static const TropicalWeightTpl<T> Zero() {
-    return TropicalWeightTpl<T>(FloatLimits<T>::kPosInfinity); }
+    return TropicalWeightTpl<T>(FloatLimits<T>::PosInfinity()); }
 
   static const TropicalWeightTpl<T> One() {
     return TropicalWeightTpl<T>(0.0F); }
 
   static const TropicalWeightTpl<T> NoWeight() {
-    return TropicalWeightTpl<T>(FloatLimits<T>::kNumberBad); }
+    return TropicalWeightTpl<T>(FloatLimits<T>::NumberBad()); }
 
   static const string &Type() {
     static const string type = "tropical" +
@@ -212,12 +215,12 @@ class TropicalWeightTpl : public FloatWeightTpl<T> {
 
   bool Member() const {
     // First part fails for IEEE NaN
-    return Value() == Value() && Value() != FloatLimits<T>::kNegInfinity;
+    return Value() == Value() && Value() != FloatLimits<T>::NegInfinity();
   }
 
   TropicalWeightTpl<T> Quantize(float delta = kDelta) const {
-    if (Value() == FloatLimits<T>::kNegInfinity ||
-        Value() == FloatLimits<T>::kPosInfinity ||
+    if (Value() == FloatLimits<T>::NegInfinity() ||
+        Value() == FloatLimits<T>::PosInfinity() ||
         Value() != Value())
       return *this;
     else
@@ -259,9 +262,9 @@ inline TropicalWeightTpl<T> Times(const TropicalWeightTpl<T> &w1,
   if (!w1.Member() || !w2.Member())
     return TropicalWeightTpl<T>::NoWeight();
   T f1 = w1.Value(), f2 = w2.Value();
-  if (f1 == FloatLimits<T>::kPosInfinity)
+  if (f1 == FloatLimits<T>::PosInfinity())
     return w1;
-  else if (f2 == FloatLimits<T>::kPosInfinity)
+  else if (f2 == FloatLimits<T>::PosInfinity())
     return w2;
   else
     return TropicalWeightTpl<T>(f1 + f2);
@@ -284,10 +287,10 @@ inline TropicalWeightTpl<T> Divide(const TropicalWeightTpl<T> &w1,
   if (!w1.Member() || !w2.Member())
     return TropicalWeightTpl<T>::NoWeight();
   T f1 = w1.Value(), f2 = w2.Value();
-  if (f2 == FloatLimits<T>::kPosInfinity)
-    return FloatLimits<T>::kNumberBad;
-  else if (f1 == FloatLimits<T>::kPosInfinity)
-    return FloatLimits<T>::kPosInfinity;
+  if (f2 == FloatLimits<T>::PosInfinity())
+    return FloatLimits<T>::NumberBad();
+  else if (f1 == FloatLimits<T>::PosInfinity())
+    return FloatLimits<T>::PosInfinity();
   else
     return TropicalWeightTpl<T>(f1 - f2);
 }
@@ -320,7 +323,7 @@ class LogWeightTpl : public FloatWeightTpl<T> {
   LogWeightTpl(const LogWeightTpl<T> &w) : FloatWeightTpl<T>(w) {}
 
   static const LogWeightTpl<T> Zero() {
-    return LogWeightTpl<T>(FloatLimits<T>::kPosInfinity);
+    return LogWeightTpl<T>(FloatLimits<T>::PosInfinity());
   }
 
   static const LogWeightTpl<T> One() {
@@ -328,7 +331,7 @@ class LogWeightTpl : public FloatWeightTpl<T> {
   }
 
   static const LogWeightTpl<T> NoWeight() {
-    return LogWeightTpl<T>(FloatLimits<T>::kNumberBad); }
+    return LogWeightTpl<T>(FloatLimits<T>::NumberBad()); }
 
   static const string &Type() {
     static const string type = "log" + FloatWeightTpl<T>::GetPrecisionString();
@@ -337,12 +340,12 @@ class LogWeightTpl : public FloatWeightTpl<T> {
 
   bool Member() const {
     // First part fails for IEEE NaN
-    return Value() == Value() && Value() != FloatLimits<T>::kNegInfinity;
+    return Value() == Value() && Value() != FloatLimits<T>::NegInfinity();
   }
 
   LogWeightTpl<T> Quantize(float delta = kDelta) const {
-    if (Value() == FloatLimits<T>::kNegInfinity ||
-        Value() == FloatLimits<T>::kPosInfinity ||
+    if (Value() == FloatLimits<T>::NegInfinity() ||
+        Value() == FloatLimits<T>::PosInfinity() ||
         Value() != Value())
       return *this;
     else
@@ -368,9 +371,9 @@ template <class T>
 inline LogWeightTpl<T> Plus(const LogWeightTpl<T> &w1,
                             const LogWeightTpl<T> &w2) {
   T f1 = w1.Value(), f2 = w2.Value();
-  if (f1 == FloatLimits<T>::kPosInfinity)
+  if (f1 == FloatLimits<T>::PosInfinity())
     return w2;
-  else if (f2 == FloatLimits<T>::kPosInfinity)
+  else if (f2 == FloatLimits<T>::PosInfinity())
     return w1;
   else if (f1 > f2)
     return LogWeightTpl<T>(f2 - LogExp(f1 - f2));
@@ -394,9 +397,9 @@ inline LogWeightTpl<T> Times(const LogWeightTpl<T> &w1,
   if (!w1.Member() || !w2.Member())
     return LogWeightTpl<T>::NoWeight();
   T f1 = w1.Value(), f2 = w2.Value();
-  if (f1 == FloatLimits<T>::kPosInfinity)
+  if (f1 == FloatLimits<T>::PosInfinity())
     return w1;
-  else if (f2 == FloatLimits<T>::kPosInfinity)
+  else if (f2 == FloatLimits<T>::PosInfinity())
     return w2;
   else
     return LogWeightTpl<T>(f1 + f2);
@@ -419,10 +422,10 @@ inline LogWeightTpl<T> Divide(const LogWeightTpl<T> &w1,
   if (!w1.Member() || !w2.Member())
     return LogWeightTpl<T>::NoWeight();
   T f1 = w1.Value(), f2 = w2.Value();
-  if (f2 == FloatLimits<T>::kPosInfinity)
-    return FloatLimits<T>::kNumberBad;
-  else if (f1 == FloatLimits<T>::kPosInfinity)
-    return FloatLimits<T>::kPosInfinity;
+  if (f2 == FloatLimits<T>::PosInfinity())
+    return FloatLimits<T>::NumberBad();
+  else if (f1 == FloatLimits<T>::PosInfinity())
+    return FloatLimits<T>::PosInfinity();
   else
     return LogWeightTpl<T>(f1 - f2);
 }
@@ -454,15 +457,15 @@ class MinMaxWeightTpl : public FloatWeightTpl<T> {
   MinMaxWeightTpl(const MinMaxWeightTpl<T> &w) : FloatWeightTpl<T>(w) {}
 
   static const MinMaxWeightTpl<T> Zero() {
-    return MinMaxWeightTpl<T>(FloatLimits<T>::kPosInfinity);
+    return MinMaxWeightTpl<T>(FloatLimits<T>::PosInfinity());
   }
 
   static const MinMaxWeightTpl<T> One() {
-    return MinMaxWeightTpl<T>(FloatLimits<T>::kNegInfinity);
+    return MinMaxWeightTpl<T>(FloatLimits<T>::NegInfinity());
   }
 
   static const MinMaxWeightTpl<T> NoWeight() {
-    return MinMaxWeightTpl<T>(FloatLimits<T>::kNumberBad); }
+    return MinMaxWeightTpl<T>(FloatLimits<T>::NumberBad()); }
 
   static const string &Type() {
     static const string type = "minmax" +
@@ -477,8 +480,8 @@ class MinMaxWeightTpl : public FloatWeightTpl<T> {
 
   MinMaxWeightTpl<T> Quantize(float delta = kDelta) const {
     // If one of infinities, or a NaN
-    if (Value() == FloatLimits<T>::kNegInfinity ||
-        Value() == FloatLimits<T>::kPosInfinity ||
+    if (Value() == FloatLimits<T>::NegInfinity() ||
+        Value() == FloatLimits<T>::PosInfinity() ||
         Value() != Value())
       return *this;
     else
@@ -541,7 +544,7 @@ inline MinMaxWeightTpl<T> Divide(const MinMaxWeightTpl<T> &w1,
   if (!w1.Member() || !w2.Member())
     return MinMaxWeightTpl<T>::NoWeight();
   // min(w1, x) = w2, w1 >= w2 => min(w1, x) = w2, x = w2
-  return w1.Value() >= w2.Value() ? w1 : FloatLimits<T>::kNumberBad;
+  return w1.Value() >= w2.Value() ? w1 : FloatLimits<T>::NumberBad();
 }
 
 inline MinMaxWeightTpl<float> Divide(const MinMaxWeightTpl<float> &w1,

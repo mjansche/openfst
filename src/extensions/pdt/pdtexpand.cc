@@ -17,7 +17,7 @@
 // Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
-// Expands a PDT and an FST.
+// Expands a (bounded-stack) PDT as an FST.
 //
 
 #include <fst/extensions/pdt/pdtscript.h>
@@ -32,12 +32,12 @@ DEFINE_string(weight, "", "Weight threshold");
 int main(int argc, char **argv) {
   namespace s = fst::script;
 
-  string usage = "Expand a PDT and an FST.\n\n  Usage: ";
+  string usage = "Expand a (bounded-stack) PDT as an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " in.pdt [out.fst]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
   if (argc > 3) {
     ShowUsage();
     return 1;

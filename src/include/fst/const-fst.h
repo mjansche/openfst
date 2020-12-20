@@ -338,7 +338,8 @@ bool ConstFst<A, U>::WriteFst(const F &fst, ostream &strm,
   size_t start_offset = 0;
   bool update_header = true;
   if (fst.Type() == ConstFst<A, U>().Type()) {
-    const ConstFst<A, U> *const_fst = static_cast<const ConstFst<A, U> *>(&fst);
+    const ConstFst<A, U> *const_fst =
+        reinterpret_cast<const ConstFst<A, U> *>(&fst);
     num_arcs = const_fst->GetImpl()->narcs_;
     num_states = const_fst->GetImpl()->nstates_;
     update_header = false;

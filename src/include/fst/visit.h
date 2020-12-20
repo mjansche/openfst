@@ -166,7 +166,8 @@ void Visit(const Fst<Arc> &fst, V *visitor, Q *queue, ArcFilter filter) {
     // Finds next tree root
     for (root = root == start ? 0 : root + 1;
          root < nstates && state_status[root] != kWhiteState;
-         ++root);
+         ++root) {
+    }
 
     // Check for a state beyond the largest known state
     if (!expanded && root == nstates) {

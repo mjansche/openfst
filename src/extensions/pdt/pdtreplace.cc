@@ -15,6 +15,7 @@
 // Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
+// Converts an RTN represented by FSTs and non-terminal labels into a PDT .
 
 #include <utility>
 using std::pair; using std::make_pair;
@@ -29,13 +30,14 @@ DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
 int main(int argc, char **argv) {
   namespace s = fst::script;
 
-  string usage = "Recursively replace Fst arcs with other Fst(s).\n";
+  string usage = "Converts an RTN represented by FSTs";
+  usage += " and non-terminal labels into PDT";
   usage += " Usage: ";
   usage += argv[0];
   usage += " root.fst rootlabel [rule1.fst label1 ...] [out.fst]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
   if (argc < 4) {
     ShowUsage();
     return 1;

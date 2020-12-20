@@ -213,7 +213,7 @@ void FarCompileStrings(const vector<string> &in_fnames,
   vector<string> inputs;
   if (file_list_input) {
     for (int i = 1; i < in_fnames.size(); ++i) {
-      istream *istrm = in_fnames.empty() ? &std::cin :
+      istream *istrm = in_fnames.empty() ? &cin :
           new ifstream(in_fnames[i].c_str());
       string str;
       while (getline(*istrm, str))
@@ -227,8 +227,8 @@ void FarCompileStrings(const vector<string> &in_fnames,
 
   for (int i = 0, n = 0; i < inputs.size(); ++i) {
     if (generate_keys == 0 && inputs[i].empty()) {
-      FSTERROR() << "FarCompileStrings: generate_keys cannot be set to 0"
-                 << " when reading from stdin";
+      FSTERROR() << "FarCompileStrings: read from a file instead of stdin or"
+                 << " set the --generate_keys flags.";
       delete far_writer;
       delete syms;
       return;
@@ -236,7 +236,7 @@ void FarCompileStrings(const vector<string> &in_fnames,
     int key_size = generate_keys ? generate_keys :
         (entry_type == StringReader<Arc>::FILE ? 1 :
          KeySize(inputs[i].c_str()));
-    istream *istrm = inputs[i].empty() ? &std::cin :
+    istream *istrm = inputs[i].empty() ? &cin :
         new ifstream(inputs[i].c_str());
 
     bool keep_syms = keep_symbols;

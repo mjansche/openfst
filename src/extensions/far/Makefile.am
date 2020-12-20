@@ -12,7 +12,7 @@ libfstfar_la_SOURCES = sttable.cc stlist.cc
 libfstfar_la_LDFLAGS = -version-info 0:0:0
 
 if HAVE_SCRIPT
-libfstfarscript_la_SOURCES = farscript.cc compile-strings.cc main.cc
+libfstfarscript_la_SOURCES = farscript.cc strings.cc main.cc
 libfstfarscript_la_LDFLAGS = -version-info 0:0:0
 endif
 

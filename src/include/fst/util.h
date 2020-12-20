@@ -313,7 +313,7 @@ bool ReadLabelPairs(const string& filename,
 template <typename Label>
 bool WriteLabelPairs(const string& filename,
                      const vector<pair<Label, Label> >& pairs) {
-  ostream *strm = &std::cout;
+  ostream *strm = &cout;
   if (!filename.empty()) {
     strm = new ofstream(filename.c_str());
     if (!*strm) {
@@ -330,7 +330,7 @@ bool WriteLabelPairs(const string& filename,
                << (filename.empty() ? "standard output" : filename);
     return false;
   }
-  if (strm != &std::cout)
+  if (strm != &cout)
     delete strm;
   return true;
 }

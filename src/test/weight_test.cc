@@ -97,7 +97,7 @@ void TestTemplatedWeights(int repeat, int seed) {
 
 int main(int argc, char **argv) {
   std::set_new_handler(FailedNewHandler);
-  SetFlags(argv[0], &argc, &argv, true);
+  SET_FLAGS(argv[0], &argc, &argv, true);
 
   int seed = FLAGS_seed >= 0 ? FLAGS_seed : time(0);
   LOG(INFO) << "Seed = " << seed;

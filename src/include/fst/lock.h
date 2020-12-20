@@ -16,6 +16,9 @@
 //
 // \file
 // Google-compatibility locking declarations and inline definitions
+//
+// Classes and functions here are no-ops (by design); proper locking requires
+// actual implementation.
 
 #ifndef FST_LIB_LOCK_H__
 #define FST_LIB_LOCK_H__
@@ -59,6 +62,14 @@ class MutexLock {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MutexLock);
+};
+
+class ReaderMutexLock {
+ public:
+  ReaderMutexLock(Mutex *) {}
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(ReaderMutexLock);
 };
 
 // Reference counting - single-thread implementation

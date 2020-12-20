@@ -8,6 +8,12 @@ fst/extensions/far/print-strings.h fst/extensions/far/stlist.h \
 fst/extensions/far/sttable.h
 endif
 
+if HAVE_NGRAM
+ngram_include_headers = fst/extensions/ngram/bitmap-index.h \
+fst/extensions/ngram/ngram-fst.h \
+fst/extensions/ngram/nthbit.h
+endif
+
 if HAVE_PDT
 pdt_include_headers = fst/extensions/pdt/collection.h \
 fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
@@ -63,6 +69,6 @@ fst/replace-util.h fst/icu.h fst/string.h fst/signed-log-weight.h \
 fst/sparse-tuple-weight.h fst/sparse-power-weight.h fst/expectation-weight.h \
 fst/symbol-table-ops.h fst/bi-table.h \
 $(far_include_headers) \
+$(ngram_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)
-

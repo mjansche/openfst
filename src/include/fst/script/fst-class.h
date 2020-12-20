@@ -53,6 +53,7 @@ class FstClassBase {
   virtual const SymbolTable *InputSymbols() const = 0;
   virtual const SymbolTable *OutputSymbols() const = 0;
   virtual void Write(const string& fname) const = 0;
+  virtual void Write(ostream &ostr, const FstWriteOptions &opts) const = 0;
   virtual uint64 Properties(uint64 mask, bool test) const = 0;
   virtual ~FstClassBase() { }
 };
@@ -115,11 +116,17 @@ class FstClassImpl : public FstClassImplBase {
     impl_->Write(fname);
   }
 
+  virtual void Write(ostream &ostr, const FstWriteOptions &opts) const {
+    impl_->Write(ostr, opts);
+  }
+
   virtual uint64 Properties(uint64 mask, bool test) const {
     return impl_->Properties(mask, test);
   }
 
   virtual ~FstClassImpl() { delete impl_; }
+
+  Fst<Arc> *GetImpl() const { return impl_; }
 
   Fst<Arc> *GetImpl() { return impl_; }
 
@@ -155,12 +162,24 @@ class FstClass : public FstClassBase {
     }
   }
 
+  FstClass() : impl_(NULL) {
+  }
+
   template<class Arc>
-  explicit FstClass(Fst<Arc> *fst) : impl_(new FstClassImpl<Arc>(fst)) { }
+  explicit FstClass(Fst<Arc> *fst) : impl_(new FstClassImpl<Arc>(fst)) {
+  }
 
   explicit FstClass(const FstClass &other) : impl_(other.impl_->Copy()) { }
 
+  FstClass &operator=(const FstClass &other) {
+    delete impl_;
+    impl_ = other.impl_->Copy();
+    return *this;
+  }
+
   static FstClass *Read(const string &fname);
+
+  static FstClass *Read(istream &istr, const string &source);
 
   virtual const string &ArcType() const {
     return impl_->ArcType();
@@ -184,6 +203,10 @@ class FstClass : public FstClassBase {
 
   virtual void Write(const string &fname) const {
     impl_->Write(fname);
+  }
+
+  virtual void Write(ostream &ostr, const FstWriteOptions &opts) const {
+    impl_->Write(ostr, opts);
   }
 
   virtual uint64 Properties(uint64 mask, bool test) const {
@@ -215,6 +238,8 @@ class FstClass : public FstClassBase {
                << "particular arc type.";
     return 0;
   }
+
+
  protected:
   explicit FstClass(FstClassImplBase *impl) : impl_(impl) { }
 
@@ -234,7 +259,12 @@ class FstClass : public FstClassBase {
     }
   }
 
+  FstClassImplBase *GetImpl() const { return impl_; }
+
   FstClassImplBase *GetImpl() { return impl_; }
+
+//  friend ostream &operator<<(ostream&, const FstClass&);
+
  private:
   FstClassImplBase *impl_;
 };
@@ -268,6 +298,14 @@ class MutableFstClass : public FstClass {
       delete mfst;
       return retval;
     }
+  }
+
+  virtual void Write(const string &fname) const {
+    GetImpl()->Write(fname);
+  }
+
+  virtual void Write(ostream &ostr, const FstWriteOptions &opts) const {
+    GetImpl()->Write(ostr, opts);
   }
 
   static MutableFstClass *Read(const string &fname, bool convert = false);
@@ -339,6 +377,4 @@ class VectorFstClass : public MutableFstClass {
 
 }  // namespace script
 }  // namespace fst
-
-
 #endif  // FST_SCRIPT_FST_CLASS_H_

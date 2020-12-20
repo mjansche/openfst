@@ -91,13 +91,13 @@ string LoadArcTypeFromFar(const string &far_fname) {
   FarHeader hdr;
 
   if (!hdr.Read(far_fname)) {
-    LOG(ERROR) << "Error reading FAR: " << far_fname;
+    FSTERROR() << "Error reading FAR: " << far_fname;
     return "";
   }
 
   string atype = hdr.ArcType();
   if (atype == "unknown") {
-    LOG(ERROR) << "Empty FST archive: " << far_fname;
+    FSTERROR() << "Empty FST archive: " << far_fname;
     return "";
   }
 
@@ -108,7 +108,7 @@ string LoadArcTypeFromFst(const string &fst_fname) {
   FstHeader hdr;
   ifstream in(fst_fname.c_str(), ifstream::in | ifstream::binary);
   if (!hdr.Read(in, fst_fname)) {
-    LOG(ERROR) << "Error reading FST: " << fst_fname;
+    FSTERROR() << "Error reading FST: " << fst_fname;
     return "";
   }
 

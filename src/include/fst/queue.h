@@ -451,7 +451,7 @@ class SccQueue : public QueueBase<S> {
     while ((front_ <= back_) &&
            (((*queue_)[front_] && (*queue_)[front_]->Empty())
             || (((*queue_)[front_] == 0) &&
-                ((front_ > trivial_queue_.size())
+                ((front_ >= trivial_queue_.size())
                  || (trivial_queue_[front_] == kNoStateId)))))
       ++front_;
     if ((*queue_)[front_])
@@ -493,7 +493,7 @@ class SccQueue : public QueueBase<S> {
     else if ((*queue_)[front_])
       return (*queue_)[front_]->Empty();
     else
-      return (front_ > trivial_queue_.size())
+      return (front_ >= trivial_queue_.size())
         || (trivial_queue_[front_] == kNoStateId);
   }
 

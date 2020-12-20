@@ -27,7 +27,10 @@
 using std::vector;
 
 #include <fst/extensions/far/far.h>
+#include <fst/shortest-distance.h>
 #include <fst/string.h>
+
+DECLARE_string(far_field_separator);
 
 namespace fst {
 
@@ -35,8 +38,9 @@ template <class Arc>
 void FarPrintStrings(
     const vector<string> &ifilenames, const FarEntryType entry_type,
     const FarTokenType far_token_type, const string &begin_key,
-    const string &end_key, const bool print_key, const string &symbols_fname,
-    const bool initial_symbols, const int32 generate_filenames,
+    const string &end_key, const bool print_key, const bool print_weight,
+    const string &symbols_fname, const bool initial_symbols,
+    const int32 generate_filenames,
     const string &filename_prefix, const string &filename_suffix) {
 
   typename StringPrinter<Arc>::TokenType token_type;
@@ -91,8 +95,11 @@ void FarPrintStrings(
 
     if (entry_type == FET_LINE) {
       if (print_key)
-        cout << key << "\t";
-      cout << str << endl;
+        cout << key << FLAGS_far_field_separator[0];
+      cout << str;
+      if (print_weight)
+        cout << FLAGS_far_field_separator[0] << ShortestDistance(fst);
+      cout << endl;
     } else if (entry_type == FET_FILE) {
       stringstream sstrm;
       if (generate_filenames) {

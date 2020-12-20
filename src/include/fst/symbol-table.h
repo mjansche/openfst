@@ -150,13 +150,11 @@ class SymbolTableImpl {
   }
 
   string CheckSum() const {
-    MutexLock check_sum_lock(&check_sum_mutex_);
     MaybeRecomputeCheckSum();
     return check_sum_string_;
   }
 
   string LabeledCheckSum() const {
-    MutexLock check_sum_lock(&check_sum_mutex_);
     MaybeRecomputeCheckSum();
     return labeled_check_sum_string_;
   }
@@ -172,6 +170,8 @@ class SymbolTableImpl {
  private:
   // Recomputes the checksums (both of them) if we've had changes since the last
   // computation (i.e., if check_sum_finalized_ is false).
+  // Takes ~2.5 microseconds (dbg) or ~230 nanoseconds (opt) on a 2.67GHz Xeon
+  // if the checksum is up-to-date (requiring no recomputation).
   void MaybeRecomputeCheckSum() const;
 
   struct StrCmp {
@@ -189,8 +189,6 @@ class SymbolTableImpl {
 
   mutable RefCounter ref_count_;
   mutable bool check_sum_finalized_;
-  mutable CheckSummer check_sum_;
-  mutable CheckSummer labeled_check_sum_;
   mutable string check_sum_string_;
   mutable string labeled_check_sum_string_;
   mutable Mutex check_sum_mutex_;
@@ -213,6 +211,9 @@ class SymbolTable {
  public:
   static const int64 kNoSymbol = -1;
 
+  // Construct symbol table with an unspecified name.
+  SymbolTable() : impl_(new SymbolTableImpl("<unspecified>")) {}
+
   // Construct symbol table with a unique name.
   SymbolTable(const string& name) : impl_(new SymbolTableImpl(name)) {}
 
@@ -225,6 +226,15 @@ class SymbolTable {
   // implementation.
   virtual ~SymbolTable() {
     if (!impl_->DecrRefCount()) delete impl_;
+  }
+
+  // Copys the implemenation from one symbol table to another.
+  void operator=(const SymbolTable &st) {
+    if (impl_ != st.impl_) {
+      st.impl_->IncrRefCount();
+      if (!impl_->DecrRefCount()) delete impl_;
+      impl_ = st.impl_;
+    }
   }
 
   // Read an ascii representation of the symbol table from an istream. Pass a
@@ -405,8 +415,6 @@ class SymbolTable {
 
  private:
   SymbolTableImpl* impl_;
-
-  void operator=(const SymbolTable &table);  // disallow
 };
 
 

@@ -17,7 +17,7 @@
 // Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
-// Return the shortest path in a PDT.
+// Return the shortest path in a (bounded-stack) PDT.
 //
 
 #include <fst/extensions/pdt/pdtscript.h>
@@ -33,12 +33,12 @@ DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
 int main(int argc, char **argv) {
   namespace s = fst::script;
 
-  string usage = "Shortest path in a PDT.\n\n  Usage: ";
+  string usage = "Shortest path in a (bounded-stack) PDT.\n\n  Usage: ";
   usage += argv[0];
   usage += " in.pdt [out.fst]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
   if (argc > 3) {
     ShowUsage();
     return 1;

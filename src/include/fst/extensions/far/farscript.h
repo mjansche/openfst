@@ -208,6 +208,7 @@ struct FarPrintStringsArgs {
   const string &begin_key;
   const string &end_key;
   const bool print_key;
+  const bool print_weight;
   const string &symbols_fname;
   const bool initial_symbols;
   const int32 generate_filenames;
@@ -217,12 +218,13 @@ struct FarPrintStringsArgs {
   FarPrintStringsArgs(
       const vector<string> &ifilenames, const FarEntryType entry_type,
       const FarTokenType token_type, const string &begin_key,
-      const string &end_key,  const bool print_key,
+      const string &end_key,  const bool print_key, const bool print_weight,
       const string &symbols_fname, const bool initial_symbols,
       const int32 generate_filenames,
       const string &filename_prefix, const string &filename_suffix) :
       ifilenames(ifilenames), entry_type(entry_type), token_type(token_type),
-      begin_key(begin_key), end_key(end_key), print_key(print_key),
+      begin_key(begin_key), end_key(end_key),
+      print_key(print_key), print_weight(print_weight),
       symbols_fname(symbols_fname), initial_symbols(initial_symbols),
       generate_filenames(generate_filenames), filename_prefix(filename_prefix),
       filename_suffix(filename_suffix) { }
@@ -232,7 +234,7 @@ template <class Arc>
 void FarPrintStrings(FarPrintStringsArgs *args) {
   fst::FarPrintStrings<Arc>(
       args->ifilenames, args->entry_type, args->token_type,
-      args->begin_key, args->end_key, args->print_key,
+      args->begin_key, args->end_key, args->print_key, args->print_weight,
       args->symbols_fname, args->initial_symbols, args->generate_filenames,
       args->filename_prefix, args->filename_suffix);
 }
@@ -245,6 +247,7 @@ void FarPrintStrings(const vector<string> &ifilenames,
                      const string &begin_key,
                      const string &end_key,
                      const bool print_key,
+                     const bool print_weight,
                      const string &symbols_fname,
                      const bool initial_symbols,
                      const int32 generate_filenames,

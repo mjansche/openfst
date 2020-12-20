@@ -87,12 +87,14 @@ am__nobase_include_HEADERS_DIST = fst/arc.h fst/determinize.h \
 	fst/extensions/far/farlib.h fst/extensions/far/farscript.h \
 	fst/extensions/far/info.h fst/extensions/far/main.h \
 	fst/extensions/far/print-strings.h fst/extensions/far/stlist.h \
-	fst/extensions/far/sttable.h fst/extensions/pdt/collection.h \
-	fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
-	fst/extensions/pdt/info.h fst/extensions/pdt/paren.h \
-	fst/extensions/pdt/pdt.h fst/extensions/pdt/pdtlib.h \
-	fst/extensions/pdt/pdtscript.h fst/extensions/pdt/replace.h \
-	fst/extensions/pdt/reverse.h \
+	fst/extensions/far/sttable.h \
+	fst/extensions/ngram/bitmap-index.h \
+	fst/extensions/ngram/ngram-fst.h fst/extensions/ngram/nthbit.h \
+	fst/extensions/pdt/collection.h fst/extensions/pdt/compose.h \
+	fst/extensions/pdt/expand.h fst/extensions/pdt/info.h \
+	fst/extensions/pdt/paren.h fst/extensions/pdt/pdt.h \
+	fst/extensions/pdt/pdtlib.h fst/extensions/pdt/pdtscript.h \
+	fst/extensions/pdt/replace.h fst/extensions/pdt/reverse.h \
 	fst/extensions/pdt/shortest-path.h fst/script/arcsort.h \
 	fst/script/arg-packs.h fst/script/closure.h \
 	fst/script/compile-impl.h fst/script/compile.h \
@@ -272,6 +274,10 @@ top_srcdir = @top_srcdir@
 @HAVE_FAR_TRUE@fst/extensions/far/print-strings.h fst/extensions/far/stlist.h \
 @HAVE_FAR_TRUE@fst/extensions/far/sttable.h
 
+@HAVE_NGRAM_TRUE@ngram_include_headers = fst/extensions/ngram/bitmap-index.h \
+@HAVE_NGRAM_TRUE@fst/extensions/ngram/ngram-fst.h \
+@HAVE_NGRAM_TRUE@fst/extensions/ngram/nthbit.h
+
 @HAVE_PDT_TRUE@pdt_include_headers = fst/extensions/pdt/collection.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/info.h fst/extensions/pdt/paren.h \
@@ -325,6 +331,7 @@ fst/replace-util.h fst/icu.h fst/string.h fst/signed-log-weight.h \
 fst/sparse-tuple-weight.h fst/sparse-power-weight.h fst/expectation-weight.h \
 fst/symbol-table-ops.h fst/bi-table.h \
 $(far_include_headers) \
+$(ngram_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)
 

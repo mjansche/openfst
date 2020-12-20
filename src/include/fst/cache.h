@@ -292,13 +292,13 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
 
   void DeleteArcs(StateId s, size_t n) {
     S *state = ExtendState(s);
-    const vector<Arc> &arcs = GetState(s)->arcs;
+    const vector<Arc> &arcs = state->arcs;
     for (size_t i = 0; i < n; ++i) {
       size_t j = arcs.size() - i - 1;
       if (arcs[j].ilabel == 0)
-        --GetState(s)->niepsilons;
+        --state->niepsilons;
       if (arcs[j].olabel == 0)
-        --GetState(s)->noepsilons;
+        --state->noepsilons;
     }
     state->arcs.resize(arcs.size() - n);
     SetProperties(DeleteArcsProperties(Properties()));
@@ -503,9 +503,6 @@ struct CacheState {
   size_t noepsilons;         // # of output epsilons
   mutable uint32 flags;
   mutable int ref_count;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CacheState);
 };
 
 // A CacheBaseImpl with a commonly used CacheState.

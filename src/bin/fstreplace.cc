@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
   usage += " root.fst rootlabel [rule1.fst label1 ...] [out.fst]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
   if (argc < 4) {
     ShowUsage();
     return 1;

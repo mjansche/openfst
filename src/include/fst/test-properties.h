@@ -125,13 +125,14 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
          siter.Next()) {
       StateId s = siter.Value();
 
-      Arc prev_arc(kNoLabel, kNoLabel, Weight::One(), 0);
+      Arc prev_arc;
       // Create these only if we need to
       if (mask & (kIDeterministic | kNonIDeterministic))
         ilabels = new unordered_set<Label>;
       if (mask & (kODeterministic | kNonODeterministic))
         olabels = new unordered_set<Label>;
 
+      bool first_arc = true;
       for (ArcIterator< Fst<Arc> > aiter(fst, s);
            !aiter.Done();
            aiter.Next()) {
@@ -161,13 +162,15 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
           comp_props |= kOEpsilons;
           comp_props &= ~kNoOEpsilons;
         }
-        if (prev_arc.ilabel != kNoLabel && arc.ilabel < prev_arc.ilabel) {
-          comp_props |= kNotILabelSorted;
-          comp_props &= ~kILabelSorted;
-        }
-        if (prev_arc.olabel != kNoLabel && arc.olabel < prev_arc.olabel) {
-          comp_props |= kNotOLabelSorted;
-          comp_props &= ~kOLabelSorted;
+        if (!first_arc) {
+          if (arc.ilabel < prev_arc.ilabel) {
+            comp_props |= kNotILabelSorted;
+            comp_props &= ~kILabelSorted;
+          }
+          if (arc.olabel < prev_arc.olabel) {
+            comp_props |= kNotOLabelSorted;
+            comp_props &= ~kOLabelSorted;
+          }
         }
         if (arc.weight != Weight::One() && arc.weight != Weight::Zero()) {
           comp_props |= kWeighted;
@@ -182,6 +185,7 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
           comp_props &= ~kString;
         }
         prev_arc = arc;
+        first_arc = false;
         if (ilabels)
           ilabels->insert(arc.ilabel);
         if (olabels)

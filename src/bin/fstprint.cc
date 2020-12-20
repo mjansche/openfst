@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   usage += " [binary.fst [text.fst]]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
   if (argc > 3) {
     ShowUsage();
     return 1;
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
   s::FstClass *fst = s::FstClass::Read(in_name);
   if (!fst) return 1;
 
-  ostream *ostrm = &std::cout;
+  ostream *ostrm = &cout;
   string dest = "standard output";
   if (argc == 3) {
     dest = argv[2];
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
   if (osyms && !FLAGS_save_osymbols.empty())
     osyms->WriteText(FLAGS_save_osymbols);
 
-  if (ostrm != &std::cout)
+  if (ostrm != &cout)
     delete ostrm;
   return 0;
 }

@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   usage += "  Flags: begin_key end_key list_fsts";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
 
   vector<string> filenames;
   for (int i = 1; i < argc; ++i)

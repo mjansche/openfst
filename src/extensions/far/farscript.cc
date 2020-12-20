@@ -102,13 +102,14 @@ void FarPrintStrings(const vector<string> &ifilenames,
                      const string &begin_key,
                      const string &end_key,
                      const bool print_key,
+                     const bool print_weight,
                      const string &symbols_fname,
                      const bool initial_symbols,
                      const int32 generate_filenames,
                      const string &filename_prefix,
                      const string &filename_suffix) {
   FarPrintStringsArgs args(ifilenames, entry_type, token_type,
-                           begin_key, end_key, print_key,
+                           begin_key, end_key, print_key, print_weight,
                            symbols_fname, initial_symbols, generate_filenames,
                            filename_prefix, filename_suffix);
 

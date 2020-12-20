@@ -74,8 +74,12 @@ FstClass *FstClass::Read(const string &fname) {
     ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
     return ReadFst<FstClass>(in, fname);
   } else {
-    return ReadFst<FstClass>(std::cin, "standard input");
+    return ReadFst<FstClass>(cin, "standard input");
   }
+}
+
+FstClass *FstClass::Read(istream &istr, const string &source) {
+  return ReadFst<FstClass>(istr, source);
 }
 
 //
@@ -88,7 +92,7 @@ MutableFstClass *MutableFstClass::Read(const string &fname, bool convert) {
       ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
       return ReadFst<MutableFstClass>(in, fname);
     } else {
-      return ReadFst<MutableFstClass>(std::cin, "standard input");
+      return ReadFst<MutableFstClass>(cin, "standard input");
     }
   } else {  // Converts to VectorFstClass if not mutable.
     FstClass *ifst = FstClass::Read(fname);
@@ -133,7 +137,7 @@ VectorFstClass *VectorFstClass::Read(const string &fname) {
     ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
     return ReadFst<VectorFstClass>(in, fname);
   } else {
-    return ReadFst<VectorFstClass>(std::cin, "standard input");
+    return ReadFst<VectorFstClass>(cin, "standard input");
   }
 }
 

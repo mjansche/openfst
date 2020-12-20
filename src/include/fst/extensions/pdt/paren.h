@@ -144,7 +144,8 @@ class PdtParenReachable {
                     const vector<pair<Label, Label> > &parens, bool close)
       : fst_(fst),
         parens_(parens),
-        close_(close) {
+        close_(close),
+        error_(false) {
     for (Label i = 0; i < parens.size(); ++i) {
       const pair<Label, Label>  &p = parens[i];
       paren_id_map_[p.first] = i;
@@ -155,11 +156,17 @@ class PdtParenReachable {
       StateId start = fst.Start();
       if (start == kNoStateId)
         return;
-      DFSearch(start, start);
+      if (!DFSearch(start)) {
+        FSTERROR() << "PdtReachable: Underlying cyclicity not supported";
+        error_ = true;
+      }
     } else {
       FSTERROR() << "PdtParenReachable: open paren info not implemented";
+      error_ = true;
     }
   }
+
+  bool const Error() { return error_; }
 
   // Given a state ID, returns an iterator over paren IDs
   // for close (open) parens reachable from that state along balanced
@@ -194,7 +201,7 @@ class PdtParenReachable {
  private:
   // DFS that gathers paren and state set information.
   // Bool returns false when cycle detected.
-  bool DFSearch(StateId s, StateId start);
+  bool DFSearch(StateId s);
 
   // Unions state sets together gathered by the DFS.
   void ComputeStateSet(StateId s);
@@ -212,12 +219,13 @@ class PdtParenReachable {
   vector<char> state_color_;                          // DFS state
   mutable Collection<ssize_t, StateId> state_sets_;   // Reachable states -> ID
   StateSetMap set_map_;                               // ID -> Reachable states
+  bool error_;
   DISALLOW_COPY_AND_ASSIGN(PdtParenReachable);
 };
 
 // DFS that gathers paren and state set information.
 template <class A>
-bool PdtParenReachable<A>::DFSearch(StateId s, StateId start) {
+bool PdtParenReachable<A>::DFSearch(StateId s) {
   if (s >= state_color_.size())
     state_color_.resize(s + 1, kDfsWhite);
 
@@ -239,7 +247,8 @@ bool PdtParenReachable<A>::DFSearch(StateId s, StateId start) {
     if (pit != paren_id_map_.end()) {               // paren?
       Label paren_id = pit->second;
       if (arc.ilabel == parens_[paren_id].first) {  // open paren
-        DFSearch(arc.nextstate, arc.nextstate);
+        if (!DFSearch(arc.nextstate))
+          return false;
         for (SetIterator set_iter = FindStates(paren_id, arc.nextstate);
              !set_iter.Done(); set_iter.Next()) {
           for (ParenArcIterator paren_arc_iter =
@@ -247,15 +256,14 @@ bool PdtParenReachable<A>::DFSearch(StateId s, StateId start) {
                !paren_arc_iter.Done();
                paren_arc_iter.Next()) {
             const A &cparc = paren_arc_iter.Value();
-            DFSearch(cparc.nextstate, start);
+            if (!DFSearch(cparc.nextstate))
+              return false;
           }
         }
       }
     } else {                                       // non-paren
-      if(!DFSearch(arc.nextstate, start)) {
-        FSTERROR() << "PdtReachable: Underlying cyclicity not supported";
-        return true;
-      }
+      if(!DFSearch(arc.nextstate))
+        return false;
     }
   }
   ComputeStateSet(s);

@@ -34,8 +34,8 @@ template <class Label>
 bool UTF8StringToLabels(const string &str, vector<Label> *labels) {
   const char *data = str.data();
   size_t length = str.size();
-  for (int32_t i = 0; i < length; /* no update */) {
-    char c = data[i++];
+  for (int i = 0; i < length; /* no update */) {
+    int c = data[i++] & 0xff;
     if ((c & 0x80) == 0) {
       labels->push_back(c);
     } else {
@@ -43,9 +43,9 @@ bool UTF8StringToLabels(const string &str, vector<Label> *labels) {
         LOG(ERROR) << "UTF8StringToLabels: continuation byte as lead byte";
         return false;
       }
-      int32_t count = (c >= 0xc0) + (c >= 0xe0) + (c >= 0xf0) + (c >= 0xf8) +
-                      (c >= 0xfc);
-      int32_t code = c & ((1 << (6 - count)) - 1);
+      int count = (c >= 0xc0) + (c >= 0xe0) + (c >= 0xf0) + (c >= 0xf8) +
+                  (c >= 0xfc);
+      int code = c & ((1 << (6 - count)) - 1);
       while (count != 0) {
         if (i == length) {
           LOG(ERROR) << "UTF8StringToLabels: truncated utf-8 byte sequence";

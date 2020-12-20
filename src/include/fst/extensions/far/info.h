@@ -34,7 +34,7 @@ void CountStatesAndArcs(const Fst<Arc> &fst, size_t *nstate, size_t *narc) {
   StateIterator<Fst<Arc> > siter(fst);
   for (; !siter.Done(); siter.Next(), ++(*nstate)) {
     ArcIterator<Fst<Arc> > aiter(fst, siter.Value());
-    for (; !aiter.Done(); aiter.Next(), ++(*narc));
+    for (; !aiter.Done(); aiter.Next(), ++(*narc)) {}
   }
 }
 

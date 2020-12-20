@@ -128,7 +128,7 @@ class MutableFst : public ExpandedFst<A> {
         }
         return Read(strm, FstReadOptions(filename));
       } else {
-        return Read(std::cin, FstReadOptions("standard input"));
+        return Read(cin, FstReadOptions("standard input"));
       }
     } else {  // Converts to 'convert_type' if not mutable.
       Fst<A> *ifst = Fst<A>::Read(filename);

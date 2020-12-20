@@ -20,6 +20,7 @@
 // Classes to provide symbol-to-integer and integer-to-symbol mappings.
 
 #include <fst/symbol-table.h>
+
 #include <fst/util.h>
 
 DEFINE_bool(fst_compat_symbols, true,
@@ -74,21 +75,29 @@ SymbolTableImpl* SymbolTableImpl::ReadText(istream &strm,
 }
 
 void SymbolTableImpl::MaybeRecomputeCheckSum() const {
-  if (check_sum_finalized_)
-    return;
+  {
+    ReaderMutexLock check_sum_lock(&check_sum_mutex_);
+    if (check_sum_finalized_)
+      return;
+  }
+
+  // We'll aquire an exclusive lock to recompute the checksums.
+  MutexLock check_sum_lock(&check_sum_mutex_);
+  if (check_sum_finalized_)  // Another thread (coming in around the same time
+    return;                  // might have done it already).  So we recheck.
 
   // Calculate the original label-agnostic check sum.
-  check_sum_.Reset();
+  CheckSummer check_sum;
   for (int64 i = 0; i < symbols_.size(); ++i)
-    check_sum_.Update(symbols_[i], strlen(symbols_[i]) + 1);
-  check_sum_string_ = check_sum_.Digest();
+    check_sum.Update(symbols_[i], strlen(symbols_[i]) + 1);
+  check_sum_string_ = check_sum.Digest();
 
   // Calculate the safer, label-dependent check sum.
-  labeled_check_sum_.Reset();
+  CheckSummer labeled_check_sum;
   for (int64 key = 0; key < dense_key_limit_; ++key) {
     ostringstream line;
     line << symbols_[key] << '\t' << key;
-    labeled_check_sum_.Update(line.str()); }
+    labeled_check_sum.Update(line.str()); }
   for (map<int64, const char*>::const_iterator it =
        key_map_.begin();
        it != key_map_.end();
@@ -96,10 +105,10 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
     if (it->first >= dense_key_limit_) {
       ostringstream line;
       line << it->second << '\t' << it->first;
-      labeled_check_sum_.Update(line.str());
+      labeled_check_sum.Update(line.str());
     }
   }
-  labeled_check_sum_string_ = labeled_check_sum_.Digest();
+  labeled_check_sum_string_ = labeled_check_sum.Digest();
 
   check_sum_finalized_ = true;
 }

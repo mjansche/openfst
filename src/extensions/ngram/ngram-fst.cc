@@ -12,26 +12,17 @@
 // limitations under the License.
 //
 // Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// Author: sorenj@google.com (Jeffrey Sorensen)
 
-#include <fst/extensions/far/compile-strings.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include <fst/extensions/ngram/ngram-fst.h>
 
-namespace fst {
+#include <sys/types.h>
 
-// Compute the minimal length required to
-// encode each line number as a decimal number
-int KeySize(const char *filename) {
-  ifstream istrm(filename);
-  istrm.seekg(0);
-  string s;
-  int nline = 0;
-  while (getline(istrm, s))
-    ++nline;
-  istrm.seekg(0);
-  return nline ? ceil(log10(nline + 1)) : 1;
-}
+#include <fst/fstlib.h>
 
-}  // namespace fst
+using fst::NGramFst;
+using fst::StdArc;
+using fst::LogArc;
+
+REGISTER_FST(NGramFst, StdArc);
+REGISTER_FST(NGramFst, LogArc);

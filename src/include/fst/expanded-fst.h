@@ -82,7 +82,7 @@ class ExpandedFst : public Fst<A> {
       }
       return Read(strm, FstReadOptions(filename));
     } else {
-      return Read(std::cin, FstReadOptions("standard input"));
+      return Read(cin, FstReadOptions("standard input"));
     }
   }
 };
@@ -154,7 +154,7 @@ class ImplToExpandedFst : public ImplToFst<I, F> {
       }
       return I::Read(strm, FstReadOptions(filename));
     } else {
-      return I::Read(std::cin, FstReadOptions("standard input"));
+      return I::Read(cin, FstReadOptions("standard input"));
     }
   }
 

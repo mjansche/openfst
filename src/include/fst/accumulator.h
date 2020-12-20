@@ -258,7 +258,7 @@ class FastLogAccumulator {
     for(StateIterator<F> siter(fst); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
       if (fst.NumArcs(s) >= arc_limit_) {
-        double sum = FloatLimits<double>::kPosInfinity;
+        double sum = FloatLimits<double>::PosInfinity();
         weight_positions.push_back(weight_position);
         weights.push_back(sum);
         ++weight_position;
@@ -282,12 +282,12 @@ class FastLogAccumulator {
 
  private:
   double LogPosExp(double x) {
-    return x == FloatLimits<double>::kPosInfinity ?
+    return x == FloatLimits<double>::PosInfinity() ?
         0.0 : log(1.0F + exp(-x));
   }
 
   double LogMinusExp(double x) {
-    return x == FloatLimits<double>::kPosInfinity ?
+    return x == FloatLimits<double>::PosInfinity() ?
         0.0 : log(1.0F - exp(-x));
   }
 
@@ -302,7 +302,7 @@ class FastLogAccumulator {
 
   double LogPlus(double f1, Weight v) {
     double f2 = to_log_weight_(v).Value();
-    if (f1 == FloatLimits<double>::kPosInfinity)
+    if (f1 == FloatLimits<double>::PosInfinity())
       return f2;
     else if (f1 > f2)
       return f2 - LogPosExp(f1 - f2);
@@ -317,7 +317,7 @@ class FastLogAccumulator {
       error_ = true;
       return Weight::NoWeight();
     }
-    if (f2 == FloatLimits<double>::kPosInfinity)
+    if (f2 == FloatLimits<double>::PosInfinity())
       return to_weight_(f1);
     else
       return to_weight_(f1 - LogMinusExp(f2 - f1));
@@ -485,7 +485,7 @@ class CacheLogAccumulator {
     if ((weights_ == 0) && (fst_->NumArcs(s) >= arc_limit_)) {
       weights_ = new vector<double>;
       weights_->reserve(fst_->NumArcs(s) + 1);
-      weights_->push_back(FloatLimits<double>::kPosInfinity);
+      weights_->push_back(FloatLimits<double>::PosInfinity());
       data_->AddWeights(s, weights_);
     }
   }
@@ -524,7 +524,7 @@ class CacheLogAccumulator {
           - weights_->begin() - 1;
     } else {
       size_t n = 0;
-      double x =  FloatLimits<double>::kPosInfinity;
+      double x =  FloatLimits<double>::PosInfinity();
       for(aiter->Reset(); !aiter->Done(); aiter->Next(), ++n) {
         x = LogPlus(x, aiter->Value().weight);
         if (x < w) break;
@@ -537,12 +537,12 @@ class CacheLogAccumulator {
 
  private:
   double LogPosExp(double x) {
-    return x == FloatLimits<double>::kPosInfinity ?
+    return x == FloatLimits<double>::PosInfinity() ?
         0.0 : log(1.0F + exp(-x));
   }
 
   double LogMinusExp(double x) {
-    return x == FloatLimits<double>::kPosInfinity ?
+    return x == FloatLimits<double>::PosInfinity() ?
         0.0 : log(1.0F - exp(-x));
   }
 
@@ -557,7 +557,7 @@ class CacheLogAccumulator {
 
   double LogPlus(double f1, Weight v) {
     double f2 = to_log_weight_(v).Value();
-    if (f1 == FloatLimits<double>::kPosInfinity)
+    if (f1 == FloatLimits<double>::PosInfinity())
       return f2;
     else if (f1 > f2)
       return f2 - LogPosExp(f1 - f2);
@@ -572,7 +572,7 @@ class CacheLogAccumulator {
       error_ = true;
       return Weight::NoWeight();
     }
-    if (f2 == FloatLimits<double>::kPosInfinity)
+    if (f2 == FloatLimits<double>::PosInfinity())
       return to_weight_(f1);
     else
       return to_weight_(f1 - LogMinusExp(f2 - f1));

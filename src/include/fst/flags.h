@@ -22,6 +22,8 @@
 
 #include <iostream>
 #include <map>
+#include <set>
+#include <sstream>
 #include <string>
 
 #include <fst/types.h>
@@ -42,7 +44,7 @@ using std::string;
 //
 //    DECLARE_int32(length);
 //
-// SetFlags() can be used to set flags from the command line
+// SET_FLAGS() can be used to set flags from the command line
 // using, for example, '--length=2'.
 //
 // ShowUsage() can be used to print out command and flag usage.
@@ -56,12 +58,18 @@ using std::string;
 
 template <typename T>
 struct FlagDescription {
-  FlagDescription(T *addr, const char *doc, const char *type, const T val)
-      : address(addr), doc_string(doc), type_name(type), default_value(val) {}
+  FlagDescription(T *addr, const char *doc, const char *type,
+		  const char *file, const T val)
+      : address(addr),
+    doc_string(doc),
+    type_name(type),
+    file_name(file),
+    default_value(val) {}
 
   T *address;
   const char *doc_string;
   const char *type_name;
+  const char *file_name;
   const T default_value;
 };
 
@@ -118,8 +126,7 @@ class FlagRegister {
   }
 
   bool SetFlag(const string &arg, const string &val) const {
-    for (typename std::map< string,
-             FlagDescription<T> >::const_iterator it =
+    for (typename std::map< string, FlagDescription<T> >::const_iterator it =
            flag_table_.begin();
          it != flag_table_.end();
          ++it) {
@@ -131,19 +138,7 @@ class FlagRegister {
     return false;
   }
 
-  void ShowDefault(bool default_value) const {
-    std::cout << ", default = ";
-    std::cout << (default_value ? "true" : "false");
-  }
-  void ShowDefault(const string &default_value) const {
-    std::cout << ", default = ";
-    std::cout << "\"" << default_value << "\"";
-  }
-  template<typename V> void ShowDefault(const V& default_value) const {
-    std::cout << ", default = ";
-    std::cout << default_value;
-  }
-  void ShowUsage() const {
+  void GetUsage(std::set< std::pair<string, string> > *usage_set) const {
     for (typename std::map< string,
              FlagDescription<T> >::const_iterator it =
            flag_table_.begin();
@@ -151,10 +146,13 @@ class FlagRegister {
          ++it) {
       const string &name = it->first;
       const FlagDescription<T> &desc = it->second;
-      std::cout << "    --" << name
-           << ": type = " << desc.type_name;
-      ShowDefault(desc.default_value);
-      std::cout << "\n      " << desc.doc_string  << "\n";
+      string usage = "  --" + name;
+      usage += ": type = ";
+      usage += desc.type_name;
+      usage += ", default = ";
+      usage += GetDefault(desc.default_value) + "\n  ";
+      usage += desc.doc_string;
+      usage_set->insert(make_pair(desc.file_name, usage));
     }
   }
 
@@ -163,11 +161,26 @@ class FlagRegister {
     register_lock_ = new fst::Mutex;
     register_ = new FlagRegister<T>;
   }
+
+  std::map< string, FlagDescription<T> > flag_table_;
+
+  string GetDefault(bool default_value) const {
+    return default_value ? "true" : "false";
+  }
+
+  string GetDefault(const string &default_value) const {
+    return "\"" + default_value + "\"";
+  }
+
+  template<typename V> string GetDefault(const V& default_value) const {
+    std::ostringstream strm;
+    strm << default_value;
+    return strm.str();
+  }
+
   static fst::FstOnceType register_init_;   // ensures only called once
   static fst::Mutex* register_lock_;        // multithreading lock
   static FlagRegister<T> *register_;
-
-  std::map< string, FlagDescription<T> > flag_table_;
 };
 
 template <class T>
@@ -199,6 +212,7 @@ class FlagRegisterer {
   name ## _flags_registerer(#name, FlagDescription<type>(&FLAGS_ ## name, \
                                                          doc,             \
                                                          #type,           \
+                                                         __FILE__,        \
                                                          value))
 
 #define DEFINE_bool(name, value, doc) DEFINE_VAR(bool, name, value, doc)
@@ -212,13 +226,17 @@ class FlagRegisterer {
 // Temporary directory
 DECLARE_string(tmpdir);
 
-void SetFlags(const char *usage, int *argc, char ***argv, bool remove_flags);
+void SetFlags(const char *usage, int *argc, char ***argv, bool remove_flags,
+              const char *src = "");
+
+#define SET_FLAGS(usage, argc, argv, rmflags) \
+SetFlags(usage, argc, argv, rmflags, __FILE__)
 
 // Deprecated - for backward compatibility
 inline void InitFst(const char *usage, int *argc, char ***argv, bool rmflags) {
   return SetFlags(usage, argc, argv, rmflags);
 }
 
-void ShowUsage();
+void ShowUsage(bool long_usage = true);
 
 #endif  // FST_LIB_FLAGS_H__

@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
   usage += " [in1.far in2.far...]\n";
 
   std::set_new_handler(FailedNewHandler);
-  SetFlags(usage.c_str(), &argc, &argv, true);
+  SET_FLAGS(usage.c_str(), &argc, &argv, true);
 
   vector<string> ifilenames;
   for (int i = 1; i < argc; ++i)

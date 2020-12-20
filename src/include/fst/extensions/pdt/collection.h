@@ -91,10 +91,9 @@ class Collection {
     return node_id;
   }
 
-  // Finds set given integer ID. Returns true if ID corresponds
-  // to set. Use iterators below to traverse result.
+  // Finds set given integer ID. Returns set iterator to traverse result.
   SetIterator FindSet(I id) {
-    if (id < 0 && id >= node_table_.Size()) {
+    if (id < 0 || id >= node_table_.Size()) {
       return SetIterator(kNoNodeId, Node(kNoNodeId, T()), &node_table_);
     } else {
       return SetIterator(id, node_table_.FindEntry(id), &node_table_);

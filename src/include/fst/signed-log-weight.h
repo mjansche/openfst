@@ -113,9 +113,9 @@ inline SignedLogWeightTpl<T> Plus(const SignedLogWeightTpl<T> &w1,
   bool s2 = w2.Value1().Value() > 0.0;
   T f1 = w1.Value2().Value();
   T f2 = w2.Value2().Value();
-  if (f1 == FloatLimits<T>::kPosInfinity)
+  if (f1 == FloatLimits<T>::PosInfinity())
     return w2;
-  else if (f2 == FloatLimits<T>::kPosInfinity)
+  else if (f2 == FloatLimits<T>::PosInfinity())
     return w1;
   else if (f1 == f2) {
     if (s1 == s2)
@@ -173,12 +173,12 @@ inline SignedLogWeightTpl<T> Divide(const SignedLogWeightTpl<T> &w1,
   bool s2 = w2.Value1().Value() > 0.0;
   T f1 = w1.Value2().Value();
   T f2 = w2.Value2().Value();
-  if (f2 == FloatLimits<T>::kPosInfinity)
+  if (f2 == FloatLimits<T>::PosInfinity())
     return SignedLogWeightTpl<T>(TropicalWeight(1.0),
-      FloatLimits<T>::kNumberBad);
-  else if (f1 == FloatLimits<T>::kPosInfinity)
+      FloatLimits<T>::NumberBad());
+  else if (f1 == FloatLimits<T>::PosInfinity())
     return SignedLogWeightTpl<T>(TropicalWeight(1.0),
-      FloatLimits<T>::kPosInfinity);
+      FloatLimits<T>::PosInfinity());
   else if (s1 == s2)
     return SignedLogWeightTpl<T>(TropicalWeight(1.0), (f1 - f2));
   else

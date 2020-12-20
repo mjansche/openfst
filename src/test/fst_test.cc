@@ -123,7 +123,7 @@ using fst::EditFst;
 int main(int argc, char **argv) {
   FLAGS_fst_verify_properties = true;
   std::set_new_handler(FailedNewHandler);
-  SetFlags(argv[0], &argc, &argv, true);
+  SET_FLAGS(argv[0], &argc, &argv, true);
 
   // VectorFst<StdArc> tests
   {

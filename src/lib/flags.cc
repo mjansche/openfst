@@ -24,14 +24,18 @@
 
 DEFINE_int32(v, 0, "verbose level");
 DEFINE_bool(help, false, "show usage information");
+DEFINE_bool(helpshort, false, "show brief usage information");
 DEFINE_string(tmpdir, "/tmp/", "temporary directory");
 
 using namespace std;
 
 static string flag_usage;
+static string prog_src;
 
-void SetFlags(const char *usage, int *argc, char ***argv, bool remove_flags) {
+void SetFlags(const char *usage, int *argc, char ***argv,
+              bool remove_flags, const char *src) {
   flag_usage = usage;
+  prog_src = src;
   int index = 1;
   for (; index < *argc; ++index) {
     string argval = (*argv)[index];
@@ -82,22 +86,75 @@ void SetFlags(const char *usage, int *argc, char ***argv, bool remove_flags) {
   }
 
   if (FLAGS_help) {
-    ShowUsage();
+    ShowUsage(true);
+    exit(1);
+  }
+
+  if (FLAGS_helpshort) {
+    ShowUsage(false);
     exit(1);
   }
 }
 
-void ShowUsage() {
+// If flag is defined in file 'src' and 'in_src' true or is not
+// defined in file 'src' and 'in_src' is false, then print usage.
+static void
+ShowUsageRestrict(const std::set< pair<string, string> > &usage_set,
+		  const string &src, bool in_src, bool show_file) {
+  string old_file;
+  bool file_out = false;
+  bool usage_out = false;
+  for (std::set< pair<string, string> >::const_iterator it =
+	 usage_set.begin();
+       it != usage_set.end();
+       ++it) {
+    const string &file = it->first;
+    const string &usage = it->second;
+
+    bool match = file == src;
+    if ((match && !in_src) || (!match && in_src))
+      continue;
+
+    if (file != old_file) {
+      if (show_file) {
+        if (file_out) cout << "\n";
+	cout << "Flags from: " << file << "\n";
+        file_out = true;
+      }
+      old_file = file;
+    }
+    cout << usage << "\n";
+    usage_out = true;
+  }
+  if (usage_out) cout << "\n";
+}
+
+void ShowUsage(bool long_usage) {
+  std::set< pair<string, string> > usage_set;
+
   cout << flag_usage << "\n";
-  cout << "  Flags Description:\n";
+
   FlagRegister<bool> *bool_register = FlagRegister<bool>::GetRegister();
-  bool_register->ShowUsage();
+  bool_register->GetUsage(&usage_set);
   FlagRegister<string> *string_register = FlagRegister<string>::GetRegister();
-  string_register->ShowUsage();
+  string_register->GetUsage(&usage_set);
   FlagRegister<int32> *int32_register = FlagRegister<int32>::GetRegister();
-  int32_register->ShowUsage();
+  int32_register->GetUsage(&usage_set);
   FlagRegister<int64> *int64_register = FlagRegister<int64>::GetRegister();
-  int64_register->ShowUsage();
+  int64_register->GetUsage(&usage_set);
   FlagRegister<double> *double_register = FlagRegister<double>::GetRegister();
-  double_register->ShowUsage();
+  double_register->GetUsage(&usage_set);
+
+  if (!prog_src.empty()) {
+    cout << "PROGRAM FLAGS:\n\n";
+    ShowUsageRestrict(usage_set, prog_src, true, false);
+  }
+
+  if (!long_usage)
+    return;
+
+  if (!prog_src.empty())
+    cout << "LIBRARY FLAGS:\n\n";
+
+  ShowUsageRestrict(usage_set, prog_src, false, true);
 }

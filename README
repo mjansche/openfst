@@ -11,7 +11,7 @@ REQUIREMENTS:
   	
 INSTALLATION:
   Follow the generic GNU build system instructions in ./INSTALL.  We
-  recommend configuring with =--enable-static=no= for faster
+  recommend configuring with --enable-static=no for faster
   compiles. 
 
   Optional features:
@@ -20,6 +20,7 @@ INSTALLATION:
   --enable-const-fsts      Enable all ConstFst classes (def: no)
   --enable-far		   Enable FAR (FST Archive) extension (def: no)
   --enable-lookahead-fsts  Enable LookAheadFst classes (def: no)
+  --enable-ngram-fsts      Enable NGramFst classes (def: no)
   --enable-pdt             Experimental push-down transducer extensions (def: no)
 
   Configuring with --enable-bin=no gives very fast compiles, but

@@ -67,7 +67,7 @@ bool ReadPotentials(const string &weight_type,
 // Writes vector of weights; returns true on success.
 bool WritePotentials(const string& filename,
                      const vector<WeightClass>& potential) {
-  ostream *strm = &std::cout;
+  ostream *strm = &cout;
   if (!filename.empty()) {
     strm = new ofstream(filename.c_str());
     if (!*strm) {
@@ -85,7 +85,7 @@ bool WritePotentials(const string& filename,
     LOG(ERROR) << "WritePotentials: Write failed: "
                << (filename.empty() ? "standard output" : filename);
   bool ret = *strm;
-  if (strm != &std::cout)
+  if (strm != &cout)
     delete strm;
   return ret;
 }

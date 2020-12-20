@@ -387,7 +387,6 @@ class PdtShortestPath {
   typedef typename SpData::SearchState SearchState;
   typedef typename SpData::ParenSpec ParenSpec;
 
-  typedef typename PdtParenReachable<Arc>::SetIterator StateSetIterator;
   typedef typename PdtBalanceData<Arc>::SetIterator CloseSourceIterator;
 
   PdtShortestPath(const Fst<Arc> &ifst,
@@ -403,7 +402,7 @@ class PdtShortestPath {
 
     if ((Weight::Properties() & (kPath | kRightSemiring))
         != (kPath | kRightSemiring)) {
-      FSTERROR() << "SingleShortestPath: Weight needs to have the path"
+      FSTERROR() << "PdtShortestPath: Weight needs to have the path"
                  << " property and be right distributive: " << Weight::Type();
       error_ = true;
     }
@@ -440,6 +439,7 @@ class PdtShortestPath {
   static const Arc kNoArc;
   static const uint8 kEnqueued;
   static const uint8 kExpanded;
+  static const uint8 kFinished;
   const uint8 kFinal;
 
  public:
@@ -543,6 +543,7 @@ void PdtShortestPath<Arc, Queue>::GetDistance(StateId start) {
     ProcArcs(s);
     sp_data_.SetFlags(s, kExpanded, kExpanded);
   }
+  sp_data_.SetFlags(q, kFinished, kFinished);
   balance_data_.FinishInsert(start);
   sp_data_.GC(start);
 }
@@ -607,7 +608,11 @@ void PdtShortestPath<Arc, Queue>::ProcOpenParen(
       Queue *state_queue = state_queue_;
       GetDistance(d.start);
       state_queue_ = state_queue;
+    } else if (!(sp_data_.Flags(d) & kFinished)) {
+      FSTERROR() << "PdtShortestPath: open parenthesis recursion: not bounded stack";
+      error_ = true;
     }
+
     for (CloseSourceIterator set_iter =
              balance_data_.Find(paren_id, arc.nextstate);
          !set_iter.Done(); set_iter.Next()) {
@@ -763,6 +768,9 @@ const uint8 PdtShortestPath<Arc, Queue>::kEnqueued = 0x10;
 
 template<class Arc, class Queue>
 const uint8 PdtShortestPath<Arc, Queue>::kExpanded = 0x20;
+
+template<class Arc, class Queue>
+const uint8 PdtShortestPath<Arc, Queue>::kFinished = 0x40;
 
 template<class Arc, class Queue>
 void ShortestPath(const Fst<Arc> &ifst,
