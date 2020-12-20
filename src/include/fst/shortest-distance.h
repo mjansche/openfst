@@ -178,7 +178,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
          !aiter.Done();
          aiter.Next()) {
       const Arc &arc = aiter.Value();
-      if (!arc_filter_(arc) || arc.weight == Weight::Zero())
+      if (!arc_filter_(arc))
         continue;
       while (distance_->size() <= arc.nextstate) {
         distance_->push_back(Weight::Zero());

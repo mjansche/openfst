@@ -56,9 +56,9 @@ struct WeightClassImpl : public WeightImplBase {
   }
 
   virtual string to_string() const {
-    ostringstream s;
-    s << weight;
-    return s.str();
+    string str;
+    WeightToStr(weight, &str);
+    return str;
   }
 
   virtual bool operator == (const WeightImplBase &other) const {

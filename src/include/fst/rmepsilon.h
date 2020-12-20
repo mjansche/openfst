@@ -110,7 +110,6 @@ class RmEpsilonState {
   class ElementKey {
    public:
     size_t operator()(const Element& e) const {
-      return static_cast<size_t>(e.nextstate);
       return static_cast<size_t>(e.nextstate +
                                  e.ilabel * kPrime0 +
                                  e.olabel * kPrime1);

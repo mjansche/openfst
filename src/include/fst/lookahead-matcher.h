@@ -601,10 +601,12 @@ bool LabelLookAheadMatcher<M, F, S>::LookAheadFst(const L &fst, StateId s) {
   bool reach_arc = label_reachable_->Reach(&aiter, 0,
                                            internal::NumArcs(*lfst_, s),
                                            reach_input, compute_weight);
+  Weight lfinal = internal::Final(*lfst_, s);
+  bool reach_final = lfinal != Weight::Zero() && label_reachable_->ReachFinal();
   if (reach_arc) {
     ssize_t begin = label_reachable_->ReachBegin();
     ssize_t end = label_reachable_->ReachEnd();
-    if (compute_prefix && end - begin == 1) {
+    if (compute_prefix && end - begin == 1 && !reach_final) {
       aiter.Seek(begin);
       SetLookAheadPrefix(aiter.Value());
       compute_weight = false;
@@ -612,9 +614,6 @@ bool LabelLookAheadMatcher<M, F, S>::LookAheadFst(const L &fst, StateId s) {
       SetLookAheadWeight(label_reachable_->ReachWeight());
     }
   }
-  Weight lfinal = internal::Final(*lfst_, s);
-  bool reach_final = lfinal != Weight::Zero() &&
-      label_reachable_->ReachFinal();
   if (reach_final && compute_weight)
     SetLookAheadWeight(reach_arc ?
                        Plus(LookAheadWeight(), lfinal) : lfinal);

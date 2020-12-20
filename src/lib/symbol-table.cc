@@ -97,7 +97,8 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
   for (int64 key = 0; key < dense_key_limit_; ++key) {
     ostringstream line;
     line << symbols_[key] << '\t' << key;
-    labeled_check_sum.Update(line.str()); }
+    labeled_check_sum.Update(line.str().data(), line.str().size());
+  }
   for (map<int64, const char*>::const_iterator it =
        key_map_.begin();
        it != key_map_.end();
@@ -105,7 +106,7 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
     if (it->first >= dense_key_limit_) {
       ostringstream line;
       line << it->second << '\t' << it->first;
-      labeled_check_sum.Update(line.str());
+      labeled_check_sum.Update(line.str().data(), line.str().size());
     }
   }
   labeled_check_sum_string_ = labeled_check_sum.Digest();
@@ -245,7 +246,7 @@ bool SymbolTable::WriteText(ostream &strm) const {
     ostringstream line;
     line << iter.Symbol() << FLAGS_fst_field_separator[0] << iter.Value()
          << '\n';
-    strm.write(line.str().c_str(), line.str().length());
+    strm.write(line.str().data(), line.str().length());
   }
   return true;
 }

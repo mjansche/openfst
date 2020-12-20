@@ -84,7 +84,7 @@ class CheckSummer {
   void Reset() {
     count_ = 0;
     for (int i = 0; i < kCheckSumLength; ++i)
-      check_sum_[0] = '\0';
+      check_sum_[i] = '\0';
   }
 
   void Update(void const *data, int size) {

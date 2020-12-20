@@ -22,7 +22,7 @@
 
 extern uint32 nth_bit_bit_offset[];
 
-inline uint nth_bit(uint64 v, uint32 r) {
+inline uint32 nth_bit(uint64 v, uint32 r) {
   uint32 shift = 0;
   uint32 c = __builtin_popcount(v & 0xffffffff);
   uint32 mask = -(r > c);

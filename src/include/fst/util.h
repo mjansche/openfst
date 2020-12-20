@@ -265,7 +265,7 @@ void WeightToStr(Weight w, string *s) {
   ostringstream strm;
   strm.precision(9);
   strm << w;
-  *s += strm.str();
+  s->append(strm.str().data(), strm.str().size());
 }
 
 // Utilities for reading/writing label pairs

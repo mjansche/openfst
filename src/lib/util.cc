@@ -49,7 +49,7 @@ int64 StrToInt64(const string &s, const string &src, size_t nline,
 void Int64ToStr(int64 n, string *s) {
   ostringstream nstr;
   nstr << n;
-  *s = nstr.str();
+  s->append(nstr.str().data(), nstr.str().size());
 }
 
 void ConvertToLegalCSymbol(string *s) {

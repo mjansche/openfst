@@ -139,9 +139,9 @@ template <class A> class FstDrawer {
       EscapeChars(symbol, &nsymbol);
       PrintString(nsymbol);
     } else {
-      ostringstream sid;
-      sid << id;
-      PrintString(sid.str());
+      string idstr;
+      Int64ToStr(id, &idstr);
+      PrintString(idstr);
     }
   }
 

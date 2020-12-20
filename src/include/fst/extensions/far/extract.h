@@ -70,7 +70,7 @@ void FarExtract(const vector<string> &ifilenames,
       if (nrep > 0) {
         ostringstream tmp;
         tmp << '.' << nrep;
-        key += tmp.str();
+        key.append(tmp.str().data(), tmp.str().size());
       }
       ofilename = key;
     }

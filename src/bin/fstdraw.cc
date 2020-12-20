@@ -26,8 +26,6 @@ DEFINE_string(isymbols, "", "Input label symbol table");
 DEFINE_string(osymbols, "", "Output label symbol table");
 DEFINE_string(ssymbols, "", "State label symbol table");
 DEFINE_bool(numeric, false, "Print numeric labels");
-DEFINE_string(save_isymbols, "", "Save input symbol table to file");
-DEFINE_string(save_osymbols, "", "Save output symbol table to file");
 DEFINE_int32(precision, 5, "Set precision (number of char/float)");
 DEFINE_bool(show_weight_one, false,
             "Print/draw arc weights and final weights equal to Weight::One()");
@@ -51,7 +49,7 @@ int main(int argc, char **argv) {
 
   string usage = "Prints out binary FSTs in dot text format.\n\n  Usage: ";
   usage += argv[0];
-  usage += " [binary.fst [text.fst]]\n";
+  usage += " [binary.fst [text.dot]]\n";
 
   std::set_new_handler(FailedNewHandler);
   SET_FLAGS(usage.c_str(), &argc, &argv, true);
@@ -105,12 +103,6 @@ int main(int argc, char **argv) {
              FLAGS_ranksep, FLAGS_nodesep,
              FLAGS_fontsize, FLAGS_precision,
              FLAGS_show_weight_one, ostrm, dest);
-
-  if (isyms && !FLAGS_save_isymbols.empty())
-    isyms->WriteText(FLAGS_save_isymbols);
-
-  if (osyms && !FLAGS_save_osymbols.empty())
-    osyms->WriteText(FLAGS_save_osymbols);
 
   if (ostrm != &cout)
     delete ostrm;

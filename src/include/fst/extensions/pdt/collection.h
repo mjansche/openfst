@@ -16,7 +16,7 @@
 // Author: riley@google.com (Michael Riley)
 //
 // \file
-// Class to store a collection of sets with elements of type T.
+// Class to store a collection of ordered (multi-)sets with elements of type T.
 
 #ifndef FST_EXTENSIONS_PDT_COLLECTION_H__
 #define FST_EXTENSIONS_PDT_COLLECTION_H__
@@ -29,11 +29,11 @@ using std::vector;
 
 namespace fst {
 
-// Stores a collection of non-empty sets with elements of type T. A
-// default constructor, equality ==, a total order <, and an STL-style
-// hash class must be defined on the elements. Provides signed
-// integer ID (of type I) of each unique set. The IDs are allocated
-// starting from 0 in order.
+// Stores a collection of non-empty, ordered (multi-)sets with elements
+// of type T. A default constructor, equality ==, and an STL-style
+// hash class must be defined on the elements. Provides signed integer
+// ID (of type I) of each unique set. The IDs are allocated starting
+// from 0 in order.
 template <class I, class T>
 class Collection {
  public:
@@ -80,18 +80,20 @@ class Collection {
 
   Collection() {}
 
-  // Lookups integer ID from set. If it doesn't exist, then adds it.
-  // Set elements should be in strict order (and therefore unique).
-  I FindId(const vector<T> &set) {
+  // Lookups integer ID from ordered multi-set. If it doesn't exist
+  // and 'insert' is true, then adds it. Otherwise returns -1.
+  I FindId(const vector<T> &set, bool insert = true) {
     I node_id = kNoNodeId;
     for (ssize_t i = set.size() - 1; i >= 0; --i) {
       Node node(node_id, set[i]);
-      node_id = node_table_.FindId(node);
+      node_id = node_table_.FindId(node, insert);
+      if (node_id == -1) break;
     }
     return node_id;
   }
 
-  // Finds set given integer ID. Returns set iterator to traverse result.
+  // Finds ordered (multi-)set given integer ID. Returns set iterator
+  // to traverse result.
   SetIterator FindSet(I id) {
     if (id < 0 || id >= node_table_.Size()) {
       return SetIterator(kNoNodeId, Node(kNoNodeId, T()), &node_table_);

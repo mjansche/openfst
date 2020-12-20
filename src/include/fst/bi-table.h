@@ -39,8 +39,9 @@ namespace fst {
 //   // Required constructors.
 //   BiTable();
 //
-//   // Lookup integer ID from entry. If it doesn't exist, then add it.
-//   I FindId(const T &entry);
+//   // Lookup integer ID from entry. If it doesn't exist and 'insert'
+//   / is true, then add it. Otherwise return -1.
+//   I FindId(const T &entry, bool insert = true);
 //   // Lookup entry from integer ID.
 //   const T &FindEntry(I) const;
 //   // # of stored entries.
@@ -58,11 +59,15 @@ class HashBiTable {
     T empty_entry;
   }
 
-  I FindId(const T &entry) {
+  I FindId(const T &entry, bool insert = true) {
     I &id_ref = entry2id_[entry];
-    if (id_ref == 0) {  // T not found; store and assign it a new ID.
-      id2entry_.push_back(entry);
-      id_ref = id2entry_.size();
+    if (id_ref == 0) {  // T not found
+      if (insert) {     // store and assign it a new ID
+        id2entry_.push_back(entry);
+        id_ref = id2entry_.size();
+      } else {
+        return -1;
+      }
     }
     return id_ref - 1;  // NB: id_ref = ID + 1
   }
@@ -109,14 +114,18 @@ class CompactHashBiTable {
     id2entry_.reserve(table_size);
   }
 
-  I FindId(const T &entry) {
+  I FindId(const T &entry, bool insert = true) {
     current_entry_ = &entry;
     typename KeyHashSet::const_iterator it = keys_.find(kCurrentKey);
-    if (it == keys_.end()) {
-      I key = id2entry_.size();
-      id2entry_.push_back(entry);
-      keys_.insert(key);
-      return key;
+    if (it == keys_.end()) {  // T not found
+      if (insert) {           // store and assign it a new ID
+        I key = id2entry_.size();
+        id2entry_.push_back(entry);
+        keys_.insert(key);
+        return key;
+      } else {
+        return -1;
+      }
     } else {
       return *it;
     }
@@ -191,14 +200,18 @@ class VectorBiTable {
 
   ~VectorBiTable() { delete fp_; }
 
-  I FindId(const T &entry) {
+  I FindId(const T &entry, bool insert = true) {
     ssize_t fp = (*fp_)(entry);
     if (fp >= fp2id_.size())
       fp2id_.resize(fp + 1);
     I &id_ref = fp2id_[fp];
-    if (id_ref == 0) {  // T not found; store and assign it a new ID.
-      id2entry_.push_back(entry);
-      id_ref = id2entry_.size();
+    if (id_ref == 0) {  // T not found
+      if (insert) {     // store and assign it a new ID
+        id2entry_.push_back(entry);
+        id_ref = id2entry_.size();
+      } else {
+        return -1;
+      }
     }
     return id_ref - 1;  // NB: id_ref = ID + 1
   }
@@ -251,24 +264,32 @@ class VectorHashBiTable {
     delete h_;
   }
 
-  I FindId(const T &entry) {
+  I FindId(const T &entry, bool insert = true) {
     if ((*selector_)(entry)) {  // Use the vector if 'selector_(entry) == true'
       uint64 fp = (*fp_)(entry);
       if (fp2id_.size() <= fp)
         fp2id_.resize(fp + 1, 0);
-      if (fp2id_[fp] == 0) {
-        id2entry_.push_back(entry);
-        fp2id_[fp] = id2entry_.size();
+      if (fp2id_[fp] == 0) {         // T not found
+        if (insert) {                // store and assign it a new ID
+          id2entry_.push_back(entry);
+          fp2id_[fp] = id2entry_.size();
+        } else {
+          return -1;
+        }
       }
       return fp2id_[fp] - 1;  // NB: assoc_value = ID + 1
     } else {  // Use the hash table otherwise.
       current_entry_ = &entry;
       typename KeyHashSet::const_iterator it = keys_.find(kCurrentKey);
       if (it == keys_.end()) {
-        I key = id2entry_.size();
-        id2entry_.push_back(entry);
-        keys_.insert(key);
-        return key;
+        if (insert) {
+          I key = id2entry_.size();
+          id2entry_.push_back(entry);
+          keys_.insert(key);
+          return key;
+        } else {
+          return -1;
+        }
       } else {
         return *it;
       }
@@ -357,11 +378,15 @@ class ErasableBiTable {
  public:
   ErasableBiTable() : first_(0) {}
 
-  I FindId(const T &entry) {
+  I FindId(const T &entry, bool insert = true) {
     I &id_ref = entry2id_[entry];
-    if (id_ref == 0) {  // T not found; store and assign it a new ID.
-      id2entry_.push_back(entry);
-      id_ref = id2entry_.size() + first_;
+    if (id_ref == 0) {  // T not found
+      if (insert) {     // store and assign it a new ID
+        id2entry_.push_back(entry);
+        id_ref = id2entry_.size() + first_;
+      } else {
+        return -1;
+      }
     }
     return id_ref - 1;  // NB: id_ref = ID + 1
   }
