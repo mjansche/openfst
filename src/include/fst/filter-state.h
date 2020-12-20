@@ -192,5 +192,4 @@ private:
 
 }  // namespace fst
 
-
 #endif  // FST_LIB_FILTER_STATE_H_

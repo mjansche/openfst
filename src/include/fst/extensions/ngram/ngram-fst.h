@@ -276,6 +276,198 @@ class NGramFstImpl : public FstImpl<A> {
 };
 
 template<typename A>
+inline void NGramFstImpl<A>::GetStates(
+    const vector<Label> &context,
+    vector<typename A::StateId>* states) const {
+  states->clear();
+  states->push_back(0);
+  typename vector<Label>::const_reverse_iterator cit = context.rbegin();
+  const Label *children = root_children_;
+  size_t num_children = select_root_.second - 2;
+  const Label *loc = std::lower_bound(children, children + num_children, *cit);
+  if (loc == children + num_children || *loc != *cit) return;
+  size_t node = 2 + loc - children;
+  states->push_back(context_index_.Rank1(node));
+  if (context.size() == 1) return;
+  size_t node_rank = context_index_.Rank1(node);
+  pair<size_t, size_t> zeros = node_rank == 0 ? select_root_ :
+      context_index_.Select0s(node_rank);
+  size_t first_child = zeros.first + 1;
+  ++cit;
+  if (context_index_.Get(first_child) != false) {
+    size_t last_child = zeros.second - 1;
+    while (cit != context.rend()) {
+      children = context_words_ + context_index_.Rank1(first_child);
+      loc = std::lower_bound(children, children + last_child - first_child + 1,
+                             *cit);
+      if (loc == children + last_child - first_child + 1 || *loc != *cit) {
+        break;
+      }
+      ++cit;
+      node = first_child + loc - children;
+      states->push_back(context_index_.Rank1(node));
+      node_rank = context_index_.Rank1(node);
+      zeros = node_rank == 0 ? select_root_
+          : context_index_.Select0s(node_rank);
+      first_child = zeros.first + 1;
+      if (context_index_.Get(first_child) == false) break;
+      last_child = zeros.second - 1;
+    }
+  }
+}
+
+/*****************************************************************************/
+template<class A>
+class NGramFst : public ImplToExpandedFst<NGramFstImpl<A> > {
+  friend class ArcIterator<NGramFst<A> >;
+  friend class NGramFstMatcher<A>;
+
+ public:
+  typedef A Arc;
+  typedef typename A::StateId StateId;
+  typedef typename A::Label Label;
+  typedef typename A::Weight Weight;
+  typedef NGramFstImpl<A> Impl;
+
+  explicit NGramFst(const Fst<A> &dst)
+      : ImplToExpandedFst<Impl>(new Impl(dst, NULL)) {}
+
+  NGramFst(const Fst<A> &fst, vector<StateId>* order_out)
+      : ImplToExpandedFst<Impl>(new Impl(fst, order_out)) {}
+
+  // Because the NGramFstImpl is a const stateless data structure, there
+  // is never a need to do anything beside copy the reference.
+  NGramFst(const NGramFst<A> &fst, bool safe = false)
+      : ImplToExpandedFst<Impl>(fst, false) {}
+
+  NGramFst() : ImplToExpandedFst<Impl>(new Impl()) {}
+
+  // Non-standard constructor to initialize NGramFst directly from data.
+  NGramFst(const char* data, bool owned) : ImplToExpandedFst<Impl>(new Impl()) {
+    GetImpl()->Init(data, owned, NULL);
+  }
+
+  // Get method that gets the data associated with Init().
+  const char* GetData(size_t* data_size) const {
+    return GetImpl()->GetData(data_size);
+  }
+
+  const vector<Label> GetContext(StateId s) const {
+    return GetImpl()->GetContext(s, &inst_);
+  }
+
+  // Consumes as much as possible of context from right to left, returns the
+  // the states corresponding to the increasingly conditioned input sequence.
+  void GetStates(const vector<Label>& context, vector<StateId> *state) const {
+    return GetImpl()->GetStates(context, state);
+  }
+
+  virtual size_t NumArcs(StateId s) const {
+    return GetImpl()->NumArcs(s, &inst_);
+  }
+
+  virtual NGramFst<A>* Copy(bool safe = false) const {
+    return new NGramFst(*this, safe);
+  }
+
+  static NGramFst<A>* Read(istream &strm, const FstReadOptions &opts) {
+    Impl* impl = Impl::Read(strm, opts);
+    return impl ? new NGramFst<A>(impl) : 0;
+  }
+
+  static NGramFst<A>* Read(const string &filename) {
+    if (!filename.empty()) {
+      ifstream strm(filename.c_str(),
+                    std::ios_base::in | std::ios_base::binary);
+      if (!strm.good()) {
+        LOG(ERROR) << "NGramFst::Read: Can't open file: " << filename;
+        return 0;
+      }
+      return Read(strm, FstReadOptions(filename));
+    } else {
+      return Read(std::cin, FstReadOptions("standard input"));
+    }
+  }
+
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return GetImpl()->Write(strm, opts);
+  }
+
+  virtual bool Write(const string &filename) const {
+    return Fst<A>::WriteFile(filename);
+  }
+
+  virtual inline void InitStateIterator(StateIteratorData<A>* data) const {
+    GetImpl()->InitStateIterator(data);
+  }
+
+  virtual inline void InitArcIterator(
+      StateId s, ArcIteratorData<A>* data) const;
+
+  virtual MatcherBase<A>* InitMatcher(MatchType match_type) const {
+    return new NGramFstMatcher<A>(*this, match_type);
+  }
+
+  size_t StorageSize() const {
+    return GetImpl()->StorageSize();
+  }
+
+  static bool HasRequiredProps(const Fst<A>& fst) {
+    int64 props = kAcceptor | kIDeterministic | kILabelSorted | kIEpsilons
+        | kAccessible;
+    return fst.Properties(props, true) == props;
+  }
+
+  static bool HasRequiredStructure(const Fst<A>& fst) {
+    if (!HasRequiredProps(fst)) {
+      return false;
+    }
+    fst::StdArc::StateId unigram = fst.Start();
+    while (true) {  // Follows epsilon arc chain to find unigram state.
+      if (unigram == fst::kNoStateId) return false;  // No unigram state.
+      fst::ArcIterator<Fst<StdArc>> aiter(fst, unigram);
+      if (aiter.Done() || aiter.Value().ilabel != 0) break;
+      unigram = aiter.Value().nextstate;
+      aiter.Next();
+    }
+    // Other requirement: all states other than unigram an epsilon arc.
+    for (fst::StateIterator<Fst<StdArc>> siter(fst); !siter.Done();
+         siter.Next()) {
+      const fst::StdArc::StateId &state = siter.Value();
+      fst::ArcIterator<Fst<StdArc>> aiter(fst, state);
+      if (state != unigram) {
+        if (aiter.Done()) return false;
+        if (aiter.Value().ilabel != 0) return false;
+        aiter.Next();
+        if (!aiter.Done() && aiter.Value().ilabel == 0) return false;
+      }
+    }
+    return true;
+  }
+
+ private:
+  explicit NGramFst(Impl* impl) : ImplToExpandedFst<Impl>(impl) {}
+
+  Impl* GetImpl() const {
+    return
+        ImplToExpandedFst<Impl, ExpandedFst<A> >::GetImpl();
+  }
+
+  void SetImpl(Impl* impl, bool own_impl = true) {
+    ImplToExpandedFst<Impl, Fst<A> >::SetImpl(impl, own_impl);
+  }
+
+  mutable NGramFstInst<A> inst_;
+};
+
+template <class A> inline void
+NGramFst<A>::InitArcIterator(StateId s, ArcIteratorData<A>* data) const {
+  GetImpl()->SetInstFuture(s, &inst_);
+  GetImpl()->SetInstNode(&inst_);
+  data->base = new ArcIterator<NGramFst<A> >(*this, s);
+}
+
+template<typename A>
 NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst, vector<StateId>* order_out)
     : data_region_(0), data_(0), owned_(false) {
   typedef A Arc;
@@ -288,8 +480,7 @@ NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst, vector<StateId>* order_out)
   SetProperties(kStaticProperties);
 
   // Check basic requirements for an OpenGRM language model Fst.
-  int64 props = kAcceptor | kIDeterministic | kIEpsilons | kILabelSorted;
-  if (fst.Properties(props, true) != props) {
+  if (!NGramFst<A>::HasRequiredProps(fst)) {
     FSTERROR() << "NGramFst only accepts OpenGRM langauge models as input";
     SetProperties(kError, kError);
     return;
@@ -321,10 +512,11 @@ NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst, vector<StateId>* order_out)
   queue<pair<StateId, Label> > label_queue;
   vector<bool> visited(num_states);
   // Force an epsilon link to the start state.
-  label_queue.push(make_pair(fst.Start(), 0));
+  label_queue.push(std::make_pair(fst.Start(), 0));
   for (ArcIterator<Fst<A> > aiter(fst, unigram);
        !aiter.Done(); aiter.Next()) {
-    label_queue.push(make_pair(aiter.Value().nextstate, aiter.Value().ilabel));
+    label_queue.push(
+        std::make_pair(aiter.Value().nextstate, aiter.Value().ilabel));
   }
   // investigate states in breadth first fashion to assign context words.
   while (!label_queue.empty()) {
@@ -336,7 +528,7 @@ NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst, vector<StateId>* order_out)
            !aiter.Done(); aiter.Next()) {
         const Arc &arc = aiter.Value();
         if (arc.ilabel != 0) {
-          label_queue.push(make_pair(arc.nextstate, now.second));
+          label_queue.push(std::make_pair(arc.nextstate, now.second));
         }
       }
     }
@@ -562,7 +754,8 @@ inline typename A::StateId NGramFstImpl<A>::Transition(
         const vector<Label> &context, Label future) const {
   const Label *children = root_children_;
   size_t num_children = select_root_.second - 2;
-  const Label *loc = lower_bound(children, children + num_children, future);
+  const Label *loc =
+      std::lower_bound(children, children + num_children, future);
   if (loc == children + num_children || *loc != future) {
     return context_index_.Rank1(0);
   }
@@ -577,16 +770,16 @@ inline typename A::StateId NGramFstImpl<A>::Transition(
   size_t last_child = zeros.second - 1;
   for (int word = context.size() - 1; word >= 0; --word) {
     children = context_words_ + context_index_.Rank1(first_child);
-    loc = lower_bound(children, children + last_child - first_child + 1,
-                      context[word]);
+    loc = std::lower_bound(children, children + last_child - first_child + 1,
+                           context[word]);
     if (loc == children + last_child - first_child + 1 ||
         *loc != context[word]) {
       break;
     }
     node = first_child + loc - children;
     node_rank = context_index_.Rank1(node);
-    pair<size_t, size_t> zeros = (node_rank == 0) ? select_root_ :
-        context_index_.Select0s(node_rank);
+    zeros = (node_rank == 0) ? select_root_
+        : context_index_.Select0s(node_rank);
     first_child = zeros.first + 1;
     if (context_index_.Get(first_child) == false) break;
     last_child = zeros.second - 1;
@@ -594,163 +787,6 @@ inline typename A::StateId NGramFstImpl<A>::Transition(
   return context_index_.Rank1(node);
 }
 
-template<typename A>
-inline void NGramFstImpl<A>::GetStates(
-    const vector<Label> &context,
-    vector<typename A::StateId>* states) const {
-  states->clear();
-  states->push_back(0);
-  typename vector<Label>::const_reverse_iterator cit = context.rbegin();
-  const Label *children = root_children_;
-  size_t num_children = select_root_.second - 2;
-  const Label *loc = lower_bound(children, children + num_children, *cit);
-  if (loc == children + num_children || *loc != *cit) return;
-  size_t node = 2 + loc - children;
-  states->push_back(context_index_.Rank1(node));
-  if (context.size() == 1) return;
-  size_t node_rank = context_index_.Rank1(node);
-  pair<size_t, size_t> zeros = node_rank == 0 ? select_root_ :
-      context_index_.Select0s(node_rank);
-  size_t first_child = zeros.first + 1;
-  ++cit;
-  if (context_index_.Get(first_child) != false) {
-    size_t last_child = zeros.second - 1;
-    while (cit != context.rend()) {
-      children = context_words_ + context_index_.Rank1(first_child);
-      loc = lower_bound(children, children + last_child - first_child + 1,
-                        *cit);
-      if (loc == children + last_child - first_child + 1 || *loc != *cit) {
-        break;
-      }
-      ++cit;
-      node = first_child + loc - children;
-      states->push_back(context_index_.Rank1(node));
-      node_rank = context_index_.Rank1(node);
-      pair<size_t, size_t> zeros = node_rank == 0 ? select_root_ :
-          context_index_.Select0s(node_rank);
-      first_child = zeros.first + 1;
-      if (context_index_.Get(first_child) == false) break;
-      last_child = zeros.second - 1;
-    }
-  }
-}
-
-/*****************************************************************************/
-template<class A>
-class NGramFst : public ImplToExpandedFst<NGramFstImpl<A> > {
-  friend class ArcIterator<NGramFst<A> >;
-  friend class NGramFstMatcher<A>;
-
- public:
-  typedef A Arc;
-  typedef typename A::StateId StateId;
-  typedef typename A::Label Label;
-  typedef typename A::Weight Weight;
-  typedef NGramFstImpl<A> Impl;
-
-  explicit NGramFst(const Fst<A> &dst)
-      : ImplToExpandedFst<Impl>(new Impl(dst, NULL)) {}
-
-  NGramFst(const Fst<A> &fst, vector<StateId>* order_out)
-      : ImplToExpandedFst<Impl>(new Impl(fst, order_out)) {}
-
-  // Because the NGramFstImpl is a const stateless data structure, there
-  // is never a need to do anything beside copy the reference.
-  NGramFst(const NGramFst<A> &fst, bool safe = false)
-      : ImplToExpandedFst<Impl>(fst, false) {}
-
-  NGramFst() : ImplToExpandedFst<Impl>(new Impl()) {}
-
-  // Non-standard constructor to initialize NGramFst directly from data.
-  NGramFst(const char* data, bool owned) : ImplToExpandedFst<Impl>(new Impl()) {
-    GetImpl()->Init(data, owned, NULL);
-  }
-
-  // Get method that gets the data associated with Init().
-  const char* GetData(size_t* data_size) const {
-    return GetImpl()->GetData(data_size);
-  }
-
-  const vector<Label> GetContext(StateId s) const {
-    return GetImpl()->GetContext(s, &inst_);
-  }
-
-  // Consumes as much as possible of context from right to left, returns the
-  // the states corresponding to the increasingly conditioned input sequence.
-  void GetStates(const vector<Label>& context, vector<StateId> *state) const {
-    return GetImpl()->GetStates(context, state);
-  }
-
-  virtual size_t NumArcs(StateId s) const {
-    return GetImpl()->NumArcs(s, &inst_);
-  }
-
-  virtual NGramFst<A>* Copy(bool safe = false) const {
-    return new NGramFst(*this, safe);
-  }
-
-  static NGramFst<A>* Read(istream &strm, const FstReadOptions &opts) {
-    Impl* impl = Impl::Read(strm, opts);
-    return impl ? new NGramFst<A>(impl) : 0;
-  }
-
-  static NGramFst<A>* Read(const string &filename) {
-    if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
-      if (!strm.good()) {
-        LOG(ERROR) << "NGramFst::Read: Can't open file: " << filename;
-        return 0;
-      }
-      return Read(strm, FstReadOptions(filename));
-    } else {
-      return Read(cin, FstReadOptions("standard input"));
-    }
-  }
-
-  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
-    return GetImpl()->Write(strm, opts);
-  }
-
-  virtual bool Write(const string &filename) const {
-    return Fst<A>::WriteFile(filename);
-  }
-
-  virtual inline void InitStateIterator(StateIteratorData<A>* data) const {
-    GetImpl()->InitStateIterator(data);
-  }
-
-  virtual inline void InitArcIterator(
-      StateId s, ArcIteratorData<A>* data) const;
-
-  virtual MatcherBase<A>* InitMatcher(MatchType match_type) const {
-    return new NGramFstMatcher<A>(*this, match_type);
-  }
-
-  size_t StorageSize() const {
-    return GetImpl()->StorageSize();
-  }
-
- private:
-  explicit NGramFst(Impl* impl) : ImplToExpandedFst<Impl>(impl) {}
-
-  Impl* GetImpl() const {
-    return
-        ImplToExpandedFst<Impl, ExpandedFst<A> >::GetImpl();
-  }
-
-  void SetImpl(Impl* impl, bool own_impl = true) {
-    ImplToExpandedFst<Impl, Fst<A> >::SetImpl(impl, own_impl);
-  }
-
-  mutable NGramFstInst<A> inst_;
-};
-
-template <class A> inline void
-NGramFst<A>::InitArcIterator(StateId s, ArcIteratorData<A>* data) const {
-  GetImpl()->SetInstFuture(s, &inst_);
-  GetImpl()->SetInstNode(&inst_);
-  data->base = new ArcIterator<NGramFst<A> >(*this, s);
-}
 
 /*****************************************************************************/
 template <class A>
@@ -823,7 +859,7 @@ class NGramFstMatcher : public MatcherBase<A> {
       current_loop_ = false;
       const Label *start = fst_.GetImpl()->future_words_ + inst_.offset_;
       const Label *end = start + inst_.num_futures_;
-      const Label* search = lower_bound(start, end, label);
+      const Label *search = std::lower_bound(start, end, label);
       if (search != end && *search == label) {
         size_t state = search - start;
         arc_.ilabel = arc_.olabel = label;

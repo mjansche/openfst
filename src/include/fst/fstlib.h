@@ -73,6 +73,7 @@
 #include <fst/factor-weight.h>
 #include <fst/intersect.h>
 #include <fst/invert.h>
+#include <fst/isomorphic.h>
 #include <fst/map.h>
 #include <fst/minimize.h>
 #include <fst/project.h>

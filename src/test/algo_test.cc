@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
   tropical_cube_tester.Test();
 #endif  // TEST_POWER
 
-  cout << "PASS" << endl;
+  std::cout << "PASS" << std::endl;
 
   return 0;
 }

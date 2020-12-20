@@ -18,8 +18,8 @@
 // \file
 // Class to represent and operate on sets of intervals.
 
-#ifndef FST_LIB_INTERVAL_SET_H__
-#define FST_LIB_INTERVAL_SET_H__
+#ifndef FST_LIB_INTERVAL_SET_H_
+#define FST_LIB_INTERVAL_SET_H_
 
 #include <iostream>
 #include <vector>
@@ -105,7 +105,7 @@ class IntervalSet {
   bool Member(T value) const {
     Interval interval(value, value);
     typename vector<Interval>::const_iterator lb =
-        lower_bound(intervals_.begin(), intervals_.end(), interval);
+        std::lower_bound(intervals_.begin(), intervals_.end(), interval);
     if (lb == intervals_.begin())
       return false;
     return (--lb)->end > value;
@@ -172,7 +172,7 @@ class IntervalSet {
 // Sorts; collapses overlapping and adjacent interavls; sets count.
 template <typename T>
 void IntervalSet<T>::Normalize() {
-  sort(intervals_.begin(), intervals_.end());
+  std::sort(intervals_.begin(), intervals_.end());
 
   count_ = 0;
   T size = 0;
@@ -379,4 +379,4 @@ ostream &operator<<(ostream &strm, const IntervalSet<T> &s)  {
 
 }  // namespace fst
 
-#endif  // FST_LIB_INTERVAL_SET_H__
+#endif  // FST_LIB_INTERVAL_SET_H_

@@ -87,10 +87,9 @@ class StringArc {
 
   static const string &Type() {  // Arc type name
     static const string type =
-        S == STRING_LEFT ? "standard_string" :
+        S == STRING_LEFT ? "left_standard_string" :
         (S == STRING_RIGHT ? "right_standard_string" :
-         (S == STRING_LEFT_RESTRICT ? "restricted_string" :
-          "right_restricted_string"));
+         "restricted_standard_string");
     return type;
   }
 
@@ -121,12 +120,11 @@ struct GallicArc {
 
   static const string &Type() {  // Arc type name
     static const string type =
-        (G == GALLIC_LEFT ? "gallic_" :
+        (G == GALLIC_LEFT ? "left_gallic_" :
          (G == GALLIC_RIGHT ? "right_gallic_" :
-          (G == GALLIC_LEFT_RESTRICT ? "left_restricted_gallic_" :
-           (G == GALLIC_RIGHT_RESTRICT ? "right_restricted_gallic_" :
-            (G == GALLIC_LEFT_MIN ? "min_gallic_" :
-             "right_min_gallic_"))))) + A::Type();
+          (G == GALLIC_RESTRICT ? "restricted_gallic_" :
+           (G == GALLIC_MIN ? "min_gallic_" :
+            "gallic_")))) + A::Type();
     return type;
   }
 

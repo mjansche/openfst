@@ -17,6 +17,7 @@
 //
 // \file
 // Class to reweight/push an FST.
+// And utility functions to weigh and reweight an FST.
 
 #ifndef FST_LIB_PUSH_H__
 #define FST_LIB_PUSH_H__
@@ -32,9 +33,6 @@ using std::vector;
 
 
 namespace fst {
-
-// Private helper functions for Push
-namespace internal {
 
 // Compute the total weight (sum of the weights of all accepting paths) from
 // the output of ShortestDistance. 'distance' is the shortest distance from the
@@ -83,7 +81,6 @@ void RemoveWeight(MutableFst<Arc> *fst, typename Arc::Weight w, bool at_final) {
     fst->SetFinal(start, Divide(fst->Final(start), w, DIVIDE_LEFT));
   }
 }
-}  // namespace internal
 
 // Pushes the weights in FST in the direction defined by TYPE.  If
 // pushing towards the initial state, the sum of the weight of the
@@ -103,11 +100,11 @@ void Push(MutableFst<Arc> *fst,
   ShortestDistance(*fst, &distance, type == REWEIGHT_TO_INITIAL, delta);
   typename Arc::Weight total_weight = Arc::Weight::One();
   if (remove_total_weight)
-    total_weight = internal::ComputeTotalWeight(*fst, distance,
-                                                type == REWEIGHT_TO_INITIAL);
+    total_weight = ComputeTotalWeight(*fst, distance,
+                                      type == REWEIGHT_TO_INITIAL);
   Reweight(fst, distance, type);
   if (remove_total_weight)
-    internal::RemoveWeight(fst, total_weight, type == REWEIGHT_TO_FINAL);
+    RemoveWeight(fst, total_weight, type == REWEIGHT_TO_FINAL);
 }
 
 const uint32 kPushWeights = 0x0001;
@@ -147,7 +144,7 @@ void Push(const Fst<Arc> &ifst,
     typename GallicArc<Arc, gtype>::Weight total_weight =
         GallicArc<Arc, gtype>::Weight::One();
     if (ptype & (kPushRemoveTotalWeight | kPushRemoveCommonAffix)) {
-      total_weight = internal::ComputeTotalWeight(
+      total_weight = ComputeTotalWeight(
           gfst, gdistance, rtype == REWEIGHT_TO_INITIAL);
       total_weight = typename GallicArc<Arc, gtype>::Weight(
           ptype & kPushRemoveCommonAffix ? total_weight.Value1()
@@ -157,7 +154,7 @@ void Push(const Fst<Arc> &ifst,
     }
     Reweight(&gfst, gdistance, rtype);
     if (ptype & (kPushRemoveTotalWeight | kPushRemoveCommonAffix))
-      internal::RemoveWeight(&gfst, total_weight, rtype == REWEIGHT_TO_FINAL);
+      RemoveWeight(&gfst, total_weight, rtype == REWEIGHT_TO_FINAL);
     FactorWeightFst< GallicArc<Arc, gtype>, GallicFactor<typename Arc::Label,
       typename Arc::Weight, gtype> > fwfst(gfst);
     ArcMap(fwfst, ofst, FromGallicMapper<Arc, gtype>());

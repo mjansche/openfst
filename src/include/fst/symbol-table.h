@@ -282,7 +282,7 @@ class SymbolTable {
   // read an ascii representation of the symbol table
   static SymbolTable* ReadText(const string& filename,
       const SymbolTableTextOptions &opts = SymbolTableTextOptions()) {
-    ifstream strm(filename.c_str(), ifstream::in);
+    ifstream strm(filename.c_str(), std::ios_base::in);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::ReadText: Can't open file " << filename;
       return 0;
@@ -311,7 +311,7 @@ class SymbolTable {
 
   // read a binary dump of the symbol table
   static SymbolTable* Read(const string& filename) {
-    ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+    ifstream strm(filename.c_str(), std::ios_base::in | std::ios_base::binary);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::Read: Can't open file " << filename;
       return 0;
@@ -395,19 +395,19 @@ class SymbolTable {
   }
 
   // Return the string associated with the key. If the key is out of
-  // range (<0, >max), log error and return an empty string.
+  // range (<0, >max), return an empty string.
   virtual string Find(int64 key) const {
     return impl_->Find(key);
   }
 
   // Return the key associated with the symbol. If the symbol
-  // does not exists, log error and  return SymbolTable::kNoSymbol
+  // does not exist, return SymbolTable::kNoSymbol
   virtual int64 Find(const string& symbol) const {
     return impl_->Find(symbol);
   }
 
   // Return the key associated with the symbol. If the symbol
-  // does not exists, log error and  return SymbolTable::kNoSymbol
+  // does not exist, return SymbolTable::kNoSymbol
   virtual int64 Find(const char* symbol) const {
     return impl_->Find(symbol);
   }
@@ -496,26 +496,22 @@ class SymbolTableIterator {
 };
 
 
-// Tests compatibilty between two sets of symbol tables
+// Returns true if the two symbol tables have equal checksums. Passing in
+// nullptr for either table always returns true.
 inline bool CompatSymbols(const SymbolTable *syms1, const SymbolTable *syms2,
                           bool warning = true) {
+  // Flag can explicitly override this check.
   if (!FLAGS_fst_compat_symbols) {
     return true;
-  } else if (!syms1 && !syms2) {
-    return true;
-  } else if (syms1 && !syms2) {
-    if (warning)
-      LOG(WARNING) <<
-          "CompatSymbols: first symbol table present but second missing";
-    return false;
-  } else if (!syms1 && syms2) {
-    if (warning)
-      LOG(WARNING) <<
-          "CompatSymbols: second symbol table present but first missing";
-    return false;
-  } else if (syms1->LabeledCheckSum() != syms2->LabeledCheckSum()) {
-    if (warning)
-      LOG(WARNING) << "CompatSymbols: Symbol table check sums do not match";
+  }
+
+  if (syms1 && syms2 &&
+      (syms1->LabeledCheckSum() != syms2->LabeledCheckSum())) {
+    if (warning) {
+      LOG(WARNING) << "CompatSymbols: Symbol table check sums do not match. "
+                   << "Table sizes are " << syms1->NumSymbols() << " and "
+                   << syms2->NumSymbols();
+    }
     return false;
   } else {
     return true;

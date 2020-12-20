@@ -38,6 +38,7 @@
 #include <fst/script/decode.h>
 #include <fst/script/determinize.h>
 #include <fst/script/difference.h>
+#include <fst/script/disambiguate.h>
 #include <fst/script/draw.h>
 #include <fst/script/encode.h>
 #include <fst/script/epsnormalize.h>
@@ -46,6 +47,7 @@
 #include <fst/script/info.h>
 #include <fst/script/intersect.h>
 #include <fst/script/invert.h>
+#include <fst/script/isomorphic.h>
 #include <fst/script/map.h>
 #include <fst/script/minimize.h>
 #include <fst/script/print.h>

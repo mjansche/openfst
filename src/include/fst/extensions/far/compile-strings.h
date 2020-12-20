@@ -214,8 +214,8 @@ void FarCompileStrings(const vector<string> &in_fnames,
   vector<string> inputs;
   if (file_list_input) {
     for (int i = 0; i < in_fnames.size(); ++i) {
-      istream *istrm = in_fnames.empty() ? &cin :
-          new ifstream(in_fnames[i].c_str());
+      istream *istrm =
+          in_fnames.empty() ? &std::cin : new ifstream(in_fnames[i].c_str());
       string str;
       while (getline(*istrm, str))
         inputs.push_back(str);
@@ -237,8 +237,8 @@ void FarCompileStrings(const vector<string> &in_fnames,
     int key_size = generate_keys ? generate_keys :
         (entry_type == StringReader<Arc>::FILE ? 1 :
          KeySize(inputs[i].c_str()));
-    istream *istrm = inputs[i].empty() ? &cin :
-        new ifstream(inputs[i].c_str());
+    istream *istrm =
+        inputs[i].empty() ? &std::cin : new ifstream(inputs[i].c_str());
 
     bool keep_syms = keep_symbols;
     for (StringReader<Arc> reader(

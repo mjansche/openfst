@@ -99,6 +99,17 @@ void FarInfo(const vector<string> &filenames,
   Apply<Operation<FarInfoArgs> >("FarInfo", arc_type, &args);
 }
 
+bool FarIsomorphic(const string &filename1, const string &filename2,
+                   const string &arc_type, float delta, const string &begin_key,
+                   const string &end_key) {
+  FarIsomorphicInnerArgs args(filename1, filename2, delta, begin_key, end_key);
+  FarIsomorphicArgs args_with_retval(args);
+
+  Apply<Operation<FarIsomorphicArgs>>("FarIsomorphic", arc_type,
+                                      &args_with_retval);
+  return args_with_retval.retval;
+}
+
 void FarPrintStrings(const vector<string> &ifilenames,
                      const string &arc_type,
                      const FarEntryType entry_type,

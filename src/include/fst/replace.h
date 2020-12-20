@@ -33,6 +33,7 @@ using std::pair; using std::make_pair;
 using std::vector;
 
 #include <fst/cache.h>
+#include <fst/fst-decl.h>  // For optional argument declarations
 #include <fst/expanded-fst.h>
 #include <fst/fst.h>
 #include <fst/matcher.h>
@@ -337,7 +338,7 @@ class VectorHashReplaceStateTable {
 
 // \class DefaultReplaceStateTable
 // Default replace state table
-template <class A, class P = ssize_t>
+template <class A, class P /* = size_t */>
 class DefaultReplaceStateTable : public CompactHashStateTable<
   ReplaceStateTuple<typename A::StateId, P>,
   ReplaceHash<typename A::StateId, P> > {
@@ -417,7 +418,7 @@ struct ReplaceFstOptions : CacheImplOptions<C> {
         take_ownership(false),
         state_table(0) {}
 
-  explicit ReplaceFstOptions(const fst::ReplaceUtilOptions<A> &opts)
+  explicit ReplaceFstOptions(const fst::ReplaceUtilOptions &opts)
       : root(opts.root),
         call_label_type(opts.call_label_type),
         return_label_type(opts.return_label_type),
@@ -664,7 +665,7 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
   // in an un-expandable replace fst.
   bool CyclicDependencies() const {
     ReplaceUtil<A> replace_util(fst_array_, nonterminal_hash_,
-                                fst::ReplaceUtilOptions<A>(root_));
+                                fst::ReplaceUtilOptions(root_));
     return replace_util.CyclicDependencies();
   }
 
@@ -1084,7 +1085,7 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
 
 //
 // \class ReplaceFst
-// \brief Recursivively replaces arcs in the root Fst with other Fsts.
+// \brief Recursively replaces arcs in the root Fst with other Fsts.
 // This version is a delayed Fst.
 //
 // ReplaceFst supports dynamic replacement of arcs in one Fst with
@@ -1122,7 +1123,7 @@ class ReplaceFstImpl : public CacheBaseImpl<typename C::State, C> {
 //
 // This class attaches interface to implementation and handles
 // reference counting, delegating most methods to ImplToFst.
-template <class A, class T = DefaultReplaceStateTable<A>,
+template <class A, class T /* = DefaultReplaceStateTable<A> */,
           class C /* = DefaultCacheStore<A> */ >
 class ReplaceFst : public ImplToFst< ReplaceFstImpl<A, T, C> > {
  public:
@@ -1264,8 +1265,8 @@ class ArcIterator< ReplaceFst<A, T, C> > {
         // until Value() or SetFlags() is called. However, the arc
         // iterator is set up now to be ready for non-caching in order
         // to keep the Value() method simple and efficient.
-        const Fst<A>* fst = fst_.GetImpl()->GetFst(tuple_.fst_id);
-        fst->InitArcIterator(tuple_.fst_state, &local_data_);
+        const Fst<A>* rfst = fst_.GetImpl()->GetFst(tuple_.fst_id);
+        rfst->InitArcIterator(tuple_.fst_state, &local_data_);
         // 'arcs_' is a pointer to the arcs in the underlying machine.
         arcs_ = local_data_.arcs;
         // Compute the final arc (but not its destination state)
@@ -1598,7 +1599,7 @@ class ReplaceFstMatcher : public MatcherBase<A> {
   mutable Arc arc_;
   Arc loop_;
 
-  DISALLOW_COPY_AND_ASSIGN(ReplaceFstMatcher);
+  void operator=(const ReplaceFstMatcher<A, T, C> &matcher);  // disallow
 };
 
 template <class A, class T, class C> inline
@@ -1634,7 +1635,7 @@ void Replace(const vector<pair<typename Arc::Label,
 template<class Arc>
 void Replace(const vector<pair<typename Arc::Label,
              const Fst<Arc>* > >& ifst_array,
-             MutableFst<Arc> *ofst, fst::ReplaceUtilOptions<Arc> opts) {
+             MutableFst<Arc> *ofst, fst::ReplaceUtilOptions opts) {
   Replace(ifst_array, ofst, ReplaceFstOptions<Arc>(opts));
 }
 

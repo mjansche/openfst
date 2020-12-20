@@ -9,16 +9,16 @@ libfst_LTLIBRARIES = libfstfar.la
 endif
 
 libfstfar_la_SOURCES = sttable.cc stlist.cc
-libfstfar_la_LDFLAGS = -version-info 1:0:0
+libfstfar_la_LDFLAGS = -version-info 1:5:0
 
 if HAVE_SCRIPT
 libfstfarscript_la_SOURCES = farscript.cc strings.cc main.cc
-libfstfarscript_la_LDFLAGS = -version-info 1:0:0
+libfstfarscript_la_LDFLAGS = -version-info 1:5:0
 endif
 
 if HAVE_BIN
 bin_PROGRAMS = farcompilestrings farcreate farequal farextract farinfo \
-	farprintstrings
+	farisomorphic farprintstrings
 
 LDADD = libfstfarscript.la libfstfar.la ../../script/libfstscript.la \
         ../../lib/libfst.la -lm -ldl
@@ -32,6 +32,8 @@ farequal_SOURCES = farequal.cc
 farextract_SOURCES = farextract.cc
 
 farinfo_SOURCES = farinfo.cc
+
+farisomorphic_SOURCES = farisomorphic.cc
 
 farprintstrings_SOURCES = farprintstrings.cc
 endif

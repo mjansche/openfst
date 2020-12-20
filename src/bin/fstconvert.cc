@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   if (ofst->FstType() != FLAGS_fst_type) {
     ofst = s::Convert(*ifst, FLAGS_fst_type);
   }
+  if (!ofst) return 1;
 
   ofst->Write(out_name);
 

@@ -52,11 +52,11 @@ int main(int argc, char **argv) {
   FstClass *ifst = FstClass::Read(in_name);
   if (!ifst) return 1;
 
-  VectorFstClass *out = new VectorFstClass(ifst->ArcType());
+  VectorFstClass out(ifst->ArcType());
 
-  Reverse(*ifst, out, FLAGS_require_superinitial);
+  Reverse(*ifst, &out, FLAGS_require_superinitial);
 
-  out->Write(out_name);
+  out.Write(out_name);
 
   return 0;
 }

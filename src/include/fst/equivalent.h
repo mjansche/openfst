@@ -209,7 +209,7 @@ bool Equivalent(const Fst<Arc> &fst1,
   // updating the equivalence relation on the statesets. Loop
   // invariant: each block of states contains either final states only
   // or non-final states only.
-  for (q.push_back(make_pair(s1, s2)); ret && !q.empty(); q.pop_front()) {
+  for (q.push_back(std::make_pair(s1, s2)); ret && !q.empty(); q.pop_front()) {
     s1 = q.front().first;
     s2 = q.front().second;
 

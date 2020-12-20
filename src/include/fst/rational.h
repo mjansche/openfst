@@ -79,10 +79,10 @@ class RationalFstImpl : public FstImpl<A> {
     SetType("rational");
     fst_tuples_.reserve(impl.fst_tuples_.size());
     for (size_t i = 0; i < impl.fst_tuples_.size(); ++i)
-      fst_tuples_.push_back(make_pair(impl.fst_tuples_[i].first,
-                                      impl.fst_tuples_[i].second
-                                      ? impl.fst_tuples_[i].second->Copy(true)
-                                      : 0));
+      fst_tuples_.push_back(std::make_pair(
+          impl.fst_tuples_[i].first,
+          impl.fst_tuples_[i].second ? impl.fst_tuples_[i].second->Copy(true)
+                                     : 0));
   }
 
   virtual ~RationalFstImpl() {
@@ -133,8 +133,8 @@ class RationalFstImpl : public FstImpl<A> {
     nonterminals_ = 2;
     rfst_.AddArc(0, A(0, -1, Weight::One(), 1));
     rfst_.AddArc(0, A(0, -2, Weight::One(), 1));
-    fst_tuples_.push_back(make_pair(-1, fst1.Copy()));
-    fst_tuples_.push_back(make_pair(-2, fst2.Copy()));
+    fst_tuples_.push_back(std::make_pair(-1, fst1.Copy()));
+    fst_tuples_.push_back(std::make_pair(-2, fst2.Copy()));
     SetProperties(UnionProperties(props1, props2, true), kCopyProperties);
   }
 
@@ -156,8 +156,8 @@ class RationalFstImpl : public FstImpl<A> {
     nonterminals_ = 2;
     rfst_.AddArc(0, A(0, -1, Weight::One(), 1));
     rfst_.AddArc(1, A(0, -2, Weight::One(), 2));
-    fst_tuples_.push_back(make_pair(-1, fst1.Copy()));
-    fst_tuples_.push_back(make_pair(-2, fst2.Copy()));
+    fst_tuples_.push_back(std::make_pair(-1, fst1.Copy()));
+    fst_tuples_.push_back(std::make_pair(-2, fst2.Copy()));
     SetProperties(ConcatProperties(props1, props2, true), kCopyProperties);
   }
 
@@ -183,7 +183,7 @@ class RationalFstImpl : public FstImpl<A> {
     }
     rfst_.SetInputSymbols(fst.InputSymbols());
     rfst_.SetOutputSymbols(fst.OutputSymbols());
-    fst_tuples_.push_back(make_pair(-1, fst.Copy()));
+    fst_tuples_.push_back(std::make_pair(-1, fst.Copy()));
     nonterminals_ = 1;
     SetProperties(ClosureProperties(props, closure_type == CLOSURE_STAR, true),
                   kCopyProperties);
@@ -203,7 +203,7 @@ class RationalFstImpl : public FstImpl<A> {
     ++nonterminals_;
     afst.AddArc(0, A(0, -nonterminals_, Weight::One(), 1));
     Union(&rfst_, afst);
-    fst_tuples_.push_back(make_pair(-nonterminals_, fst.Copy()));
+    fst_tuples_.push_back(std::make_pair(-nonterminals_, fst.Copy()));
     SetProperties(UnionProperties(props1, props2, true), kCopyProperties);
   }
 
@@ -224,7 +224,7 @@ class RationalFstImpl : public FstImpl<A> {
       Concat(&rfst_, afst);
     else
       Concat(afst, &rfst_);
-    fst_tuples_.push_back(make_pair(-nonterminals_, fst.Copy()));
+    fst_tuples_.push_back(std::make_pair(-nonterminals_, fst.Copy()));
     SetProperties(ConcatProperties(props1, props2, true), kCopyProperties);
   }
 

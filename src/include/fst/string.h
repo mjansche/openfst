@@ -122,7 +122,7 @@ class StringCompiler {
     vector<pair<Label, Weight> > compacts;
     compacts.reserve(labels.size());
     for (size_t i = 0; i < labels.size(); ++i)
-      compacts.push_back(make_pair(labels[i], Weight::One()));
+      compacts.push_back(std::make_pair(labels[i], Weight::One()));
     compacts.back().second = weight;
     fst->SetCompactElements(compacts.begin(), compacts.end());
   }

@@ -25,6 +25,7 @@
 #include <string>
 
 #include <fst/product-weight.h>
+#include <fst/union-weight.h>
 #include <fst/weight.h>
 
 
@@ -34,20 +35,17 @@ const int kStringInfinity = -1;      // Label for the infinite string
 const int kStringBad = -2;           // Label for a non-string
 const char kStringSeparator = '_';   // Label separator in strings
 
-// Determines whether to use left or right string semiring.  Includes
-// 'restricted' versions that signal an error if proper prefixes
-// (suffixes) would otherwise be returned by Plus, useful with various
+// Determines whether to use left or right string semiring.  Includes a
+// 'restricted' version that signals an error if proper prefixes/suffixes
+// would otherwise be returned by Plus, useful with various
 // algorithms that require functional transducer input with the
 // string semirings.
-enum StringType { STRING_LEFT = 0, STRING_RIGHT = 1 ,
-                  STRING_LEFT_RESTRICT = 2, STRING_RIGHT_RESTRICT = 3,
-};
+enum StringType { STRING_LEFT = 0, STRING_RIGHT = 1 , STRING_RESTRICT = 2 };
 
 #define REVERSE_STRING_TYPE(S)                                  \
    ((S) == STRING_LEFT ? STRING_RIGHT :                         \
     ((S) == STRING_RIGHT ? STRING_LEFT :                        \
-     ((S) == STRING_LEFT_RESTRICT ? STRING_RIGHT_RESTRICT :     \
-      STRING_LEFT_RESTRICT)))
+     STRING_RESTRICT))
 
 template <typename L, StringType S = STRING_LEFT>
 class StringWeight;
@@ -102,10 +100,8 @@ class StringWeight {
 
   static const string &Type() {
     static const string type =
-        S == STRING_LEFT ? "string" :
-        (S == STRING_RIGHT ? "right_string" :
-         (S == STRING_LEFT_RESTRICT ? "restricted_string" :
-          "right_restricted_string"));
+        S == STRING_LEFT ? "left_string" :
+        (S == STRING_RIGHT ? "right_string" :  "restricted_string");
     return type;
   }
 
@@ -124,13 +120,14 @@ class StringWeight {
   ReverseWeight Reverse() const;
 
   static uint64 Properties() {
-    return (S == STRING_LEFT ||
-            S == STRING_LEFT_RESTRICT ?
-            kLeftSemiring : kRightSemiring) | kIdempotent;
+    if (S == STRING_LEFT) {
+      return kLeftSemiring | kIdempotent;
+    } else if (S == STRING_RIGHT) {
+      return kRightSemiring | kIdempotent;
+    } else {
+      return kLeftSemiring | kRightSemiring | kIdempotent;
+    }
   }
-
-  // NB: This needs to be uncommented only if default fails for this impl.
-  // StringWeight<L, S> &operator=(const StringWeight<L, S> &w);
 
   // These operations combined with the StringWeightIterator and
   // StringWeightReverseIterator provide the access and mutation of
@@ -282,19 +279,6 @@ inline size_t StringWeight<L, S>::Hash() const {
   return h;
 }
 
-// NB: This needs to be uncommented only if default fails for this the impl.
-//
-// template <typename L, StringType S>
-// inline StringWeight<L, S>
-// &StringWeight<L, S>::operator=(const StringWeight<L, S> &w) {
-//   if (this != &w) {
-//     Clear();
-//     for (StringWeightIterator<L, S> iter(w); !iter.Done(); iter.Next())
-//       PushBack(iter.Value());
-//   }
-//   return *this;
-// }
-
 template <typename L, StringType S>
 inline bool operator==(const StringWeight<L, S> &w1,
                        const StringWeight<L, S> &w2) {
@@ -366,7 +350,7 @@ inline istream &operator>>(istream &strm, StringWeight<L, S> &w) {
 }
 
 
-// Default is for the restricted left and right semirings.  String
+// Default is for the restricted string semiring.  String
 // equality is required (for non-Zero() input. The restriction
 // is used in e.g. Determinize to ensure functional input.
 template <typename L, StringType S>  inline StringWeight<L, S>
@@ -449,18 +433,9 @@ inline StringWeight<L, S> Times(const StringWeight<L, S> &w1,
 }
 
 
-// Default is for left division in the left string semirings.
+// Left division in a left string semiring.
 template <typename L, StringType S> inline StringWeight<L, S>
-Divide(const StringWeight<L, S> &w1,
-       const StringWeight<L, S> &w2,
-       DivideType typ) {
-
-  if (typ != DIVIDE_LEFT) {
-    FSTERROR() << "StringWeight::Divide: only left division is defined "
-               << "for the " << StringWeight<L, S>::Type() << " semiring";
-    return StringWeight<L, S>::NoWeight();
-  }
-
+DivideLeft(const StringWeight<L, S> &w1, const StringWeight<L, S> &w2) {
   if (!w1.Member() || !w2.Member())
     return StringWeight<L, S>::NoWeight();
 
@@ -478,33 +453,9 @@ Divide(const StringWeight<L, S> &w1,
   return div;
 }
 
-// Right division in the right string semiring.
-template <typename L> inline StringWeight<L, STRING_RIGHT>
-Divide(const StringWeight<L, STRING_RIGHT> &w1,
-       const StringWeight<L, STRING_RIGHT> &w2,
-       DivideType typ) {
-  return DivideRight(w1, w2, typ);
-}
-
-// Right division in the right restricted string semiring.
-template <typename L> inline StringWeight<L, STRING_RIGHT_RESTRICT>
-Divide(const StringWeight<L, STRING_RIGHT_RESTRICT> &w1,
-       const StringWeight<L, STRING_RIGHT_RESTRICT> &w2,
-       DivideType typ) {
-  return DivideRight(w1, w2, typ);
-}
-
 // Right division in a right string semiring.
 template <typename L, StringType S> inline StringWeight<L, S>
-DivideRight(const StringWeight<L, S> &w1,
-            const StringWeight<L, S> &w2,
-            DivideType typ) {
-  if (typ != DIVIDE_RIGHT) {
-    FSTERROR() << "StringWeight::Divide: only right division is defined "
-               << "for a right semiring";
-    return StringWeight<L, S>::NoWeight();
-  }
-
+DivideRight(const StringWeight<L, S> &w1, const StringWeight<L, S> &w2) {
   if (!w1.Member() || !w2.Member())
     return StringWeight<L, S>::NoWeight();
 
@@ -522,30 +473,68 @@ DivideRight(const StringWeight<L, S> &w1,
   return div;
 }
 
-// Determines whether to use left or right gallic semiring.  Includes
-// 'restricted' versions that signal an error if proper string
-// prefixes (suffixes) would otherwise be returned by string Plus,
-// useful with various algorithms that require functional transducer
-// input. Also includes 'min' versions that change the Plus to keep
-// only the lowest W weight string.
-enum GallicType { GALLIC_LEFT = 0, GALLIC_RIGHT = 1 ,
-                  GALLIC_LEFT_RESTRICT = 2, GALLIC_RIGHT_RESTRICT = 3,
-                  GALLIC_LEFT_MIN = 4, GALLIC_RIGHT_MIN = 5,
+// Default is the restricted string semiring.
+template <typename L, StringType S> inline StringWeight<L, S>
+Divide(const StringWeight<L, S> &w1,
+       const StringWeight<L, S> &w2,
+       DivideType typ) {
+  if (typ == DIVIDE_LEFT) {
+    return DivideLeft(w1, w2);
+  } else if (typ == DIVIDE_RIGHT) {
+    return DivideRight(w1, w2);
+  } else {
+    FSTERROR() << "StringWeight::Divide: "
+               << "only explicit left or right division is defined "
+               << "for the " << StringWeight<L, S>::Type() << " semiring";
+    return StringWeight<L, S>::NoWeight();
+  }
+}
+
+// Left division in the left string semiring.
+template <typename L> inline StringWeight<L, STRING_LEFT>
+Divide(const StringWeight<L, STRING_LEFT> &w1,
+       const StringWeight<L, STRING_LEFT> &w2,
+       DivideType typ) {
+  if (typ != DIVIDE_LEFT) {
+    FSTERROR() << "StringWeight::Divide: only left division is defined "
+               << "for the left string semiring";
+    return StringWeight<L, STRING_LEFT>::NoWeight();
+  }
+  return DivideLeft(w1, w2);
+}
+
+// Right division in the right string semiring.
+template <typename L> inline StringWeight<L, STRING_RIGHT>
+Divide(const StringWeight<L, STRING_RIGHT> &w1,
+       const StringWeight<L, STRING_RIGHT> &w2,
+       DivideType typ) {
+  if (typ != DIVIDE_RIGHT) {
+    FSTERROR() << "StringWeight::Divide: only right division is defined "
+               << "for the right string semiring";
+    return StringWeight<L, STRING_RIGHT>::NoWeight();
+  }
+  return DivideRight(w1, w2);
+}
+
+// Determines whether to use left, right, or (general) gallic semiring.
+// Includes a 'restricted' version that signals an error if proper
+// string prefixes/suffixes would otherwise be returned by string
+// Plus, useful with various algorithms that require functional
+// transducer input. Also includes 'min' version that changes the Plus
+// to keep only the lowest W weight string.
+enum GallicType { GALLIC_LEFT = 0, GALLIC_RIGHT = 1 , GALLIC_RESTRICT = 2,
+                  GALLIC_MIN = 3, GALLIC = 4
 };
 
 #define GALLIC_STRING_TYPE(G)                                   \
    ((G) == GALLIC_LEFT ? STRING_LEFT :                          \
-    ((G) == GALLIC_RIGHT ? STRING_RIGHT :                       \
-     (((G) == GALLIC_LEFT_RESTRICT || (G) == GALLIC_LEFT_MIN) ? \
-      STRING_LEFT_RESTRICT : STRING_RIGHT_RESTRICT)))
+    ((G) == GALLIC_RIGHT ? STRING_RIGHT : STRING_RESTRICT))
 
 #define REVERSE_GALLIC_TYPE(G)                                  \
    ((G) == GALLIC_LEFT ? GALLIC_RIGHT :                         \
     ((G) == GALLIC_RIGHT ? GALLIC_LEFT :                        \
-     ((G) == GALLIC_LEFT_RESTRICT ? GALLIC_RIGHT_RESTRICT :     \
-      ((G) == GALLIC_RIGHT_RESTRICT ? GALLIC_LEFT_RESTRICT :    \
-       ((G) == GALLIC_LEFT_MIN ? GALLIC_RIGHT_MIN :             \
-        GALLIC_LEFT_MIN)))))
+     ((G) == GALLIC_RESTRICT ? GALLIC_RESTRICT :                \
+      ((G) == GALLIC_MIN ? GALLIC_MIN : GALLIC))))
 
 // Product of string weight and an arbitray weight.
 template <class L, class W, GallicType G = GALLIC_LEFT>
@@ -569,6 +558,8 @@ struct GallicWeight
   explicit GallicWeight(const string &s, int *nread = 0)
       : ProductWeight<SW, W>(s, nread) {}
 
+  GallicWeight(const ProductWeight<SW, W> &w) : ProductWeight<SW, W>(w) {}
+
   static const GallicWeight<L, W, G> &Zero() {
     static const GallicWeight<L, W, G> zero(ProductWeight<SW, W>::Zero());
     return zero;
@@ -587,12 +578,10 @@ struct GallicWeight
 
   static const string &Type() {
     static const string type =
-        G == GALLIC_LEFT ? "gallic" :
+        G == GALLIC_LEFT ? "left_gallic" :
         (G == GALLIC_RIGHT ? "right_gallic" :
-         (G == GALLIC_LEFT_RESTRICT ? "restricted_gallic" :
-          (G == GALLIC_RIGHT_RESTRICT ? "right_restricted_gallic" :
-           (G == GALLIC_LEFT_MIN ? "min_gallic" :
-            "right_min_gallic"))));
+         (G == GALLIC_RESTRICT ? "restricted_gallic" :
+          (G == GALLIC_MIN ? "min_gallic" : "gallic")));
     return type;
   }
 
@@ -601,8 +590,6 @@ struct GallicWeight
   }
 
   ReverseWeight Reverse() const { return ProductWeight<SW, W>::Reverse(); }
-
-  GallicWeight(const ProductWeight<SW, W> &w) : ProductWeight<SW, W>(w) {}
 };
 
 // Default plus
@@ -613,20 +600,11 @@ inline GallicWeight<L, W, G> Plus(const GallicWeight<L, W, G> &w,
                                Plus(w.Value2(), v.Value2()));
 }
 
-// Left min gallic plus
+// Min gallic plus
 template <class L, class W>
-inline GallicWeight<L, W, GALLIC_LEFT_MIN>
-Plus(const GallicWeight<L, W, GALLIC_LEFT_MIN> &w1,
-     const GallicWeight<L, W, GALLIC_LEFT_MIN> &w2) {
-  NaturalLess<W> less;
-  return less(w1.Value2(), w2.Value2()) ? w1 : w2;
-}
-
-// Right min gallic plus
-template <class L, class W>
-inline GallicWeight<L, W, GALLIC_RIGHT_MIN>
-Plus(const GallicWeight<L, W, GALLIC_RIGHT_MIN> &w1,
-     const GallicWeight<L, W, GALLIC_RIGHT_MIN> &w2) {
+inline GallicWeight<L, W, GALLIC_MIN>
+Plus(const GallicWeight<L, W, GALLIC_MIN> &w1,
+     const GallicWeight<L, W, GALLIC_MIN> &w2) {
   NaturalLess<W> less;
   return less(w1.Value2(), w2.Value2()) ? w1 : w2;
 }
@@ -644,6 +622,138 @@ inline GallicWeight<L, W, G> Divide(const GallicWeight<L, W, G> &w,
                                     DivideType typ = DIVIDE_ANY) {
   return GallicWeight<L, W, G>(Divide(w.Value1(), v.Value1(), typ),
                                Divide(w.Value2(), v.Value2(), typ));
+}
+
+// Union weight options for (general) GALLIC type.
+template <class L, class W>
+struct GallicUnionWeightOptions {
+  typedef GallicUnionWeightOptions<L, W> ReverseOptions;
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GW;
+  typedef StringWeight<L, GALLIC_STRING_TYPE(GALLIC_RESTRICT)> SW;
+  typedef StringWeightIterator<L, GALLIC_STRING_TYPE(GALLIC_RESTRICT)> SI;
+
+  // Military order
+  struct Compare {
+    bool operator() (const GW &w1, const GW &w2) {
+
+      SW s1 = w1.Value1();
+      SW s2 = w2.Value1();
+      if (s1.Size() < s2.Size()) {
+        return true;
+      }
+      if (s1.Size() > s2.Size())
+        return false;
+      SI iter1(s1);
+      SI iter2(s2);
+      while (!iter1.Done()) {
+        L l1 = iter1.Value();
+        L l2 = iter2.Value();
+        if (l1 < l2)
+          return true;
+        if (l1 > l2)
+          return false;
+        iter1.Next();
+        iter2.Next();
+      }
+      return false;
+    }
+  };
+
+  // Adds W weights when string part equal.
+  struct Merge {
+    GW operator()(const GW &w1, const GW &w2) {
+      return GW(w1.Value1(), Plus(w1.Value2(), w2.Value2()));
+    }
+  };
+};
+
+// Specialization for the (general) GALLIC type.
+template <class L, class W>
+struct GallicWeight <L, W, GALLIC>
+    : public UnionWeight<GallicWeight<L, W, GALLIC_RESTRICT>,
+                         GallicUnionWeightOptions<L, W> > {
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GW;
+  typedef StringWeight<L, GALLIC_STRING_TYPE(GALLIC_RESTRICT)> SW;
+  typedef StringWeightIterator<L, GALLIC_STRING_TYPE(GALLIC_RESTRICT)> SI;
+  typedef UnionWeight<GW, GallicUnionWeightOptions<L, W> > U;
+  typedef GallicWeight<L, W, GALLIC> ReverseWeight;
+
+  using U::Zero;
+  using U::One;
+  using U::NoWeight;
+  using U::Quantize;
+  using U::Reverse;
+
+  GallicWeight() {}
+
+  // Copy constructor.
+  GallicWeight(const U &w) : U(w) {}  // NOLINT
+
+  // Singleton constructors: create a GALLIC weight containing
+  // a single GALLIC_RESTRICT weight.
+  // Takes as argument (1) a GALLIC_RESTRICT weight or
+  // (2) the two components of a GALLIC_RESTRICT weight.
+  explicit GallicWeight(const GW &w) : U(w) {}
+  GallicWeight(SW w1, W w2) : U(GW(w1, w2)) {}
+
+  explicit GallicWeight(const string &s, int *nread = 0) : U(s, nread) {}
+
+  static const GallicWeight<L, W, GALLIC> &Zero() {
+    static const GallicWeight<L, W, GALLIC> zero(U::Zero());
+    return zero;
+  }
+
+  static const GallicWeight<L, W, GALLIC> &One() {
+    static const GallicWeight<L, W, GALLIC> one(U::One());
+    return one;
+  }
+
+  static const GallicWeight<L, W, GALLIC> &NoWeight() {
+    static const GallicWeight<L, W, GALLIC> no_weight(U::NoWeight());
+    return no_weight;
+  }
+
+  static const string &Type() {
+    static const string type = "gallic";
+    return type;
+  }
+
+  GallicWeight<L, W, GALLIC> Quantize(float delta = kDelta) const {
+    return U::Quantize(delta);
+  }
+
+  ReverseWeight Reverse() const { return U::Reverse(); }
+};
+
+// (General) gallic plus
+template <class L, class W>
+inline GallicWeight<L, W, GALLIC>
+Plus(const GallicWeight<L, W, GALLIC> &w1,
+     const GallicWeight<L, W, GALLIC> &w2) {
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GW;
+  typedef UnionWeight<GW, GallicUnionWeightOptions<L, W> > U;
+  return Plus(static_cast<U>(w1), static_cast<U>(w2));
+}
+
+// (General) gallic times
+template <class L, class W>
+inline GallicWeight<L, W, GALLIC>
+Times(const GallicWeight<L, W, GALLIC> &w1,
+      const GallicWeight<L, W, GALLIC> &w2) {
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GW;
+  typedef UnionWeight<GW, GallicUnionWeightOptions<L, W> > U;
+  return Times(static_cast<U>(w1), static_cast<U>(w2));
+}
+
+// (General) gallic divide
+template <class L, class W>
+inline GallicWeight<L, W, GALLIC>
+Divide(const GallicWeight<L, W, GALLIC> &w1,
+       const GallicWeight<L, W, GALLIC> &w2,
+       DivideType typ = DIVIDE_ANY) {
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GW;
+  typedef UnionWeight<GW, GallicUnionWeightOptions<L, W> > U;
+  return Divide(static_cast<U>(w1), static_cast<U>(w2), typ);
 }
 
 }  // namespace fst

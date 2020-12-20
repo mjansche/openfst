@@ -107,10 +107,30 @@ class GallicCommonDivisor {
   }
 
  private:
-LabelCommonDivisor<L, GALLIC_STRING_TYPE(G)> label_common_divisor_;
+  LabelCommonDivisor<L, GALLIC_STRING_TYPE(G)> label_common_divisor_;
   D weight_common_divisor_;
 };
 
+// Specialization for general GALLIC weight.
+template <class L, class W, class D>
+class GallicCommonDivisor<L, W, GALLIC, D> {
+ public:
+  typedef GallicWeight<L, W, GALLIC> Weight;
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GRWeight;
+  typedef UnionWeightIterator<GRWeight, GallicUnionWeightOptions<L, W> > Iter;
+
+  Weight operator()(const Weight &w1, const Weight &w2) const {
+    GRWeight w = GRWeight::Zero();
+    for (Iter iter(w1); !iter.Done(); iter.Next())
+      w = common_divisor_(w, iter.Value());
+    for (Iter iter(w2); !iter.Done(); iter.Next())
+      w = common_divisor_(w, iter.Value());
+    return w == GRWeight::Zero() ? Weight::Zero() : Weight(w);
+  }
+
+ private:
+  GallicCommonDivisor<L, W, GALLIC_RESTRICT, D> common_divisor_;
+};
 
 // Represents an element in a subset
 template <class A>
@@ -372,6 +392,15 @@ class DefaultDeterminizeStateTable {
   void operator=(const DefaultDeterminizeStateTable<A, F> &);  // disallow
 };
 
+
+// Type of determinization
+enum DeterminizeType {
+  DETERMINIZE_FUNCTIONAL,     // Input transducer is functional (error if not)
+  DETERMINIZE_NONFUNCTIONAL,  // Input transducer is not known to be functional
+  DETERMINIZE_DISAMBIGUATE    // Input transducer is non-functional but only
+  // keep the min of ambiguous outputs.
+};
+
 // Options for finite-state transducer determinization templated on
 // the arc type, common divisor, the determinization filter and the
 // state table.  DeterminizeFst takes ownership of the determinization
@@ -386,22 +415,29 @@ struct DeterminizeFstOptions : CacheOptions {
   float delta;                // Quantization delta for subset weights
   Label subsequential_label;  // Label used for residual final output
                               // when producing subsequential transducers.
-  bool disambiguate_output;   // Keep only the min of ambiguous output
+  DeterminizeType type;       // Determinization type
+  bool increment_subsequential_label;  // When creating several subsequential
+                                       // arcs at a given state, make their
+                                       // label distinct by incrementing.
   F *filter;                  // Determinization filter
   T *state_table;             // Determinization state table
 
   explicit DeterminizeFstOptions(const CacheOptions &opts,
                                  float del = kDelta, Label lab = 0,
-                                 bool disamb = false,
+                                 DeterminizeType typ = DETERMINIZE_FUNCTIONAL,
+                                 bool inc_lab = false,
                                  F *filt = 0, T *table = 0)
       : CacheOptions(opts), delta(del), subsequential_label(lab),
-        disambiguate_output(disamb), filter(filt), state_table(table) {}
+        type(typ), increment_subsequential_label(inc_lab),
+        filter(filt), state_table(table) {}
 
   explicit DeterminizeFstOptions(float del = kDelta, Label lab = 0,
-                                 bool disamb = false,
+                                 DeterminizeType typ = DETERMINIZE_FUNCTIONAL,
+                                 bool inc_lab = false,
                                  F *filt = 0, T *table = 0)
-      : delta(del), subsequential_label(lab), disambiguate_output(disamb),
-        filter(filt), state_table(table) {}
+      : delta(del), subsequential_label(lab), type(typ),
+        increment_subsequential_label(inc_lab), filter(filt),
+        state_table(table) {}
 };
 
 // Implementation of delayed DeterminizeFst. This base class is
@@ -434,8 +470,11 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
       : CacheImpl<A>(opts), fst_(fst.Copy()) {
     SetType("determinize");
     uint64 iprops = fst.Properties(kFstProperties, false);
-    uint64 dprops = DeterminizeProperties(iprops,
-                                          opts.subsequential_label != 0);
+    uint64 dprops = DeterminizeProperties(
+        iprops,
+        opts.subsequential_label != 0,
+        opts.type == DETERMINIZE_NONFUNCTIONAL ?
+        opts.increment_subsequential_label : true);
     SetProperties(F::Properties(dprops), kCopyProperties);
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
@@ -769,7 +808,8 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
                      const DeterminizeFstOptions<A, D, F, T> &opts)
       : DeterminizeFstImplBase<A>(fst, opts),
         delta_(opts.delta),
-        subsequential_label_(opts.subsequential_label) {
+        subsequential_label_(opts.subsequential_label),
+        increment_subsequential_label_(opts.increment_subsequential_label) {
     if (opts.state_table) {
       FSTERROR() << "DeterminizeFst: "
                  << "a state table can not be passed with transducer input";
@@ -782,7 +822,8 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   DeterminizeFstImpl(const DeterminizeFstImpl<A, G, D, F, T> &impl)
       : DeterminizeFstImplBase<A>(impl),
         delta_(impl.delta_),
-        subsequential_label_(impl.subsequential_label_) {
+        subsequential_label_(impl.subsequential_label_),
+        increment_subsequential_label_(impl.increment_subsequential_label_) {
     Init(GetFst(), 0);
   }
 
@@ -821,6 +862,7 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
 
   float delta_;
   Label subsequential_label_;
+  bool increment_subsequential_label_;
   FromFst *from_fst_;
 
   void operator=(const DeterminizeFstImpl<A, G, D, F, T> &);  // disallow
@@ -923,7 +965,7 @@ class DeterminizeFst : public ImplToFst< DeterminizeFstImplBase<A> >  {
     if (fst.Properties(kAcceptor, true)) {
       // Calls implementation for acceptors.
       SetImpl(new DeterminizeFsaImpl<A, D, F, T>(fst, 0, 0, opts));
-    } else if (opts.disambiguate_output) {
+    } else if (opts.type == DETERMINIZE_DISAMBIGUATE) {
       if (!(Weight::Properties() & kPath)) {
         FSTERROR() << "DeterminizeFst: Weight needs to have the "
                    << "path property to disambiguate output: "
@@ -932,14 +974,17 @@ class DeterminizeFst : public ImplToFst< DeterminizeFstImplBase<A> >  {
       }
       // Calls disambiguating implementation for non-functional transducers.
       SetImpl(new
-              DeterminizeFstImpl<A, GALLIC_LEFT_MIN, D, F, T>(fst, opts));
-    } else {
+              DeterminizeFstImpl<A, GALLIC_MIN, D, F, T>(fst, opts));
+    } else if (opts.type == DETERMINIZE_FUNCTIONAL) {
       // Calls implementation for functional transducers.
       SetImpl(new
-              DeterminizeFstImpl<A, GALLIC_LEFT_RESTRICT, D, F, T>(fst, opts));
+              DeterminizeFstImpl<A, GALLIC_RESTRICT, D, F, T>(fst, opts));
+    } else {  // opts.type == DETERMINIZE_NONFUNCTIONAL
+      // Calls implementation for non functional transducers;
+      SetImpl(new
+              DeterminizeFstImpl<A, GALLIC, D, F, T>(fst, opts));
     }
   }
-
 
   // Makes visible to friends.
   Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
@@ -961,7 +1006,7 @@ void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst,  F *filter) {
   // different constructor.
   CacheOptions copts(GetCacheGc(), GetCacheLimit());
   DeterminizeFstOptions<ToArc, ToD, ToF, ToT>
-      dopts(copts, delta_, 0, false, to_filter);
+      dopts(copts, delta_, 0, DETERMINIZE_FUNCTIONAL, false, to_filter);
   // Uses acceptor-only constructor to avoid template recursion
   DeterminizeFst<ToArc> det_fsa(to_fst, 0, 0, dopts);
 
@@ -969,7 +1014,9 @@ void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst,  F *filter) {
   FactorWeightOptions<ToArc> fopts(CacheOptions(true, 0), delta_,
                                    kFactorFinalWeights,
                                    subsequential_label_,
-                                   subsequential_label_);
+                                   subsequential_label_,
+                                   increment_subsequential_label_,
+                                   increment_subsequential_label_);
   FactorWeightFst<ToArc, FactorIterator> factored_fst(det_fsa, fopts);
   from_fst_ = new FromFst(factored_fst, FromMapper(subsequential_label_));
 }
@@ -1024,14 +1071,18 @@ struct DeterminizeOptions {
   Weight weight_threshold;    // Pruning weight threshold.
   StateId state_threshold;    // Pruning state threshold.
   Label subsequential_label;  // Label used for residual final output
-                              // when producing subsequential transducers.
-  bool disambiguate_output;   // Ensure functionality by summing ambig. outputs
+  // when producing subsequential transducers.
+  DeterminizeType type;       // functional, nonfunctional, disambiguate?
+  bool increment_subsequential_label;  // When creating several subsequential
+  // arcs at a given state, make their label distinct by incrementing.
+
 
   explicit DeterminizeOptions(float d = kDelta, Weight w = Weight::Zero(),
                               StateId n = kNoStateId, Label l = 0,
-                              bool o = false)
+                              DeterminizeType t = DETERMINIZE_FUNCTIONAL,
+                              bool isl = false)
       : delta(d), weight_threshold(w), state_threshold(n),
-        subsequential_label(l), disambiguate_output(o) {}
+        subsequential_label(l), type(t), increment_subsequential_label(isl) {}
 };
 
 
@@ -1063,7 +1114,8 @@ void Determinize(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
   DeterminizeFstOptions<Arc> nopts;
   nopts.delta = opts.delta;
   nopts.subsequential_label = opts.subsequential_label;
-  nopts.disambiguate_output = opts.disambiguate_output;
+  nopts.type = opts.type;
+  nopts.increment_subsequential_label = opts.increment_subsequential_label;
 
   nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
 

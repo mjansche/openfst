@@ -52,7 +52,7 @@ class STTableWriter {
   typedef W EntryWriter;
 
   explicit STTableWriter(const string &filename)
-      : stream_(filename.c_str(), ofstream::out | ofstream::binary),
+      : stream_(filename.c_str(), std::ios_base::out | std::ios_base::binary),
         error_(false) {
     WriteType(stream_, kSTTableMagicNumber);
     WriteType(stream_, kSTTableFileVersion);
@@ -126,7 +126,7 @@ class STTableReader {
     positions_.resize(filenames.size());
     for (size_t i = 0; i < filenames.size(); ++i) {
       streams_[i] = new ifstream(
-          filenames[i].c_str(), ifstream::in | ifstream::binary);
+          filenames[i].c_str(), std::ios_base::in | std::ios_base::binary);
       int32 magic_number = 0, file_version = 0;
       ReadType(*streams_[i], &magic_number);
       ReadType(*streams_[i], &file_version);
@@ -211,7 +211,7 @@ class STTableReader {
         error_ = true;
         return;
       }
-      push_heap(heap_.begin(), heap_.end(), *compare_);
+      std::push_heap(heap_.begin(), heap_.end(), *compare_);
     } else {
       heap_.pop_back();
     }
@@ -286,7 +286,7 @@ class STTableReader {
       }
       heap_.push_back(i);
     }
-    make_heap(heap_.begin(), heap_.end(), *compare_);
+    std::make_heap(heap_.begin(), heap_.end(), *compare_);
     PopHeap();
   }
 
@@ -294,7 +294,7 @@ class STTableReader {
   // of the heap, set 'current_' to the ID of that stream
   // and read the current entry from that stream
   void PopHeap() {
-    pop_heap(heap_.begin(), heap_.end(), *compare_);
+    std::pop_heap(heap_.begin(), heap_.end(), *compare_);
     current_ = heap_.back();
     if (entry_)
       delete entry_;
@@ -331,7 +331,7 @@ class STTableReader {
 // entry in the STTable.
 template <class H>
 bool ReadSTTableHeader(const string &filename, H *header) {
-  ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+  ifstream strm(filename.c_str(), std::ios_base::in | std::ios_base::binary);
   int32 magic_number = 0, file_version = 0;
   ReadType(strm, &magic_number);
   ReadType(strm, &file_version);

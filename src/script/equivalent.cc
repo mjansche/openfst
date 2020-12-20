@@ -22,10 +22,10 @@ namespace fst {
 namespace script {
 
 bool Equivalent(const FstClass &fst1, const FstClass &fst2,
-                float delta) {
+                float delta, bool *error) {
   if (!ArcTypesMatch(fst1, fst2, "Equivalent")) return false;
 
-  EquivalentInnerArgs args(fst1, fst2, delta);
+  EquivalentInnerArgs args(fst1, fst2, delta, error);
   EquivalentArgs args_with_retval(args);
 
   Apply<Operation<EquivalentArgs> >("Equivalent", fst1.ArcType(),

@@ -25,7 +25,7 @@ namespace fst {
 namespace script {
 
 typedef args::Package<const FstClass &, const FstClass &,
-                      float> EquivalentInnerArgs;
+                      float, bool *> EquivalentInnerArgs;
 typedef args::WithReturnValue<bool, EquivalentInnerArgs> EquivalentArgs;
 
 template<class Arc>
@@ -33,11 +33,11 @@ void Equivalent(EquivalentArgs *args) {
   const Fst<Arc> &fst1 = *(args->args.arg1.GetFst<Arc>());
   const Fst<Arc> &fst2 = *(args->args.arg2.GetFst<Arc>());
 
-  args->retval = Equivalent(fst1, fst2, args->args.arg3);
+  args->retval = Equivalent(fst1, fst2, args->args.arg3, args->args.arg4);
 }
 
 bool Equivalent(const FstClass &fst1, const FstClass &fst2,
-                float delta = kDelta);
+                float delta = kDelta, bool *error = 0);
 
 }  // namespace script
 }  // namespace fst

@@ -35,6 +35,7 @@ using std::vector;
 #include <fst/power-weight.h>
 #include <fst/signed-log-weight.h>
 #include <fst/sparse-power-weight.h>
+#include <fst/union-weight.h>
 
 
 namespace fst {
@@ -49,7 +50,7 @@ class TropicalWeightGenerator_ {
  public:
   typedef TropicalWeightTpl<T> Weight;
 
-  TropicalWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit TropicalWeightGenerator_(int seed = time(0), bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -81,7 +82,7 @@ class LogWeightGenerator_ {
  public:
   typedef LogWeightTpl<T> Weight;
 
-  LogWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit LogWeightGenerator_(int seed = time(0), bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -114,7 +115,7 @@ class MinMaxWeightGenerator_ {
  public:
   typedef MinMaxWeightTpl<T> Weight;
 
-  MinMaxWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit MinMaxWeightGenerator_(int seed = time(0), bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -148,7 +149,7 @@ class StringWeightGenerator {
  public:
   typedef StringWeight<L, S> Weight;
 
-  StringWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit StringWeightGenerator(int seed = time(0), bool allow_zero = true)
       : allow_zero_(allow_zero) {
      srand(seed);
   }
@@ -179,6 +180,44 @@ template <typename L, StringType S>
 const int StringWeightGenerator<L, S>::kMaxStringLength;
 
 
+// This function object returns a weight generator over the union of the
+// weights (by default) for the generators G. Class O is the options
+// class for the union.
+template <class G, class O>
+class UnionWeightGenerator {
+ public:
+  typedef typename G::Weight W;;
+  typedef UnionWeight<W, O> Weight;
+
+  explicit UnionWeightGenerator(int seed = time(0), bool allow_zero = true)
+      : generator_(seed, false), allow_zero_(allow_zero) {}
+
+  Weight operator() () const {
+    int n = rand() % (kNumRandomWeights + 1);
+    if (allow_zero_ && n == kNumRandomWeights) {
+      return Weight::Zero();
+    } else if (n % 2 == 0) {
+      W w = generator_();
+      return Weight(w);
+    } else {
+      W w1 = generator_();
+      W w2 = generator_();
+      return Plus(Weight(w1), Weight(w2));
+    }
+  }
+
+ private:
+  // The number of alternative random weights.
+  static const int kNumRandomWeights = 5;
+
+  G generator_;
+  bool allow_zero_;
+};
+
+template <class G, class O>
+const int UnionWeightGenerator<G, O>::kNumRandomWeights;
+
+
 // This function object returns a weight generator over the product of the
 // weights (by default) for the generators G1 and G2.
 template <class G1, class G2,
@@ -189,7 +228,7 @@ class ProductWeightGenerator {
   typedef typename G2::Weight W2;
   typedef W Weight;
 
-  ProductWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit ProductWeightGenerator(int seed = time(0), bool allow_zero = true)
       : generator1_(seed, allow_zero), generator2_(seed, allow_zero) {}
 
   Weight operator() () const {
@@ -215,13 +254,14 @@ class LexicographicWeightGenerator {
   typedef typename G2::Weight W2;
   typedef LexicographicWeight<W1, W2> Weight;
 
-  LexicographicWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit LexicographicWeightGenerator(int seed = time(0),
+                                        bool allow_zero = true)
       : generator1_(seed, false), generator2_(seed, false),
         allow_zero_(allow_zero) {}
 
   Weight operator() () const {
     if (allow_zero_) {
-      int n = rand() % (kNumRandomWeights + allow_zero_);
+      int n = rand() % (kNumRandomWeights + 1);
       if (n == kNumRandomWeights)
         return Weight(W1::Zero(), W2::Zero());
     }
@@ -231,9 +271,11 @@ class LexicographicWeightGenerator {
   }
 
  private:
+  // The number of alternative random weights.
+  static const int kNumRandomWeights = 5;
+
   G1 generator1_;
   G2 generator2_;
-  static const int kNumRandomWeights = 5;
   bool allow_zero_;
 };
 
@@ -253,11 +295,30 @@ class GallicWeightGenerator
   typedef typename G::Weight W;
   typedef GallicWeight<L, W, T> Weight;
 
-  GallicWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit GallicWeightGenerator(int seed = time(0), bool allow_zero = true)
       : PG(seed, allow_zero) {}
 
-  GallicWeightGenerator(const PG &pg) : PG(pg) {}
+  explicit GallicWeightGenerator(const PG &pg) : PG(pg) {}
 };
+
+// Specialization for (general) gallic weight.
+template <class L, class G>
+class GallicWeightGenerator<L, G, GALLIC>
+    : public UnionWeightGenerator<
+                GallicWeightGenerator<L, G, GALLIC_RESTRICT>,
+                GallicUnionWeightOptions<L, typename G::Weight> > {
+ public:
+  typedef UnionWeightGenerator<
+                GallicWeightGenerator<L, G, GALLIC_RESTRICT>,
+                GallicUnionWeightOptions<L, typename G::Weight> > UG;
+  typedef typename G::Weight W;
+
+  explicit GallicWeightGenerator(int seed = time(0), bool allow_zero = true)
+      : UG(seed, allow_zero) {}
+
+  explicit GallicWeightGenerator(const UG &ug) : UG(ug) {}
+};
+
 
 // This function object returms a weight generator over the catersian power
 // of rank n of the weights for the generator G.
@@ -267,7 +328,7 @@ class PowerWeightGenerator {
   typedef typename G::Weight W;
   typedef PowerWeight<W, n> Weight;
 
-  PowerWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit PowerWeightGenerator(int seed = time(0), bool allow_zero = true)
       : generator_(seed, allow_zero) {}
 
   Weight operator()() const {
@@ -291,7 +352,8 @@ class SignedLogWeightGenerator_ {
  public:
   typedef SignedLogWeightTpl<T> Weight;
 
-  SignedLogWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit SignedLogWeightGenerator_(int seed = time(0),
+                                     bool allow_zero = true)
   : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -327,7 +389,8 @@ class SparsePowerWeightGenerator {
   typedef typename G::Weight W;
   typedef SparsePowerWeight<W, K> Weight;
 
-  SparsePowerWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit SparsePowerWeightGenerator(int seed = time(0),
+                                      bool allow_zero = true)
       : generator_(seed, allow_zero) {}
 
   Weight operator()() const {

@@ -537,7 +537,7 @@ void PrunedExpand<A>::InitCloseParenMultimap(
       if (pit == paren_id_map.end()) continue;
       if (arc.ilabel == parens[pit->second].second) {  // Close paren
         ParenState<Arc> paren_state(pit->second, s);
-        close_paren_multimap_.insert(make_pair(paren_state, arc));
+        close_paren_multimap_.insert(std::make_pair(paren_state, arc));
       }
     }
   }
@@ -668,7 +668,7 @@ bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
       // TODO(allauzen): queue discipline should prevent this never
       // from happening; replace by a check.
       cached_dest_list_.push_front(
-          make_pair(rfst_.Start() -1, Weight::One()));
+          std::make_pair(rfst_.Start() - 1, Weight::One()));
     }
   }
 
@@ -702,7 +702,7 @@ void PrunedExpand<A>::ProcStart() {
   cached_source_ = ifst_->Start();
   cached_stack_id_ = 0;
   cached_dest_list_.push_front(
-          make_pair(rfst_.Start() -1, Weight::One()));
+      std::make_pair(rfst_.Start() - 1, Weight::One()));
 
   PdtStateTuple<StateId, StackId> tuple(rfst_.Start() - 1, 0);
   SetFinalDistance(state_table_.FindState(tuple), Weight::One());

@@ -30,6 +30,7 @@ using std::vector;
 #include <fst/extensions/far/equal.h>
 #include <fst/extensions/far/extract.h>
 #include <fst/extensions/far/info.h>
+#include <fst/extensions/far/isomorphic.h>
 #include <fst/extensions/far/print-strings.h>
 #include <fst/extensions/far/far.h>
 
@@ -205,6 +206,26 @@ void FarInfo(const vector<string> &filenames,
              const string &end_key,
              const bool list_fsts);
 
+
+typedef args::Package<const string &, const string &, float,
+                      const string &, const string &> FarIsomorphicInnerArgs;
+typedef args::WithReturnValue<bool, FarIsomorphicInnerArgs> FarIsomorphicArgs;
+
+template <class Arc>
+void FarIsomorphic(FarIsomorphicArgs *args) {
+  args->retval = fst::FarIsomorphic<Arc>(
+      args->args.arg1, args->args.arg2, args->args.arg3,
+      args->args.arg4, args->args.arg5);
+}
+
+bool FarIsomorphic(const string &filename1,
+              const string &filename2,
+              const string &arc_type,
+              float delta = kDelta,
+              const string &begin_key = string(),
+              const string &end_key = string());
+
+
 struct FarPrintStringsArgs {
   const vector<string> &ifilenames;
   const FarEntryType entry_type;
@@ -268,6 +289,7 @@ void FarPrintStrings(const vector<string> &ifilenames,
   REGISTER_FST_OPERATION(FarEqual, ArcType, FarEqualArgs);              \
   REGISTER_FST_OPERATION(FarExtract, ArcType, FarExtractArgs);          \
   REGISTER_FST_OPERATION(FarInfo, ArcType, FarInfoArgs);                \
+  REGISTER_FST_OPERATION(FarIsomorphic, ArcType, FarIsomorphicArgs);    \
   REGISTER_FST_OPERATION(FarPrintStrings, ArcType, FarPrintStringsArgs)
 
 #endif  // FST_EXTENSIONS_FAR_FARSCRIPT_H_

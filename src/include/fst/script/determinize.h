@@ -30,15 +30,18 @@ struct DeterminizeOptions {
   WeightClass weight_threshold;
   int64 state_threshold;
   int64 subsequential_label;
-  bool disambiguate_output;
+  DeterminizeType type;
+  bool increment_subsequential_label;
 
   explicit DeterminizeOptions(float d = fst::kDelta,
                               WeightClass w =
                                 fst::script::WeightClass::Zero(),
                               int64 n = fst::kNoStateId, int64 l = 0,
-                              bool o = false)
+                              DeterminizeType t = DETERMINIZE_FUNCTIONAL,
+                              bool i = false)
       : delta(d), weight_threshold(w), state_threshold(n),
-        subsequential_label(l), disambiguate_output(o) {}
+        subsequential_label(l), type(t),
+        increment_subsequential_label(i) {}
 };
 
 typedef args::Package<const FstClass&, MutableFstClass*,
@@ -56,7 +59,9 @@ void Determinize(DeterminizeArgs *args) {
       *(opts.weight_threshold.GetWeight<typename Arc::Weight>());
   detargs.state_threshold = opts.state_threshold;
   detargs.subsequential_label = opts.subsequential_label;
-  detargs.disambiguate_output = opts.disambiguate_output;
+  detargs.type = opts.type;
+  detargs.increment_subsequential_label =
+      opts.increment_subsequential_label;
 
   Determinize(ifst, ofst, detargs);
 }

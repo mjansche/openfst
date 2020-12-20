@@ -19,9 +19,8 @@
 // Class to determine if a non-epsilon label can be read as the
 // first non-epsilon symbol along some path from a given state.
 
-
-#ifndef FST_LIB_LABEL_REACHABLE_H__
-#define FST_LIB_LABEL_REACHABLE_H__
+#ifndef FST_LIB_LABEL_REACHABLE_H_
+#define FST_LIB_LABEL_REACHABLE_H_
 
 #include <unordered_map>
 using std::unordered_map;
@@ -575,4 +574,4 @@ class LabelReachable {
 
 }  // namespace fst
 
-#endif  // FST_LIB_LABEL_REACHABLE_H__
+#endif  // FST_LIB_LABEL_REACHABLE_H_

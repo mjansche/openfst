@@ -20,8 +20,6 @@
 #ifndef FST_LIB_COMPAT_H__
 #define FST_LIB_COMPAT_H__
 
-#include <dlfcn.h>
-
 #include <climits>
 #include <cstdlib>
 #include <cstring>

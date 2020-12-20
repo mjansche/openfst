@@ -34,7 +34,7 @@ using std::vector;
 
 namespace fst {
 
-template <class A> class MutableArcIteratorData;
+template <class A> struct MutableArcIteratorData;
 
 // An expanded FST plus mutators (use MutableArcIterator to modify arcs).
 template <class A>
@@ -121,14 +121,15 @@ class MutableFst : public ExpandedFst<A> {
                              const string &convert_type = "vector") {
     if (convert == false) {
       if (!filename.empty()) {
-        ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+        ifstream strm(filename.c_str(),
+                      std::ios_base::in | std::ios_base::binary);
         if (!strm) {
           LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
           return 0;
         }
         return Read(strm, FstReadOptions(filename));
       } else {
-        return Read(cin, FstReadOptions("standard input"));
+        return Read(std::cin, FstReadOptions("standard input"));
       }
     } else {  // Converts to 'convert_type' if not mutable.
       Fst<A> *ifst = Fst<A>::Read(filename);

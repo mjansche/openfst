@@ -184,8 +184,6 @@ WeightImplBase* StrToWeightImplBase(const string &str,
   return new WeightClassImpl<W>(StrToWeight<W>(str, src, nline));
 }
 
-// The following confuses swig, and doesn't need to be wrapped anyway.
-#ifndef SWIG
 ostream& operator << (ostream &o, const WeightClass &c);
 
 class WeightClassRegister : public GenericRegister<string,
@@ -198,7 +196,6 @@ class WeightClassRegister : public GenericRegister<string,
 };
 
 typedef GenericRegisterer<WeightClassRegister> WeightClassRegisterer;
-#endif
 
 // internal version, needs to be called by wrapper in order for
 // macro args to expand

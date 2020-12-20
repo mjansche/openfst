@@ -28,6 +28,9 @@ using std::deque;
 #include <unordered_map>
 using std::unordered_map;
 using std::unordered_multimap;
+#include <unordered_set>
+using std::unordered_set;
+using std::unordered_multiset;
 #include <vector>
 using std::vector;
 
@@ -106,6 +109,13 @@ class HashBiTable {
   }
 
   I Size() const { return id2entry_.size(); }
+
+  // TODO(riley): Add fancy clear-to-size as in CompactHashBiTable.
+  void Clear() {
+    entry2id_.clear();
+    id2entry_.clear();
+  }
+
 
  private:
   H *hash_func_;

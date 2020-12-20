@@ -20,8 +20,8 @@
 // read/write method to an FST and its file rep. The FST is given a
 // new type name.
 
-#ifndef FST_LIB_ADD_ON_FST_H__
-#define FST_LIB_ADD_ON_FST_H__
+#ifndef FST_LIB_ADD_ON_H_
+#define FST_LIB_ADD_ON_H_
 
 #include <stddef.h>
 #include <string>
@@ -149,6 +149,8 @@ class AddOnImpl : public FstImpl<typename F::Arc> {
   typedef typename Arc::StateId StateId;
 
   using FstImpl<Arc>::SetType;
+  using FstImpl<Arc>::SetInputSymbols;
+  using FstImpl<Arc>::SetOutputSymbols;
   using FstImpl<Arc>::SetProperties;
   using FstImpl<Arc>::WriteHeader;
 
@@ -157,6 +159,8 @@ class AddOnImpl : public FstImpl<typename F::Arc> {
       : fst_(fst), t_(t) {
     SetType(type);
     SetProperties(fst_.Properties(kFstProperties, false));
+    SetInputSymbols(fst_.InputSymbols());
+    SetOutputSymbols(fst_.OutputSymbols());
     if (t_)
       t_->IncrRefCount();
   }
@@ -166,6 +170,8 @@ class AddOnImpl : public FstImpl<typename F::Arc> {
       : fst_(fst), t_(t) {
     SetType(type);
     SetProperties(fst_.Properties(kFstProperties, false));
+    SetInputSymbols(fst_.InputSymbols());
+    SetOutputSymbols(fst_.OutputSymbols());
     if (t_)
       t_->IncrRefCount();
   }
@@ -174,6 +180,8 @@ class AddOnImpl : public FstImpl<typename F::Arc> {
       : fst_(impl.fst_), t_(impl.t_) {
     SetType(impl.Type());
     SetProperties(fst_.Properties(kCopyProperties, false));
+    SetInputSymbols(fst_.InputSymbols());
+    SetOutputSymbols(fst_.OutputSymbols());
     if (t_)
       t_->IncrRefCount();
   }
@@ -303,4 +311,4 @@ template <class F, class T> const int AddOnImpl<F, T>::kMinFileVersion;
 
 }  // namespace fst
 
-#endif  // FST_LIB_ADD_ON_FST_H__
+#endif  // FST_LIB_ADD_ON_H_

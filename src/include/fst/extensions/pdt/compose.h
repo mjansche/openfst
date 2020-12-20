@@ -96,6 +96,8 @@ class ParenMatcher {
 
   void Next();
 
+  Weight Final(StateId s) { return matcher_.Final(s); }
+
   ssize_t Priority(StateId s) { return matcher_.Priority(s); }
 
   const FST &GetFst() const { return matcher_.GetFst(); }

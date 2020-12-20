@@ -47,21 +47,28 @@ struct FactorWeightOptions : CacheOptions {
   uint32 mode;         // factor arc weights and/or final weights
   Label final_ilabel;  // input label of arc created when factoring final w's
   Label final_olabel;  // output label of arc created when factoring final w's
+  bool increment_final_ilabel;  // when factoring final w' results in >1 arcs
+  bool increment_final_olabel;  // at state, increment labels to make distinct
 
   FactorWeightOptions(const CacheOptions &opts, float d,
                       uint32 m = kFactorArcWeights | kFactorFinalWeights,
-                      Label il = 0, Label ol = 0)
+                      Label il = 0, Label ol = 0,
+                      bool iil = false, bool iol = false)
       : CacheOptions(opts), delta(d), mode(m), final_ilabel(il),
-        final_olabel(ol) {}
+        final_olabel(ol), increment_final_ilabel(iil),
+        increment_final_olabel(iol) {}
 
   explicit FactorWeightOptions(
       float d, uint32 m = kFactorArcWeights | kFactorFinalWeights,
-      Label il = 0, Label ol = 0)
-      : delta(d), mode(m), final_ilabel(il), final_olabel(ol) {}
+      Label il = 0, Label ol = 0, bool iil = false, bool iol = false)
+      : delta(d), mode(m), final_ilabel(il), final_olabel(ol),
+        increment_final_ilabel(iil), increment_final_olabel(iol) {}
 
   FactorWeightOptions(uint32 m = kFactorArcWeights | kFactorFinalWeights,
-                      Label il = 0, Label ol = 0)
-      : delta(kDelta), mode(m), final_ilabel(il), final_olabel(ol) {}
+                      Label il = 0, Label ol = 0,
+                      bool iil = false, bool iol = false)
+      : delta(kDelta), mode(m), final_ilabel(il), final_olabel(ol),
+        increment_final_ilabel(iil), increment_final_olabel(iol) {}
 };
 
 
@@ -73,7 +80,7 @@ struct FactorWeightOptions : CacheOptions {
 // template <class W>
 // class FactorIterator {
 //  public:
-//   FactorIterator(W w);
+//   explicit FactorIterator(W w);
 //   bool Done() const;
 //   void Next();
 //   pair<W, W> Value() const;
@@ -85,7 +92,7 @@ struct FactorWeightOptions : CacheOptions {
 template <class W>
 class IdentityFactor {
  public:
-  IdentityFactor(const W &w) {}
+  explicit IdentityFactor(const W &w) {}
   bool Done() const { return true; }
   void Next() {}
   pair<W, W> Value() const { return make_pair(W::One(), W::One()); } // unused
@@ -97,7 +104,7 @@ class IdentityFactor {
 template <typename L, StringType S = STRING_LEFT>
 class StringFactor {
  public:
-  StringFactor(const StringWeight<L, S> &w)
+  explicit StringFactor(const StringWeight<L, S> &w)
       : weight_(w), done_(w.Size() <= 1) {}
 
   bool Done() const { return done_; }
@@ -110,7 +117,7 @@ class StringFactor {
     StringWeight<L, S> w2;
     for (iter.Next(); !iter.Done(); iter.Next())
       w2.PushBack(iter.Value());
-    return make_pair(w1, w2);
+    return std::make_pair(w1, w2);
   }
 
   void Reset() { done_ = weight_.Size() <= 1; }
@@ -125,24 +132,54 @@ class StringFactor {
 template <class L, class W, GallicType G = GALLIC_LEFT>
 class GallicFactor {
  public:
-  GallicFactor(const GallicWeight<L, W, G> &w)
+  typedef GallicWeight<L, W, G> GW;
+
+  explicit GallicFactor(const GW &w)
       : weight_(w), done_(w.Value1().Size() <= 1) {}
 
   bool Done() const { return done_; }
-
   void Next() { done_ = true; }
 
-  pair< GallicWeight<L, W, G>, GallicWeight<L, W, G> > Value() const {
+  pair<GW, GW> Value() const {
     StringFactor<L, GALLIC_STRING_TYPE(G)> iter(weight_.Value1());
-    GallicWeight<L, W, G> w1(iter.Value().first, weight_.Value2());
-    GallicWeight<L, W, G> w2(iter.Value().second, W::One());
-    return make_pair(w1, w2);
+    GW w1(iter.Value().first, weight_.Value2());
+    GW w2(iter.Value().second, W::One());
+    return std::make_pair(w1, w2);
   }
 
   void Reset() { done_ = weight_.Value1().Size() <= 1; }
 
  private:
-  GallicWeight<L, W, G> weight_;
+  GW weight_;
+  bool done_;
+};
+
+// Specialization for the (general) GALLIC type GallicWeight.
+template <class L, class W>
+class GallicFactor<L, W, GALLIC> {
+ public:
+  typedef GallicWeight<L, W, GALLIC> GW;
+  typedef GallicWeight<L, W, GALLIC_RESTRICT> GRW;
+
+  explicit GallicFactor(const GW &w)
+      : iter_(w),
+        done_(w.Size() == 0 ||
+              (w.Size() == 1 && w.Back().Value1().Size() <= 1)) {}
+
+  bool Done() const { return done_ || iter_.Done(); }
+  void Next() { iter_.Next(); }
+  void Reset() { iter_.Reset(); }
+
+  pair<GW, GW> Value() const {
+    const GRW weight = iter_.Value();
+    StringFactor<L, GALLIC_STRING_TYPE(GALLIC_RESTRICT)> iter(weight.Value1());
+    GRW w1(iter.Value().first, weight.Value2());
+    GRW w2(iter.Value().second, W::One());
+    return std::make_pair(GW(w1), GW(w2));
+  }
+
+ private:
+  UnionWeightIterator<GRW, GallicUnionWeightOptions<L, W> > iter_;
   bool done_;
 };
 
@@ -186,7 +223,9 @@ class FactorWeightFstImpl
         delta_(opts.delta),
         mode_(opts.mode),
         final_ilabel_(opts.final_ilabel),
-        final_olabel_(opts.final_olabel) {
+        final_olabel_(opts.final_olabel),
+        increment_final_ilabel_(opts.increment_final_ilabel),
+        increment_final_olabel_(opts.increment_final_olabel) {
     SetType("factor_weight");
     uint64 props = fst.Properties(kFstProperties, false);
     SetProperties(FactorWeightProperties(props), kCopyProperties);
@@ -205,7 +244,9 @@ class FactorWeightFstImpl
         delta_(impl.delta_),
         mode_(impl.mode_),
         final_ilabel_(impl.final_ilabel_),
-        final_olabel_(impl.final_olabel_) {
+        final_olabel_(impl.final_olabel_),
+        increment_final_ilabel_(impl.increment_final_ilabel_),
+        increment_final_olabel_(impl.increment_final_olabel_) {
     SetType("factor_weight");
     SetProperties(impl.Properties(), kCopyProperties);
     SetInputSymbols(impl.InputSymbols());
@@ -280,7 +321,8 @@ class FactorWeightFstImpl
   // Find state corresponding to an element. Create new state
   // if element not found.
   StateId FindState(const Element &e) {
-    if (!(mode_ & kFactorArcWeights) && e.weight == Weight::One()) {
+    if (!(mode_ & kFactorArcWeights) && e.weight == Weight::One() &&
+        e.state != kNoStateId) {
       while (unfactored_.size() <= e.state)
         unfactored_.push_back(kNoStateId);
       if (unfactored_[e.state] == kNoStateId) {
@@ -332,13 +374,17 @@ class FactorWeightFstImpl
       Weight w = e.state == kNoStateId
                  ? e.weight
                  : Times(e.weight, fst_->Final(e.state));
+      Label ilabel = final_ilabel_;
+      Label olabel = final_olabel_;
       for (FactorIterator fit(w);
            !fit.Done();
            fit.Next()) {
         const pair<Weight, Weight> &p = fit.Value();
         StateId d = FindState(Element(kNoStateId,
                                       p.second.Quantize(delta_)));
-        PushArc(s, Arc(final_ilabel_, final_olabel_, p.first, d));
+        PushArc(s, Arc(ilabel, olabel, p.first, d));
+        if (increment_final_ilabel_) ++ilabel;
+        if (increment_final_olabel_) ++olabel;
       }
     }
     SetArcs(s);
@@ -368,9 +414,11 @@ class FactorWeightFstImpl
 
   const Fst<A> *fst_;
   float delta_;
-  uint32 mode_;               // factoring arc and/or final weights
-  Label final_ilabel_;        // ilabel of arc created when factoring final w's
-  Label final_olabel_;        // olabel of arc created when factoring final w's
+  uint32 mode_;         // factoring arc and/or final weights
+  Label final_ilabel_;  // ilabel of arc created when factoring final w's
+  Label final_olabel_;  // olabel of arc created when factoring final w's
+  bool increment_final_ilabel_;  // when factoring final w's results >1 arcs,
+  bool increment_final_olabel_;  // increment labels to make them distinct.
   vector<Element> elements_;  // mapping Fst state to Elements
   ElementMap element_map_;    // mapping Elements to Fst state
   // mapping between old/new 'StateId' for states that do not need to

@@ -49,14 +49,13 @@ void Concat(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  // TODO(riley): restore when voice actions issues fixed
   // Check that the symbol table are compatible
   if (!CompatSymbols(fst1->InputSymbols(), fst2.InputSymbols()) ||
       !CompatSymbols(fst1->OutputSymbols(), fst2.OutputSymbols())) {
     LOG(ERROR) << "Concat: input/output symbol tables of 1st argument "
                << "do not match input/output symbol tables of 2nd argument";
-    // fst1->SetProperties(kError, kError);
-    // return;
+    fst1->SetProperties(kError, kError);
+    return;
   }
 
   uint64 props1 = fst1->Properties(kFstProperties, false);

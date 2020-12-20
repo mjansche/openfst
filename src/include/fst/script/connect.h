@@ -25,15 +25,12 @@
 namespace fst {
 namespace script {
 
-// This function confuses SWIG, because both versions have the same args
-#ifndef SWIG
 template<class Arc>
 void Connect(MutableFstClass *fst) {
   MutableFst<Arc> *typed_fst = fst->GetMutableFst<Arc>();
 
   Connect(typed_fst);
 }
-#endif
 
 void Connect(MutableFstClass *fst);
 

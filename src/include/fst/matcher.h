@@ -80,6 +80,9 @@ namespace fst {
 //   // Initially and after SetState() the iterator methods
 //   // have undefined behavior until Find() is called.
 //
+//   // Returns finality of state 's'.
+//   Weight Final(StateId s) const;
+//
 //   // Indicates preference for being the side used for matching in
 //   // composition/intersection. If the value is kRequirePriority,
 //   // then it is manditory that it be used.
@@ -127,6 +130,7 @@ class MatcherBase {
   bool Done() const { return Done_(); }
   const A& Value() const { return Value_(); }
   void Next() { Next_(); }
+  Weight Final(StateId s) const { return Final_(s); }
   ssize_t Priority(StateId s) { return Priority_(s); }
 
   virtual const Fst<A> &GetFst() const = 0;
@@ -138,6 +142,9 @@ class MatcherBase {
   virtual bool Done_() const = 0;
   virtual const A& Value_() const  = 0;
   virtual void Next_()  = 0;
+  virtual Weight Final_(StateId s) const {
+    return GetFst().Final(s);
+  }
 
   virtual ssize_t Priority_(StateId s) {
     return GetFst().NumArcs(s);
@@ -302,6 +309,10 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
       aiter_->Next();
   }
 
+  Weight Final(StateId s) const {
+    return internal::Final(*fst_, s);
+  }
+
   ssize_t Priority(StateId s) {
     return internal::NumArcs(*fst_, s);
   }
@@ -322,6 +333,7 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   bool Search();
@@ -517,6 +529,8 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
 
   void Next() { matcher_->Next(); }
 
+  Weight Final(StateId s) const { return matcher_->Final(s); }
+
   ssize_t Priority(StateId s) {
     s_ = s;
     matcher_->SetState(s);
@@ -545,6 +559,7 @@ class RhoMatcher : public MatcherBase<typename M::Arc> {
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   M *matcher_;
@@ -720,6 +735,8 @@ class SigmaMatcher : public MatcherBase<typename M::Arc> {
     }
   }
 
+  Weight Final(StateId s) const { return matcher_->Final(s); }
+
   ssize_t Priority(StateId s) {
     if (sigma_label_ != kNoLabel) {
       SetState(s);
@@ -745,6 +762,7 @@ private:
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   M *matcher_;
@@ -900,12 +918,32 @@ class PhiMatcher : public MatcherBase<typename M::Arc> {
 
   void Next() { matcher_->Next(); }
 
+  Weight Final(StateId s) const {
+    Weight final = matcher_->Final(s);
+    if (phi_label_ == kNoLabel || final != Weight::Zero()) {
+      return final;
+    } else {
+      final = Weight::One();
+      StateId state = s;
+      matcher_->SetState(state);
+      while (matcher_->Final(state) == Weight::Zero()) {
+        if (!matcher_->Find(phi_label_ == 0 ? -1 : phi_label_)) break;
+        final = Times(final, matcher_->Value().weight);
+        if (state == matcher_->Value().nextstate)
+          return  Weight::Zero();  // Do not follow phi self loops.
+        state = matcher_->Value().nextstate;
+        matcher_->SetState(state);
+      }
+      final = Times(final, matcher_->Final(state));
+      return final;
+    }
+  }
+
   ssize_t Priority(StateId s) {
     if (phi_label_ != kNoLabel) {
       matcher_->SetState(s);
-      has_phi_ = matcher_->Find(phi_label_);
-      state_ = s;
-      return has_phi_ ? kRequirePriority : matcher_->Priority(s);
+      const bool has_phi = matcher_->Find(phi_label_ == 0 ? -1 : phi_label_);
+      return has_phi ? kRequirePriority : matcher_->Priority(s);
     } else {
       return matcher_->Priority(s);
     }
@@ -927,9 +965,10 @@ private:
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
-  M *matcher_;
+  mutable M *matcher_;
   MatchType match_type_;  // Type of match requested
   Label phi_label_;       // Label that represents the phi transition
   bool rewrite_both_;     // Rewrite both sides when both are 'phi_label_'
@@ -1132,6 +1171,8 @@ class MultiEpsMatcher {
     }
   }
 
+  Weight Final(StateId s) const { return matcher_->Final(s); }
+
   ssize_t Priority(StateId s) { return matcher_->Priority(s); }
 
   const FST &GetFst() const { return matcher_->GetFst(); }
@@ -1271,6 +1312,8 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
     CheckArc();
   }
 
+  Weight Final(StateId s) const { return matcher_->Final(s); }
+
   ssize_t Priority(StateId s) { return  matcher_->Priority(s); }
 
   virtual const FST &GetFst() const { return matcher_->GetFst(); }
@@ -1299,6 +1342,7 @@ class ExplicitMatcher : public MatcherBase<typename M::Arc> {
   virtual bool Done_() const { return Done(); }
   virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
+  virtual Weight Final_(StateId s) const { return Final(s); }
   virtual ssize_t Priority_(StateId s) { return Priority(s); }
 
   M *matcher_;
@@ -1353,6 +1397,7 @@ class Matcher {
   bool Done() const { return base_->Done(); }
   const Arc& Value() const { return base_->Value(); }
   void Next() { base_->Next(); }
+  Weight Final(StateId s) const { return base_->Final(s); }
   ssize_t Priority(StateId s) { return base_->Priority(s); }
   const F &GetFst() const { return static_cast<const F &>(base_->GetFst()); }
   uint64 Properties(uint64 props) const { return base_->Properties(props); }

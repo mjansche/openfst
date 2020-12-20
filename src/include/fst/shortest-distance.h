@@ -235,7 +235,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
 // The weights must must be right distributive and k-closed (i.e., 1 +
 // x + x^2 + ... + x^(k +1) = 1 + x + x^2 + ... + x^k).
 //
-// The algorithm is from Mohri, "Semiring Framweork and Algorithms for
+// The algorithm is from Mohri, "Semiring Framework and Algorithms for
 // Shortest-Distance Problems", Journal of Automata, Languages and
 // Combinatorics 7(3):321-350, 2002. The complexity of algorithm
 // depends on the properties of the semiring and the queue discipline

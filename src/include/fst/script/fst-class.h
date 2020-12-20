@@ -130,8 +130,6 @@ class FstClassImpl : public FstClassImplBase {
 
   Fst<Arc> *GetImpl() const { return impl_; }
 
-  Fst<Arc> *GetImpl() { return impl_; }
-
   virtual FstClassImpl *Copy() {
     return new FstClassImpl<Arc>(impl_);
   }
@@ -171,11 +169,12 @@ class FstClass : public FstClassBase {
   explicit FstClass(const Fst<Arc> &fst) : impl_(new FstClassImpl<Arc>(fst)) {
   }
 
-  FstClass(const FstClass &other) : impl_(other.impl_->Copy()) { }
+  FstClass(const FstClass &other) : impl_(
+      other.impl_ == NULL ? NULL : other.impl_->Copy()) { }
 
   FstClass &operator=(const FstClass &other) {
     delete impl_;
-    impl_ = other.impl_->Copy();
+    impl_ = other.impl_ == NULL ? NULL : other.impl_->Copy();
     return *this;
   }
 

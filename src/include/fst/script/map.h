@@ -109,10 +109,6 @@ void Map(MapArgs *args) {
   delete fst;
 }
 
-
-#ifdef SWIG
-%newobject Map;
-#endif
 FstClass *Map(const FstClass& f, MapType map_type,
          float delta = fst::kDelta,
          const WeightClass &w = fst::script::WeightClass::Zero());

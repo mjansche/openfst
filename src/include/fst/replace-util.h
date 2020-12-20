@@ -36,6 +36,7 @@ using std::unordered_multiset;
 #include <fst/connect.h>
 #include <fst/mutable-fst.h>
 #include <fst/topsort.h>
+#include <fst/vector-fst.h>
 
 
 namespace fst {
@@ -52,8 +53,7 @@ enum ReplaceLabelType { REPLACE_LABEL_NEITHER = 1, REPLACE_LABEL_INPUT = 2,
 // By default ReplaceUtil will copy the input label of the 'replace arc'.
 // The call_label_type and return_label_type options specify how to manage
 // the labels of the call arc and the return arc of the replace FST
-template <class A>
-struct ReplaceUtilOptions : CacheOptions {
+struct ReplaceUtilOptions {
   int64 root;    // root rule for expansion
   ReplaceLabelType call_label_type;  // how to label call arc
   ReplaceLabelType return_label_type;  // how to label return arc
@@ -88,7 +88,7 @@ struct ReplaceUtilOptions : CacheOptions {
 
 template <class Arc>
 void Replace(const vector<pair<typename Arc::Label, const Fst<Arc>* > >&,
-             MutableFst<Arc> *, fst::ReplaceUtilOptions<Arc> opts);
+             MutableFst<Arc> *, fst::ReplaceUtilOptions opts);
 
 // Utility class for the recursive replacement of Fsts (RTNs). The
 // user provides a set of Label, Fst pairs at construction. These are
@@ -109,16 +109,16 @@ class ReplaceUtil {
 
   // Constructs from mutable Fsts; Fst ownership given to ReplaceUtil.
   ReplaceUtil(const vector<MutableFstPair> &fst_pairs,
-              const ReplaceUtilOptions<Arc> &opts);
+              const ReplaceUtilOptions &opts);
 
   // Constructs from Fsts; Fst ownership retained by caller.
   ReplaceUtil(const vector<FstPair> &fst_pairs,
-              const ReplaceUtilOptions<Arc> &opts);
+              const ReplaceUtilOptions &opts);
 
   // Constructs from ReplaceFst internals; ownership retained by caller.
   ReplaceUtil(const vector<const Fst<Arc> *> &fst_array,
               const NonTerminalHash &nonterminal_hash,
-              const ReplaceUtilOptions<Arc> &opts);
+              const ReplaceUtilOptions &opts);
 
   ~ReplaceUtil() {
     for (Label i = 0; i < fst_array_.size(); ++i)
@@ -238,7 +238,7 @@ class ReplaceUtil {
 template <class Arc>
 ReplaceUtil<Arc>::ReplaceUtil(
     const vector<MutableFstPair> &fst_pairs,
-    const ReplaceUtilOptions<Arc> &opts)
+    const ReplaceUtilOptions &opts)
     : root_label_(opts.root),
       call_label_type_(opts.call_label_type),
       return_label_type_(opts.return_label_type),
@@ -264,7 +264,7 @@ ReplaceUtil<Arc>::ReplaceUtil(
 template <class Arc>
 ReplaceUtil<Arc>::ReplaceUtil(
     const vector<FstPair> &fst_pairs,
-    const ReplaceUtilOptions<Arc> &opts)
+    const ReplaceUtilOptions &opts)
     : root_label_(opts.root),
       call_label_type_(opts.call_label_type),
       return_label_type_(opts.return_label_type),
@@ -289,7 +289,7 @@ template <class Arc>
 ReplaceUtil<Arc>::ReplaceUtil(
     const vector<const Fst<Arc> *> &fst_array,
     const NonTerminalHash &nonterminal_hash,
-    const ReplaceUtilOptions<Arc> &opts)
+    const ReplaceUtilOptions &opts)
     : root_fst_(opts.root),
       call_label_type_(opts.call_label_type),
       return_label_type_(opts.return_label_type),
@@ -514,17 +514,17 @@ void ReplaceUtil<Arc>::ReplaceLabels(const vector<Label> &labels) {
       const Arc &arc = aiter.Value();
       Label label = nonterminal_array_[arc.nextstate];
       const Fst<Arc> *fst = fst_array_[arc.nextstate];
-      fst_pairs.push_back(make_pair(label, fst));
+      fst_pairs.push_back(std::make_pair(label, fst));
     }
     if (fst_pairs.empty())
         continue;
     Label label = nonterminal_array_[s];
     const Fst<Arc> *fst = fst_array_[s];
-    fst_pairs.push_back(make_pair(label, fst));
+    fst_pairs.push_back(std::make_pair(label, fst));
 
     Replace(fst_pairs, mutable_fst_array_[s],
-            ReplaceUtilOptions<Arc>(label, call_label_type_,
-                                    return_label_type_, return_label_));
+            ReplaceUtilOptions(label, call_label_type_,
+                               return_label_type_, return_label_));
   }
   ClearDependencies();
 }
@@ -582,7 +582,7 @@ void ReplaceUtil<Arc>::GetFstPairs(vector<FstPair> *fst_pairs) {
     const Fst<Arc> *fst = fst_array_[i];
     if (!fst)
       continue;
-    fst_pairs->push_back(make_pair(label, fst));
+    fst_pairs->push_back(std::make_pair(label, fst));
   }
 }
 
@@ -596,7 +596,7 @@ void ReplaceUtil<Arc>::GetMutableFstPairs(
     MutableFst<Arc> *fst = mutable_fst_array_[i];
     if (!fst)
       continue;
-    mutable_fst_pairs->push_back(make_pair(label, fst->Copy()));
+    mutable_fst_pairs->push_back(std::make_pair(label, fst->Copy()));
   }
 }
 
