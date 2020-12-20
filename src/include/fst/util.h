@@ -12,6 +12,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -40,35 +41,25 @@ namespace fst {
 // Read some types from an input stream.
 
 // Generic case.
-template <typename T>
+template <class T,
+    typename std::enable_if<std::is_class<T>::value, T>::type* = nullptr>
 inline std::istream &ReadType(std::istream &strm, T *t) {
   return t->Read(strm);
 }
 
-// Fixed size, contiguous memory read.
-#define READ_POD_TYPE(T)                                      \
-  inline std::istream &ReadType(std::istream &strm, T *t) {   \
-    return strm.read(reinterpret_cast<char *>(t), sizeof(T)); \
-  }
-
-READ_POD_TYPE(bool);
-READ_POD_TYPE(int8);
-READ_POD_TYPE(uint8);
-READ_POD_TYPE(int16);
-READ_POD_TYPE(uint16);
-READ_POD_TYPE(int32);
-READ_POD_TYPE(uint32);
-READ_POD_TYPE(int64);
-READ_POD_TYPE(uint64);
-READ_POD_TYPE(float);
-READ_POD_TYPE(double);
+// Numeric (boolean, integral, floating-point) case.
+template <class T,
+    typename std::enable_if<std::is_arithmetic<T>::value, T>::type* = nullptr>
+inline std::istream &ReadType(std::istream &strm, T *t) {
+  return strm.read(reinterpret_cast<char *>(t), sizeof(T)); \
+}
 
 // String case.
 inline std::istream &ReadType(std::istream &strm, string *s) {  // NOLINT
   s->clear();
   int32 ns = 0;
   strm.read(reinterpret_cast<char *>(&ns), sizeof(ns));
-  for (int i = 0; i < ns; ++i) {
+  for (auto i = 0; i < ns; ++i) {
     char c;
     strm.read(&c, 1);
     *s += c;
@@ -76,7 +67,7 @@ inline std::istream &ReadType(std::istream &strm, string *s) {  // NOLINT
   return strm;
 }
 
-// Declare some types that write to an output stream
+// Declares some types that write to an output stream.
 
 #define DECL_READ_TYPE2(C)          \
   template <typename S, typename T> \
@@ -161,38 +152,28 @@ READ_STL_ASSOC_TYPE(std::unordered_map);
 // Write some types to an output stream.
 
 // Generic case.
-template <typename T>
+template <class T,
+    typename std::enable_if<std::is_class<T>::value, T>::type* = nullptr>
 inline std::ostream &WriteType(std::ostream &strm, const T t) {
   t.Write(strm);
   return strm;
 }
 
-// Fixed size, contiguous memory write.
-#define WRITE_POD_TYPE(T)                                             \
-  inline std::ostream &WriteType(std::ostream &strm, const T t) {     \
-    return strm.write(reinterpret_cast<const char *>(&t), sizeof(T)); \
-  }
-
-WRITE_POD_TYPE(bool);
-WRITE_POD_TYPE(int8);
-WRITE_POD_TYPE(uint8);
-WRITE_POD_TYPE(int16);
-WRITE_POD_TYPE(uint16);
-WRITE_POD_TYPE(int32);
-WRITE_POD_TYPE(uint32);
-WRITE_POD_TYPE(int64);
-WRITE_POD_TYPE(uint64);
-WRITE_POD_TYPE(float);
-WRITE_POD_TYPE(double);
+// Numeric (boolean, integral, floating-point) case.
+template <class T,
+    typename std::enable_if<std::is_arithmetic<T>::value, T>::type* = nullptr>
+inline std::ostream &WriteType(std::ostream &strm, const T t) {
+  return strm.write(reinterpret_cast<const char *>(&t), sizeof(T));
+}
 
 // String case.
-inline std::ostream &WriteType(std::ostream &strm, const string &s) {
+inline std::ostream &WriteType(std::ostream &strm, const string &s) {  // NOLINT
   int32 ns = s.size();
   strm.write(reinterpret_cast<const char *>(&ns), sizeof(ns));
   return strm.write(s.data(), ns);
 }
 
-// Declare some types that write to an output stream
+// Declares some types that write to an output stream.
 
 #define DECL_WRITE_TYPE2(C)         \
   template <typename S, typename T> \
