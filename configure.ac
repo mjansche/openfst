@@ -13,8 +13,6 @@ AC_CONFIG_FILES([
   src/test/Makefile
 ])
 AC_LANG([C++])
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
 AC_CHECK_TYPES([std::tr1::hash<long long unsigned>], [], [], 
                [[#include <tr1/unordered_map>]])
 AC_CHECK_TYPES([__gnu_cxx::slist<int>], [], [], 
