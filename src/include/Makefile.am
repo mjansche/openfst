@@ -1,6 +1,6 @@
 if HAVE_COMPRESS
 compress_include_headers = fst/extensions/compress/compress.h \
-fst/extensions/compress/compress-script.h \
+fst/extensions/compress/compress-script.h fst/extensions/compress/fstgzfile.h \
 fst/extensions/compress/elias.h fst/extensions/compress/randmod.h
 endif
 
@@ -21,6 +21,13 @@ fst/extensions/linear/linear-fst.h \
 fst/extensions/linear/linearscript.h \
 fst/extensions/linear/loglinear-apply.h \
 fst/extensions/linear/trie.h
+endif
+
+if HAVE_MPDT
+mpdt_include_headers = fst/extensions/mpdt/compose.h \
+fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
+fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtscript.h \
+fst/extensions/mpdt/read_write_utils.h fst/extensions/mpdt/reverse.h
 endif
 
 if HAVE_NGRAM
@@ -87,6 +94,7 @@ fst/filter-state.h fst/disambiguate.h fst/isomorphic.h fst/union-weight.h \
 $(compress_include_headers) \
 $(far_include_headers) \
 $(linear_include_headers) \
+$(mpdt_include_headers) \
 $(ngram_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)

@@ -16,10 +16,10 @@ mpdtinfo_SOURCES = mpdtinfo.cc
 mpdtreverse_SOURCES = mpdtreverse.cc
 endif
 
-libfstdir = @libfstdir@
-
 if HAVE_SCRIPT
 libfst_LTLIBRARIES = libfstmpdtscript.la
 libfstmpdtscript_la_SOURCES = mpdtscript.cc
 libfstmpdtscript_la_LDFLAGS = -version-info 1:5:0
 endif
+
+libfstdir = @libfstdir@

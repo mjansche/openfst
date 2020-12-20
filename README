@@ -46,7 +46,7 @@ USAGE:
 
   To use in your own program, include <fst/fstlib.h> and compile 
   with '-I /usr/local/include'. The compiler must support C++11
-  (for g++ add the flag "-std=c++0x"). Link against /usr/local/lib/libfst.so 
+  (for g++ add the flag "-std=c++11"). Link against /usr/local/lib/libfst.so 
   and -ldl. Set your LD_LIBRARY_PATH (or equivalent) to contain /usr/local/lib. 
   The linking is, by default, dynamic so that the Fst and Arc type DSO
   extensions can be used correctly if desired. Any extensions will

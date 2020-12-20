@@ -146,6 +146,7 @@ am__nobase_include_HEADERS_DIST = fst/arc.h fst/determinize.h \
 	fst/memory.h fst/disambiguate.h fst/isomorphic.h \
 	fst/union-weight.h fst/extensions/compress/compress.h \
 	fst/extensions/compress/compress-script.h \
+	fst/extensions/compress/fstgzfile.h \
 	fst/extensions/compress/elias.h \
 	fst/extensions/compress/randmod.h \
 	fst/extensions/far/compile-strings.h \
@@ -160,7 +161,11 @@ am__nobase_include_HEADERS_DIST = fst/arc.h fst/determinize.h \
 	fst/extensions/linear/linear-fst.h \
 	fst/extensions/linear/linearscript.h \
 	fst/extensions/linear/loglinear-apply.h \
-	fst/extensions/linear/trie.h \
+	fst/extensions/linear/trie.h fst/extensions/mpdt/compose.h \
+	fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
+	fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtscript.h \
+	fst/extensions/mpdt/read_write_utils.h \
+	fst/extensions/mpdt/reverse.h \
 	fst/extensions/ngram/bitmap-index.h \
 	fst/extensions/ngram/ngram-fst.h fst/extensions/ngram/nthbit.h \
 	fst/extensions/pdt/collection.h fst/extensions/pdt/compose.h \
@@ -377,7 +382,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 @HAVE_COMPRESS_TRUE@compress_include_headers = fst/extensions/compress/compress.h \
-@HAVE_COMPRESS_TRUE@fst/extensions/compress/compress-script.h \
+@HAVE_COMPRESS_TRUE@fst/extensions/compress/compress-script.h fst/extensions/compress/fstgzfile.h \
 @HAVE_COMPRESS_TRUE@fst/extensions/compress/elias.h fst/extensions/compress/randmod.h
 
 @HAVE_FAR_TRUE@far_include_headers = fst/extensions/far/compile-strings.h \
@@ -394,6 +399,11 @@ top_srcdir = @top_srcdir@
 @HAVE_LINEAR_TRUE@fst/extensions/linear/linearscript.h \
 @HAVE_LINEAR_TRUE@fst/extensions/linear/loglinear-apply.h \
 @HAVE_LINEAR_TRUE@fst/extensions/linear/trie.h
+
+@HAVE_MPDT_TRUE@mpdt_include_headers = fst/extensions/mpdt/compose.h \
+@HAVE_MPDT_TRUE@fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
+@HAVE_MPDT_TRUE@fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtscript.h \
+@HAVE_MPDT_TRUE@fst/extensions/mpdt/read_write_utils.h fst/extensions/mpdt/reverse.h
 
 @HAVE_NGRAM_TRUE@ngram_include_headers = fst/extensions/ngram/bitmap-index.h \
 @HAVE_NGRAM_TRUE@fst/extensions/ngram/ngram-fst.h \
@@ -455,6 +465,7 @@ fst/filter-state.h fst/disambiguate.h fst/isomorphic.h fst/union-weight.h \
 $(compress_include_headers) \
 $(far_include_headers) \
 $(linear_include_headers) \
+$(mpdt_include_headers) \
 $(ngram_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)
