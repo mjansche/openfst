@@ -1,21 +1,6 @@
-// arcsort.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Functions and classes to sort arcs in an FST.
 
 #ifndef FST_LIB_ARCSORT_H__
@@ -24,7 +9,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-using std::vector;
 
 #include <fst/cache.h>
 #include <fst/state-map.h>
@@ -57,7 +41,7 @@ class ArcSortMapper {
     i_ = 0;
     arcs_.clear();
     arcs_.reserve(fst_.NumArcs(s));
-    for (ArcIterator< Fst<Arc> > aiter(fst_, s); !aiter.Done(); aiter.Next())
+    for (ArcIterator<Fst<Arc>> aiter(fst_, s); !aiter.Done(); aiter.Next())
       arcs_.push_back(aiter.Value());
     std::sort(arcs_.begin(), arcs_.end(), comp_);
   }
@@ -73,12 +57,11 @@ class ArcSortMapper {
  private:
   const Fst<Arc> &fst_;
   const Compare &comp_;
-  vector<Arc> arcs_;
-  ssize_t i_;               // current arc position
+  std::vector<Arc> arcs_;
+  ssize_t i_;  // current arc position
 
   void operator=(const ArcSortMapper<Arc, Compare> &);  // disallow
 };
-
 
 // Sorts the arcs in an FST according to function object 'comp' of
 // type Compare. This version modifies its input.  Comparison function
@@ -93,7 +76,7 @@ class ArcSortMapper {
 // - Time: O(V D log D)
 // - Space: O(D)
 // where V = # of states and D = maximum out-degree.
-template<class Arc, class Compare>
+template <class Arc, class Compare>
 void ArcSort(MutableFst<Arc> *fst, Compare comp) {
   ArcSortMapper<Arc, Compare> mapper(*fst, comp);
   StateMap(fst, mapper);
@@ -117,8 +100,9 @@ typedef CacheOptions ArcSortFstOptions;
 // visited. Constant time and space to visit an input state is assumed
 // and exclusive of caching.
 template <class A, class C>
-class ArcSortFst : public StateMapFst<A, A, ArcSortMapper<A, C> > {
-  using StateMapFst<A, A, ArcSortMapper<A, C> >::GetImpl;
+class ArcSortFst : public StateMapFst<A, A, ArcSortMapper<A, C>> {
+  using StateMapFst<A, A, ArcSortMapper<A, C>>::GetImpl;
+
  public:
   typedef A Arc;
   typedef typename Arc::StateId StateId;
@@ -135,74 +119,70 @@ class ArcSortFst : public StateMapFst<A, A, ArcSortMapper<A, C> > {
       : StateMapFst<A, A, M>(fst, safe) {}
 
   // Get a copy of this ArcSortFst. See Fst<>::Copy() for further doc.
-  virtual ArcSortFst<A, C> *Copy(bool safe = false) const {
+  ArcSortFst<A, C> *Copy(bool safe = false) const override {
     return new ArcSortFst(*this, safe);
   }
 
-  virtual size_t NumArcs(StateId s) const {
+  size_t NumArcs(StateId s) const override {
     return GetImpl()->GetFst().NumArcs(s);
   }
 
-  virtual size_t NumInputEpsilons(StateId s) const {
+  size_t NumInputEpsilons(StateId s) const override {
     return GetImpl()->GetFst().NumInputEpsilons(s);
   }
 
-  virtual size_t NumOutputEpsilons(StateId s) const {
+  size_t NumOutputEpsilons(StateId s) const override {
     return GetImpl()->GetFst().NumOutputEpsilons(s);
   }
 };
 
-
 // Specialization for ArcSortFst.
 template <class A, class C>
-class StateIterator< ArcSortFst<A, C> >
-    : public StateIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > > {
+class StateIterator<ArcSortFst<A, C>>
+    : public StateIterator<StateMapFst<A, A, ArcSortMapper<A, C>> > {
  public:
   explicit StateIterator(const ArcSortFst<A, C> &fst)
-      : StateIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > >(fst) {}
+      : StateIterator<StateMapFst<A, A, ArcSortMapper<A, C>> >(fst) {}
 };
-
 
 // Specialization for ArcSortFst.
 template <class A, class C>
-class ArcIterator< ArcSortFst<A, C> >
-    : public ArcIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > > {
+class ArcIterator<ArcSortFst<A, C>>
+    : public ArcIterator<StateMapFst<A, A, ArcSortMapper<A, C>> > {
  public:
   ArcIterator(const ArcSortFst<A, C> &fst, typename A::StateId s)
-      : ArcIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > >(fst, s) {}
+      : ArcIterator<StateMapFst<A, A, ArcSortMapper<A, C>> >(fst, s) {}
 };
 
-
 // Compare class for comparing input labels of arcs.
-template<class A> class ILabelCompare {
+template <class A>
+class ILabelCompare {
  public:
-  bool operator() (A arc1, A arc2) const {
-    return arc1.ilabel < arc2.ilabel;
-  }
+  bool operator()(A arc1, A arc2) const { return arc1.ilabel < arc2.ilabel; }
 
   uint64 Properties(uint64 props) const {
     return (props & kArcSortProperties) | kILabelSorted |
-        (props & kAcceptor ? kOLabelSorted : 0);
+           (props & kAcceptor ? kOLabelSorted : 0);
   }
 };
 
-
 // Compare class for comparing output labels of arcs.
-template<class A> class OLabelCompare {
+template <class A>
+class OLabelCompare {
  public:
-  bool operator() (const A &arc1, const A &arc2) const {
+  bool operator()(const A &arc1, const A &arc2) const {
     return arc1.olabel < arc2.olabel;
   }
 
   uint64 Properties(uint64 props) const {
     return (props & kArcSortProperties) | kOLabelSorted |
-        (props & kAcceptor ? kILabelSorted : 0);
+           (props & kAcceptor ? kILabelSorted : 0);
   }
 };
 
-
 // Useful aliases when using StdArc.
-template<class C> class StdArcSortFst : public ArcSortFst<StdArc, C> {
+template <class C>
+class StdArcSortFst : public ArcSortFst<StdArc, C> {
  public:
   typedef StdArc Arc;
   typedef C Compare;

@@ -1,22 +1,10 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_SCRIPT_REGISTER_H_
 #define FST_SCRIPT_REGISTER_H_
 
+#include <istream>
 #include <string>
 
 #include <fst/generic-register.h>
@@ -29,29 +17,44 @@
 namespace fst {
 namespace script {
 
-//
 // Registers for reading and converting various kinds of FST classes.
-//
 
 // This class definition is to avoid a nested class definition inside
 // the IORegistration struct.
-template<class Reader, class Creator, class Converter>
+
+template <class Reader, class Creator, class Converter>
 struct FstClassRegEntry {
   Reader reader;
   Creator creator;
   Converter converter;
 
-  FstClassRegEntry(Reader r, Creator cr, Converter co) :
-      reader(r), creator(cr), converter(co) { }
-  FstClassRegEntry() : reader(0), creator(0), converter(0) { }
+  FstClassRegEntry(Reader r, Creator cr, Converter co)
+      : reader(r), creator(cr), converter(co) {}
+
+  FstClassRegEntry()
+      : reader(NullReader), creator(NullCreator), converter(NullConverter) {}
+
+  // Null-returning reader, creator, and converter, used when registry lookup
+  // fails.
+
+  template <class FstClassType>
+  static FstClassType *NullReader(std::istream &strm,
+                                  const FstReadOptions &opts) {
+    return nullptr;
+  }
+
+  static FstClassImplBase *NullCreator() { return nullptr; }
+
+  static FstClassImplBase *NullConverter(const FstClass &other) {
+    return nullptr;
+  }
 };
 
-template<class Reader, class Creator, class Converter>
+template <class Reader, class Creator, class Converter>
 class FstClassIORegister
     : public GenericRegister<string,
                              FstClassRegEntry<Reader, Creator, Converter>,
-                             FstClassIORegister<Reader, Creator,
-                                                Converter> > {
+                             FstClassIORegister<Reader, Creator, Converter>> {
  public:
   Reader GetReader(const string &arc_type) const {
     return this->GetEntry(arc_type).reader;
@@ -66,8 +69,7 @@ class FstClassIORegister
   }
 
  protected:
-  virtual string ConvertKeyToSoFilename(
-      const string& key) const {
+  string ConvertKeyToSoFilename(const string &key) const override {
     string legal_type(key);
     ConvertToLegalCSymbol(&legal_type);
 
@@ -79,12 +81,13 @@ class FstClassIORegister
 // Struct containing everything needed to register a particular type
 // of FST class (e.g. a plain FstClass, or a MutableFstClass, etc)
 //
-template<class FstClassType>
+template <class FstClassType>
 struct IORegistration {
-  typedef FstClassType *(*Reader)(istream &stream,
+  typedef FstClassType *(*Reader)(std::istream &stream,
                                   const FstReadOptions &opts);
 
   typedef FstClassImplBase *(*Creator)();
+
   typedef FstClassImplBase *(*Converter)(const FstClass &other);
 
   typedef FstClassRegEntry<Reader, Creator, Converter> Entry;
@@ -93,25 +96,23 @@ struct IORegistration {
   typedef FstClassIORegister<Reader, Creator, Converter> Register;
 
   // FST class Register-er
-  typedef GenericRegisterer<FstClassIORegister<Reader, Creator, Converter> >
-    Registerer;
+  typedef GenericRegisterer<FstClassIORegister<Reader, Creator, Converter>>
+      Registerer;
 };
-
 
 //
 // REGISTRATION MACROS
 //
 
-#define REGISTER_FST_CLASS(Class, Arc)                                  \
-  static IORegistration<Class>::Registerer Class ## _ ## Arc ## _registerer( \
-      Arc::Type(),                                                      \
-      IORegistration<Class>::Entry(Class::Read<Arc>,                    \
-                                   Class::Create<Arc>,                  \
+#define REGISTER_FST_CLASS(Class, Arc)                                   \
+  static IORegistration<Class>::Registerer Class##_##Arc##_registerer(   \
+      Arc::Type(),                                                       \
+      IORegistration<Class>::Entry(Class::Read<Arc>, Class::Create<Arc>, \
                                    Class::Convert<Arc>))
 
-#define REGISTER_FST_CLASSES(Arc)               \
-  REGISTER_FST_CLASS(FstClass, Arc);            \
-  REGISTER_FST_CLASS(MutableFstClass, Arc);     \
+#define REGISTER_FST_CLASSES(Arc)           \
+  REGISTER_FST_CLASS(FstClass, Arc);        \
+  REGISTER_FST_CLASS(MutableFstClass, Arc); \
   REGISTER_FST_CLASS(VectorFstClass, Arc);
 
 }  // namespace script

@@ -1,30 +1,12 @@
-// fstsymbols.cc
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+//
+// Performs operations (set, clear, relabel) on the symbols table attached to an
+// input FST.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
-// Performs operations (set, clear, relabel) on the symbols table
-// attached to the input Fst.
-//
-
-#include <fst/script/fst-class.h>
-#include <fst/script/script-impl.h>
-#include <fst/script/verify.h>
 #include <fst/util.h>
+#include <fst/script/fst-class.h>
+#include <fst/script/verify.h>
 
 DEFINE_string(isymbols, "", "Input label symbol table");
 DEFINE_string(osymbols, "", "Output label symbol table");
@@ -42,7 +24,8 @@ int main(int argc, char **argv) {
   namespace s = fst::script;
   using fst::SymbolTable;
 
-  string usage = "Performs operations (set, clear, relabel) on the symbol"
+  string usage =
+      "Performs operations (set, clear, relabel) on the symbol"
       " tables attached to an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
@@ -65,7 +48,8 @@ int main(int argc, char **argv) {
     if (isyms) {
       isyms->WriteText(FLAGS_save_isymbols);
     } else {
-      LOG(ERROR) << "save isymbols requested but there are no input symbols.";
+      LOG(ERROR) << argv[0]
+                 << ": Saving isymbols but there are no input symbols.";
     }
   }
 
@@ -74,7 +58,8 @@ int main(int argc, char **argv) {
     if (osyms) {
       osyms->WriteText(FLAGS_save_osymbols);
     } else {
-      LOG(ERROR) << "save osymbols requested but there are no output symbols.";
+      LOG(ERROR) << argv[0]
+                 << ": Saving osymbols but there are no output symbols.";
     }
   }
 
@@ -82,18 +67,18 @@ int main(int argc, char **argv) {
   opts.allow_negative = FLAGS_allow_negative_labels;
 
   if (FLAGS_clear_isymbols)
-    fst->SetInputSymbols(0);
+    fst->SetInputSymbols(nullptr);
   else if (!FLAGS_isymbols.empty())
     fst->SetInputSymbols(SymbolTable::ReadText(FLAGS_isymbols, opts));
 
   if (FLAGS_clear_osymbols)
-    fst->SetOutputSymbols(0);
+    fst->SetOutputSymbols(nullptr);
   else if (!FLAGS_osymbols.empty())
     fst->SetOutputSymbols(SymbolTable::ReadText(FLAGS_osymbols, opts));
 
   if (!FLAGS_relabel_ipairs.empty()) {
     typedef int64 Label;
-    vector<pair<Label, Label> > ipairs;
+    std::vector<std::pair<Label, Label>> ipairs;
     fst::ReadLabelPairs(FLAGS_relabel_ipairs, &ipairs,
                             FLAGS_allow_negative_labels);
     SymbolTable *isyms = RelabelSymbolTable(fst->InputSymbols(), ipairs);
@@ -103,7 +88,7 @@ int main(int argc, char **argv) {
 
   if (!FLAGS_relabel_opairs.empty()) {
     typedef int64 Label;
-    vector<pair<Label, Label> > opairs;
+    std::vector<std::pair<Label, Label>> opairs;
     fst::ReadLabelPairs(FLAGS_relabel_opairs, &opairs,
                             FLAGS_allow_negative_labels);
     SymbolTable *osyms = RelabelSymbolTable(fst->OutputSymbols(), opairs);
@@ -111,8 +96,9 @@ int main(int argc, char **argv) {
     delete osyms;
   }
 
-  if (FLAGS_verify && !s::Verify(*fst))
-    return 1;
+  if (FLAGS_verify && !s::Verify(*fst)) return 1;
+
   fst->Write(out_fname);
+
   return 0;
 }

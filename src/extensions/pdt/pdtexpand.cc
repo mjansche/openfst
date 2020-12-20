@@ -1,24 +1,9 @@
-// pdtexpand.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
 // Expands a (bounded-stack) PDT as an FST.
-//
+
+#include <vector>
 
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
@@ -27,7 +12,6 @@ DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
 DEFINE_bool(connect, true, "Trim output");
 DEFINE_bool(keep_parentheses, false, "Keep PDT parentheses in result.");
 DEFINE_string(weight, "", "Weight threshold");
-
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -54,16 +38,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  vector<pair<int64, int64> > parens;
+  std::vector<s::LabelPair> parens;
   fst::ReadLabelPairs(FLAGS_pdt_parentheses, &parens, false);
 
-  s::WeightClass weight_threshold = FLAGS_weight.empty() ?
-      s::WeightClass::Zero() :
-      s::WeightClass(ifst->WeightType(), FLAGS_weight);
+  s::WeightClass weight_threshold =
+      FLAGS_weight.empty() ? s::WeightClass::Zero(ifst->WeightType())
+                           : s::WeightClass(ifst->WeightType(), FLAGS_weight);
 
   s::VectorFstClass ofst(ifst->ArcType());
-  s::PdtExpand(*ifst, parens, &ofst, s::PdtExpandOptions(
-      FLAGS_connect, FLAGS_keep_parentheses, weight_threshold));
+  s::PdtExpand(*ifst, parens, &ofst,
+               s::PdtExpandOptions(FLAGS_connect, FLAGS_keep_parentheses,
+                                   weight_threshold));
 
   ofst.Write(out_name);
 

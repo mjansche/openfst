@@ -1,31 +1,16 @@
-// pdtshortestpath.cc
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+//
+// Returns the shortest path in a (bounded-stack) PDT.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
-// Return the shortest path in a (bounded-stack) PDT.
-//
+#include <vector>
 
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
 
-
 DEFINE_bool(keep_parentheses, false, "Keep PDT parentheses in result.");
-DEFINE_string(queue_type, "fifo", "Queue type: one of: "
+DEFINE_string(queue_type, "fifo",
+              "Queue type: one of: "
               "\"fifo\", \"lifo\", \"state\"");
 DEFINE_bool(path_gc, true, "Garbage collect shortest path data");
 DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
@@ -55,7 +40,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  vector<pair<int64, int64> > parens, rparens;
+  std::vector<s::LabelPair> parens;
   fst::ReadLabelPairs(FLAGS_pdt_parentheses, &parens, false);
 
   s::VectorFstClass ofst(ifst->ArcType());
@@ -69,7 +54,7 @@ int main(int argc, char **argv) {
   } else if (FLAGS_queue_type == "state") {
     qt = fst::STATE_ORDER_QUEUE;
   } else {
-    LOG(ERROR) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    LOG(ERROR) << "Unknown queue type: " << FLAGS_queue_type;
     return 1;
   }
 

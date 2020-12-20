@@ -1,35 +1,18 @@
-// state-table.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Classes for representing the mapping between state tuples and state Ids.
+// Classes for representing the mapping between state tuples and state IDs.
 
 #ifndef FST_LIB_STATE_TABLE_H__
 #define FST_LIB_STATE_TABLE_H__
 
 #include <deque>
-using std::deque;
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 
 #include <fst/bi-table.h>
 #include <fst/expanded-fst.h>
+#include <fst/filter-state.h>
 
 
 namespace fst {
@@ -67,7 +50,6 @@ namespace fst {
 //   StateTuple(const StateTuple &);
 // };
 
-
 // An implementation using a hash map for the tuple to state ID mapping.
 // The state tuple T must have == defined. H is the hash function.
 template <class T, class H>
@@ -88,7 +70,6 @@ class HashStateTable : public HashBiTable<typename T::StateId, T, H> {
   StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
   const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
-
 
 // An implementation using a hash map for the tuple to state ID mapping.
 // The state tuple T must have == defined. H is the hash function.
@@ -119,8 +100,7 @@ class CompactHashStateTable
 // pass in this object; in that case, VectorStateTable takes its
 // ownership.
 template <class T, class FP>
-class VectorStateTable
-    : public VectorBiTable<typename T::StateId, T, FP> {
+class VectorStateTable : public VectorBiTable<typename T::StateId, T, FP> {
  public:
   typedef T StateTuple;
   typedef typename StateTuple::StateId StateId;
@@ -136,7 +116,6 @@ class VectorStateTable
   StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
   const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
-
 
 // An implementation using a vector and a compact hash table. The
 // selecting functor S returns true for tuples to be hashed in the
@@ -157,16 +136,14 @@ class VectorHashStateTable
   using VectorHashBiTable<StateId, T, S, FP, H>::Fingerprint;
   using VectorHashBiTable<StateId, T, S, FP, H>::Hash;
 
-  VectorHashStateTable(S *s, FP *fp, H *h,
-                       size_t vector_size = 0,
+  VectorHashStateTable(S *s, FP *fp, H *h, size_t vector_size = 0,
                        size_t tuple_size = 0)
-      : VectorHashBiTable<StateId, T, S, FP, H>(
-          s, fp, h, vector_size, tuple_size) {}
+      : VectorHashBiTable<StateId, T, S, FP, H>(s, fp, h, vector_size,
+                                                tuple_size) {}
 
   StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
   const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
-
 
 // An implementation using a hash map for the tuple to state ID
 // mapping. This version permits erasing of states.  The state tuple T
@@ -226,7 +203,7 @@ class ErasableStateTable : public ErasableBiTable<typename T::StateId, T, F> {
 //   StateId StateId1() const;
 //   StateId StateId2() const;
 //   FilterState GetFilterState() const;
-//   pair<StateId, StateId> StatePair() const;
+//   std::pair<StateId, StateId> StatePair() const;
 //   size_t Hash() const;
 //   friend bool operator==(const StateTuple& x, const StateTuple &y);
 // }
@@ -250,12 +227,10 @@ class DefaultComposeStateTuple {
 
   FilterState GetFilterState() const { return filter_state_; }
 
-  const pair<StateId, StateId>& StatePair() const {
-    return state_pair_;
-  }
+  const std::pair<StateId, StateId> &StatePair() const { return state_pair_; }
 
-  friend bool operator==(const DefaultComposeStateTuple& x,
-                         const DefaultComposeStateTuple& y) {
+  friend bool operator==(const DefaultComposeStateTuple &x,
+                         const DefaultComposeStateTuple &y) {
     return (&x == &y) || (x.state_pair_ == y.state_pair_ &&
                           x.filter_state_ == y.filter_state_);
   }
@@ -265,24 +240,56 @@ class DefaultComposeStateTuple {
   }
 
  private:
-  pair<StateId, StateId> state_pair_;
+  std::pair<StateId, StateId> state_pair_;
   FilterState filter_state_;  // State of composition filter
+};
+
+// Specialization for TrivialFilterState that does not explicitely store
+// the filter state since it is always the unique non-blocking state.
+template <typename S>
+class DefaultComposeStateTuple<S, TrivialFilterState> {
+ public:
+  typedef S StateId;
+  typedef TrivialFilterState FilterState;
+
+  DefaultComposeStateTuple()
+      : state_pair_(kNoStateId, kNoStateId) {}
+
+  DefaultComposeStateTuple(StateId s1, StateId s2, const FilterState &)
+      : state_pair_(s1, s2) {}
+
+  StateId StateId1() const { return state_pair_.first; }
+
+  StateId StateId2() const { return state_pair_.second; }
+
+  FilterState GetFilterState() const { return TrivialFilterState(true); }
+
+  const std::pair<StateId, StateId> &StatePair() const { return state_pair_; }
+
+  friend bool operator==(const DefaultComposeStateTuple &x,
+                         const DefaultComposeStateTuple &y) {
+    return (&x == &y) || (x.state_pair_ == y.state_pair_);
+  }
+
+  size_t Hash() const {
+    return StateId1() + StateId2() * 7853;
+  }
+
+ private:
+  std::pair<StateId, StateId> state_pair_;
 };
 
 // Hashing of composition state tuples.
 template <typename T>
 class ComposeHash {
  public:
-  size_t operator()(const T& t) const {
-    return t.Hash();
-  }
+  size_t operator()(const T &t) const { return t.Hash(); }
 };
 
 // A HashStateTable over composition tuples.
-template <typename A,
-          typename FS,
+template <typename A, typename FS,
           typename T = DefaultComposeStateTuple<typename A::StateId, FS>,
-          typename H = CompactHashStateTable<T, ComposeHash<T> > >
+          typename H = CompactHashStateTable<T, ComposeHash<T>> >
 class GenericComposeStateTable : public H {
  public:
   typedef A Arc;
@@ -294,7 +301,8 @@ class GenericComposeStateTable : public H {
 
   // Reserves space for 'table_size' elements.
   GenericComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2,
-                           size_t table_size) : H(table_size) {}
+                           size_t table_size)
+      : H(table_size) {}
 
   bool Error() const { return false; }
 
@@ -302,7 +310,6 @@ class GenericComposeStateTable : public H {
   void operator=(
       const GenericComposeStateTable<A, FS, T, H> &table);  // disallow
 };
-
 
 //  Fingerprint for general composition tuples.
 template <typename T>
@@ -318,18 +325,17 @@ class ComposeFingerprint {
 
   // Constructor is provided the sizes of the input FSTs
   ComposeFingerprint(StateId nstates1, StateId nstates2)
-      : mult1_(nstates1), mult2_(nstates1 * nstates2) { }
+      : mult1_(nstates1), mult2_(nstates1 * nstates2) {}
 
   size_t operator()(const StateTuple &tuple) {
     return tuple.StateId1() + tuple.StateId2() * mult1_ +
-        tuple.GetFilterState().Hash() * mult2_;
+           tuple.GetFilterState().Hash() * mult2_;
   }
 
  private:
   ssize_t mult1_;
   ssize_t mult2_;
 };
-
 
 // Useful when the first composition state determines the tuple.
 template <typename T>
@@ -340,9 +346,8 @@ class ComposeState1Fingerprint {
   size_t operator()(const StateTuple &tuple) { return tuple.StateId1(); }
 };
 
-
 // Useful when the second composition state determines the tuple.
-template  <typename T>
+template <typename T>
 class ComposeState2Fingerprint {
  public:
   typedef T StateTuple;
@@ -350,40 +355,34 @@ class ComposeState2Fingerprint {
   size_t operator()(const StateTuple &tuple) { return tuple.StateId2(); }
 };
 
-
 // A VectorStateTable over composition tuples.  This can be used when
 // the product of number of states in FST1 and FST2 (and the
 // composition filter state hash) is manageable. If the FSTs are not
 // expanded Fsts, they will first have their states counted.
-template  <typename A, typename T>
+template <typename A, typename T>
 class ProductComposeStateTable
-    : public VectorStateTable<T, ComposeFingerprint<T> > {
+    : public VectorStateTable<T, ComposeFingerprint<T>> {
  public:
   typedef A Arc;
   typedef typename A::StateId StateId;
   typedef T StateTuple;
-  typedef VectorStateTable<
-      StateTuple,
-      ComposeFingerprint<StateTuple> > StateTable;
+  typedef VectorStateTable<StateTuple, ComposeFingerprint<StateTuple>>
+      StateTable;
 
   // Reserves space for 'table_size' elements.
   ProductComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2,
                            size_t table_size = 0)
-      : StateTable(
-          new ComposeFingerprint<StateTuple>(CountStates(fst1),
-                                                         CountStates(fst2)),
+      : StateTable(new ComposeFingerprint<StateTuple>(CountStates(fst1),
+                                                      CountStates(fst2)),
                    table_size) {}
 
   ProductComposeStateTable(const ProductComposeStateTable<A, T> &table)
-      : StateTable(
-          new ComposeFingerprint<StateTuple>(table.Fingerprint())) {
-  }
+      : StateTable(new ComposeFingerprint<StateTuple>(table.Fingerprint())) {}
 
   bool Error() const { return false; }
 
  private:
-  void operator=(
-      const ProductComposeStateTable<A, T> &table);  // disallow
+  void operator=(const ProductComposeStateTable<A, T> &table);  // disallow
 };
 
 // A VectorStateTable over composition tuples.  This can be used when
@@ -394,13 +393,13 @@ class ProductComposeStateTable
 // MatchComposeFilter).
 template <typename A, typename T>
 class StringDetComposeStateTable
-    : public VectorStateTable<T, ComposeState1Fingerprint<T> > {
+    : public VectorStateTable<T, ComposeState1Fingerprint<T>> {
  public:
   typedef A Arc;
   typedef typename A::StateId StateId;
   typedef T StateTuple;
-  typedef VectorStateTable<StateTuple,
-                           ComposeState1Fingerprint<StateTuple> > StateTable;
+  typedef VectorStateTable<StateTuple, ComposeState1Fingerprint<StateTuple>>
+      StateTable;
 
   StringDetComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2)
       : error_(false) {
@@ -408,8 +407,8 @@ class StringDetComposeStateTable
     uint64 props2 = kIDeterministic | kNoIEpsilons;
     if (fst1.Properties(props1, true) != props1 ||
         fst2.Properties(props2, true) != props2) {
-      FSTERROR() << "StringDetComposeStateTable: fst1 not a string or"
-                 << " fst2 not input deterministic and epsilon-free";
+      FSTERROR() << "StringDetComposeStateTable: 1st Fst not a string or"
+                 << " 2nd Fst not output-deterministic and epsilon-free";
       error_ = true;
     }
   }
@@ -422,10 +421,8 @@ class StringDetComposeStateTable
  private:
   bool error_;
 
-  void operator=(
-      const StringDetComposeStateTable<A, T> &table);  // disallow
+  void operator=(const StringDetComposeStateTable<A, T> &table);  // disallow
 };
-
 
 // A VectorStateTable over composition tuples.  This can be used when
 // FST2 is a string (satisfies kStringProperties) and FST1 is
@@ -435,22 +432,22 @@ class StringDetComposeStateTable
 // MatchComposeFilter).
 template <typename A, typename T>
 class DetStringComposeStateTable
-    : public VectorStateTable<T, ComposeState2Fingerprint<T> > {
+    : public VectorStateTable<T, ComposeState2Fingerprint<T>> {
  public:
   typedef A Arc;
   typedef typename A::StateId StateId;
   typedef T StateTuple;
-  typedef VectorStateTable<StateTuple,
-                           ComposeState2Fingerprint<StateTuple> > StateTable;
+  typedef VectorStateTable<StateTuple, ComposeState2Fingerprint<StateTuple>>
+      StateTable;
 
   DetStringComposeStateTable(const Fst<A> &fst1, const Fst<A> &fst2)
-      :error_(false) {
+      : error_(false) {
     uint64 props1 = kODeterministic | kNoOEpsilons;
     uint64 props2 = kString;
     if (fst1.Properties(props1, true) != props1 ||
         fst2.Properties(props2, true) != props2) {
-      FSTERROR() << "StringDetComposeStateTable: fst2 not a string or"
-                 << " fst1 not output deterministic and epsilon-free";
+      FSTERROR() << "StringDetComposeStateTable: 2nd Fst not a string or"
+                 << " 1st Fst not input deterministic and epsilon-free";
       error_ = true;
     }
   }
@@ -466,14 +463,13 @@ class DetStringComposeStateTable
   void operator=(const DetStringComposeStateTable<A, T> &table);  // disallow
 };
 
-
 // An ErasableStateTable over composition tuples. The Erase(StateId) method
 // can be called if the user either is sure that composition will never return
 // to that tuple or doesn't care that if it does, it is assigned a new
 // state ID.
 template <typename A, typename T>
 class ErasableComposeStateTable
-    : public ErasableStateTable<T, ComposeHash<T> > {
+    : public ErasableStateTable<T, ComposeHash<T>> {
  public:
   typedef A Arc;
   typedef typename A::StateId StateId;

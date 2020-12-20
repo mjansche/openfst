@@ -1,37 +1,30 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_SCRIPT_COMPILE_H_
 #define FST_SCRIPT_COMPILE_H_
 
+#include <istream>
+
 #include <fst/script/arg-packs.h>
-#include <fst/script/fst-class.h>
 #include <fst/script/compile-impl.h>
+#include <fst/script/fst-class.h>
 
 namespace fst {
 namespace script {
+
+// This operation exists in two forms. 1 is a void operation which writes the
+// compiled machine to disk; 2 returns an FstClass. I/O should normally be done
+// using the binary format for efficiency, so users are STRONGLY ENCOURAGED to
+// use 1 or to construct FSTs using the C++ FST mutation operations.
 
 // Note: it is safe to pass these strings as references because
 // this struct is only used to pass them deeper in the call graph.
 // Be sure you understand why this is so before using this struct
 // for anything else!
-struct FstCompileArgs {
-  fst::istream &istrm;
+struct CompileFstInnerArgs {
+  std::istream &istrm;
   const string &source;
-  const string &dest;
   const string &fst_type;
   const fst::SymbolTable *isyms;
   const fst::SymbolTable *osyms;
@@ -42,49 +35,66 @@ struct FstCompileArgs {
   const bool nkeep;
   const bool allow_negative_labels;
 
-  FstCompileArgs(istream &istrm, const string &source, const string &dest,
-                 const string &fst_type, const fst::SymbolTable *isyms,
-                 const fst::SymbolTable *osyms,
-                 const fst::SymbolTable *ssyms,
-                 bool accep, bool ikeep, bool okeep, bool nkeep,
-                 bool allow_negative_labels = false) :
-      istrm(istrm), source(source), dest(dest), fst_type(fst_type),
-      isyms(isyms), osyms(osyms), ssyms(ssyms), accep(accep), ikeep(ikeep),
-      okeep(okeep), nkeep(nkeep),
-      allow_negative_labels(allow_negative_labels) { }
+  CompileFstInnerArgs(std::istream &istrm, const string &source,
+                      const string &fst_type, const fst::SymbolTable *isyms,
+                      const fst::SymbolTable *osyms,
+                      const fst::SymbolTable *ssyms, bool accep, bool ikeep,
+                      bool okeep, bool nkeep,
+                      bool allow_negative_labels = false)
+      : istrm(istrm),
+        source(source),
+        fst_type(fst_type),
+        isyms(isyms),
+        osyms(osyms),
+        ssyms(ssyms),
+        accep(accep),
+        ikeep(ikeep),
+        okeep(okeep),
+        nkeep(nkeep),
+        allow_negative_labels(allow_negative_labels) {}
 };
 
-template<class Arc>
-void CompileFst(FstCompileArgs *args) {
-  using fst::FstCompiler;
+// 1
+typedef args::WithReturnValue<FstClass *, CompileFstInnerArgs> CompileFstArgs;
+
+// 2
+template <class Arc>
+void CompileFstInternal(CompileFstArgs *args) {
   using fst::Convert;
   using fst::Fst;
+  using fst::FstCompiler;
 
-  FstCompiler<Arc> fstcompiler(args->istrm, args->source, args->isyms,
-                               args->osyms, args->ssyms,
-                               args->accep, args->ikeep,
-                               args->okeep, args->nkeep,
-                               args->allow_negative_labels);
+  FstCompiler<Arc> fstcompiler(
+      args->args.istrm, args->args.source, args->args.isyms, args->args.osyms,
+      args->args.ssyms, args->args.accep, args->args.ikeep, args->args.okeep,
+      args->args.nkeep, args->args.allow_negative_labels);
 
   const Fst<Arc> *fst = &fstcompiler.Fst();
-  if (args->fst_type != "vector") {
-    fst = Convert<Arc>(*fst, args->fst_type);
+  if (args->args.fst_type != "vector") {
+    fst = Convert<Arc>(*fst, args->args.fst_type);
     if (!fst) {
       FSTERROR() << "Failed to convert FST to desired type: "
-                 << args->fst_type;
-      return;
+                 << args->args.fst_type;
     }
   }
 
-  fst->Write(args->dest);
+  args->retval = fst ? new FstClass(*fst) : nullptr;
 }
 
-void CompileFst(istream &istrm, const string &source, const string &dest,
+// 1
+void CompileFst(std::istream &istrm, const string &source, const string &dest,
                 const string &fst_type, const string &arc_type,
-                const SymbolTable *isyms,
-                const SymbolTable *osyms, const SymbolTable *ssyms,
-                bool accep, bool ikeep, bool okeep, bool nkeep,
-                bool allow_negative_labels);
+                const SymbolTable *isyms, const SymbolTable *osyms,
+                const SymbolTable *ssyms, bool accep, bool ikeep, bool okeep,
+                bool nkeep, bool allow_negative_labels);
+
+// 2
+FstClass *CompileFstInternal(std::istream &istrm, const string &source,
+                             const string &fst_type, const string &arc_type,
+                             const SymbolTable *isyms, const SymbolTable *osyms,
+                             const SymbolTable *ssyms, bool accep, bool ikeep,
+                             bool okeep, bool nkeep,
+                             bool allow_negative_labels);
 
 }  // namespace script
 }  // namespace fst

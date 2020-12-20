@@ -1,20 +1,6 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: krr@google.com (Kasturi Rangan Raghavan)
-// Inspiration: shumash@google.com (Masha Maria Shugrina)
-// \file
 // Expectation semiring as described by Jason Eisner:
 // See: doi=10.1.1.22.9398
 // Multiplex semiring operations and identities:
@@ -25,13 +11,13 @@
 //    Division: Undefined (currently)
 //
 // Usually used to store the pair <probability, random_variable> so that
-// ShortestDistance[Fst<ArcTpl<ExpectationWeight<P, V> > >]
+// ShortestDistance[Fst<ArcTpl<ExpectationWeight<P, V>>>]
 //    == < PosteriorProbability, Expected_Value[V] >
 
 #ifndef FST_LIB_EXPECTATION_WEIGHT_H_
 #define FST_LIB_EXPECTATION_WEIGHT_H_
 
-#include<string>
+#include <string>
 
 #include <fst/pair-weight.h>
 
@@ -61,16 +47,14 @@ class ExpectationWeight : public PairWeight<X1, X2> {
   typedef ExpectationWeight<typename X1::ReverseWeight,
                             typename X2::ReverseWeight> ReverseWeight;
 
-  ExpectationWeight() : PairWeight<X1, X2>(Zero()) { }
+  ExpectationWeight() : PairWeight<X1, X2>(Zero()) {}
 
-  ExpectationWeight(const ExpectationWeight<X1, X2>& w)
-      : PairWeight<X1, X2> (w) { }
+  ExpectationWeight(const ExpectationWeight<X1, X2> &w)
+      : PairWeight<X1, X2>(w) {}
 
-  ExpectationWeight(const PairWeight<X1, X2>& w)
-      : PairWeight<X1, X2> (w) { }
+  ExpectationWeight(const PairWeight<X1, X2> &w) : PairWeight<X1, X2>(w) {}
 
-  ExpectationWeight(const X1& x1, const X2& x2)
-      : PairWeight<X1, X2>(x1, x2) { }
+  ExpectationWeight(const X1 &x1, const X2 &x2) : PairWeight<X1, X2>(x1, x2) {}
 
   static const ExpectationWeight<X1, X2> &Zero() {
     static const ExpectationWeight<X1, X2> zero(X1::Zero(), X2::Zero());
@@ -97,19 +81,15 @@ class ExpectationWeight : public PairWeight<X1, X2> {
     return PairWeight<X1, X2>::Quantize();
   }
 
-  ReverseWeight Reverse() const {
-    return PairWeight<X1, X2>::Reverse();
-  }
+  ReverseWeight Reverse() const { return PairWeight<X1, X2>::Reverse(); }
 
-  bool Member() const {
-    return PairWeight<X1, X2>::Member();
-  }
+  bool Member() const { return PairWeight<X1, X2>::Member(); }
 
   static uint64 Properties() {
     uint64 props1 = W1::Properties();
     uint64 props2 = W2::Properties();
-    return props1 & props2 & (kLeftSemiring | kRightSemiring |
-                              kCommutative | kIdempotent);
+    return props1 & props2 &
+           (kLeftSemiring | kRightSemiring | kCommutative | kIdempotent);
   }
 };
 
@@ -120,20 +100,19 @@ inline ExpectationWeight<X1, X2> Plus(const ExpectationWeight<X1, X2> &w,
                                    Plus(w.Value2(), v.Value2()));
 }
 
-
 template <class X1, class X2>
 inline ExpectationWeight<X1, X2> Times(const ExpectationWeight<X1, X2> &w,
                                        const ExpectationWeight<X1, X2> &v) {
-  return ExpectationWeight<X1, X2>(Times(w.Value1(), v.Value1()),
-                                   Plus(Times(w.Value1(), v.Value2()),
-                                        Times(w.Value2(), v.Value1())));
+  return ExpectationWeight<X1, X2>(
+      Times(w.Value1(), v.Value1()),
+      Plus(Times(w.Value1(), v.Value2()), Times(w.Value2(), v.Value1())));
 }
 
 template <class X1, class X2>
 inline ExpectationWeight<X1, X2> Divide(const ExpectationWeight<X1, X2> &w,
                                         const ExpectationWeight<X1, X2> &v,
                                         DivideType typ = DIVIDE_ANY) {
-  FSTERROR() << "ExpectationWeight::Divide: not implemented";
+  FSTERROR() << "ExpectationWeight::Divide: Not implemented";
   return ExpectationWeight<X1, X2>::NoWeight();
 }
 

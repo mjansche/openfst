@@ -1,21 +1,6 @@
-// weight.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // General weight set and associated semiring operation definitions.
 //
 // A semiring is specified by two binary operations Plus and Times and
@@ -68,12 +53,11 @@
 //      Idempotent: for all a: Plus(a, a) == a.
 //      Path: for all a, b: Plus(a, b) == a or Plus(a, b) == b.
 
-
 #ifndef FST_LIB_WEIGHT_H__
 #define FST_LIB_WEIGHT_H__
 
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 
@@ -92,30 +76,31 @@ namespace fst {
 //
 
 // A representable float near .001
-const float kDelta =                   1.0F/1024.0F;
+const float kDelta = 1.0F / 1024.0F;
 
 // For all a,b,c: Times(c, Plus(a,b)) = Plus(Times(c,a), Times(c, b))
-const uint64 kLeftSemiring =           0x0000000000000001ULL;
+const uint64 kLeftSemiring = 0x0000000000000001ULL;
 
 // For all a,b,c: Times(Plus(a,b), c) = Plus(Times(a,c), Times(b, c))
-const uint64 kRightSemiring =          0x0000000000000002ULL;
+const uint64 kRightSemiring = 0x0000000000000002ULL;
 
 const uint64 kSemiring = kLeftSemiring | kRightSemiring;
 
 // For all a,b: Times(a,b) = Times(b,a)
-const uint64 kCommutative =       0x0000000000000004ULL;
+const uint64 kCommutative = 0x0000000000000004ULL;
 
 // For all a: Plus(a, a) = a
-const uint64 kIdempotent =             0x0000000000000008ULL;
+const uint64 kIdempotent = 0x0000000000000008ULL;
 
 // For all a,b: Plus(a,b) = a or Plus(a,b) = b
-const uint64 kPath =                   0x0000000000000010ULL;
-
+const uint64 kPath = 0x0000000000000010ULL;
 
 // Determines direction of division.
-enum DivideType { DIVIDE_LEFT,   // left division
-                  DIVIDE_RIGHT,  // right division
-                  DIVIDE_ANY };  // division in a commutative semiring
+enum DivideType {
+  DIVIDE_LEFT,   // left division
+  DIVIDE_RIGHT,  // right division
+  DIVIDE_ANY
+};  // division in a commutative semiring
 
 // NATURAL ORDER
 //
@@ -137,8 +122,7 @@ class NaturalLess {
 
   NaturalLess() {
     if (!(W::Properties() & kIdempotent)) {
-      FSTERROR() << "NaturalLess: Weight type is not idempotent: "
-                 << W::Type();
+      FSTERROR() << "NaturalLess: Weight type is not idempotent: " << W::Type();
     }
   }
 
@@ -164,8 +148,8 @@ W Power(W w, size_t n) {
 template <class W1, class W2>
 struct WeightConvert {
   W2 operator()(W1 w1) const {
-    FSTERROR() << "WeightConvert: can't convert weight from \""
-               << W1::Type() << "\" to \"" << W2::Type();
+    FSTERROR() << "WeightConvert: Can't convert weight from \"" << W1::Type()
+               << "\" to \"" << W2::Type();
     return W2::NoWeight();
   }
 };
@@ -179,8 +163,9 @@ struct WeightConvert<W, W> {
 // Helper class for writing textual composite weights.
 class CompositeWeightWriter {
  public:
-  explicit CompositeWeightWriter(ostream &strm)  // NOLINT
-  : strm_(strm), i_(0) {
+  explicit CompositeWeightWriter(std::ostream &strm)  // NOLINT
+      : strm_(strm),
+        i_(0) {
     if (FLAGS_fst_weight_separator.size() != 1) {
       FSTERROR() << "CompositeWeightWriter: "
                  << "FLAGS_fst_weight_separator.size() is not equal to 1";
@@ -206,8 +191,7 @@ class CompositeWeightWriter {
   // Writes element to a stream
   template <class T>
   void WriteElement(const T &comp) {
-    if (i_++ > 0)
-      strm_ << FLAGS_fst_weight_separator[0];
+    if (i_++ > 0) strm_ << FLAGS_fst_weight_separator[0];
     strm_ << comp;
   }
 
@@ -218,8 +202,8 @@ class CompositeWeightWriter {
   }
 
  private:
-  ostream &strm_;
-  int i_;           // Element position.
+  std::ostream &strm_;
+  int i_;  // Element position.
   DISALLOW_COPY_AND_ASSIGN(CompositeWeightWriter);
 };
 
@@ -230,9 +214,13 @@ class CompositeWeightWriter {
 // weights to ensure proper parsing.
 class CompositeWeightReader {
  public:
-  explicit CompositeWeightReader(istream &strm)  // NOLINT
-      : strm_(strm), c_(0), has_parens_(false),
-        depth_(0), open_paren_(0), close_paren_(0) {
+  explicit CompositeWeightReader(std::istream &strm)  // NOLINT
+      : strm_(strm),
+        c_(0),
+        has_parens_(false),
+        depth_(0),
+        open_paren_(0),
+        close_paren_(0) {
     if (FLAGS_fst_weight_separator.size() != 1) {
       FSTERROR() << "ComposeWeightReader: "
                  << "FLAGS_fst_weight_separator.size() is not equal to 1";
@@ -261,7 +249,7 @@ class CompositeWeightReader {
 
     if (has_parens_) {
       if (c_ != open_paren_) {
-        FSTERROR() << "CompositeWeightReader: open paren missing: "
+        FSTERROR() << "CompositeWeightReader: Open paren missing: "
                    << "fst_weight_parentheses flag set correcty?";
         strm_.clear(std::ios::badbit);
         return;
@@ -275,7 +263,8 @@ class CompositeWeightReader {
   // indicates this will be the last element (allowing more
   // forgiving formatting of the last elemeng). Returns false
   // when last element is read.
-  template <class T> bool ReadElement(T *comp, bool last = false);
+  template <class T>
+  bool ReadElement(T *comp, bool last = false);
 
   // Finalizes read
   void ReadEnd() {
@@ -288,11 +277,11 @@ class CompositeWeightReader {
   }
 
  private:
-  istream &strm_;      // input stream
-  int c_;              // last character read
+  std::istream &strm_;  // input stream
+  int c_;          // last character read
   char separator_;
   bool has_parens_;
-  int depth_;          // paren depth
+  int depth_;  // paren depth
   char open_paren_;
   char close_paren_;
   DISALLOW_COPY_AND_ASSIGN(CompositeWeightReader);
@@ -311,7 +300,7 @@ inline bool CompositeWeightReader::ReadElement(T *comp, bool last) {
     } else if (has_parens_ && c_ == close_paren_) {
       // Fail for unmatched parens
       if (depth_ == 0) {
-        FSTERROR() << "CompositeWeightReader: unmatched close paren: "
+        FSTERROR() << "CompositeWeightReader: Unmatched close paren: "
                    << "fst_weight_parentheses flag set correcty?";
         strm_.clear(std::ios::badbit);
         return false;
@@ -322,21 +311,19 @@ inline bool CompositeWeightReader::ReadElement(T *comp, bool last) {
   }
 
   if (s.empty()) {
-    FSTERROR() << "CompositeWeightReader: empty element: "
+    FSTERROR() << "CompositeWeightReader: Empty element: "
                << "fst_weight_parentheses flag set correcty?";
     strm_.clear(std::ios::badbit);
     return false;
   }
-  istringstream strm(s);
+  std::istringstream strm(s);
   strm >> *comp;
 
   // Skips separator/close parenthesis
-  if (c_ != EOF && !std::isspace(c_))
-    c_ = strm_.get();
+  if (c_ != EOF && !std::isspace(c_)) c_ = strm_.get();
 
   // Clears fail bit if just EOF
-  if (c_ == EOF && !strm_.bad())
-    strm_.clear(std::ios::eofbit);
+  if (c_ == EOF && !strm_.bad()) strm_.clear(std::ios::eofbit);
 
   return c_ != EOF && !std::isspace(c_);
 }

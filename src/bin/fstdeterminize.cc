@@ -1,34 +1,18 @@
-// fstdeterminize.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
 // Determinizes an FST.
-//
 
 #include <fst/script/determinize.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
-DEFINE_int64(nstate, fst::kNoStateId, "State number threshold");
 DEFINE_string(weight, "", "Weight threshold");
+DEFINE_int64(nstate, fst::kNoStateId, "State number threshold");
 DEFINE_int64(subsequential_label, 0,
              "Input label of arc corresponding to residual final output when"
              " producing a subsequential transducer");
-DEFINE_string(type, "functional", "Type of determinization: \"functional\", "
+DEFINE_string(det_type, "functional",
+              "Type of determinization: \"functional\", "
               "\"nonfunctional\", \"disambiguate\"");
 DEFINE_bool(increment_subsequential_label, false,
             "Increment subsequential_label to obtain distinct labels for "
@@ -52,15 +36,15 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  fst::DeterminizeType type;
-  if (FLAGS_type.empty() || FLAGS_type[0] == 'f') {
-    type = fst::DETERMINIZE_FUNCTIONAL;
-  } else if (FLAGS_type[0] == 'n') {
-    type = fst::DETERMINIZE_NONFUNCTIONAL;
-  } else if (FLAGS_type[0] == 'd') {
-    type = fst::DETERMINIZE_DISAMBIGUATE;
+  fst::DeterminizeType det_type;
+  if (FLAGS_det_type.empty() || FLAGS_det_type[0] == 'f') {
+    det_type = fst::DETERMINIZE_FUNCTIONAL;
+  } else if (FLAGS_det_type[0] == 'n') {
+    det_type = fst::DETERMINIZE_NONFUNCTIONAL;
+  } else if (FLAGS_det_type[0] == 'd') {
+    det_type = fst::DETERMINIZE_DISAMBIGUATE;
   } else {
-    LOG(ERROR) << "Unknown determinize type: " << FLAGS_type;
+    LOG(ERROR) << argv[0] << ": Unknown determinize type: " << FLAGS_det_type;
     return 1;
   }
 
@@ -72,11 +56,13 @@ int main(int argc, char **argv) {
 
   VectorFstClass ofst(ifst->ArcType());
 
-  s::DeterminizeOptions opts(
-      FLAGS_delta, FLAGS_weight.empty() ?
-      WeightClass::Zero() : WeightClass(ifst->WeightType(), FLAGS_weight),
-      FLAGS_nstate, FLAGS_subsequential_label, type,
-      FLAGS_increment_subsequential_label);
+  const WeightClass weight_threshold =
+      FLAGS_weight.empty() ? WeightClass::Zero(ifst->WeightType())
+                           : WeightClass(ifst->WeightType(), FLAGS_weight);
+
+  s::DeterminizeOptions opts(FLAGS_delta, weight_threshold,
+                             FLAGS_nstate, FLAGS_subsequential_label,
+                             det_type, FLAGS_increment_subsequential_label);
 
   s::Determinize(*ifst, &ofst, opts);
 

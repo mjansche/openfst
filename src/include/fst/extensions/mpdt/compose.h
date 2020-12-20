@@ -1,22 +1,6 @@
-// compose.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
 // Compose an MPDT and an FST.
 
 #ifndef FST_EXTENSIONS_MPDT_COMPOSE_H__
@@ -24,8 +8,8 @@
 
 #include <list>
 
-#include <fst/extensions/pdt/compose.h>
 #include <fst/extensions/mpdt/mpdt.h>
+#include <fst/extensions/pdt/compose.h>
 #include <fst/compose.h>
 
 namespace fst {
@@ -49,13 +33,13 @@ class MPdtParenFilter {
   typedef MPdtParenFilter<F> Filter;
 
   MPdtParenFilter(const FST1 &fst1, const FST2 &fst2,
-                  Matcher1 *matcher1 = 0,  Matcher2 *matcher2 = 0,
-                  const vector<pair<Label, Label> > *parens = 0,
-                  const vector<typename Arc::Label> *assignments = 0,
+                  Matcher1 *matcher1 = nullptr, Matcher2 *matcher2 = nullptr,
+                  const std::vector<pair<Label, Label>> *parens = nullptr,
+                  const std::vector<typename Arc::Label> *assignments = nullptr,
                   bool expand = false, bool keep_parens = true)
       : filter_(fst1, fst2, matcher1, matcher2),
-        parens_(parens ? *parens : vector<pair<Label, Label> >()),
-        assignments_(assignments ? *assignments : vector<int>()),
+        parens_(parens ? *parens : std::vector<std::pair<Label, Label>>()),
+        assignments_(assignments ? *assignments : std::vector<int>()),
         expand_(expand),
         keep_parens_(keep_parens),
         f_(FilterState::NoState()),
@@ -63,7 +47,7 @@ class MPdtParenFilter {
         paren_id_(-1) {
     if (parens) {
       for (size_t i = 0; i < parens->size(); ++i) {
-        const pair<Label, Label>  &p = (*parens)[i];
+        const std::pair<Label, Label> &p = (*parens)[i];
         parens_.push_back(p);
         GetMatcher1()->AddOpenParen(p.first);
         GetMatcher2()->AddOpenParen(p.first);
@@ -82,7 +66,7 @@ class MPdtParenFilter {
         keep_parens_(filter.keep_parens_),
         f_(FilterState::NoState()),
         stack_(filter.parens_, filter.assignments_),
-        paren_id_(-1) { }
+        paren_id_(-1) {}
 
   FilterState Start() const {
     return FilterState(filter_.Start(), FilterState2(0));
@@ -91,8 +75,7 @@ class MPdtParenFilter {
   void SetState(StateId s1, StateId s2, const FilterState &f) {
     f_ = f;
     filter_.SetState(s1, s2, f_.GetState1());
-    if (!expand_)
-      return;
+    if (!expand_) return;
 
     ssize_t paren_id = stack_.Top(f.GetState2().GetState());
     if (paren_id != paren_id_) {
@@ -111,10 +94,9 @@ class MPdtParenFilter {
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
     FilterState1 f1 = filter_.FilterArc(arc1, arc2);
     const FilterState2 &f2 = f_.GetState2();
-    if (f1 == FilterState1::NoState())
-      return FilterState::NoState();
+    if (f1 == FilterState1::NoState()) return FilterState::NoState();
 
-    if (arc1->olabel == kNoLabel && arc2->ilabel) {         // arc2 parentheses
+    if (arc1->olabel == kNoLabel && arc2->ilabel) {  // arc2 parentheses
       if (keep_parens_) {
         arc1->ilabel = arc2->ilabel;
       } else if (arc2->ilabel) {
@@ -134,8 +116,7 @@ class MPdtParenFilter {
   }
 
   void FilterFinal(Weight *w1, Weight *w2) const {
-    if (f_.GetState2().GetState() != 0)
-      *w1 = Weight::Zero();
+    if (f_.GetState2().GetState() != 0) *w1 = Weight::Zero();
     filter_.FilterFinal(w1, w2);
   }
 
@@ -151,8 +132,7 @@ class MPdtParenFilter {
  private:
   const FilterState FilterParen(Label label, const FilterState1 &f1,
                                 const FilterState2 &f2) const {
-    if (!expand_)
-      return FilterState(f1, f2);
+    if (!expand_) return FilterState(f1, f2);
 
     StackId stack_id = stack_.Find(f2.GetState(), label);
     if (stack_id < 0) {
@@ -163,11 +143,11 @@ class MPdtParenFilter {
   }
 
   F filter_;
-  vector<pair<Label, Label> > parens_;
-  vector<typename Arc::Label> assignments_;
-  bool expand_;                    // Expands to FST
-  bool keep_parens_;               // Retains parentheses in output
-  FilterState f_;                  // Current filter state
+  std::vector<std::pair<Label, Label>> parens_;
+  std::vector<typename Arc::Label> assignments_;
+  bool expand_;       // Expands to FST
+  bool keep_parens_;  // Retains parentheses in output
+  FilterState f_;     // Current filter state
   mutable ParenStack stack_;
   ssize_t paren_id_;
 };
@@ -175,54 +155,51 @@ class MPdtParenFilter {
 // Class to setup composition options for PDT composition.
 // Default is for the PDT as the first composition argument.
 template <class Arc, bool left_pdt = true>
-class MPdtComposeFstOptions : public
-ComposeFstOptions<Arc,
-                  ParenMatcher< Fst<Arc> >,
-                  MPdtParenFilter<AltSequenceComposeFilter<
-                                    ParenMatcher< Fst<Arc> > > > > {
+class MPdtComposeFstOptions
+    : public ComposeFstOptions<Arc, ParenMatcher<Fst<Arc>>,
+                               MPdtParenFilter<AltSequenceComposeFilter<
+                                   ParenMatcher<Fst<Arc>> >> > {
  public:
   typedef typename Arc::Label Label;
-  typedef ParenMatcher< Fst<Arc> > MPdtMatcher;
-  typedef MPdtParenFilter<AltSequenceComposeFilter<MPdtMatcher> > MPdtFilter;
+  typedef ParenMatcher<Fst<Arc>> MPdtMatcher;
+  typedef MPdtParenFilter<AltSequenceComposeFilter<MPdtMatcher>> MPdtFilter;
   typedef ComposeFstOptions<Arc, MPdtMatcher, MPdtFilter> COptions;
   using COptions::matcher1;
   using COptions::matcher2;
   using COptions::filter;
 
   MPdtComposeFstOptions(const Fst<Arc> &ifst1,
-                        const vector<pair<Label, Label> > &parens,
-                        const vector<typename Arc::Label> &assignments,
+                        const std::vector<std::pair<Label, Label>> &parens,
+                        const std::vector<typename Arc::Label> &assignments,
                         const Fst<Arc> &ifst2, bool expand = false,
                         bool keep_parens = true) {
     matcher1 = new MPdtMatcher(ifst1, MATCH_OUTPUT, kParenList);
     matcher2 = new MPdtMatcher(ifst2, MATCH_INPUT, kParenLoop);
 
     filter = new MPdtFilter(ifst1, ifst2, matcher1, matcher2, &parens,
-                           &assignments, expand, keep_parens);
+                            &assignments, expand, keep_parens);
   }
 };
 
 // Class to setup composition options for PDT with FST composition.
 // Specialization is for the FST as the first composition argument.
 template <class Arc>
-class MPdtComposeFstOptions<Arc, false> : public
-ComposeFstOptions<Arc,
-                  ParenMatcher< Fst<Arc> >,
-                  MPdtParenFilter<SequenceComposeFilter<
-                                    ParenMatcher< Fst<Arc> > > > > {
+class MPdtComposeFstOptions<Arc, false>
+    : public ComposeFstOptions<
+          Arc, ParenMatcher<Fst<Arc>>,
+          MPdtParenFilter<SequenceComposeFilter<ParenMatcher<Fst<Arc>> >> > {
  public:
   typedef typename Arc::Label Label;
-  typedef ParenMatcher< Fst<Arc> > MPdtMatcher;
-  typedef MPdtParenFilter<SequenceComposeFilter<MPdtMatcher> > MPdtFilter;
+  typedef ParenMatcher<Fst<Arc>> MPdtMatcher;
+  typedef MPdtParenFilter<SequenceComposeFilter<MPdtMatcher>> MPdtFilter;
   typedef ComposeFstOptions<Arc, MPdtMatcher, MPdtFilter> COptions;
   using COptions::matcher1;
   using COptions::matcher2;
   using COptions::filter;
 
-  MPdtComposeFstOptions(const Fst<Arc> &ifst1,
-                        const Fst<Arc> &ifst2,
-                        const vector<pair<Label, Label> > &parens,
-                        const vector<typename Arc::Label> &assignments,
+  MPdtComposeFstOptions(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
+                        const std::vector<std::pair<Label, Label>> &parens,
+                        const std::vector<typename Arc::Label> &assignments,
                         bool expand = false, bool keep_parens = true) {
     matcher1 = new MPdtMatcher(ifst1, MATCH_OUTPUT, kParenLoop);
     matcher2 = new MPdtMatcher(ifst2, MATCH_INPUT, kParenList);
@@ -233,7 +210,7 @@ ComposeFstOptions<Arc,
 };
 
 struct MPdtComposeOptions {
-  bool connect;  // Connect output
+  bool connect;                  // Connect output
   PdtComposeFilter filter_type;  // Which pre-defined filter to use
 
   explicit MPdtComposeOptions(bool c, PdtComposeFilter ft = PAREN_FILTER)
@@ -249,11 +226,10 @@ struct MPdtComposeOptions {
 // are passed in 'parens'.
 template <class Arc>
 void Compose(const Fst<Arc> &ifst1,
-             const vector<pair<typename Arc::Label,
-                               typename Arc::Label> > &parens,
-             const vector<typename Arc::Label> &assignments,
-             const Fst<Arc> &ifst2,
-             MutableFst<Arc> *ofst,
+             const std::vector<
+                 std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+             const std::vector<typename Arc::Label> &assignments,
+             const Fst<Arc> &ifst2, MutableFst<Arc> *ofst,
              const MPdtComposeOptions &opts = MPdtComposeOptions()) {
   bool expand = opts.filter_type != PAREN_FILTER;
   bool keep_parens = opts.filter_type != EXPAND_FILTER;
@@ -261,8 +237,7 @@ void Compose(const Fst<Arc> &ifst1,
                                          expand, keep_parens);
   copts.gc_limit = 0;
   *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
-  if (opts.connect)
-    Connect(ofst);
+  if (opts.connect) Connect(ofst);
 }
 
 // Composes an FST (1st arg) and pushdown transducer (PDT) encoded as
@@ -272,21 +247,19 @@ void Compose(const Fst<Arc> &ifst1,
 // a path (see ExpandFst()). The open-close parenthesis label pairs
 // are passed in 'parens'.
 template <class Arc>
-void Compose(const Fst<Arc> &ifst1,
-             const Fst<Arc> &ifst2,
-             const vector<pair<typename Arc::Label,
-                               typename Arc::Label> > &parens,
-             const vector<typename Arc::Label> &assignments,
-             MutableFst<Arc> *ofst,
-             const MPdtComposeOptions &opts = MPdtComposeOptions()) {
+void Compose(
+    const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
+    const std::vector<std::pair<typename Arc::Label, typename Arc::Label>>
+        &parens,
+    const std::vector<typename Arc::Label> &assignments, MutableFst<Arc> *ofst,
+    const MPdtComposeOptions &opts = MPdtComposeOptions()) {
   bool expand = opts.filter_type != PAREN_FILTER;
   bool keep_parens = opts.filter_type != EXPAND_FILTER;
-  MPdtComposeFstOptions<Arc, false> copts(ifst1, ifst2, parens,
-                                          assignments, expand, keep_parens);
+  MPdtComposeFstOptions<Arc, false> copts(ifst1, ifst2, parens, assignments,
+                                          expand, keep_parens);
   copts.gc_limit = 0;
   *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
-  if (opts.connect)
-    Connect(ofst);
+  if (opts.connect) Connect(ofst);
 }
 
 }  // namespace fst

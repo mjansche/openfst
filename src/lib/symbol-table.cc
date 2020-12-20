@@ -1,26 +1,11 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// All Rights Reserved.
-//
-// Author : Johan Schalkwyk
-//
-// \file
 // Classes to provide symbol-to-integer and integer-to-symbol mappings.
 
 #include <fst/symbol-table.h>
 
+#include <fstream>
 #include <fst/util.h>
 
 DEFINE_bool(fst_compat_symbols, true,
@@ -37,18 +22,18 @@ const int kLineLen = 8096;
 static const int32 kSymbolTableMagicNumber = 2125658996;
 
 SymbolTableTextOptions::SymbolTableTextOptions()
-    : allow_negative(false), fst_field_separator(FLAGS_fst_field_separator) { }
+    : allow_negative(false), fst_field_separator(FLAGS_fst_field_separator) {}
 
-SymbolTableImpl* SymbolTableImpl::ReadText(istream &strm,
-                                           const string &filename,
-                                           const SymbolTableTextOptions &opts) {
+SymbolTableImpl* SymbolTableImpl::ReadText(std::istream& strm,
+                                           const string& filename,
+                                           const SymbolTableTextOptions& opts) {
   SymbolTableImpl* impl = new SymbolTableImpl(filename);
 
   int64 nline = 0;
   char line[kLineLen];
   while (!strm.getline(line, kLineLen).fail()) {
     ++nline;
-    vector<char *> col;
+    std::vector<char*> col;
     string separator = opts.fst_field_separator + "\n";
     SplitToVector(line, separator.c_str(), &col, true);
     if (col.size() == 0)  // empty line
@@ -56,17 +41,17 @@ SymbolTableImpl* SymbolTableImpl::ReadText(istream &strm,
     if (col.size() != 2) {
       LOG(ERROR) << "SymbolTable::ReadText: Bad number of columns ("
                  << col.size() << "), "
-                 << "file = " << filename << ", line = " << nline
-                 << ":<" << line << ">";
+                 << "file = " << filename << ", line = " << nline << ":<"
+                 << line << ">";
       delete impl;
       return 0;
     }
-    const char *symbol = col[0];
-    const char *value = col[1];
-    char *p;
+    const char* symbol = col[0];
+    const char* value = col[1];
+    char* p;
     int64 key = strtoll(value, &p, 10);
-    if (p < value + strlen(value) ||
-        (!opts.allow_negative && key < 0) || key == -1) {
+    if (p < value + strlen(value) || (!opts.allow_negative && key < 0) ||
+        key == -1) {
       LOG(ERROR) << "SymbolTable::ReadText: Bad non-negative integer \""
                  << value << "\", "
                  << "file = " << filename << ", line = " << nline;
@@ -82,8 +67,7 @@ SymbolTableImpl* SymbolTableImpl::ReadText(istream &strm,
 void SymbolTableImpl::MaybeRecomputeCheckSum() const {
   {
     ReaderMutexLock check_sum_lock(&check_sum_mutex_);
-    if (check_sum_finalized_)
-      return;
+    if (check_sum_finalized_) return;
   }
 
   // We'll aquire an exclusive lock to recompute the checksums.
@@ -103,17 +87,18 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
   // Calculate the safer, label-dependent check sum.
   CheckSummer labeled_check_sum;
   for (int64 i = 0; i < dense_key_limit_; i++) {
-    ostringstream line;
+    std::ostringstream line;
     line << symbols_.GetSymbol(i) << '\t' << i;
     labeled_check_sum.Update(line.str().data(), line.str().size());
   }
-  for (map<int64, int64>::const_iterator i
-         = key_map_.begin(); i != key_map_.end(); ++i) {
+  for (map<int64, int64>::const_iterator i =
+           key_map_.begin();
+       i != key_map_.end(); ++i) {
     // TODO(tombagby, 2013-11-22) This line maintains a bug that ignores
     // negative labels in the checksum that too many tests rely on.
     if (i->first < dense_key_limit_) continue;
 
-    ostringstream line;
+    std::ostringstream line;
     line << symbols_.GetSymbol(i->second) << '\t' << i->first;
     labeled_check_sum.Update(line.str().data(), line.str().size());
   }
@@ -124,7 +109,7 @@ void SymbolTableImpl::MaybeRecomputeCheckSum() const {
 
 int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
   if (key == -1) return key;
-  const pair<int64, bool>& insert_key = symbols_.InsertOrFind(symbol);
+  const std::pair<int64, bool>& insert_key = symbols_.InsertOrFind(symbol);
   if (!insert_key.second) {
     int64 key_already = GetNthKey(insert_key.first);
     if (key_already == key) return key;
@@ -133,7 +118,7 @@ int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
             << " but supplied new key = " << key << " (ignoring new key)";
     return key_already;
   }
-  if (key == (symbols_.size() - 1)  && key == dense_key_limit_) {
+  if (key == (symbols_.size() - 1) && key == dense_key_limit_) {
     dense_key_limit_++;
   } else {
     idx_key_.push_back(key);
@@ -146,13 +131,13 @@ int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
   return key;
 }
 
-SymbolTableImpl* SymbolTableImpl::Read(istream &strm,
+SymbolTableImpl* SymbolTableImpl::Read(std::istream& strm,
                                        const SymbolTableReadOptions& opts) {
   int32 magic_number = 0;
   ReadType(strm, &magic_number);
   if (strm.fail()) {
-    LOG(ERROR) << "SymbolTable::Read: read failed";
-    return 0;
+    LOG(ERROR) << "SymbolTable::Read: Read failed";
+    return nullptr;
   }
   string name;
   ReadType(strm, &name);
@@ -161,9 +146,9 @@ SymbolTableImpl* SymbolTableImpl::Read(istream &strm,
   int64 size;
   ReadType(strm, &size);
   if (strm.fail()) {
-    LOG(ERROR) << "SymbolTable::Read: read failed";
+    LOG(ERROR) << "SymbolTable::Read: Read failed";
     delete impl;
-    return 0;
+    return nullptr;
   }
 
   string symbol;
@@ -173,16 +158,16 @@ SymbolTableImpl* SymbolTableImpl::Read(istream &strm,
     ReadType(strm, &symbol);
     ReadType(strm, &key);
     if (strm.fail()) {
-      LOG(ERROR) << "SymbolTable::Read: read failed";
+      LOG(ERROR) << "SymbolTable::Read: Read failed";
       delete impl;
-      return 0;
+      return nullptr;
     }
     impl->AddSymbol(symbol, key);
   }
   return impl;
 }
 
-bool SymbolTableImpl::Write(ostream &strm) const {
+bool SymbolTableImpl::Write(std::ostream& strm) const {
   WriteType(strm, kSymbolTableMagicNumber);
   WriteType(strm, name_);
   WriteType(strm, available_key_);
@@ -195,7 +180,7 @@ bool SymbolTableImpl::Write(ostream &strm) const {
   }
   strm.flush();
   if (strm.fail()) {
-    LOG(ERROR) << "SymbolTable::Write: write failed";
+    LOG(ERROR) << "SymbolTable::Write: Write failed";
     return false;
   }
   return true;
@@ -209,15 +194,15 @@ void SymbolTable::AddTable(const SymbolTable& table) {
     impl_->AddSymbol(iter.Symbol());
 }
 
-bool SymbolTable::WriteText(ostream &strm,
-                            const SymbolTableTextOptions &opts) const {
+bool SymbolTable::WriteText(std::ostream& strm,
+                            const SymbolTableTextOptions& opts) const {
   if (opts.fst_field_separator.empty()) {
     LOG(ERROR) << "Missing required field separator";
     return false;
   }
   bool once_only = false;
   for (SymbolTableIterator iter(*this); !iter.Done(); iter.Next()) {
-    ostringstream line;
+    std::ostringstream line;
     if (iter.Value() < 0 && !opts.allow_negative && !once_only) {
       LOG(WARNING) << "Negative symbol table entry when not allowed";
       once_only = true;
@@ -232,9 +217,7 @@ bool SymbolTable::WriteText(ostream &strm,
 namespace internal {
 
 DenseSymbolMap::DenseSymbolMap()
-    : empty_(-1),
-      buckets_(1 << 4),
-      hash_mask_(buckets_.size() - 1) {
+    : empty_(-1), buckets_(1 << 4), hash_mask_(buckets_.size() - 1) {
   std::uninitialized_fill(buckets_.begin(), buckets_.end(), empty_);
 }
 
@@ -246,7 +229,7 @@ DenseSymbolMap::DenseSymbolMap(const DenseSymbolMap& x)
       size_(x.size_) {
   for (int i = 0; i < symbols_.size(); i++) {
     size_t sz = strlen(x.symbols_[i]) + 1;
-    char *cpy = new char[sz];
+    char* cpy = new char[sz];
     memcpy(cpy, x.symbols_[i], sz);
     symbols_[i] = cpy;
   }
@@ -258,7 +241,7 @@ DenseSymbolMap::~DenseSymbolMap() {
   }
 }
 
-pair<int64, bool> DenseSymbolMap::InsertOrFind(const string& key) {
+std::pair<int64, bool> DenseSymbolMap::InsertOrFind(const string& key) {
   static const float kMaxOccupancyRatio = 0.75;  // Grow when 75% full.
   if (symbols_.size() >= kMaxOccupancyRatio * buckets_.size()) Rehash();
   size_t idx = str_hash_(key) & hash_mask_;
@@ -303,7 +286,7 @@ void DenseSymbolMap::Rehash() {
 
 const char* DenseSymbolMap::NewSymbol(const string& sym) {
   size_t num = sym.size() + 1;
-  char *newstr = new char[num];
+  char* newstr = new char[num];
   memcpy(newstr, sym.c_str(), num);
   return newstr;
 }

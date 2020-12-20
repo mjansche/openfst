@@ -319,7 +319,7 @@ top_srcdir = @top_srcdir@
 @HAVE_PDT_TRUE@pdtdir = pdt
 SUBDIRS = $(compactdir) $(compressdir) $(constdir) $(fardir) \
           $(lineardir) $(lookaheaddir) $(mpdtdir) $(ngramdir) $(pdtdir) \
-				  $(pywrapfstdir)
+          $(pywrapfstdir)
 
 all: all-recursive
 

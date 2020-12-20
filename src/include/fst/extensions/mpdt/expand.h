@@ -1,29 +1,12 @@
-// expand.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
-// Expand an MPDT to an FST.
+// Expands an MPDT to an FST.
 
 #ifndef FST_EXTENSIONS_MPDT_EXPAND_H__
 #define FST_EXTENSIONS_MPDT_EXPAND_H__
 
 #include <vector>
-using std::vector;
 
 #include <fst/extensions/mpdt/mpdt.h>
 #include <fst/extensions/pdt/paren.h>
@@ -36,28 +19,26 @@ using std::vector;
 namespace fst {
 
 template <class Arc>
-struct ExpandFstOptions : public CacheOptions {
+struct MPdtExpandFstOptions : public CacheOptions {
   bool keep_parentheses;
   MPdtStack<typename Arc::StateId, typename Arc::Label> *stack;
   PdtStateTable<typename Arc::StateId, typename Arc::StateId> *state_table;
 
-  ExpandFstOptions(
-      const CacheOptions &opts = CacheOptions(),
-      bool kp = false,
-      MPdtStack<typename Arc::StateId, typename Arc::Label> *s = 0,
-      PdtStateTable<typename Arc::StateId, typename Arc::StateId> *st = 0)
+  MPdtExpandFstOptions(
+      const CacheOptions &opts = CacheOptions(), bool kp = false,
+      MPdtStack<typename Arc::StateId, typename Arc::Label> *s = nullptr,
+      PdtStateTable<typename Arc::StateId, typename Arc::StateId> *st = nullptr)
       : CacheOptions(opts), keep_parentheses(kp), stack(s), state_table(st) {}
 };
 
 // Properties for an expanded PDT.
-inline uint64 ExpandProperties(uint64 inprops) {
+inline uint64 MPdtExpandProperties(uint64 inprops) {
   return inprops & (kAcceptor | kAcyclic | kInitialAcyclic | kUnweighted);
 }
 
 // Implementation class for ExpandFst
 template <class A>
-class ExpandFstImpl
-    : public CacheImpl<A> {
+class MPdtExpandFstImpl : public CacheImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
@@ -65,13 +46,13 @@ class ExpandFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::PushArc;
-  using CacheBaseImpl< CacheState<A> >::HasArcs;
-  using CacheBaseImpl< CacheState<A> >::HasFinal;
-  using CacheBaseImpl< CacheState<A> >::HasStart;
-  using CacheBaseImpl< CacheState<A> >::SetArcs;
-  using CacheBaseImpl< CacheState<A> >::SetFinal;
-  using CacheBaseImpl< CacheState<A> >::SetStart;
+  using CacheBaseImpl<CacheState<A>>::PushArc;
+  using CacheBaseImpl<CacheState<A>>::HasArcs;
+  using CacheBaseImpl<CacheState<A>>::HasFinal;
+  using CacheBaseImpl<CacheState<A>>::HasStart;
+  using CacheBaseImpl<CacheState<A>>::SetArcs;
+  using CacheBaseImpl<CacheState<A>>::SetFinal;
+  using CacheBaseImpl<CacheState<A>>::SetStart;
 
   typedef A Arc;
   typedef typename A::Label Label;
@@ -80,34 +61,37 @@ class ExpandFstImpl
   typedef StateId StackId;
   typedef PdtStateTuple<StateId, StackId> StateTuple;
 
-  ExpandFstImpl(const Fst<A> &fst,
-                const vector<pair<typename Arc::Label,
-                                  typename Arc::Label> > &parens,
-                const vector<typename Arc::Label> &assignments,
-                const ExpandFstOptions<A> &opts)
-      : CacheImpl<A>(opts), fst_(fst.Copy()),
-        stack_(opts.stack ?
-               opts.stack:
-               new MPdtStack<StateId, Label>(parens, assignments)),
-        state_table_(opts.state_table ? opts.state_table :
-                     new PdtStateTable<StateId, StackId>()),
-        own_stack_(opts.stack == 0), own_state_table_(opts.state_table == 0),
+  MPdtExpandFstImpl(
+      const Fst<A> &fst,
+      const std::vector<std::pair<typename Arc::Label, typename Arc::Label>>
+          &parens,
+      const std::vector<typename Arc::Label> &assignments,
+      const MPdtExpandFstOptions<A> &opts)
+      : CacheImpl<A>(opts),
+        fst_(fst.Copy()),
+        stack_(opts.stack ? opts.stack
+                          : new MPdtStack<StateId, Label>(parens, assignments)),
+        state_table_(opts.state_table ? opts.state_table
+                                      : new PdtStateTable<StateId, StackId>()),
+        own_stack_(opts.stack == 0),
+        own_state_table_(opts.state_table == 0),
         keep_parentheses_(opts.keep_parentheses) {
     SetType("expand");
 
     uint64 props = fst.Properties(kFstProperties, false);
-    SetProperties(ExpandProperties(props), kCopyProperties);
+    SetProperties(MPdtExpandProperties(props), kCopyProperties);
 
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
   }
 
-  ExpandFstImpl(const ExpandFstImpl &impl)
+  MPdtExpandFstImpl(const MPdtExpandFstImpl &impl)
       : CacheImpl<A>(impl),
         fst_(impl.fst_->Copy(true)),
         stack_(new MPdtStack<StateId, Label>(*impl.stack_)),
         state_table_(new PdtStateTable<StateId, StackId>()),
-        own_stack_(true), own_state_table_(true),
+        own_stack_(true),
+        own_state_table_(true),
         keep_parentheses_(impl.keep_parentheses_) {
     SetType("expand");
     SetProperties(impl.Properties(), kCopyProperties);
@@ -115,19 +99,16 @@ class ExpandFstImpl
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~ExpandFstImpl() {
+  ~MPdtExpandFstImpl() override {
     delete fst_;
-    if (own_stack_)
-      delete stack_;
-    if (own_state_table_)
-      delete state_table_;
+    if (own_stack_) delete stack_;
+    if (own_state_table_) delete state_table_;
   }
 
   StateId Start() {
     if (!HasStart()) {
       StateId s = fst_->Start();
-      if (s == kNoStateId)
-        return kNoStateId;
+      if (s == kNoStateId) return kNoStateId;
       StateTuple tuple(s, 0);
       StateId start = state_table_->FindState(tuple);
       SetStart(start);
@@ -155,20 +136,17 @@ class ExpandFstImpl
   }
 
   size_t NumInputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      ExpandState(s);
+    if (!HasArcs(s)) ExpandState(s);
     return CacheImpl<A>::NumInputEpsilons(s);
   }
 
   size_t NumOutputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      ExpandState(s);
+    if (!HasArcs(s)) ExpandState(s);
     return CacheImpl<A>::NumOutputEpsilons(s);
   }
 
   void InitArcIterator(StateId s, ArcIteratorData<A> *data) {
-    if (!HasArcs(s))
-      ExpandState(s);
+    if (!HasArcs(s)) ExpandState(s);
     CacheImpl<A>::InitArcIterator(s, data);
   }
 
@@ -176,8 +154,8 @@ class ExpandFstImpl
   // states as needed.
   void ExpandState(StateId s) {
     StateTuple tuple = state_table_->Tuple(s);
-    for (ArcIterator< Fst<A> > aiter(*fst_, tuple.state_id);
-         !aiter.Done(); aiter.Next()) {
+    for (ArcIterator<Fst<A>> aiter(*fst_, tuple.state_id); !aiter.Done();
+         aiter.Next()) {
       Arc arc = aiter.Value();
       StackId stack_id = stack_->Find(tuple.stack_id, arc.ilabel);
       if (stack_id == -1) {
@@ -187,7 +165,6 @@ class ExpandFstImpl
         // Stack push/pop
         arc.ilabel = arc.olabel = 0;
       }
-
       StateTuple ntuple(arc.nextstate, stack_id);
       arc.nextstate = state_table_->FindState(ntuple);
       PushArc(s, arc);
@@ -210,7 +187,7 @@ class ExpandFstImpl
   bool own_state_table_;
   bool keep_parentheses_;
 
-  void operator=(const ExpandFstImpl<A> &);  // disallow
+  void operator=(const MPdtExpandFstImpl<A> &);  // disallow
 };
 
 // Expands a multi-pushdown transducer (MPDT) encoded as an FST into an FST.
@@ -224,10 +201,10 @@ class ExpandFstImpl
 // This class attaches interface to implementation and handles
 // reference counting, delegating most methods to ImplToFst.
 template <class A>
-class ExpandFst : public ImplToFst< ExpandFstImpl<A> > {
+class MPdtExpandFst : public ImplToFst<MPdtExpandFstImpl<A>> {
  public:
-  friend class ArcIterator< ExpandFst<A> >;
-  friend class StateIterator< ExpandFst<A> >;
+  friend class ArcIterator<MPdtExpandFst<A>>;
+  friend class StateIterator<MPdtExpandFst<A>>;
 
   typedef A Arc;
   typedef typename A::Label Label;
@@ -236,35 +213,36 @@ class ExpandFst : public ImplToFst< ExpandFstImpl<A> > {
   typedef StateId StackId;
   typedef DefaultCacheStore<A> Store;
   typedef typename Store::State State;
-  typedef ExpandFstImpl<A> Impl;
+  typedef MPdtExpandFstImpl<A> Impl;
 
-  ExpandFst(const Fst<A> &fst,
-            const vector<pair<typename Arc::Label,
-                              typename Arc::Label> > &parens,
-            const vector<typename Arc::Label> &assignments)
-      : ImplToFst<Impl>(new Impl(fst, parens, assignments,
-                                 ExpandFstOptions<A>())) {}
+  MPdtExpandFst(const Fst<A> &fst,
+                const std::vector<
+                std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+                const std::vector<typename Arc::Label> &assignments)
+      : ImplToFst<Impl>(std::make_shared<Impl>(fst, parens, assignments,
+                                               MPdtExpandFstOptions<A>())) {}
 
-  ExpandFst(const Fst<A> &fst,
-            const vector<pair<typename Arc::Label,
-                              typename Arc::Label> > &parens,
-            const vector<typename Arc::Label> &assignments,
-            const ExpandFstOptions<A> &opts)
-      : ImplToFst<Impl>(new Impl(fst, parens, assignments, opts)) {}
+  MPdtExpandFst(const Fst<A> &fst,
+                const std::vector<
+                std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+                const std::vector<typename Arc::Label> &assignments,
+                const MPdtExpandFstOptions<A> &opts)
+      : ImplToFst<Impl>(
+            std::make_shared<Impl>(fst, parens, assignments, opts)) {}
 
   // See Fst<>::Copy() for doc.
-  ExpandFst(const ExpandFst<A> &fst, bool safe = false)
+  MPdtExpandFst(const MPdtExpandFst<A> &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
   // Get a copy of this ExpandFst. See Fst<>::Copy() for further doc.
-  virtual ExpandFst<A> *Copy(bool safe = false) const {
-    return new ExpandFst<A>(*this, safe);
+  MPdtExpandFst<A> *Copy(bool safe = false) const override {
+    return new MPdtExpandFst<A>(*this, safe);
   }
 
-  virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
+  inline void InitStateIterator(StateIteratorData<A> *data) const override;
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    GetImpl()->InitArcIterator(s, data);
+  void InitArcIterator(StateId s, ArcIteratorData<A> *data) const override {
+    GetMutableImpl()->InitArcIterator(s, data);
   }
 
   const MPdtStack<StackId, Label> &GetStack() const {
@@ -276,56 +254,52 @@ class ExpandFst : public ImplToFst< ExpandFstImpl<A> > {
   }
 
  private:
-  // Makes visible to friends.
-  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
+  using ImplToFst<Impl>::GetImpl;
+  using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const ExpandFst<A> &fst);  // Disallow
+  void operator=(const MPdtExpandFst<A> &fst);  // Disallow
 };
-
-
-// Specialization for ExpandFst.
-template<class A>
-class StateIterator< ExpandFst<A> >
-    : public CacheStateIterator< ExpandFst<A> > {
- public:
-  explicit StateIterator(const ExpandFst<A> &fst)
-      : CacheStateIterator< ExpandFst<A> >(fst, fst.GetImpl()) {}
-};
-
 
 // Specialization for ExpandFst.
 template <class A>
-class ArcIterator< ExpandFst<A> >
-    : public CacheArcIterator< ExpandFst<A> > {
+class StateIterator<MPdtExpandFst<A>> :
+    public CacheStateIterator<MPdtExpandFst<A>> {
+ public:
+  explicit StateIterator(const MPdtExpandFst<A> &fst)
+      : CacheStateIterator<MPdtExpandFst<A>>(fst, fst.GetMutableImpl()) {}
+};
+
+// Specialization for ExpandFst.
+template <class A>
+class ArcIterator<MPdtExpandFst<A>>
+    : public CacheArcIterator<MPdtExpandFst<A>> {
  public:
   typedef typename A::StateId StateId;
 
-  ArcIterator(const ExpandFst<A> &fst, StateId s)
-      : CacheArcIterator< ExpandFst<A> >(fst.GetImpl(), s) {
-    if (!fst.GetImpl()->HasArcs(s))
-      fst.GetImpl()->ExpandState(s);
+  ArcIterator(const MPdtExpandFst<A> &fst, StateId s)
+      : CacheArcIterator<MPdtExpandFst<A>>(fst.GetMutableImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->ExpandState(s);
   }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
-
-template <class A> inline
-void ExpandFst<A>::InitStateIterator(StateIteratorData<A> *data) const {
-  data->base = new StateIterator< ExpandFst<A> >(*this);
+template <class A>
+inline void MPdtExpandFst<A>::InitStateIterator(StateIteratorData<A> *data)
+    const {
+  data->base = new StateIterator<MPdtExpandFst<A>>(*this);
 }
 
 //
 // Expand() Functions
 //
 
-template <class Arc>
-struct ExpandOptions {
+struct MPdtExpandOptions {
   bool connect;
   bool keep_parentheses;
 
-  ExpandOptions(bool c  = true, bool k = false)
+  MPdtExpandOptions(bool c = true, bool k = false)
       : connect(c), keep_parentheses(k) {}
 };
 
@@ -337,24 +311,20 @@ struct ExpandOptions {
 // assignment of those pairs to stacks in 'paren_assignments'. The expansion
 // enforces the parenthesis constraints. The MPDT must be expandable as an FST.
 template <class Arc>
-void Expand(
-    const Fst<Arc> &ifst,
-    const vector<pair<typename Arc::Label, typename Arc::Label> > &parens,
-    const vector<typename Arc::Label> &assignments,
-    MutableFst<Arc> *ofst,
-    const ExpandOptions<Arc> &opts) {
+void Expand(const Fst<Arc> &ifst,
+            const std::vector<
+            std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+            const std::vector<typename Arc::Label> &assignments,
+            MutableFst<Arc> *ofst, const MPdtExpandOptions &opts) {
   typedef typename Arc::Label Label;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
-  typedef typename ExpandFst<Arc>::StackId StackId;
-
-  ExpandFstOptions<Arc> eopts;
+  typedef typename MPdtExpandFst<Arc>::StackId StackId;
+  MPdtExpandFstOptions<Arc> eopts;
   eopts.gc_limit = 0;
   eopts.keep_parentheses = opts.keep_parentheses;
-  *ofst = ExpandFst<Arc>(ifst, parens, assignments, eopts);
-
-  if (opts.connect)
-    Connect(ofst);
+  *ofst = MPdtExpandFst<Arc>(ifst, parens, assignments, eopts);
+  if (opts.connect) Connect(ofst);
 }
 
 // Expands a multi-pushdown transducer (MPDT) encoded as an FST into an FST.
@@ -364,15 +334,15 @@ void Expand(
 // open-close parenthesis label pair sets are passed in 'parens', and the
 // assignment of those pairs to stacks in 'paren_assignments'. The expansion
 // enforces the parenthesis constraints. The MPDT must be expandable as an FST.
-template<class Arc>
-void Expand(
-    const Fst<Arc> &ifst,
-    const vector<pair<typename Arc::Label, typename Arc::Label> > &parens,
-    const vector<typename Arc::Label> &assignments,
-    MutableFst<Arc> *ofst,
-    bool connect = true, bool keep_parentheses = false) {
+template <class Arc>
+void Expand(const Fst<Arc> &ifst,
+            const std::vector<std::pair<typename Arc::Label,
+            typename Arc::Label>> &parens,
+            const std::vector<typename Arc::Label> &assignments,
+            MutableFst<Arc> *ofst, bool connect = true,
+            bool keep_parentheses = false) {
   Expand(ifst, parens, assignments, ofst,
-         ExpandOptions<Arc>(connect, keep_parentheses));
+         MPdtExpandOptions(connect, keep_parentheses));
 }
 
 }  // namespace fst

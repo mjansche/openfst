@@ -1,21 +1,6 @@
-// fst_test.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Regression test for FST classes.
 
 #include "./fst_test.h"
@@ -25,7 +10,6 @@
 #include <fst/edit-fst.h>
 #include <fst/matcher-fst.h>
 
-
 namespace fst {
 
 // A user-defined arc type.
@@ -34,8 +18,8 @@ struct CustomArc {
   typedef ProductWeight<TropicalWeight, LogWeight> Weight;
   typedef int64 StateId;
 
-  CustomArc(Label i, Label o, Weight w, StateId s) :
-    ilabel(i), olabel(o), weight(w), nextstate(s) {}
+  CustomArc(Label i, Label o, Weight w, StateId s)
+      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
   CustomArc() {}
 
   static const string &Type() {  // Arc type name
@@ -49,7 +33,6 @@ struct CustomArc {
   StateId nextstate;  // Transition destination state
 };
 
-
 // A user-defined compactor for test FST.
 template <class A>
 class CustomCompactor {
@@ -58,55 +41,49 @@ class CustomCompactor {
   typedef typename A::Label Label;
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
-  typedef pair<Label, Weight> Element;
+  typedef std::pair<Label, Weight> Element;
 
   Element Compact(StateId s, const A &arc) const {
     return std::make_pair(arc.ilabel, arc.weight);
   }
 
   Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
-    return p.first == kNoLabel ?
-        Arc(kNoLabel, kNoLabel, p.second, kNoStateId) :
-        Arc(p.first, 0, p.second, s);
+    return p.first == kNoLabel ? Arc(kNoLabel, kNoLabel, p.second, kNoStateId)
+                               : Arc(p.first, 0, p.second, s);
   }
 
-  ssize_t Size() const { return -1;}
+  ssize_t Size() const { return -1; }
 
-  uint64 Properties() const { return 0ULL;}
+  uint64 Properties() const { return 0ULL; }
 
-  bool Compatible(const Fst<A> &fst) const {
-    return true;
-  }
+  bool Compatible(const Fst<A> &fst) const { return true; }
 
   static const string &Type() {
     static const string type = "my";
     return type;
   }
 
-  bool Write(ostream &strm) const { return true; }
+  bool Write(std::ostream &strm) const { return true; }
 
-  static CustomCompactor *Read(istream &strm) {
+  static CustomCompactor *Read(std::istream &strm) {
     return new CustomCompactor;
   }
 };
 
-
 REGISTER_FST(VectorFst, CustomArc);
 REGISTER_FST(ConstFst, CustomArc);
+static fst::FstRegisterer<CompactFst<StdArc, CustomCompactor<StdArc>> >
+    CompactFst_StdArc_CustomCompactor_registerer;
 static fst::FstRegisterer<
-  CompactFst<StdArc, CustomCompactor<StdArc> > >
-CompactFst_StdArc_CustomCompactor_registerer;
+    CompactFst<CustomArc, CustomCompactor<CustomArc>> >
+    CompactFst_CustomArc_CustomCompactor_registerer;
+static fst::FstRegisterer<ConstFst<StdArc, uint16>>
+    ConstFst_StdArc_uint16_registerer;
 static fst::FstRegisterer<
-  CompactFst<CustomArc, CustomCompactor<CustomArc> > >
-CompactFst_CustomArc_CustomCompactor_registerer;
-static fst::FstRegisterer<ConstFst<StdArc, uint16> >
-ConstFst_StdArc_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, CustomCompactor<StdArc>, uint16> >
-CompactFst_StdArc_CustomCompactor_uint16_registerer;
+    CompactFst<StdArc, CustomCompactor<StdArc>, uint16>>
+    CompactFst_StdArc_CustomCompactor_uint16_registerer;
 
 }  // namespace fst
-
 
 using fst::FstTester;
 using fst::VectorFst;
@@ -127,7 +104,7 @@ int main(int argc, char **argv) {
 
   // VectorFst<StdArc> tests
   {
-    FstTester< VectorFst<StdArc> > std_vector_tester;
+    FstTester<VectorFst<StdArc>> std_vector_tester;
     std_vector_tester.TestBase();
     std_vector_tester.TestExpanded();
     std_vector_tester.TestAssign();
@@ -138,17 +115,16 @@ int main(int argc, char **argv) {
 
   // ConstFst<StdArc> tests
   {
-    FstTester< ConstFst<StdArc> > std_const_tester;
+    FstTester<ConstFst<StdArc>> std_const_tester;
     std_const_tester.TestBase();
     std_const_tester.TestExpanded();
     std_const_tester.TestCopy();
     std_const_tester.TestIO();
   }
 
-  // CompactFst<StdArc, CustomCompactor<StdArc> >
+  // CompactFst<StdArc, CustomCompactor<StdArc>>
   {
-    FstTester< CompactFst<StdArc, CustomCompactor<StdArc> > >
-        std_compact_tester;
+    FstTester<CompactFst<StdArc, CustomCompactor<StdArc>> > std_compact_tester;
     std_compact_tester.TestBase();
     std_compact_tester.TestExpanded();
     std_compact_tester.TestCopy();
@@ -157,7 +133,7 @@ int main(int argc, char **argv) {
 
   // VectorFst<CustomArc> tests
   {
-    FstTester< VectorFst<CustomArc> > std_vector_tester;
+    FstTester<VectorFst<CustomArc>> std_vector_tester;
     std_vector_tester.TestBase();
     std_vector_tester.TestExpanded();
     std_vector_tester.TestAssign();
@@ -168,16 +144,16 @@ int main(int argc, char **argv) {
 
   // ConstFst<CustomArc> tests
   {
-    FstTester< ConstFst<CustomArc> > std_const_tester;
+    FstTester<ConstFst<CustomArc>> std_const_tester;
     std_const_tester.TestBase();
     std_const_tester.TestExpanded();
     std_const_tester.TestCopy();
     std_const_tester.TestIO();
   }
 
-  // CompactFst<CustomArc, CustomCompactor<CustomArc> >
+  // CompactFst<CustomArc, CustomCompactor<CustomArc>>
   {
-    FstTester< CompactFst<CustomArc, CustomCompactor<CustomArc> > >
+    FstTester<CompactFst<CustomArc, CustomCompactor<CustomArc>> >
         std_compact_tester;
     std_compact_tester.TestBase();
     std_compact_tester.TestExpanded();
@@ -187,7 +163,7 @@ int main(int argc, char **argv) {
 
   // ConstFst<StdArc, uint16> tests
   {
-    FstTester< ConstFst<StdArc, uint16> > std_const_tester;
+    FstTester<ConstFst<StdArc, uint16>> std_const_tester;
     std_const_tester.TestBase();
     std_const_tester.TestExpanded();
     std_const_tester.TestCopy();
@@ -196,7 +172,7 @@ int main(int argc, char **argv) {
 
   // CompactFst<StdArc, CustomCompactor<StdArc>, uint16>
   {
-    FstTester< CompactFst<StdArc, CustomCompactor<StdArc>, uint16> >
+    FstTester<CompactFst<StdArc, CustomCompactor<StdArc>, uint16>>
         std_compact_tester;
     std_compact_tester.TestBase();
     std_compact_tester.TestExpanded();
@@ -214,7 +190,7 @@ int main(int argc, char **argv) {
 
   // EditFst<StdArc> tests
   {
-    FstTester< EditFst<StdArc> > std_edit_tester;
+    FstTester<EditFst<StdArc>> std_edit_tester;
     std_edit_tester.TestBase();
     std_edit_tester.TestExpanded();
     std_edit_tester.TestAssign();

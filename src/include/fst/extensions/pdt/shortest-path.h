@@ -1,39 +1,18 @@
-// shortest-path.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Functions to find shortest paths in a PDT.
 
 #ifndef FST_EXTENSIONS_PDT_SHORTEST_PATH_H__
 #define FST_EXTENSIONS_PDT_SHORTEST_PATH_H__
 
-#include <fst/shortest-path.h>
 #include <fst/extensions/pdt/paren.h>
 #include <fst/extensions/pdt/pdt.h>
+#include <fst/shortest-path.h>
 
-#include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
-#include <unordered_set>
-using std::unordered_set;
-using std::unordered_multiset;
 #include <stack>
+#include <unordered_map>
 #include <vector>
-using std::vector;
 
 namespace fst {
 
@@ -45,7 +24,6 @@ struct PdtShortestPathOptions {
   PdtShortestPathOptions(bool kp = false, bool gc = true)
       : keep_parentheses(kp), path_gc(gc) {}
 };
-
 
 // Class to store PDT shortest path results. Stores shortest path
 // tree info 'Distance()', Parent(), and ArcParent() information keyed
@@ -77,15 +55,13 @@ class PdtShortestPathData {
     SearchState(StateId s, StateId t) : state(s), start(t) {}
 
     bool operator==(const SearchState &s) const {
-      if (&s == this)
-        return true;
+      if (&s == this) return true;
       return s.state == this->state && s.start == this->start;
     }
 
     StateId state;  // PDT state
     StateId start;  // PDT paren 'source' state
   };
-
 
   // Specifies paren id, source and dest 'start' states of a paren.
   // These are the 'start' states of the respective sub-graphs.
@@ -96,24 +72,23 @@ class PdtShortestPathData {
     ParenSpec(Label id, StateId s, StateId d)
         : paren_id(id), src_start(s), dest_start(d) {}
 
-    Label paren_id;        // Id of parenthesis
-    StateId src_start;     // sub-graph 'start' state for paren source.
-    StateId dest_start;    // sub-graph 'start' state for paren dest.
+    Label paren_id;      // Id of parenthesis
+    StateId src_start;   // sub-graph 'start' state for paren source.
+    StateId dest_start;  // sub-graph 'start' state for paren dest.
 
     bool operator==(const ParenSpec &x) const {
-      if (&x == this)
-        return true;
-      return x.paren_id == this->paren_id &&
-          x.src_start == this->src_start &&
-          x.dest_start == this->dest_start;
+      if (&x == this) return true;
+      return x.paren_id == this->paren_id && x.src_start == this->src_start &&
+             x.dest_start == this->dest_start;
     }
   };
 
   struct SearchData {
-    SearchData() : distance(Weight::Zero()),
-                   parent(kNoStateId, kNoStateId),
-                   paren_id(kNoLabel),
-                   flags(0) {}
+    SearchData()
+        : distance(Weight::Zero()),
+          parent(kNoStateId, kNoStateId),
+          paren_id(kNoLabel),
+          flags(0) {}
 
     Weight distance;     // Distance to this state from PDT 'start' state
     SearchState parent;  // Parent state in shortest path tree
@@ -132,8 +107,7 @@ class PdtShortestPathData {
   ~PdtShortestPathData() {
     VLOG(1) << "opm size: " << paren_map_.size();
     VLOG(1) << "# of search states: " << nstates_;
-    if (gc_)
-      VLOG(1) << "# of GC'd search states: " << ngc_;
+    if (gc_) VLOG(1) << "# of GC'd search states: " << ngc_;
   }
 
   void Clear() {
@@ -230,24 +204,23 @@ class PdtShortestPathData {
   struct ParenHash {
     size_t operator()(const ParenSpec &paren) const {
       return paren.paren_id + paren.src_start * kPrime0 +
-          paren.dest_start * kPrime1;
+             paren.dest_start * kPrime1;
     }
   };
 
-  typedef unordered_map<SearchState, SearchData, SearchStateHash> SearchMap;
+  typedef std::unordered_map<SearchState, SearchData, SearchStateHash>
+      SearchMap;
 
-  typedef unordered_multimap<StateId, StateId> SearchMultimap;
+  typedef std::unordered_multimap<StateId, StateId> SearchMultimap;
 
   // Hash map from paren spec to open paren data
-  typedef unordered_map<ParenSpec, SearchData, ParenHash> ParenMap;
+  typedef std::unordered_map<ParenSpec, SearchData, ParenHash> ParenMap;
 
   SearchData *GetSearchData(SearchState s) const {
-    if (s == state_)
-      return state_data_;
+    if (s == state_) return state_data_;
     if (finished_) {
-      typename SearchMap::iterator it = search_map_.find(s);
-      if (it == search_map_.end())
-        return &null_search_data_;
+      auto it = search_map_.find(s);
+      if (it == search_map_.end()) return &null_search_data_;
       state_ = s;
       return state_data_ = &(it->second);
     } else {
@@ -263,12 +236,10 @@ class PdtShortestPathData {
   }
 
   SearchData *GetSearchData(ParenSpec paren) const {
-    if (paren == paren_)
-      return paren_data_;
+    if (paren == paren_) return paren_data_;
     if (finished_) {
-      typename ParenMap::iterator it = paren_map_.find(paren);
-      if (it == paren_map_.end())
-        return &null_search_data_;
+      auto it = paren_map_.find(paren);
+      if (it == paren_map_.end()) return &null_search_data_;
       paren_ = paren;
       return state_data_ = &(it->second);
     } else {
@@ -296,18 +267,15 @@ class PdtShortestPathData {
 // Deletes inaccessible search data from a given 'start' (open paren dest)
 // state. Assumes 'final' (close paren source or PDT final) states have
 // been flagged 'kFinal'.
-template<class Arc>
-void  PdtShortestPathData<Arc>::GC(StateId start) {
-  if (!gc_)
-    return;
-  vector<StateId> final;
-  for (typename SearchMultimap::iterator mmit = search_multimap_.find(start);
-       mmit != search_multimap_.end() && mmit->first == start;
-       ++mmit) {
+template <class Arc>
+void PdtShortestPathData<Arc>::GC(StateId start) {
+  if (!gc_) return;
+  std::vector<StateId> final;
+  for (auto mmit = search_multimap_.find(start);
+       mmit != search_multimap_.end() && mmit->first == start; ++mmit) {
     SearchState s(mmit->second, start);
     const SearchData &data = search_map_[s];
-    if (data.flags & kFinal)
-      final.push_back(s.state);
+    if (data.flags & kFinal) final.push_back(s.state);
   }
 
   // Mark phase
@@ -315,8 +283,7 @@ void  PdtShortestPathData<Arc>::GC(StateId start) {
     SearchState s(final[i], start);
     while (s.state != kNoLabel) {
       SearchData *sdata = &search_map_[s];
-      if (sdata->flags & kMarked)
-        break;
+      if (sdata->flags & kMarked) break;
       sdata->flags |= kMarked;
       SearchState p = sdata->parent;
       if (p.start != start && p.start != kNoLabel) {  // entering sub-subgraph
@@ -330,10 +297,10 @@ void  PdtShortestPathData<Arc>::GC(StateId start) {
   }
 
   // Sweep phase
-  typename SearchMultimap::iterator mmit = search_multimap_.find(start);
+  auto mmit = search_multimap_.find(start);
   while (mmit != search_multimap_.end() && mmit->first == start) {
     SearchState s(mmit->second, start);
-    typename SearchMap::iterator mit = search_map_.find(s);
+    auto mit = search_map_.find(s);
     const SearchData &data = mit->second;
     if (!(data.flags & kMarked)) {
       search_map_.erase(mit);
@@ -343,19 +310,24 @@ void  PdtShortestPathData<Arc>::GC(StateId start) {
   }
 }
 
-template<class Arc> const Arc PdtShortestPathData<Arc>::kNoArc
-    = Arc(kNoLabel, kNoLabel, Weight::Zero(), kNoStateId);
+template <class Arc>
+const Arc PdtShortestPathData<Arc>::kNoArc = Arc(kNoLabel, kNoLabel,
+                                                 Weight::Zero(), kNoStateId);
 
-template<class Arc> const size_t PdtShortestPathData<Arc>::kPrime0 = 7853;
+template <class Arc>
+const size_t PdtShortestPathData<Arc>::kPrime0 = 7853;
 
-template<class Arc> const size_t PdtShortestPathData<Arc>::kPrime1 = 7867;
+template <class Arc>
+const size_t PdtShortestPathData<Arc>::kPrime1 = 7867;
 
-template<class Arc> const uint8 PdtShortestPathData<Arc>::kInited = 0x01;
+template <class Arc>
+const uint8 PdtShortestPathData<Arc>::kInited = 0x01;
 
-template<class Arc> const uint8 PdtShortestPathData<Arc>::kFinal =  0x02;
+template <class Arc>
+const uint8 PdtShortestPathData<Arc>::kFinal = 0x02;
 
-template<class Arc> const uint8 PdtShortestPathData<Arc>::kMarked = 0x04;
-
+template <class Arc>
+const uint8 PdtShortestPathData<Arc>::kMarked = 0x04;
 
 // This computes the single source shortest (balanced) path (SSSP)
 // through a weighted PDT that has a bounded stack (i.e. is expandable
@@ -375,7 +347,7 @@ template<class Arc> const uint8 PdtShortestPathData<Arc>::kMarked = 0x04;
 // algorithm (implicitly) creates a new graph where each state is a
 // pair of an original state and a possible parenthesis 'start' state
 // for that state.
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 class PdtShortestPath {
  public:
   typedef typename Arc::StateId StateId;
@@ -389,7 +361,7 @@ class PdtShortestPath {
   typedef typename PdtBalanceData<Arc>::SetIterator CloseSourceIterator;
 
   PdtShortestPath(const Fst<Arc> &ifst,
-                  const vector<pair<Label, Label> > &parens,
+                  const std::vector<std::pair<Label, Label>> &parens,
                   const PdtShortestPathOptions<Arc, Queue> &opts)
       : kFinal(SpData::kFinal),
         ifst_(ifst.Copy()),
@@ -398,16 +370,15 @@ class PdtShortestPath {
         start_(ifst.Start()),
         sp_data_(opts.path_gc),
         error_(false) {
-
-    if ((Weight::Properties() & (kPath | kRightSemiring))
-        != (kPath | kRightSemiring)) {
+    if ((Weight::Properties() & (kPath | kRightSemiring)) !=
+        (kPath | kRightSemiring)) {
       FSTERROR() << "PdtShortestPath: Weight needs to have the path"
                  << " property and be right distributive: " << Weight::Type();
       error_ = true;
     }
 
     for (Label i = 0; i < parens.size(); ++i) {
-      const pair<Label, Label>  &p = parens[i];
+      const std::pair<Label, Label> &p = parens[i];
       paren_id_map_[p.first] = i;
       paren_id_map_[p.second] = i;
     }
@@ -443,8 +414,8 @@ class PdtShortestPath {
 
  public:
   // Hash multimap from close paren label to an paren arc.
-  typedef unordered_multimap<ParenState<Arc>, Arc,
-                        typename ParenState<Arc>::Hash> CloseParenMultimap;
+  typedef std::unordered_multimap<
+      ParenState<Arc>, Arc, typename ParenState<Arc>::Hash> CloseParenMultimap;
 
   const CloseParenMultimap &GetCloseParenMultimap() const {
     return close_paren_multimap_;
@@ -465,14 +436,14 @@ class PdtShortestPath {
 
   Fst<Arc> *ifst_;
   MutableFst<Arc> *ofst_;
-  const vector<pair<Label, Label> > &parens_;
+  const std::vector<std::pair<Label, Label>> &parens_;
   bool keep_parens_;
-  Queue *state_queue_;                   // current state queue
+  Queue *state_queue_;  // current state queue
   StateId start_;
   Weight f_distance_;
   SearchState f_parent_;
   SpData sp_data_;
-  unordered_map<Label, Label> paren_id_map_;
+  std::unordered_map<Label, Label> paren_id_map_;
   CloseParenMultimap close_paren_multimap_;
   PdtBalanceData<Arc> balance_data_;
   ssize_t nenqueued_;
@@ -481,15 +452,14 @@ class PdtShortestPath {
   DISALLOW_COPY_AND_ASSIGN(PdtShortestPath);
 };
 
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 void PdtShortestPath<Arc, Queue>::Init(MutableFst<Arc> *ofst) {
   ofst_ = ofst;
   ofst->DeleteStates();
   ofst->SetInputSymbols(ifst_->InputSymbols());
   ofst->SetOutputSymbols(ifst_->OutputSymbols());
 
-  if (ifst_->Start() == kNoStateId)
-    return;
+  if (ifst_->Start() == kNoStateId) return;
 
   f_distance_ = Weight::Zero();
   f_parent_ = SearchState(kNoStateId, kNoStateId);
@@ -500,18 +470,17 @@ void PdtShortestPath<Arc, Queue>::Init(MutableFst<Arc> *ofst) {
   nenqueued_ = 0;
 
   // Find open parens per destination state and close parens per source state.
-  for (StateIterator<Fst<Arc> > siter(*ifst_); !siter.Done(); siter.Next()) {
+  for (StateIterator<Fst<Arc>> siter(*ifst_); !siter.Done(); siter.Next()) {
     StateId s = siter.Value();
-    for (ArcIterator<Fst<Arc> > aiter(*ifst_, s);
-         !aiter.Done(); aiter.Next()) {
+    for (ArcIterator<Fst<Arc>> aiter(*ifst_, s); !aiter.Done(); aiter.Next()) {
       const Arc &arc = aiter.Value();
-      typename unordered_map<Label, Label>::const_iterator pit
-          = paren_id_map_.find(arc.ilabel);
-      if (pit != paren_id_map_.end()) {               // Is a paren?
+      typename std::unordered_map<Label, Label>::const_iterator pit =
+          paren_id_map_.find(arc.ilabel);
+      if (pit != paren_id_map_.end()) {  // Is a paren?
         Label paren_id = pit->second;
         if (arc.ilabel == parens_[paren_id].first) {  // Open paren
           balance_data_.OpenInsert(paren_id, arc.nextstate);
-        } else {                                      // Close paren
+        } else {  // Close paren
           ParenState<Arc> paren_state(paren_id, s);
           close_paren_multimap_.insert(std::make_pair(paren_state, arc));
         }
@@ -522,10 +491,9 @@ void PdtShortestPath<Arc, Queue>::Init(MutableFst<Arc> *ofst) {
 
 // Computes the shortest distance stored in a recursive way. Each
 // sub-graph (i.e. different paren 'start' state) begins with weight One().
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 void PdtShortestPath<Arc, Queue>::GetDistance(StateId start) {
-  if (start == kNoStateId)
-    return;
+  if (start == kNoStateId) return;
 
   Queue state_queue;
   state_queue_ = &state_queue;
@@ -548,11 +516,10 @@ void PdtShortestPath<Arc, Queue>::GetDistance(StateId start) {
 }
 
 // Updates best complete path.
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 void PdtShortestPath<Arc, Queue>::ProcFinal(SearchState s) {
   if (ifst_->Final(s.state) != Weight::Zero() && s.start == start_) {
-    Weight w = Times(sp_data_.Distance(s),
-                     ifst_->Final(s.state));
+    Weight w = Times(sp_data_.Distance(s), ifst_->Final(s.state));
     if (f_distance_ != Plus(f_distance_, w)) {
       if (f_parent_.state != kNoStateId)
         sp_data_.SetFlags(f_parent_, 0, kFinal);
@@ -565,16 +532,15 @@ void PdtShortestPath<Arc, Queue>::ProcFinal(SearchState s) {
 }
 
 // Processes all arcs leaving the state s.
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 void PdtShortestPath<Arc, Queue>::ProcArcs(SearchState s) {
-  for (ArcIterator< Fst<Arc> > aiter(*ifst_, s.state);
-       !aiter.Done();
+  for (ArcIterator<Fst<Arc>> aiter(*ifst_, s.state); !aiter.Done();
        aiter.Next()) {
     Arc arc = aiter.Value();
     Weight w = Times(sp_data_.Distance(s), arc.weight);
 
-    typename unordered_map<Label, Label>::const_iterator pit
-        = paren_id_map_.find(arc.ilabel);
+    typename std::unordered_map<Label, Label>::const_iterator pit =
+        paren_id_map_.find(arc.ilabel);
     if (pit != paren_id_map_.end()) {  // Is a paren?
       Label paren_id = pit->second;
       if (arc.ilabel == parens_[paren_id].first)
@@ -592,10 +558,10 @@ void PdtShortestPath<Arc, Queue>::ProcArcs(SearchState s) {
 // if previously unvisited. Otherwise it finds any previously encountered
 // closing parentheses and relaxes them using the recursively stored
 // shortest distance to them.
-template<class Arc, class Queue> inline
-void PdtShortestPath<Arc, Queue>::ProcOpenParen(
-    Label paren_id, SearchState s, Arc arc, Weight w) {
-
+template <class Arc, class Queue>
+inline void PdtShortestPath<Arc, Queue>::ProcOpenParen(Label paren_id,
+                                                       SearchState s, Arc arc,
+                                                       Weight w) {
   SearchState d(arc.nextstate, arc.nextstate);
   ParenSpec paren(paren_id, s.start, d.start);
   Weight pdist = sp_data_.Distance(paren);
@@ -608,7 +574,8 @@ void PdtShortestPath<Arc, Queue>::ProcOpenParen(
       GetDistance(d.start);
       state_queue_ = state_queue;
     } else if (!(sp_data_.Flags(d) & kFinished)) {
-      FSTERROR() << "PdtShortestPath: open parenthesis recursion: not bounded stack";
+      FSTERROR()
+          << "PdtShortestPath: open parenthesis recursion: not bounded stack";
       error_ = true;
     }
 
@@ -622,8 +589,7 @@ void PdtShortestPath<Arc, Queue>::ProcOpenParen(
            cpit != close_paren_multimap_.end() && paren_state == cpit->first;
            ++cpit) {
         const Arc &cparc = cpit->second;
-        Weight cpw = Times(w, Times(sp_data_.Distance(cpstate),
-                                    cparc.weight));
+        Weight cpw = Times(w, Times(sp_data_.Distance(cpstate), cparc.weight));
         Relax(cpstate, s, cparc, cpw, paren_id);
       }
     }
@@ -634,9 +600,11 @@ void PdtShortestPath<Arc, Queue>::ProcOpenParen(
 // balancing open parenthesis info. Relaxes any close parenthesis
 // destination state that has a balancing previously encountered open
 // parenthesis.
-template<class Arc, class Queue> inline
-void PdtShortestPath<Arc, Queue>::ProcCloseParen(
-    Label paren_id, SearchState s, const Arc &arc, Weight w) {
+template <class Arc, class Queue>
+inline void PdtShortestPath<Arc, Queue>::ProcCloseParen(Label paren_id,
+                                                        SearchState s,
+                                                        const Arc &arc,
+                                                        Weight w) {
   ParenState<Arc> paren_state(paren_id, s.start);
   if (!(sp_data_.Flags(s) & kExpanded)) {
     balance_data_.CloseInsert(paren_id, s.start, s.state);
@@ -645,18 +613,20 @@ void PdtShortestPath<Arc, Queue>::ProcCloseParen(
 }
 
 // For non-parentheses, classical relaxation.
-template<class Arc, class Queue> inline
-void PdtShortestPath<Arc, Queue>::ProcNonParen(
-    SearchState s, const Arc &arc, Weight w) {
+template <class Arc, class Queue>
+inline void PdtShortestPath<Arc, Queue>::ProcNonParen(SearchState s,
+                                                      const Arc &arc,
+                                                      Weight w) {
   Relax(s, s, arc, w, kNoLabel);
 }
 
 // Classical relaxation on the search graph for 'arc' from state 's'.
 // State 't' is in the same sub-graph as the nextstate should be (i.e.
 // has the same paren 'start'.
-template<class Arc, class Queue> inline
-void PdtShortestPath<Arc, Queue>::Relax(
-    SearchState s, SearchState t, Arc arc, Weight w, Label paren_id) {
+template <class Arc, class Queue>
+inline void PdtShortestPath<Arc, Queue>::Relax(SearchState s, SearchState t,
+                                               Arc arc, Weight w,
+                                               Label paren_id) {
   SearchState d(arc.nextstate, t.start);
   Weight dist = sp_data_.Distance(d);
   if (dist != Plus(dist, w)) {
@@ -667,8 +637,8 @@ void PdtShortestPath<Arc, Queue>::Relax(
   }
 }
 
-template<class Arc, class Queue> inline
-void PdtShortestPath<Arc, Queue>::Enqueue(SearchState s) {
+template <class Arc, class Queue>
+inline void PdtShortestPath<Arc, Queue>::Enqueue(SearchState s) {
   if (!(sp_data_.Flags(s) & kEnqueued)) {
     state_queue_->Enqueue(s.state);
     sp_data_.SetFlags(s, kEnqueued, kEnqueued);
@@ -680,7 +650,7 @@ void PdtShortestPath<Arc, Queue>::Enqueue(SearchState s) {
 
 // Follows parent pointers to find the shortest path. Uses a stack
 // since the shortest distance is stored recursively.
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 void PdtShortestPath<Arc, Queue>::GetPath() {
   SearchState s = f_parent_, d = SearchState(kNoStateId, kNoStateId);
   StateId s_p = kNoStateId, d_p = kNoStateId;
@@ -696,12 +666,11 @@ void PdtShortestPath<Arc, Queue>::GetPath() {
       if (paren_id != kNoLabel) {                     // paren?
         if (arc.ilabel == parens_[paren_id].first) {  // open paren
           paren_stack.pop();
-        } else {                                      // close paren
+        } else {  // close paren
           ParenSpec paren(paren_id, d.start, s.start);
           paren_stack.push(paren);
         }
-        if (!keep_parens_)
-          arc.ilabel = arc.olabel = 0;
+        if (!keep_parens_) arc.ilabel = arc.olabel = 0;
       }
       arc.nextstate = d_p;
       ofst_->AddArc(s_p, arc);
@@ -724,68 +693,63 @@ void PdtShortestPath<Arc, Queue>::GetPath() {
       kFstProperties);
 }
 
-
 // Finds transition with least weight between two states with label matching
 // paren_id and open/close paren type or a non-paren if kNoLabel.
-template<class Arc, class Queue>
-Arc PdtShortestPath<Arc, Queue>::GetPathArc(
-    SearchState s, SearchState d, Label paren_id, bool open_paren) {
+template <class Arc, class Queue>
+Arc PdtShortestPath<Arc, Queue>::GetPathArc(SearchState s, SearchState d,
+                                            Label paren_id, bool open_paren) {
   Arc path_arc = kNoArc;
-  for (ArcIterator< Fst<Arc> > aiter(*ifst_, s.state);
-       !aiter.Done();
+  for (ArcIterator<Fst<Arc>> aiter(*ifst_, s.state); !aiter.Done();
        aiter.Next()) {
     const Arc &arc = aiter.Value();
-    if (arc.nextstate != d.state)
-      continue;
+    if (arc.nextstate != d.state) continue;
     Label arc_paren_id = kNoLabel;
-    typename unordered_map<Label, Label>::const_iterator pit
-        = paren_id_map_.find(arc.ilabel);
+    typename std::unordered_map<Label, Label>::const_iterator pit =
+        paren_id_map_.find(arc.ilabel);
     if (pit != paren_id_map_.end()) {
       arc_paren_id = pit->second;
       bool arc_open_paren = arc.ilabel == parens_[arc_paren_id].first;
-      if (arc_open_paren != open_paren)
-        continue;
+      if (arc_open_paren != open_paren) continue;
     }
-    if (arc_paren_id != paren_id)
-      continue;
-    if (arc.weight == Plus(arc.weight, path_arc.weight))
-      path_arc = arc;
+    if (arc_paren_id != paren_id) continue;
+    if (arc.weight == Plus(arc.weight, path_arc.weight)) path_arc = arc;
   }
   if (path_arc.nextstate == kNoStateId) {
-    FSTERROR() << "PdtShortestPath::GetPathArc failed to find arc";
+    FSTERROR() << "PdtShortestPath::GetPathArc: Failed to find arc";
     error_ = true;
   }
   return path_arc;
 }
 
-template<class Arc, class Queue>
-const Arc PdtShortestPath<Arc, Queue>::kNoArc
-    = Arc(kNoLabel, kNoLabel, Weight::Zero(), kNoStateId);
+template <class Arc, class Queue>
+const Arc PdtShortestPath<Arc, Queue>::kNoArc = Arc(kNoLabel, kNoLabel,
+                                                    Weight::Zero(), kNoStateId);
 
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 const uint8 PdtShortestPath<Arc, Queue>::kEnqueued = 0x10;
 
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 const uint8 PdtShortestPath<Arc, Queue>::kExpanded = 0x20;
 
-template<class Arc, class Queue>
+template <class Arc, class Queue>
 const uint8 PdtShortestPath<Arc, Queue>::kFinished = 0x40;
 
-template<class Arc, class Queue>
-void ShortestPath(const Fst<Arc> &ifst,
-                  const vector<pair<typename Arc::Label,
-                                    typename Arc::Label> > &parens,
-                  MutableFst<Arc> *ofst,
-                  const PdtShortestPathOptions<Arc, Queue> &opts) {
+template <class Arc, class Queue>
+void ShortestPath(
+    const Fst<Arc> &ifst,
+    const std::vector<std::pair<typename Arc::Label, typename Arc::Label>>
+        &parens,
+    MutableFst<Arc> *ofst, const PdtShortestPathOptions<Arc, Queue> &opts) {
   PdtShortestPath<Arc, Queue> psp(ifst, parens, opts);
   psp.ShortestPath(ofst);
 }
 
-template<class Arc>
-void ShortestPath(const Fst<Arc> &ifst,
-                  const vector<pair<typename Arc::Label,
-                                    typename Arc::Label> > &parens,
-                  MutableFst<Arc> *ofst) {
+template <class Arc>
+void ShortestPath(
+    const Fst<Arc> &ifst,
+    const std::vector<std::pair<typename Arc::Label, typename Arc::Label>>
+        &parens,
+    MutableFst<Arc> *ofst) {
   typedef FifoQueue<typename Arc::StateId> Queue;
   PdtShortestPathOptions<Arc, Queue> opts;
   PdtShortestPath<Arc, Queue> psp(ifst, parens, opts);

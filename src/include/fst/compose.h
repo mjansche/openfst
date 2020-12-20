@@ -1,22 +1,7 @@
-// compose.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Class to compute the composition of two FSTs
+// Class to compute the composition of two FSTs.
 
 #ifndef FST_LIB_COMPOSE_H__
 #define FST_LIB_COMPOSE_H__
@@ -24,7 +9,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-using std::vector;
 
 #include <fst/cache.h>
 #include <fst/compose-filter.h>
@@ -46,25 +30,25 @@ namespace fst {
 // types and a shared matcher type M for Fst<Arc>. This should be
 // adequate for most applications, giving a reasonable tradeoff
 // between efficiency and code sharing (but see ComposeFstImplOptions).
-template <class A,
-          class M = Matcher<Fst<A> >,
+template <class A, class M = Matcher<Fst<A>>,
           class F = SequenceComposeFilter<M>,
-          class T = GenericComposeStateTable<A, typename F::FilterState> >
+          class T = GenericComposeStateTable<A, typename F::FilterState>>
 struct ComposeFstOptions : public CacheOptions {
-  M *matcher1;      // FST1 matcher (see matcher.h)
-  M *matcher2;      // FST2 matcher
-  F *filter;        // Composition filter (see compose-filter.h)
-  T *state_table;   // Composition state table (see compose-state-table.h)
+  M *matcher1;     // FST1 matcher (see matcher.h)
+  M *matcher2;     // FST2 matcher
+  F *filter;       // Composition filter (see compose-filter.h)
+  T *state_table;  // Composition state table (see compose-state-table.h)
 
-  explicit ComposeFstOptions(const CacheOptions &opts,
-                             M *mat1 = 0, M *mat2 = 0,
-                             F *filt = 0, T *sttable= 0)
-      : CacheOptions(opts), matcher1(mat1), matcher2(mat2),
-        filter(filt), state_table(sttable) {}
+  explicit ComposeFstOptions(const CacheOptions &opts, M *mat1 = 0, M *mat2 = 0,
+                             F *filt = 0, T *sttable = 0)
+      : CacheOptions(opts),
+        matcher1(mat1),
+        matcher2(mat2),
+        filter(filt),
+        state_table(sttable) {}
 
   ComposeFstOptions() : matcher1(0), matcher2(0), filter(0), state_table(0) {}
 };
-
 
 // Delayed composition options templated on the two matcher types, the
 // composition filter, the composition state table and the cache
@@ -78,38 +62,46 @@ struct ComposeFstOptions : public CacheOptions {
 // code. This is for advanced use only in the most demanding or
 // specialized applications that can benefit from it (o.w. prefer
 // ComposeFstOptions).
-template <class M1, class M2,
-          class F = SequenceComposeFilter<M1, M2>,
+template <class M1, class M2, class F = SequenceComposeFilter<M1, M2>,
           class T = GenericComposeStateTable<typename M1::Arc,
                                              typename F::FilterState>,
-          class C = DefaultCacheStore<typename M1::Arc> >
+          class C = DefaultCacheStore<typename M1::Arc>>
 struct ComposeFstImplOptions : public CacheImplOptions<C> {
-  M1 *matcher1;     // FST1 matcher (see matcher.h)
-  M2 *matcher2;     // FST2 matcher
-  F *filter;        // Composition filter (see compose-filter.h)
-  T *state_table;   // Composition state table (see compose-state-table.h)
+  M1 *matcher1;    // FST1 matcher (see matcher.h)
+  M2 *matcher2;    // FST2 matcher
+  F *filter;       // Composition filter (see compose-filter.h)
+  T *state_table;  // Composition state table (see compose-state-table.h)
+  bool own_state_table;  // ComposeFstImpl takes ownership of 'state_table'?
 
   explicit ComposeFstImplOptions(const CacheOptions &opts,
                                  M1 *mat1 = 0, M2 *mat2 = 0,
-                                 F *filt = 0, T *sttable= 0)
-      : CacheImplOptions<C>(opts), matcher1(mat1), matcher2(mat2),
-        filter(filt), state_table(sttable) {}
+                                 F *filt = 0, T *sttable = 0)
+      : CacheImplOptions<C>(opts),
+        matcher1(mat1),
+        matcher2(mat2),
+        filter(filt),
+        state_table(sttable),
+        own_state_table(true) {}
 
   explicit ComposeFstImplOptions(const CacheImplOptions<C> &opts,
                                  M1 *mat1 = 0, M2 *mat2 = 0,
-                                 F *filt = 0, T *sttable= 0)
-      : CacheImplOptions<C>(opts), matcher1(mat1), matcher2(mat2),
-        filter(filt), state_table(sttable) {}
+                                 F *filt = 0, T *sttable = 0)
+      : CacheImplOptions<C>(opts),
+        matcher1(mat1),
+        matcher2(mat2),
+        filter(filt),
+        state_table(sttable),
+        own_state_table(true) {}
 
   ComposeFstImplOptions()
-      : matcher1(0), matcher2(0), filter(0), state_table(0) {}
+      : matcher1(0), matcher2(0), filter(0), state_table(0),
+        own_state_table(true) {}
 };
-
 
 // Implementation of delayed composition. This base class is
 // common to the variants with different matchers, composition filters
 // and state tables.
-template <class A, class C = DefaultCacheStore<A> >
+template <class A, class C = DefaultCacheStore<A>>
 class ComposeFstImplBase : public CacheBaseImpl<typename C::State, C> {
  public:
   typedef typename A::Label Label;
@@ -142,17 +134,16 @@ class ComposeFstImplBase : public CacheBaseImpl<typename C::State, C> {
     InitBase(fst1, fst2);
   }
 
-  ComposeFstImplBase(const ComposeFstImplBase<A, C> &impl)
-      : CImpl(impl, true) {
+  ComposeFstImplBase(const ComposeFstImplBase<A, C> &impl) : CImpl(impl, true) {
     SetType(impl.Type());
     SetProperties(impl.Properties(), kCopyProperties);
     SetInputSymbols(impl.InputSymbols());
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  virtual ComposeFstImplBase<A, C> *Copy() = 0;
+  virtual ComposeFstImplBase<A, C> *Copy() const = 0;
 
-  virtual ~ComposeFstImplBase() {}
+  ~ComposeFstImplBase() override {}
 
   StateId Start() {
     if (!HasStart()) {
@@ -175,26 +166,22 @@ class ComposeFstImplBase : public CacheBaseImpl<typename C::State, C> {
   virtual void Expand(StateId s) = 0;
 
   size_t NumArcs(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
+    if (!HasArcs(s)) Expand(s);
     return CImpl::NumArcs(s);
   }
 
   size_t NumInputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
+    if (!HasArcs(s)) Expand(s);
     return CImpl::NumInputEpsilons(s);
   }
 
   size_t NumOutputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
+    if (!HasArcs(s)) Expand(s);
     return CImpl::NumOutputEpsilons(s);
   }
 
   void InitArcIterator(StateId s, ArcIteratorData<A> *data) {
-    if (!HasArcs(s))
-      Expand(s);
+    if (!HasArcs(s)) Expand(s);
     CImpl::InitArcIterator(s, data);
   }
 
@@ -208,12 +195,11 @@ class ComposeFstImplBase : public CacheBaseImpl<typename C::State, C> {
   virtual StateId ComputeStart() = 0;
   virtual Weight ComputeFinal(StateId s) = 0;
 
-
   void InitBase(const Fst<A> &fst1, const Fst<A> &fst2) {
     SetType("compose");
 
     if (!CompatSymbols(fst2.InputSymbols(), fst1.OutputSymbols())) {
-      FSTERROR() << "ComposeFst: output symbol table of 1st argument "
+      FSTERROR() << "ComposeFst: Output symbol table of 1st argument "
                  << "does not match input symbol table of 2nd argument";
       SetProperties(kError, kError);
     }
@@ -263,27 +249,27 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
         fst1_(matcher1_->GetFst()),
         fst2_(matcher2_->GetFst()),
         state_table_(new T(*impl.state_table_)),
+        own_state_table_(true),
         match_type_(impl.match_type_) {}
 
-  ~ComposeFstImpl() {
+  ~ComposeFstImpl() override {
     delete filter_;
-    delete state_table_;
+    if (own_state_table_) delete state_table_;
   }
 
-  virtual ComposeFstImpl<C, F, T> *Copy() {
+  ComposeFstImpl<C, F, T> *Copy() const override {
     return new ComposeFstImpl<C, F, T>(*this);
   }
 
-  uint64 Properties() const { return Properties(kFstProperties); }
+  uint64 Properties() const override { return Properties(kFstProperties); }
 
   // Set error if found; return FST impl properties.
-  uint64 Properties(uint64 mask) const {
+  uint64 Properties(uint64 mask) const override {
     if ((mask & kError) &&
-        (fst1_.Properties(kError, false) ||
-         fst2_.Properties(kError, false) ||
+        (fst1_.Properties(kError, false) || fst2_.Properties(kError, false) ||
          (matcher1_->Properties(0) & kError) ||
          (matcher2_->Properties(0) & kError) |
-         (filter_->Properties(0) & kError) ||
+             (filter_->Properties(0) & kError) ||
          state_table_->Error())) {
       SetProperties(kError, kError);
     }
@@ -292,7 +278,7 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
 
   // Arranges it so that the first arg to OrderedExpand is the Fst
   // that will be matched on.
-  void Expand(StateId s) {
+  void Expand(StateId s) override {
     const StateTuple &tuple = state_table_->Tuple(s);
     const StateId s1 = tuple.StateId1();
     const StateId s2 = tuple.StateId2();
@@ -319,11 +305,11 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
   const T *GetStateTable() const { return state_table_; }
   T *GetStateTable() { return state_table_; }
 
-  virtual MatcherBase<Arc> *InitMatcher(const ComposeFst<Arc, C> &fst,
-                                        MatchType match_type) const {
-    uint64 test_props = match_type == MATCH_INPUT ?
-        kFstProperties & ~kILabelInvariantProperties :
-        kFstProperties & ~kOLabelInvariantProperties;
+  MatcherBase<Arc> *InitMatcher(const ComposeFst<Arc, C> &fst,
+                                MatchType match_type) const override {
+    uint64 test_props = match_type == MATCH_INPUT
+                            ? kFstProperties & ~kILabelInvariantProperties
+                            : kFstProperties & ~kOLabelInvariantProperties;
     // If both matchers support 'match_type' and we have
     // a guarantee that a call to 'filter_->FilterArc(arc1, arc2)' will
     // not modify the ilabel of arc1 when MATCH_INPUT or the olabel
@@ -343,14 +329,13 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
   // determines whether the input or output label of arcs at 'sb' is
   // the one to match on.
   template <class FST, class Matcher>
-  void OrderedExpand(StateId s, const Fst<Arc> &, StateId sa,
-                     const FST &fstb, StateId sb,
-                     Matcher *matchera,  bool match_input) {
+  void OrderedExpand(StateId s, const Fst<Arc> &, StateId sa, const FST &fstb,
+                     StateId sb, Matcher *matchera, bool match_input) {
     matchera->SetState(sa);
 
     // First process non-consuming symbols (e.g., epsilons) on FSTA.
     Arc loop(match_input ? 0 : kNoLabel, match_input ? kNoLabel : 0,
-           Weight::One(), sb);
+             Weight::One(), sb);
     MatchArc(s, matchera, loop, match_input);
 
     // Then process matches on FSTB.
@@ -362,59 +347,53 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
 
   // Matches a single transition from 'fstb' against 'fata' at 's'.
   template <class Matcher>
-  void MatchArc(StateId s, Matcher *matchera,
-                const Arc &arc, bool match_input) {
+  void MatchArc(StateId s, Matcher *matchera, const Arc &arc,
+                bool match_input) {
     if (matchera->Find(match_input ? arc.olabel : arc.ilabel)) {
       for (; !matchera->Done(); matchera->Next()) {
         Arc arca = matchera->Value();
         Arc arcb = arc;
         if (match_input) {
           const FilterState &f = filter_->FilterArc(&arcb, &arca);
-          if (f != FilterState::NoState())
-            AddArc(s, arcb, arca, f);
+          if (f != FilterState::NoState()) AddArc(s, arcb, arca, f);
         } else {
           const FilterState &f = filter_->FilterArc(&arca, &arcb);
-          if (f != FilterState::NoState())
-            AddArc(s, arca, arcb, f);
+          if (f != FilterState::NoState()) AddArc(s, arca, arcb, f);
         }
       }
     }
   }
 
   // Add a matching transition at 's'.
-   void AddArc(StateId s, const Arc &arc1, const Arc &arc2,
-               const FilterState &f) {
+  void AddArc(StateId s, const Arc &arc1, const Arc &arc2,
+              const FilterState &f) {
     StateTuple tuple(arc1.nextstate, arc2.nextstate, f);
     Arc oarc(arc1.ilabel, arc2.olabel, Times(arc1.weight, arc2.weight),
-           state_table_->FindState(tuple));
+             state_table_->FindState(tuple));
     CImpl::PushArc(s, oarc);
   }
 
-  StateId ComputeStart() {
+  StateId ComputeStart() override {
     StateId s1 = fst1_.Start();
-    if (s1 == kNoStateId)
-      return kNoStateId;
+    if (s1 == kNoStateId) return kNoStateId;
 
     StateId s2 = fst2_.Start();
-    if (s2 == kNoStateId)
-      return kNoStateId;
+    if (s2 == kNoStateId) return kNoStateId;
 
     const FilterState &f = filter_->Start();
     StateTuple tuple(s1, s2, f);
     return state_table_->FindState(tuple);
   }
 
-  Weight ComputeFinal(StateId s) {
+  Weight ComputeFinal(StateId s) override {
     const StateTuple &tuple = state_table_->Tuple(s);
     const StateId s1 = tuple.StateId1();
     Weight final1 = matcher1_->Final(s1);
-    if (final1 == Weight::Zero())
-      return final1;
+    if (final1 == Weight::Zero()) return final1;
 
     const StateId s2 = tuple.StateId2();
     Weight final2 = matcher2_->Final(s2);
-    if (final2 == Weight::Zero())
-      return final2;
+    if (final2 == Weight::Zero()) return final2;
 
     filter_->SetState(s1, s2, tuple.GetFilterState());
     filter_->FilterFinal(&final1, &final2);
@@ -433,13 +412,12 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
         ssize_t priority2 = matcher2_->Priority(s2);
 
         if (priority1 == kRequirePriority && priority2 == kRequirePriority) {
-          FSTERROR() << "ComposeFst: both sides can't require match";
+          FSTERROR() << "ComposeFst: Both sides can't require match";
           SetProperties(kError, kError);
           return true;
         }
 
-        if (priority1 == kRequirePriority)
-          return false;
+        if (priority1 == kRequirePriority) return false;
         if (priority2 == kRequirePriority) {
           return true;
         }
@@ -457,6 +435,7 @@ class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
   const FST1 &fst1_;
   const FST2 &fst2_;
   T *state_table_;
+  bool own_state_table_;
 
   MatchType match_type_;
 
@@ -469,17 +448,16 @@ ComposeFstImpl<C, F, T>::ComposeFstImpl(
     const FST1 &fst1, const FST2 &fst2,
     const ComposeFstImplOptions<Mat1, Mat2, F, T, C> &opts)
     : ComposeFstImplBase<Arc, C>(fst1, fst2, opts),
-      filter_(opts.filter ? opts.filter :
-              new F(fst1, fst2, opts.matcher1, opts.matcher2)),
+      filter_(opts.filter ? opts.filter
+                          : new F(fst1, fst2, opts.matcher1, opts.matcher2)),
       matcher1_(filter_->GetMatcher1()),
       matcher2_(filter_->GetMatcher2()),
       fst1_(matcher1_->GetFst()),
       fst2_(matcher2_->GetFst()),
-      state_table_(opts.state_table ? opts.state_table :
-                   new T(fst1_, fst2_)) {
+      state_table_(opts.state_table ? opts.state_table : new T(fst1_, fst2_)),
+      own_state_table_(opts.state_table ? opts.own_state_table : true) {
   SetMatchType();
-  if (match_type_ == MATCH_NONE)
-    SetProperties(kError, kError);
+  if (match_type_ == MATCH_NONE) SetProperties(kError, kError);
 
   uint64 fprops1 = fst1.Properties(kFstProperties, false);
   uint64 fprops2 = fst2.Properties(kFstProperties, false);
@@ -509,7 +487,7 @@ void ComposeFstImpl<C, F, T>::SetMatchType() {
   // Finds which sides to match on (favoring minimal testing of capabilities).
   MatchType type1 = matcher1_->Type(false);
   MatchType type2 = matcher2_->Type(false);
-  if (type1 == MATCH_OUTPUT && type2  == MATCH_INPUT) {
+  if (type1 == MATCH_OUTPUT && type2 == MATCH_INPUT) {
     match_type_ = MATCH_BOTH;
   } else if (type1 == MATCH_OUTPUT) {
     match_type_ = MATCH_OUTPUT;
@@ -561,10 +539,10 @@ void ComposeFstImpl<C, F, T>::SetMatchType() {
 // reference counting, delegating most methods to ImplToFst.
 // The type C specifies the cache store (default declared in fst-decl.h).
 template <class A, class C /* = DefaultCacheStore<A> */>
-class ComposeFst : public ImplToFst< ComposeFstImplBase<A, C> > {
+class ComposeFst : public ImplToFst<ComposeFstImplBase<A, C>> {
  public:
-  friend class ArcIterator< ComposeFst<A, C> >;
-  friend class StateIterator< ComposeFst<A, C> >;
+  friend class ArcIterator<ComposeFst<A, C>>;
+  friend class StateIterator<ComposeFst<A, C>>;
 
   typedef A Arc;
   typedef C Store;
@@ -573,8 +551,6 @@ class ComposeFst : public ImplToFst< ComposeFstImplBase<A, C> > {
   typedef typename C::State State;
 
   typedef ComposeFstImplBase<A, C> Impl;
-
-  using ImplToFst<Impl>::SetImpl;
 
   // Compose specifying only caching options.
   ComposeFst(const Fst<A> &fst1, const Fst<A> &fst2,
@@ -601,37 +577,37 @@ class ComposeFst : public ImplToFst< ComposeFstImplBase<A, C> > {
 
   // See Fst<>::Copy() for doc.
   ComposeFst(const ComposeFst<A, C> &fst, bool safe = false)
-      : ImplToFst<Impl>() {
-    if (safe)
-      SetImpl(fst.GetImpl()->Copy());
-    else
-      SetImpl(fst.GetImpl(), false);
-  }
+      : ImplToFst<Impl>(safe ? std::shared_ptr<Impl>(fst.GetImpl()->Copy())
+                             : fst.GetSharedImpl()) {}
 
   // Get a copy of this ComposeFst. See Fst<>::Copy() for further doc.
-  virtual ComposeFst<A, C> *Copy(bool safe = false) const {
+  ComposeFst<A, C> *Copy(bool safe = false) const override {
     return new ComposeFst<A, C>(*this, safe);
   }
 
-  virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
+  inline void InitStateIterator(StateIteratorData<A> *data) const override;
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    GetImpl()->InitArcIterator(s, data);
+  void InitArcIterator(StateId s, ArcIteratorData<A> *data) const override {
+    GetMutableImpl()->InitArcIterator(s, data);
   }
 
-  virtual MatcherBase<A> *InitMatcher(MatchType match_type) const {
+  MatcherBase<A> *InitMatcher(MatchType match_type) const override {
     return GetImpl()->InitMatcher(*this, match_type);
   }
 
  protected:
-  ComposeFst() {}
+  using ImplToFst<Impl>::GetImpl;
+  using ImplToFst<Impl>::GetMutableImpl;
+
+  explicit ComposeFst(std::shared_ptr<Impl> impl) : ImplToFst<Impl>(impl) {}
 
   // Create compose implementation specifying two matcher types.
   template <class M1, class M2, class F, class T>
-  static Impl *CreateBase2(
+  static std::shared_ptr<Impl> CreateBase2(
       const typename M1::FST &fst1, const typename M2::FST &fst2,
       const ComposeFstImplOptions<M1, M2, F, T, C> &opts) {
-    Impl *impl = new ComposeFstImpl<C, F, T>(fst1, fst2, opts);
+    std::shared_ptr<Impl> impl =
+        std::make_shared<ComposeFstImpl<C, F, T>>(fst1, fst2, opts);
     if (!(Weight::Properties() & kCommutative)) {
       int64 props1 = fst1.Properties(kUnweighted, true);
       int64 props2 = fst2.Properties(kUnweighted, true);
@@ -647,30 +623,31 @@ class ComposeFst : public ImplToFst< ComposeFstImplBase<A, C> > {
   // Create compose implementation specifying one matcher type.
   //  Requires input Fsts and matcher FST type (M::FST) be Fst<A>
   template <class M, class F, class T>
-  static Impl *CreateBase1(const Fst<A> &fst1, const Fst<A> &fst2,
-                           const ComposeFstOptions<A, M, F, T> &opts) {
-    ComposeFstImplOptions<M, M, F, T, C> nopts(opts, opts.matcher1,
-                                               opts.matcher2,
-                                               opts.filter, opts.state_table);
+  static std::shared_ptr<Impl> CreateBase1(
+      const Fst<A> &fst1, const Fst<A> &fst2,
+      const ComposeFstOptions<A, M, F, T> &opts) {
+    ComposeFstImplOptions<M, M, F, T, C> nopts(
+        opts, opts.matcher1, opts.matcher2, opts.filter, opts.state_table);
     return CreateBase2(fst1, fst2, nopts);
   }
 
   // Create compose implementation specifying no matcher type.
-  static Impl *CreateBase(const Fst<A> &fst1, const Fst<A> &fst2,
-                          const CacheOptions &opts) {
+  static std::shared_ptr<Impl> CreateBase(const Fst<A> &fst1,
+                                          const Fst<A> &fst2,
+                                          const CacheOptions &opts) {
     switch (LookAheadMatchType(fst1, fst2)) {  // Check for lookahead matchers
       default:
-      case MATCH_NONE: {     // Default composition (no look-ahead)
+      case MATCH_NONE: {  // Default composition (no look-ahead)
         ComposeFstOptions<Arc> nopts(opts);
         return CreateBase1(fst1, fst2, nopts);
       }
-      case MATCH_OUTPUT: {   // Lookahead on fst1
+      case MATCH_OUTPUT: {  // Lookahead on fst1
         typedef typename DefaultLookAhead<Arc, MATCH_OUTPUT>::FstMatcher M;
         typedef typename DefaultLookAhead<Arc, MATCH_OUTPUT>::ComposeFilter F;
         ComposeFstOptions<Arc, M, F> nopts(opts);
         return CreateBase1(fst1, fst2, nopts);
       }
-      case MATCH_INPUT: {    // Lookahead on fst2
+      case MATCH_INPUT: {  // Lookahead on fst2
         typedef typename DefaultLookAhead<Arc, MATCH_INPUT>::FstMatcher M;
         typedef typename DefaultLookAhead<Arc, MATCH_INPUT>::ComposeFilter F;
         ComposeFstOptions<Arc, M, F> nopts(opts);
@@ -680,45 +657,39 @@ class ComposeFst : public ImplToFst< ComposeFstImplBase<A, C> > {
   }
 
  private:
-  // Makes visible to friends.
-  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
-
   void operator=(const ComposeFst<A, C> &fst);  // disallow
 };
 
-
 // Specialization for ComposeFst.
 template <class A, class C>
-class StateIterator< ComposeFst<A, C> >
-    : public CacheStateIterator<ComposeFst<A, C> > {
+class StateIterator<ComposeFst<A, C>>
+    : public CacheStateIterator<ComposeFst<A, C>> {
  public:
   explicit StateIterator(const ComposeFst<A, C> &fst)
-      : CacheStateIterator<ComposeFst<A, C> >(fst, fst.GetImpl()) {}
+      : CacheStateIterator<ComposeFst<A, C>>(fst, fst.GetMutableImpl()) {}
 };
-
 
 // Specialization for ComposeFst.
 template <class A, class C>
-class ArcIterator< ComposeFst<A, C> >
-    : public CacheArcIterator<ComposeFst<A, C> > {
+class ArcIterator<ComposeFst<A, C>>
+    : public CacheArcIterator<ComposeFst<A, C>> {
  public:
   typedef typename A::StateId StateId;
 
   ArcIterator(const ComposeFst<A, C> &fst, StateId s)
-      : CacheArcIterator<ComposeFst<A, C> >(fst.GetImpl(), s) {
-    if (!fst.GetImpl()->HasArcs(s))
-      fst.GetImpl()->Expand(s);
+      : CacheArcIterator<ComposeFst<A, C>>(fst.GetMutableImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
-template <class A, class C> inline
-void ComposeFst<A, C>::InitStateIterator(StateIteratorData<A> *data) const {
-  data->base = new StateIterator< ComposeFst<A, C> >(*this);
+template <class A, class C>
+inline void ComposeFst<A, C>::InitStateIterator(
+    StateIteratorData<A> *data) const {
+  data->base = new StateIterator<ComposeFst<A, C>>(*this);
 }
-
 
 // Specialized matcher for ComposeFst.
 // Supports MATCH_INPUT (resp. MATCH_OUTPUT) iff the underlying
@@ -736,8 +707,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
   typedef typename T::StateTuple StateTuple;
 
   ComposeFstMatcher(const ComposeFst<Arc, C> &fst,
-                    const ComposeFstImpl<C, F, T> *impl,
-                    MatchType match_type)
+                    const ComposeFstImpl<C, F, T> *impl, MatchType match_type)
       : fst_(fst),
         impl_(impl),
         s_(kNoStateId),
@@ -747,8 +717,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
         current_loop_(false),
         loop_(kNoLabel, 0, Arc::Weight::One(), kNoStateId),
         error_(false) {
-    if (match_type == MATCH_OUTPUT)
-      swap(loop_.ilabel, loop_.olabel);
+    if (match_type == MATCH_OUTPUT) std::swap(loop_.ilabel, loop_.olabel);
   }
 
   ComposeFstMatcher(const ComposeFstMatcher<C, F, T> &matcher,
@@ -763,47 +732,44 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
         loop_(fst::kNoLabel, 0, Arc::Weight::One(), fst::kNoStateId),
         error_(matcher.error_) {
     if (safe == true) {
-      FSTERROR() << "ComposeFstMatcher: safe copy not supported";
+      FSTERROR() << "ComposeFstMatcher: Safe copy not supported";
       error_ = true;
     }
-    if (match_type_ == MATCH_OUTPUT)
-      swap(loop_.ilabel, loop_.olabel);
+    if (match_type_ == MATCH_OUTPUT) std::swap(loop_.ilabel, loop_.olabel);
   }
 
-  virtual ComposeFstMatcher<C, F, T> *Copy(bool safe = false) const {
+  ComposeFstMatcher<C, F, T> *Copy(bool safe = false) const override {
     return new ComposeFstMatcher<C, F, T>(*this, safe);
   }
 
-  virtual ~ComposeFstMatcher() {
+  ~ComposeFstMatcher() override {
     delete matcher1_;
     delete matcher2_;
   }
 
-  virtual MatchType Type(bool test) const {
+  MatchType Type(bool test) const override {
     if ((matcher1_->Type(test) == MATCH_NONE) ||
         (matcher2_->Type(test) == MATCH_NONE)) {
       return MATCH_NONE;
     }
-    if (((matcher1_->Type(test) == MATCH_UNKNOWN)  &&
+    if (((matcher1_->Type(test) == MATCH_UNKNOWN) &&
          (matcher2_->Type(test) == MATCH_UNKNOWN)) ||
-        ((matcher1_->Type(test) == MATCH_UNKNOWN)  &&
+        ((matcher1_->Type(test) == MATCH_UNKNOWN) &&
          (matcher2_->Type(test) == match_type_)) ||
-        ((matcher1_->Type(test) == match_type_)  &&
+        ((matcher1_->Type(test) == match_type_) &&
          (matcher2_->Type(test) == MATCH_UNKNOWN))) {
       return MATCH_UNKNOWN;
     }
-    if ((matcher1_->Type(test) == match_type_)  &&
+    if ((matcher1_->Type(test) == match_type_) &&
         (matcher2_->Type(test) == match_type_)) {
       return match_type_;
     }
     return MATCH_NONE;
   }
 
-  virtual const Fst<Arc> &GetFst() const {
-    return fst_;
-  }
+  const Fst<Arc> &GetFst() const override { return fst_; }
 
-  virtual uint64 Properties(uint64 inprops) const {
+  uint64 Properties(uint64 inprops) const override {
     uint64 outprops = inprops;
     if (error_) outprops |= kError;
     return outprops;
@@ -812,8 +778,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
   // Processes a match with the filter and creates resulting arc.
   bool MatchArc(StateId s, Arc arc1, Arc arc2) {
     const FilterState &f = impl_->filter_->FilterArc(&arc1, &arc2);
-    if (f == FilterState::NoState())
-      return false;
+    if (f == FilterState::NoState()) return false;
     StateTuple tuple(arc1.nextstate, arc2.nextstate, f);
     arc_.ilabel = arc1.ilabel;
     arc_.olabel = arc2.olabel;
@@ -826,8 +791,8 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
   template <class MatcherA, class MatcherB>
   bool FindLabel(Label label, MatcherA *matchera, MatcherB *matcherb) {
     if (matchera->Find(label)) {
-      matcherb->Find(match_type_ == MATCH_INPUT ?
-                     matchera->Value().olabel : matchera->Value().ilabel);
+      matcherb->Find(match_type_ == MATCH_INPUT ? matchera->Value().olabel
+                                                : matchera->Value().ilabel);
       return FindNext(matchera, matcherb);
     }
     return false;
@@ -847,9 +812,9 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
         // such that there is a match for y' on 'matcherb'.
         matchera->Next();
         while (!matchera->Done() &&
-               !matcherb->Find(
-                   match_type_ == MATCH_INPUT ?
-                   matchera->Value().olabel : matchera->Value().ilabel)) {
+               !matcherb->Find(match_type_ == MATCH_INPUT
+                                   ? matchera->Value().olabel
+                                   : matchera->Value().ilabel)) {
           matchera->Next();
         }
       }
@@ -867,8 +832,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
         // If combining these two arcs is allowed by the filter
         // (hence resulting in an arc (x,z')) return true.
         // returning. Otherwise consider next match for y' on 'matcherb'.
-        if (MatchArc(s_,
-                     match_type_ == MATCH_INPUT ? arca : arcb,
+        if (MatchArc(s_, match_type_ == MATCH_INPUT ? arca : arcb,
                      match_type_ == MATCH_INPUT ? arcb : arca)) {
           return true;
         }
@@ -879,7 +843,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
   }
 
  private:
-  virtual void SetState_(StateId s) {
+  void SetState_(StateId s) override {
     if (s_ == s) return;
     s_ = s;
     StateTuple tuple = impl_->state_table_->Tuple(s);
@@ -888,7 +852,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
     loop_.nextstate = s_;
   }
 
-  virtual bool Find_(Label label) {
+  bool Find_(Label label) override {
     bool found = false;
     current_loop_ = false;
     if (label == 0) {
@@ -902,15 +866,13 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
     return found;
   }
 
-  virtual bool Done_() const {
-    return !current_loop_ &&  matcher1_->Done() && matcher2_->Done();
+  bool Done_() const override {
+    return !current_loop_ && matcher1_->Done() && matcher2_->Done();
   }
 
-  virtual const Arc &Value_() const {
-    return current_loop_ ? loop_ : arc_;
-  }
+  const Arc &Value_() const override { return current_loop_ ? loop_ : arc_; }
 
-  virtual void Next_() {
+  void Next_() override {
     if (current_loop_)
       current_loop_ = false;
     else if (match_type_ == MATCH_INPUT)
@@ -919,7 +881,7 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
       FindNext(matcher2_, matcher1_);
   }
 
-  virtual ssize_t Priority_(StateId s) { return fst_.NumArcs(s); }
+  ssize_t Priority_(StateId s) override { return fst_.NumArcs(s); }
 
  private:
   const ComposeFst<Arc, C> &fst_;
@@ -934,15 +896,20 @@ class ComposeFstMatcher : public MatcherBase<typename C::Arc> {
   bool error_;
 };
 
-
 // Useful alias when using StdArc.
 typedef ComposeFst<StdArc> StdComposeFst;
 
-enum ComposeFilter { AUTO_FILTER, NULL_FILTER, SEQUENCE_FILTER,
-                     ALT_SEQUENCE_FILTER, MATCH_FILTER };
+enum ComposeFilter {
+  AUTO_FILTER,
+  NULL_FILTER,
+  TRIVIAL_FILTER,
+  SEQUENCE_FILTER,
+  ALT_SEQUENCE_FILTER,
+  MATCH_FILTER
+};
 
 struct ComposeOptions {
-  bool connect;  // Connect output
+  bool connect;               // Connect output
   ComposeFilter filter_type;  // Which pre-defined filter to use
 
   ComposeOptions(bool c, ComposeFilter ft = AUTO_FILTER)
@@ -982,32 +949,35 @@ template <class Arc>
 void Compose(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
              MutableFst<Arc> *ofst,
              const ComposeOptions &opts = ComposeOptions()) {
-  typedef Matcher< Fst<Arc> > M;
+  typedef Matcher<Fst<Arc>> M;
 
   if (opts.filter_type == AUTO_FILTER) {
-     CacheOptions nopts;
-     nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
-     *ofst = ComposeFst<Arc>(ifst1, ifst2, nopts);
+    CacheOptions nopts;
+    nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = ComposeFst<Arc>(ifst1, ifst2, nopts);
   } else if (opts.filter_type == NULL_FILTER) {
-    ComposeFstOptions<Arc, M,  NullComposeFilter<M> > copts;
+    ComposeFstOptions<Arc, M, NullComposeFilter<M>> copts;
     copts.gc_limit = 0;  // Cache only the last state for fastest copy.
     *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
   } else if (opts.filter_type == SEQUENCE_FILTER) {
-    ComposeFstOptions<Arc, M,  SequenceComposeFilter<M> > copts;
+    ComposeFstOptions<Arc, M, SequenceComposeFilter<M>> copts;
     copts.gc_limit = 0;  // Cache only the last state for fastest copy.
     *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
   } else if (opts.filter_type == ALT_SEQUENCE_FILTER) {
-    ComposeFstOptions<Arc, M,  AltSequenceComposeFilter<M> > copts;
+    ComposeFstOptions<Arc, M, AltSequenceComposeFilter<M>> copts;
     copts.gc_limit = 0;  // Cache only the last state for fastest copy.
     *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
   } else if (opts.filter_type == MATCH_FILTER) {
-    ComposeFstOptions<Arc, M,  MatchComposeFilter<M> > copts;
+    ComposeFstOptions<Arc, M, MatchComposeFilter<M>> copts;
+    copts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
+  } else if (opts.filter_type == TRIVIAL_FILTER) {
+    ComposeFstOptions<Arc, M, TrivialComposeFilter<M>> copts;
     copts.gc_limit = 0;  // Cache only the last state for fastest copy.
     *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
   }
 
-  if (opts.connect)
-    Connect(ofst);
+  if (opts.connect) Connect(ofst);
 }
 
 }  // namespace fst

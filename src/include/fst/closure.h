@@ -1,29 +1,13 @@
-// closure.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Functions and classes to compute the concatenative closure of an Fst.
+// Functions and classes to compute the concatenative closure of an FST.
 
 #ifndef FST_LIB_CLOSURE_H__
 #define FST_LIB_CLOSURE_H__
 
-#include <vector>
-using std::vector;
 #include <algorithm>
+#include <vector>
 
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
@@ -42,7 +26,7 @@ namespace fst {
 // - Time: O(V)
 // - Space: O(V)
 // where V = # of states.
-template<class Arc>
+template <class Arc>
 void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
@@ -50,21 +34,18 @@ void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
 
   uint64 props = fst->Properties(kFstProperties, false);
   StateId start = fst->Start();
-  for (StateIterator< MutableFst<Arc> > siter(*fst);
-       !siter.Done();
+  for (StateIterator<MutableFst<Arc>> siter(*fst); !siter.Done();
        siter.Next()) {
     StateId s = siter.Value();
     Weight final = fst->Final(s);
-    if (final != Weight::Zero())
-      fst->AddArc(s, Arc(0, 0, final, start));
+    if (final != Weight::Zero()) fst->AddArc(s, Arc(0, 0, final, start));
   }
   if (closure_type == CLOSURE_STAR) {
     fst->ReserveStates(fst->NumStates() + 1);
     StateId nstart = fst->AddState();
     fst->SetStart(nstart);
     fst->SetFinal(nstart, Weight::One());
-    if (start != kNoLabel)
-      fst->AddArc(nstart, Arc(0, 0, Weight::One(), start));
+    if (start != kNoLabel) fst->AddArc(nstart, Arc(0, 0, Weight::One(), start));
   }
   fst->SetProperties(ClosureProperties(props, closure_type == CLOSURE_STAR),
                      kFstProperties);
@@ -72,11 +53,10 @@ void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
 
 // Computes the concatenative closure. This version modifies its
 // RationalFst input.
-template<class Arc>
+template <class Arc>
 void Closure(RationalFst<Arc> *fst, ClosureType closure_type) {
-  fst->GetImpl()->AddClosure(closure_type);
+  fst->GetMutableImpl()->AddClosure(closure_type);
 }
-
 
 struct ClosureFstOptions : RationalFstOptions {
   ClosureType type;
@@ -86,7 +66,6 @@ struct ClosureFstOptions : RationalFstOptions {
   explicit ClosureFstOptions(ClosureType t) : type(t) {}
   ClosureFstOptions() : type(CLOSURE_STAR) {}
 };
-
 
 // Computes the concatenative closure. This version is a delayed
 // Fst. If FST transduces string x to y with weight a, then the
@@ -103,17 +82,15 @@ struct ClosureFstOptions : RationalFstOptions {
 template <class A>
 class ClosureFst : public RationalFst<A> {
  public:
-  using ImplToFst< RationalFstImpl<A> >::GetImpl;
-
   typedef A Arc;
 
   ClosureFst(const Fst<A> &fst, ClosureType closure_type) {
-    GetImpl()->InitClosure(fst, closure_type);
+    GetMutableImpl()->InitClosure(fst, closure_type);
   }
 
   ClosureFst(const Fst<A> &fst, const ClosureFstOptions &opts)
       : RationalFst<A>(opts) {
-    GetImpl()->InitClosure(fst, opts.type);
+    GetMutableImpl()->InitClosure(fst, opts.type);
   }
 
   // See Fst<>::Copy() for doc.
@@ -121,31 +98,32 @@ class ClosureFst : public RationalFst<A> {
       : RationalFst<A>(fst, safe) {}
 
   // Get a copy of this ClosureFst. See Fst<>::Copy() for further doc.
-  virtual ClosureFst<A> *Copy(bool safe = false) const {
+  ClosureFst<A> *Copy(bool safe = false) const override {
     return new ClosureFst<A>(*this, safe);
   }
-};
 
+ private:
+  using ImplToFst<RationalFstImpl<A>>::GetImpl;
+  using ImplToFst<RationalFstImpl<A>>::GetMutableImpl;
+};
 
 // Specialization for ClosureFst.
 template <class A>
-class StateIterator< ClosureFst<A> > : public StateIterator< RationalFst<A> > {
+class StateIterator<ClosureFst<A>> : public StateIterator<RationalFst<A>> {
  public:
   explicit StateIterator(const ClosureFst<A> &fst)
-      : StateIterator< RationalFst<A> >(fst) {}
+      : StateIterator<RationalFst<A>>(fst) {}
 };
-
 
 // Specialization for ClosureFst.
 template <class A>
-class ArcIterator< ClosureFst<A> > : public ArcIterator< RationalFst<A> > {
+class ArcIterator<ClosureFst<A>> : public ArcIterator<RationalFst<A>> {
  public:
   typedef typename A::StateId StateId;
 
   ArcIterator(const ClosureFst<A> &fst, StateId s)
-      : ArcIterator< RationalFst<A> >(fst, s) {}
+      : ArcIterator<RationalFst<A>>(fst, s) {}
 };
-
 
 // Useful alias when using StdArc.
 typedef ClosureFst<StdArc> StdClosureFst;

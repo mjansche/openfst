@@ -1,32 +1,15 @@
-// test-properties.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Functions to manipulate and test property bits
+// Functions to manipulate and test property bits.
 
 #ifndef FST_LIB_TEST_PROPERTIES_H__
 #define FST_LIB_TEST_PROPERTIES_H__
 
 #include <unordered_set>
-using std::unordered_set;
-using std::unordered_multiset;
 
-#include <fst/dfs-visit.h>
 #include <fst/connect.h>
+#include <fst/dfs-visit.h>
 
 
 DECLARE_bool(fst_verify_properties);
@@ -38,8 +21,8 @@ namespace fst {
 // returned set iff either corresponding input bit is set.
 inline uint64 KnownProperties(uint64 props) {
   return kBinaryProperties | (props & kTrinaryProperties) |
-    ((props & kPosTrinaryProperties) << 1) |
-    ((props & kNegTrinaryProperties) >> 1);
+         ((props & kPosTrinaryProperties) << 1) |
+         ((props & kNegTrinaryProperties) >> 1);
 }
 
 // Tests compatibility between two sets of properties
@@ -52,7 +35,7 @@ inline bool CompatProperties(uint64 props1, uint64 props2) {
     uint64 prop = 1;
     for (int i = 0; i < 64; ++i, prop <<= 1)
       if (prop & incompat_props)
-        LOG(ERROR) << "CompatProperties: mismatch: " << PropertyNames[i]
+        LOG(ERROR) << "CompatProperties: Mismatch: " << PropertyNames[i]
                    << ": props1 = " << (props1 & prop ? "true" : "false")
                    << ", props2 = " << (props2 & prop ? "true" : "false");
     return false;
@@ -70,9 +53,11 @@ inline bool CompatProperties(uint64 props1, uint64 props2) {
 // known properties (whether true or false) determined by this
 // operation will be assigned to the the value pointed to by KNOWN.
 // If 'use_stored' is true, pre-computed FST properties may be used
-// when possible. This routine is seldom called directly; instead it
-// is used to implement fst.Properties(mask, true).
-template<class Arc>
+// when possible. 'mask & required_mask' is used to determine whether
+// the stored propertoes can be used.
+// This routine is seldom called directly; instead it is used to implement
+// fst.Properties(mask, true).
+template <class Arc>
 uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
                          bool use_stored) {
   typedef typename Arc::Label Label;
@@ -86,7 +71,7 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
     uint64 known_props = KnownProperties(fst_props);
     // If FST contains required info, return it.
     if ((known_props & mask) == mask) {
-      *known = known_props;
+      if (known) *known = known_props;
       return fst_props;
     }
   }
@@ -100,43 +85,43 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
   // that need a DFS here, since we otherwise would like to avoid a DFS
   // since its stack could grow large.
   uint64 dfs_props = kCyclic | kAcyclic | kInitialCyclic | kInitialAcyclic |
-                     kAccessible | kNotAccessible |
-                     kCoAccessible | kNotCoAccessible;
-  if (mask & dfs_props) {
-    SccVisitor<Arc> scc_visitor(&comp_props);
+                     kAccessible | kNotAccessible | kCoAccessible |
+                     kNotCoAccessible;
+  std::vector<StateId> scc;
+  if (mask & (dfs_props | kWeightedCycles | kUnweightedCycles)) {
+    SccVisitor<Arc> scc_visitor(&scc, nullptr, nullptr, &comp_props);
     DfsVisit(fst, &scc_visitor);
   }
 
   // Compute any remaining trinary properties via a state and arcs iterations
   if (mask & ~(kBinaryProperties | dfs_props)) {
     comp_props |= kAcceptor | kNoEpsilons | kNoIEpsilons | kNoOEpsilons |
-        kILabelSorted | kOLabelSorted | kUnweighted | kTopSorted | kString;
+                  kILabelSorted | kOLabelSorted | kUnweighted | kTopSorted |
+                  kString;
     if (mask & (kIDeterministic | kNonIDeterministic))
       comp_props |= kIDeterministic;
     if (mask & (kODeterministic | kNonODeterministic))
       comp_props |= kODeterministic;
+    if (mask & (dfs_props | kWeightedCycles | kUnweightedCycles))
+      comp_props |= kUnweightedCycles;
 
-    unordered_set<Label> *ilabels = 0;
-    unordered_set<Label> *olabels = 0;
+    std::unordered_set<Label> *ilabels = 0;
+    std::unordered_set<Label> *olabels = 0;
 
     StateId nfinal = 0;
-    for (StateIterator< Fst<Arc> > siter(fst);
-         !siter.Done();
-         siter.Next()) {
+    for (StateIterator<Fst<Arc>> siter(fst); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
 
       Arc prev_arc;
       // Create these only if we need to
       if (mask & (kIDeterministic | kNonIDeterministic))
-        ilabels = new unordered_set<Label>;
+        ilabels = new std::unordered_set<Label>;
       if (mask & (kODeterministic | kNonODeterministic))
-        olabels = new unordered_set<Label>;
+        olabels = new std::unordered_set<Label>;
 
       bool first_arc = true;
-      for (ArcIterator< Fst<Arc> > aiter(fst, s);
-           !aiter.Done();
-           aiter.Next()) {
-        const Arc &arc =aiter.Value();
+      for (ArcIterator<Fst<Arc>> aiter(fst, s); !aiter.Done(); aiter.Next()) {
+        const Arc &arc = aiter.Value();
 
         if (ilabels && ilabels->find(arc.ilabel) != ilabels->end()) {
           comp_props |= kNonIDeterministic;
@@ -175,6 +160,11 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
         if (arc.weight != Weight::One() && arc.weight != Weight::Zero()) {
           comp_props |= kWeighted;
           comp_props &= ~kUnweighted;
+          if ((comp_props & kUnweightedCycles) &&
+              scc[s] == scc[arc.nextstate]) {
+            comp_props |= kWeightedCycles;
+            comp_props &= ~kUnweightedCycles;
+          }
         }
         if (arc.nextstate <= s) {
           comp_props |= kNotTopSorted;
@@ -186,13 +176,11 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
         }
         prev_arc = arc;
         first_arc = false;
-        if (ilabels)
-          ilabels->insert(arc.ilabel);
-        if (olabels)
-          olabels->insert(arc.olabel);
+        if (ilabels) ilabels->insert(arc.ilabel);
+        if (olabels) olabels->insert(arc.olabel);
       }
 
-      if (nfinal > 0) {             // final state not last
+      if (nfinal > 0) {  // final state not last
         comp_props |= kNotString;
         comp_props &= ~kString;
       }
@@ -205,7 +193,7 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
           comp_props &= ~kUnweighted;
         }
         ++nfinal;
-      } else {                        // non-final state
+      } else {  // non-final state
         if (fst.NumArcs(s) != 1) {
           comp_props |= kNotString;
           comp_props &= ~kString;
@@ -222,7 +210,7 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
     }
   }
 
-  *known = KnownProperties(comp_props);
+  if (known) *known = KnownProperties(comp_props);
   return comp_props;
 }
 
@@ -231,18 +219,35 @@ uint64 ComputeProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known,
 // incompatible when 'FLAGS_fst_verify_properties' is true.  This
 // routine is seldom called directly; instead it is used to implement
 // fst.Properties(mask, true).
-template<class Arc>
+template <class Arc>
 uint64 TestProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known) {
   if (FLAGS_fst_verify_properties) {
     uint64 stored_props = fst.Properties(kFstProperties, false);
     uint64 computed_props = ComputeProperties(fst, mask, known, false);
     if (!CompatProperties(stored_props, computed_props))
-      LOG(FATAL) << "TestProperties: stored Fst properties incorrect"
+      FSTERROR() << "TestProperties: stored Fst properties incorrect"
                  << " (stored: props1, computed: props2)";
     return computed_props;
   } else {
     return ComputeProperties(fst, mask, known, true);
   }
+}
+
+// If all the properties of 'fst' corresponding to 'check_mask' are known,
+// returns the stored properties. Otherwise, the properties corresponding to
+// both 'check_mask' and 'test_mask' are computed.
+// This is used to check for newly-added properties that might not be set
+// in old binary files.
+template <class Arc>
+uint64 CheckProperties(
+    const Fst<Arc> &fst, uint64 check_mask, uint64 test_mask) {
+  uint64 props = fst.Properties(kFstProperties, false);
+  if (FLAGS_fst_verify_properties) {
+    props = TestProperties(fst, check_mask | test_mask, nullptr);
+  } else if ((KnownProperties(props) & check_mask) != check_mask) {
+    props = ComputeProperties(fst, check_mask | test_mask, nullptr, false);
+  }
+  return props & (check_mask | test_mask);
 }
 
 }  // namespace fst

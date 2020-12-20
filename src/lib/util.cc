@@ -1,27 +1,13 @@
-// util.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // FST utility definitions.
 
 #include <cctype>
+#include <sstream>
 #include <string>
-#include <fst/util.h>
 #include <fst/mapped-file.h>
+#include <fst/util.h>
 
 // Utility flag definitions
 
@@ -31,16 +17,13 @@ DEFINE_bool(fst_error_fatal, true,
 
 namespace fst {
 
-void SplitToVector(char* full, const char* delim, vector<char*>* vec,
+void SplitToVector(char *full, const char *delim, std::vector<char *> *vec,
                    bool omit_empty_strings) {
   char *p = full;
   while (p) {
-    if ((p = strpbrk(full, delim)))
-      p[0] = '\0';
-    if (!omit_empty_strings || full[0] != '\0')
-      vec->push_back(full);
-    if (p)
-      full = p + 1;
+    if ((p = strpbrk(full, delim))) p[0] = '\0';
+    if (!omit_empty_strings || full[0] != '\0') vec->push_back(full);
+    if (p) full = p + 1;
   }
 }
 
@@ -52,8 +35,8 @@ int64 StrToInt64(const string &s, const string &src, size_t nline,
   if (error) *error = false;
   n = strtoll(cs, &p, 10);
   if (p < cs + s.size() || (!allow_negative && n < 0)) {
-    FSTERROR() << "StrToInt64: Bad integer = " << s
-               << "\", source = " << src << ", line = " << nline;
+    FSTERROR() << "StrToInt64: Bad integer = " << s << "\", source = " << src
+               << ", line = " << nline;
     if (error) *error = true;
     return 0;
   }
@@ -61,24 +44,24 @@ int64 StrToInt64(const string &s, const string &src, size_t nline,
 }
 
 void Int64ToStr(int64 n, string *s) {
-  ostringstream nstr;
+  std::ostringstream nstr;
   nstr << n;
   s->append(nstr.str().data(), nstr.str().size());
 }
 
 void ConvertToLegalCSymbol(string *s) {
-  for (string::iterator it = s->begin(); it != s->end(); ++it)
+  for (auto it = s->begin(); it != s->end(); ++it)
     if (!isalnum(*it)) *it = '_';
 }
 
 // Skips over input characters to align to 'align' bytes. Returns
 // false if can't align.
-bool AlignInput(istream &strm) {
+bool AlignInput(std::istream &strm) {
   char c;
   for (int i = 0; i < MappedFile::kArchAlignment; ++i) {
     int64 pos = strm.tellg();
     if (pos < 0) {
-      LOG(ERROR) << "AlignInput: can't determine stream position";
+      LOG(ERROR) << "AlignInput: Can't determine stream position";
       return false;
     }
     if (pos % MappedFile::kArchAlignment == 0) break;
@@ -89,11 +72,11 @@ bool AlignInput(istream &strm) {
 
 // Write null output characters to align to 'align' bytes. Returns
 // false if can't align.
-bool AlignOutput(ostream &strm) {
+bool AlignOutput(std::ostream &strm) {
   for (int i = 0; i < MappedFile::kArchAlignment; ++i) {
     int64 pos = strm.tellp();
     if (pos < 0) {
-      LOG(ERROR) << "AlignOutput: can't determine stream position";
+      LOG(ERROR) << "AlignOutput: Can't determine stream position";
       return false;
     }
     if (pos % MappedFile::kArchAlignment == 0) break;
@@ -101,6 +84,5 @@ bool AlignOutput(ostream &strm) {
   }
   return true;
 }
-
 
 }  // namespace fst

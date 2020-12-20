@@ -1,5 +1,7 @@
-// Generates a random FST according to a class-specific transition model
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
+// Generates a random FST according to a class-specific transition model.
 
 #include <cstdlib>
 #include <ctime>
@@ -35,22 +37,20 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-
   string out_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
 
   srand(FLAGS_seed);
 
-  int num_states = (rand() % FLAGS_states) + 1;     // NOLINT
-  int num_classes = (rand() % FLAGS_classes) + 1;   // NOLINT
-  int num_labels = (rand() % FLAGS_labels) + 1;     // NOLINT
+  int num_states = (rand() % FLAGS_states) + 1;    // NOLINT
+  int num_classes = (rand() % FLAGS_classes) + 1;  // NOLINT
+  int num_labels = (rand() % FLAGS_labels) + 1;    // NOLINT
 
   StdVectorFst fst;
-  TropicalWeightGenerator *weight_gen = 0;
+  TropicalWeightGenerator *weight_gen = nullptr;
   if (FLAGS_weights)
     weight_gen = new TropicalWeightGenerator(FLAGS_seed, false);
-  fst::RandMod<StdArc, TropicalWeightGenerator>
-      rand_mod(num_states, num_classes, num_labels, FLAGS_transducer,
-               weight_gen);
+  fst::RandMod<StdArc, TropicalWeightGenerator> rand_mod(
+      num_states, num_classes, num_labels, FLAGS_transducer, weight_gen);
   rand_mod.Generate(&fst);
   fst.Write(out_name);
   return 0;

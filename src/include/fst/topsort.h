@@ -1,29 +1,13 @@
-// topsort.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Topological sort of FSTs
+// Topological sort of FSTs.
 
 #ifndef FST_LIB_TOPSORT_H__
 #define FST_LIB_TOPSORT_H__
 
 #include <algorithm>
 #include <vector>
-using std::vector;
 
 
 #include <fst/dfs-visit.h>
@@ -43,11 +27,11 @@ class TopOrderVisitor {
   // If acyclic, ORDER[i] gives the topological position of state Id i;
   // otherwise unchanged. ACYCLIC will be true iff the FST has
   // no cycles.
-  TopOrderVisitor(vector<StateId> *order, bool *acyclic)
+  TopOrderVisitor(std::vector<StateId> *order, bool *acyclic)
       : order_(order), acyclic_(acyclic) {}
 
   void InitVisit(const Fst<A> &fst) {
-    finish_ = new vector<StateId>;
+    finish_ = new std::vector<StateId>;
     *acyclic_ = true;
   }
 
@@ -73,11 +57,10 @@ class TopOrderVisitor {
   }
 
  private:
-  vector<StateId> *order_;
+  std::vector<StateId> *order_;
   bool *acyclic_;
-  vector<StateId> *finish_;  // states in finishing-time order
+  std::vector<StateId> *finish_;  // states in finishing-time order
 };
-
 
 // Topologically sorts its input if acyclic, modifying it.  Otherwise,
 // the input is unchanged.  When sorted, all transitions are from
@@ -91,7 +74,7 @@ template <class Arc>
 bool TopSort(MutableFst<Arc> *fst) {
   typedef typename Arc::StateId StateId;
 
-  vector<StateId> order;
+  std::vector<StateId> order;
   bool acyclic;
 
   TopOrderVisitor<Arc> top_order_visitor(&order, &acyclic);

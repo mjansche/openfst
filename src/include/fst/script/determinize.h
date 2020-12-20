@@ -1,18 +1,5 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: jpr@google.com (Jake Ratkiewicz)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_SCRIPT_DETERMINIZE_H_
 #define FST_SCRIPT_DETERMINIZE_H_
@@ -25,50 +12,66 @@
 namespace fst {
 namespace script {
 
+// 1: Full signature with DeterminizeOptions.
 struct DeterminizeOptions {
   float delta;
-  WeightClass weight_threshold;
+  const WeightClass &weight_threshold;
   int64 state_threshold;
   int64 subsequential_label;
   DeterminizeType type;
   bool increment_subsequential_label;
 
-  explicit DeterminizeOptions(float d = fst::kDelta,
-                              WeightClass w =
-                                fst::script::WeightClass::Zero(),
-                              int64 n = fst::kNoStateId, int64 l = 0,
-                              DeterminizeType t = DETERMINIZE_FUNCTIONAL,
-                              bool i = false)
-      : delta(d), weight_threshold(w), state_threshold(n),
-        subsequential_label(l), type(t),
+  DeterminizeOptions(float d, const WeightClass &w,
+                     int64 n = fst::kNoStateId, int64 l = 0,
+                     DeterminizeType t = DETERMINIZE_FUNCTIONAL, bool i = false)
+      : delta(d),
+        weight_threshold(w),
+        state_threshold(n),
+        subsequential_label(l),
+        type(t),
         increment_subsequential_label(i) {}
 };
 
-typedef args::Package<const FstClass&, MutableFstClass*,
-                      const DeterminizeOptions &> DeterminizeArgs;
+typedef args::Package<const FstClass &, MutableFstClass *,
+                      const DeterminizeOptions &> DeterminizeArgs1;
 
-template<class Arc>
-void Determinize(DeterminizeArgs *args) {
+template <class Arc>
+void Determinize(DeterminizeArgs1 *args) {
   const Fst<Arc> &ifst = *(args->arg1.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
   const DeterminizeOptions &opts = args->arg3;
-
-  fst::DeterminizeOptions<Arc> detargs;
-  detargs.delta = opts.delta;
-  detargs.weight_threshold =
+  typename Arc::Weight weight_threshold =
       *(opts.weight_threshold.GetWeight<typename Arc::Weight>());
-  detargs.state_threshold = opts.state_threshold;
-  detargs.subsequential_label = opts.subsequential_label;
-  detargs.type = opts.type;
-  detargs.increment_subsequential_label =
-      opts.increment_subsequential_label;
-
+  fst::DeterminizeOptions<Arc> detargs(
+      opts.delta, weight_threshold, opts.state_threshold,
+      opts.subsequential_label, opts.type, opts.increment_subsequential_label);
   Determinize(ifst, ofst, detargs);
 }
 
+// 2: Signature with default WeightClass argument.
+typedef args::Package<const FstClass &, MutableFstClass *, float, int64, int64,
+                      DeterminizeType, bool> DeterminizeArgs2;
+
+template <class Arc>
+void Determinize(DeterminizeArgs2 *args) {
+  const Fst<Arc> &ifst = *(args->arg1.GetFst<Arc>());
+  MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
+  typename Arc::Weight weight_threshold = Arc::Weight::Zero();
+  fst::DeterminizeOptions<Arc> detargs(args->arg3, weight_threshold,
+                                           args->arg4, args->arg5, args->arg6,
+                                           args->arg7);
+  Determinize(ifst, ofst, detargs);
+}
+
+// 1
 void Determinize(const FstClass &ifst, MutableFstClass *ofst,
-                 const DeterminizeOptions &opts =
-                   fst::script::DeterminizeOptions());
+                 const DeterminizeOptions &opts);
+
+// 2
+void Determinize(const FstClass &ifst, MutableFstClass *ofst,
+                 float d = fst::kDelta, int64 n = fst::kNoStateId,
+                 int64 l = 0, DeterminizeType t = DETERMINIZE_FUNCTIONAL,
+                 bool i = false);
 
 }  // namespace script
 }  // namespace fst

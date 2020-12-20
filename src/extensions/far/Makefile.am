@@ -1,19 +1,17 @@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
 
-libfstdir = @libfstdir@
-
 if HAVE_SCRIPT
-libfst_LTLIBRARIES = libfstfarscript.la libfstfar.la
+lib_LTLIBRARIES = libfstfarscript.la libfstfar.la
 else
-libfst_LTLIBRARIES = libfstfar.la
+lib_LTLIBRARIES = libfstfar.la
 endif
 
 libfstfar_la_SOURCES = sttable.cc stlist.cc
-libfstfar_la_LDFLAGS = -version-info 1:5:0
+libfstfar_la_LDFLAGS = -version-info 2:5:0
 
 if HAVE_SCRIPT
-libfstfarscript_la_SOURCES = farscript.cc strings.cc main.cc
-libfstfarscript_la_LDFLAGS = -version-info 1:5:0
+libfstfarscript_la_SOURCES = far-class.cc farscript.cc strings.cc main.cc
+libfstfarscript_la_LDFLAGS = -version-info 2:5:0
 endif
 
 if HAVE_BIN

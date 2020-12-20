@@ -21,10 +21,7 @@ pdtshortestpath_SOURCES = pdtshortestpath.cc
 endif
 
 if HAVE_SCRIPT
-libfst_LTLIBRARIES = libfstpdtscript.la
+lib_LTLIBRARIES = libfstpdtscript.la
 libfstpdtscript_la_SOURCES = pdtscript.cc
-libfstpdtscript_la_LDFLAGS = -version-info 1:5:0
+libfstpdtscript_la_LDFLAGS = -version-info 2:5:0
 endif
-
-libfstdir = @libfstdir@
-

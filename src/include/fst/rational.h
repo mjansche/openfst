@@ -1,23 +1,8 @@
-// rational.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// An Fst implementation and base interface for delayed unions,
-// concatenations and closures.
+// An FST implementation and base interface for delayed unions, concatenations,
+// and closures.
 
 #ifndef FST_LIB_RATIONAL_H__
 #define FST_LIB_RATIONAL_H__
@@ -25,7 +10,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-using std::vector;
 
 #include <fst/mutable-fst.h>
 #include <fst/replace.h>
@@ -37,18 +21,24 @@ namespace fst {
 typedef CacheOptions RationalFstOptions;
 
 // This specifies whether to add the empty string.
-enum ClosureType { CLOSURE_STAR = 0,    // T* -> add the empty string
-                   CLOSURE_PLUS = 1 };  // T+ -> don't add the empty string
+enum ClosureType {
+  CLOSURE_STAR = 0,  // T* -> add the empty string
+  CLOSURE_PLUS = 1
+};  // T+ -> don't add the empty string
 
-template <class A> class RationalFst;
-template <class A> void Union(RationalFst<A> *fst1, const Fst<A> &fst2);
-template <class A> void Concat(RationalFst<A> *fst1, const Fst<A> &fst2);
-template <class A> void Concat(const Fst<A> &fst1, RationalFst<A> *fst2);
-template <class A> void Closure(RationalFst<A> *fst, ClosureType closure_type);
-
+template <class A>
+class RationalFst;
+template <class A>
+void Union(RationalFst<A> *fst1, const Fst<A> &fst2);
+template <class A>
+void Concat(RationalFst<A> *fst1, const Fst<A> &fst2);
+template <class A>
+void Concat(const Fst<A> &fst1, RationalFst<A> *fst2);
+template <class A>
+void Closure(RationalFst<A> *fst, ClosureType closure_type);
 
 // Implementation class for delayed unions, concatenations and closures.
-template<class A>
+template <class A>
 class RationalFstImpl : public FstImpl<A> {
  public:
   using FstImpl<A>::SetType;
@@ -63,11 +53,9 @@ class RationalFstImpl : public FstImpl<A> {
   typedef typename A::Label Label;
 
   explicit RationalFstImpl(const RationalFstOptions &opts)
-      : nonterminals_(0),
-        replace_(0),
-        replace_options_(opts, 0) {
+      : nonterminals_(0), replace_(0), replace_options_(opts, 0) {
     SetType("rational");
-    fst_tuples_.push_back(pair<Label, const Fst<A>*>(0, 0));
+    fst_tuples_.push_back(std::pair<Label, const Fst<A> *>(0, 0));
   }
 
   RationalFstImpl(const RationalFstImpl<A> &impl)
@@ -85,12 +73,10 @@ class RationalFstImpl : public FstImpl<A> {
                                      : 0));
   }
 
-  virtual ~RationalFstImpl() {
+  ~RationalFstImpl() override {
     for (size_t i = 0; i < fst_tuples_.size(); ++i)
-      if (fst_tuples_[i].second)
-        delete fst_tuples_[i].second;
-    if (replace_)
-      delete replace_;
+      if (fst_tuples_[i].second) delete fst_tuples_[i].second;
+    if (replace_) delete replace_;
   }
 
   StateId Start() { return Replace()->Start(); }
@@ -99,18 +85,16 @@ class RationalFstImpl : public FstImpl<A> {
 
   size_t NumArcs(StateId s) { return Replace()->NumArcs(s); }
 
-  size_t NumInputEpsilons(StateId s) {
-    return Replace()->NumInputEpsilons(s);
-  }
+  size_t NumInputEpsilons(StateId s) { return Replace()->NumInputEpsilons(s); }
 
   size_t NumOutputEpsilons(StateId s) {
     return Replace()->NumOutputEpsilons(s);
   }
 
-  uint64 Properties() const { return Properties(kFstProperties); }
+  uint64 Properties() const override { return Properties(kFstProperties); }
 
   // Set error if found; return FST impl properties.
-  uint64 Properties(uint64 mask) const {
+  uint64 Properties(uint64 mask) const override {
     if ((mask & kError) && Replace()->Properties(kError, false))
       SetProperties(kError, kError);
     return FstImpl<Arc>::Properties(mask);
@@ -118,8 +102,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of UnionFst(fst1,fst2)
   void InitUnion(const Fst<A> &fst1, const Fst<A> &fst2) {
-    if (replace_)
-      delete replace_;
+    if (replace_) delete replace_;
     uint64 props1 = fst1.Properties(kFstProperties, false);
     uint64 props2 = fst2.Properties(kFstProperties, false);
     SetInputSymbols(fst1.InputSymbols());
@@ -140,8 +123,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of ConcatFst(fst1,fst2)
   void InitConcat(const Fst<A> &fst1, const Fst<A> &fst2) {
-    if (replace_)
-      delete replace_;
+    if (replace_) delete replace_;
     uint64 props1 = fst1.Properties(kFstProperties, false);
     uint64 props2 = fst2.Properties(kFstProperties, false);
     SetInputSymbols(fst1.InputSymbols());
@@ -163,8 +145,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of ClosureFst(fst, closure_type)
   void InitClosure(const Fst<A> &fst, ClosureType closure_type) {
-    if (replace_)
-      delete replace_;
+    if (replace_) delete replace_;
     uint64 props = fst.Properties(kFstProperties, false);
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
@@ -191,8 +172,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of Union(Fst &, RationalFst *)
   void AddUnion(const Fst<A> &fst) {
-    if (replace_)
-      delete replace_;
+    if (replace_) delete replace_;
     uint64 props1 = FstImpl<A>::Properties();
     uint64 props2 = fst.Properties(kFstProperties, false);
     VectorFst<A> afst;
@@ -209,8 +189,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of Concat(Fst &, RationalFst *)
   void AddConcat(const Fst<A> &fst, bool append) {
-    if (replace_)
-      delete replace_;
+    if (replace_) delete replace_;
     uint64 props1 = FstImpl<A>::Properties();
     uint64 props2 = fst.Properties(kFstProperties, false);
     VectorFst<A> afst;
@@ -230,8 +209,7 @@ class RationalFstImpl : public FstImpl<A> {
 
   // Implementation of Closure(RationalFst *, closure_type)
   void AddClosure(ClosureType closure_type) {
-    if (replace_)
-      delete replace_;
+    if (replace_) delete replace_;
     uint64 props = FstImpl<A>::Properties();
     Closure(&rfst_, closure_type);
     SetProperties(ClosureProperties(props, closure_type == CLOSURE_STAR, true),
@@ -251,11 +229,11 @@ class RationalFstImpl : public FstImpl<A> {
   VectorFst<A> rfst_;   // rational topology machine; uses neg. nonterminals
   Label nonterminals_;  // # of nonterminals used
   // Contains the nonterminals and their corresponding FSTs.
-  mutable vector<pair<Label, const Fst<A>*> > fst_tuples_;
+  mutable std::vector<std::pair<Label, const Fst<A> *>> fst_tuples_;
   mutable ReplaceFst<A> *replace_;        // Underlying ReplaceFst
   ReplaceFstOptions<A> replace_options_;  // Options for creating 'replace_'
 
-  void operator=(const RationalFstImpl<A> &impl);    // disallow
+  void operator=(const RationalFstImpl<A> &impl);  // disallow
 };
 
 // Parent class for the delayed rational operations - delayed union,
@@ -264,10 +242,10 @@ class RationalFstImpl : public FstImpl<A> {
 // This class attaches interface to implementation and handles
 // reference counting, delegating most methods to ImplToFst.
 template <class A>
-class RationalFst : public ImplToFst< RationalFstImpl<A> > {
+class RationalFst : public ImplToFst<RationalFstImpl<A>> {
  public:
-  friend class StateIterator< RationalFst<A> >;
-  friend class ArcIterator< RationalFst<A> >;
+  friend class StateIterator<RationalFst<A>>;
+  friend class ArcIterator<RationalFst<A>>;
   friend void Union<>(RationalFst<A> *fst1, const Fst<A> &fst2);
   friend void Concat<>(RationalFst<A> *fst1, const Fst<A> &fst2);
   friend void Concat<>(const Fst<A> &fst1, RationalFst<A> *fst2);
@@ -277,52 +255,47 @@ class RationalFst : public ImplToFst< RationalFstImpl<A> > {
   typedef typename A::StateId StateId;
   typedef RationalFstImpl<A> Impl;
 
-  virtual void InitStateIterator(StateIteratorData<A> *data) const {
+  void InitStateIterator(StateIteratorData<A> *data) const override {
     GetImpl()->Replace()->InitStateIterator(data);
   }
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
+  void InitArcIterator(StateId s, ArcIteratorData<A> *data) const override {
     GetImpl()->Replace()->InitArcIterator(s, data);
   }
 
  protected:
+  using ImplToFst<Impl>::GetImpl;
+
   RationalFst()
-      : ImplToFst<Impl>(new Impl(RationalFstOptions())) {}
+      : ImplToFst<Impl>(std::make_shared<Impl>(RationalFstOptions())) {}
 
   explicit RationalFst(const RationalFstOptions &opts)
-      : ImplToFst<Impl>(new Impl(opts)) {}
+      : ImplToFst<Impl>(std::make_shared<Impl>(opts)) {}
 
   // See Fst<>::Copy() for doc.
-  RationalFst(const RationalFst<A> &fst , bool safe = false)
+  RationalFst(const RationalFst<A> &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
  private:
-  // Makes visible to friends.
-  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
-
   void operator=(const RationalFst<A> &fst);  // disallow
 };
 
-
 // Specialization for RationalFst.
 template <class A>
-class StateIterator< RationalFst<A> >
-    : public StateIterator< ReplaceFst<A> > {
+class StateIterator<RationalFst<A>> : public StateIterator<ReplaceFst<A>> {
  public:
   explicit StateIterator(const RationalFst<A> &fst)
-      : StateIterator< ReplaceFst<A> >(*(fst.GetImpl()->Replace())) {}
+      : StateIterator<ReplaceFst<A>>(*(fst.GetImpl()->Replace())) {}
 };
-
 
 // Specialization for RationalFst.
 template <class A>
-class ArcIterator< RationalFst<A> >
-    : public CacheArcIterator< ReplaceFst<A> > {
+class ArcIterator<RationalFst<A>> : public CacheArcIterator<ReplaceFst<A>> {
  public:
   typedef typename A::StateId StateId;
 
   ArcIterator(const RationalFst<A> &fst, StateId s)
-      : ArcIterator< ReplaceFst<A> >(*(fst.GetImpl()->Replace()), s) {}
+      : ArcIterator<ReplaceFst<A>>(*(fst.GetImpl()->Replace()), s) {}
 };
 
 }  // namespace fst

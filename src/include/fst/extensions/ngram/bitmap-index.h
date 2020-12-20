@@ -1,26 +1,11 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: sorenj@google.com (Jeffrey Sorensen)
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_EXTENSIONS_NGRAM_BITMAP_INDEX_H_
 #define FST_EXTENSIONS_NGRAM_BITMAP_INDEX_H_
 
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 
 #include <fst/compat.h>
 
@@ -46,7 +31,7 @@ class BitmapIndex {
     return ((size + kStorageBlockMask) >> kStorageLogBitSize);
   }
 
-  BitmapIndex() : bits_(NULL), size_(0) { }
+  BitmapIndex() : bits_(nullptr), size_(0) {}
 
   bool Get(size_t index) const {
     return (bits_[index >> kStorageLogBitSize] &
@@ -61,13 +46,9 @@ class BitmapIndex {
     bits[index >> kStorageLogBitSize] &= ~(kOne << (index & kStorageBlockMask));
   }
 
-  size_t Bits() const {
-    return size_;
-  }
+  size_t Bits() const { return size_; }
 
-  size_t ArraySize() const {
-    return StorageSize(size_);
-  }
+  size_t ArraySize() const { return StorageSize(size_); }
 
   // Returns the number of one bits in the bitmap
   size_t GetOnesCount() const {
@@ -86,9 +67,7 @@ class BitmapIndex {
 
   // Returns the number of zero bits in positions 0 to limit - 1.
   // REQUIRES: limit <= Bits()
-  size_t Rank0(size_t end) const {
-    return end - Rank1(end);
-  }
+  size_t Rank0(size_t end) const { return end - Rank1(end); }
 
   // Returns the number of zero bits in the range start to end - 1.
   // REQUIRES: limit <= Bits()
@@ -113,12 +92,12 @@ class BitmapIndex {
 
   // Returns the offset of the nth and nth+1 clear bit (zero based),
   // equivalent to two calls to Select0, but more efficient.
-  pair<size_t, size_t> Select0s(size_t bit_index) const;
+  std::pair<size_t, size_t> Select0s(size_t bit_index) const;
 
   // Rebuilds from index for the associated Bitmap, should be called
   // whenever changes have been made to the Bitmap or else behavior
   // of the indexed bitmap methods will be undefined.
-  void BuildIndex(const uint64 *bits, size_t size);
+  void BuildIndex(const uint64* bits, size_t size);
 
   // the secondary index accumulates counts until it can possibly overflow
   // this constant computes the number of uint64 units that can fit into
@@ -126,8 +105,8 @@ class BitmapIndex {
   static const uint64 kOne = 1;
   static const uint32 kStorageBitSize = 64;
   static const uint32 kStorageLogBitSize = 6;
-  static const uint32 kSecondaryBlockSize = ((1 << 16) - 1)
-      >> kStorageLogBitSize;
+  static const uint32 kSecondaryBlockSize =
+      ((1 << 16) - 1) >> kStorageLogBitSize;
 
  private:
   static const uint32 kStorageBlockMask = kStorageBitSize - 1;
@@ -159,8 +138,8 @@ class BitmapIndex {
   // returns 1 + the secondary block that contains the bitindex in question
   size_t find_secondary_block(size_t block, size_t rem_bit_index) const;
 
-  size_t find_inverted_secondary_block(size_t block, size_t rem_bit_index)
-      const;
+  size_t find_inverted_secondary_block(size_t block,
+                                       size_t rem_bit_index) const;
 
   // We create a primary index based upon the number of secondary index
   // blocks.  The primary index uses fields wide enough to accomodate any
@@ -177,11 +156,11 @@ class BitmapIndex {
   // The primary index contains the running popcount of all blocks
   // which means the nth value contains the popcounts of
   // [0,n*kSecondaryBlockSize], however, the 0th element is omitted.
-  vector<uint32> primary_index_;
+  std::vector<uint32> primary_index_;
   // The secondary index contains the running popcount of the associated
   // bitmap.  It is the same length (in units of uint16) as the
   // bitmap's map is in units of uint64s.
-  vector<uint16> secondary_index_;
+  std::vector<uint16> secondary_index_;
 };
 
 }  // end namespace fst

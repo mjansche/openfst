@@ -1,38 +1,31 @@
-// pdtreplace.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// Converts an RTN represented by FSTs and non-terminal labels into a PDT .
+// Converts an RTN represented by FSTs and non-terminal labels into a PDT.
 
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 #include <fst/extensions/pdt/pdtscript.h>
-#include <fst/vector-fst.h>
 #include <fst/util.h>
+#include <fst/vector-fst.h>
 
 DEFINE_string(pdt_parentheses, "", "PDT parenthesis label pairs.");
+DEFINE_string(pdt_parser_type, "left",
+              "Construction method, one of: \"left\", \"left_sr\"");
+DEFINE_int64(start_paren_labels, fst::kNoLabel,
+             "Index to use for the first inserted parentheses; if not "
+             "specified, the next available label beyond the highest output "
+             "label is used");
+DEFINE_string(left_paren_prefix, "(_", "Prefix to attach to SymbolTable "
+              "labels for inserted left parentheses");
+DEFINE_string(right_paren_prefix, ")_", "Prefix to attach to SymbolTable "
+              "labels for inserted right parentheses");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
 
   string usage = "Converts an RTN represented by FSTs";
-  usage += " and non-terminal labels into PDT";
-  usage += " Usage: ";
+  usage += " and non-terminal labels into PDT.\n\n  Usage: ";
   usage += argv[0];
   usage += " root.fst rootlabel [rule1.fst label1 ...] [out.fst]\n";
 
@@ -49,22 +42,33 @@ int main(int argc, char **argv) {
   s::FstClass *ifst = s::FstClass::Read(in_fname);
   if (!ifst) return 1;
 
-  typedef int64 Label;
-  typedef pair<Label, const s::FstClass* > FstTuple;
-  vector<FstTuple> fst_tuples;
-  Label root = atoll(argv[2]);
-  fst_tuples.push_back(std::make_pair(root, ifst));
+  fst::PdtParserType parser_type;
+  if (FLAGS_pdt_parser_type == "left") {
+    parser_type = fst::PDT_LEFT_PARSER;
+  } else if (FLAGS_pdt_parser_type == "left_sr") {
+    parser_type = fst::PDT_LEFT_SR_PARSER;
+  } else {
+    LOG(ERROR) << argv[0]
+               << "Unknown PDT parser type: " << FLAGS_pdt_parser_type;
+    return 1;
+  }
+
+  std::vector<s::LabelFstClassPair> pairs;
+  int64 root = atoll(argv[2]);
+  pairs.push_back(std::make_pair(root, ifst));
 
   for (size_t i = 3; i < argc - 1; i += 2) {
     ifst = s::FstClass::Read(argv[i]);
     if (!ifst) return 1;
-    Label lab = atoll(argv[i + 1]);
-    fst_tuples.push_back(std::make_pair(lab, ifst));
+    int64 lab = atoll(argv[i + 1]);
+    pairs.push_back(std::make_pair(lab, ifst));
   }
 
   s::VectorFstClass ofst(ifst->ArcType());
-  vector<pair<int64, int64> > parens;
-  s::PdtReplace(fst_tuples, &ofst, &parens, root);
+  std::vector<s::LabelPair> parens;
+  s::PdtReplace(pairs, &ofst, &parens, root, parser_type,
+                FLAGS_start_paren_labels, FLAGS_left_paren_prefix,
+                FLAGS_right_paren_prefix);
 
   if (!FLAGS_pdt_parentheses.empty())
     fst::WriteLabelPairs(FLAGS_pdt_parentheses, parens);

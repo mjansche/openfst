@@ -1,24 +1,7 @@
-// fstrmepsilon.cc
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
 // Removes epsilons from an FST.
-//
 
 #include <fst/script/rmepsilon.h>
 
@@ -27,7 +10,8 @@ DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
 DEFINE_int64(nstate, fst::kNoStateId, "State number threshold");
 DEFINE_bool(reverse, false, "Perform in the reverse direction");
 DEFINE_string(weight, "", "Weight threshold");
-DEFINE_string(queue_type, "auto", "Queue type: one of: \"auto\", "
+DEFINE_string(queue_type, "auto",
+              "Queue type: one of: \"auto\", "
               "\"fifo\", \"lifo\", \"shortest\", \"state\", \"top\"");
 
 int main(int argc, char **argv) {
@@ -54,9 +38,9 @@ int main(int argc, char **argv) {
   FstClass *ifst = FstClass::Read(in_fname);
   if (!ifst) return 1;
 
-  WeightClass weight_threshold = FLAGS_weight.empty() ?
-      WeightClass::Zero() :
-      WeightClass(ifst->WeightType(), FLAGS_weight);
+  WeightClass weight_threshold =
+      FLAGS_weight.empty() ? WeightClass::Zero(ifst->WeightType())
+                           : WeightClass(ifst->WeightType(), FLAGS_weight);
 
   fst::QueueType qt;
 
@@ -73,12 +57,13 @@ int main(int argc, char **argv) {
   } else if (FLAGS_queue_type == "top") {
     qt = fst::TOP_ORDER_QUEUE;
   } else {
-    LOG(ERROR) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+    LOG(ERROR) << argv[0]
+               << ": Unknown or unsupported queue type: " << FLAGS_queue_type;
     return 1;
   }
 
-  s::RmEpsilonOptions opts(qt, FLAGS_delta, FLAGS_connect,
-                           weight_threshold, FLAGS_nstate);
+  s::RmEpsilonOptions opts(qt, FLAGS_delta, FLAGS_connect, weight_threshold,
+                           FLAGS_nstate);
 
   VectorFstClass ofst(ifst->ArcType());
   s::RmEpsilon(*ifst, &ofst, FLAGS_reverse, opts);

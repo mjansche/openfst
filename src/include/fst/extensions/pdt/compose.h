@@ -1,22 +1,7 @@
-// compose.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Compose a PDT and an FST.
+// Composes a PDT and an FST.
 
 #ifndef FST_EXTENSIONS_PDT_COMPOSE_H__
 #define FST_EXTENSIONS_PDT_COMPOSE_H__
@@ -29,10 +14,10 @@
 namespace fst {
 
 // Return paren arcs for Find(kNoLabel).
-const uint32 kParenList =  0x00000001;
+const uint32 kParenList = 0x00000001;
 
 // Return a kNolabel loop for Find(paren).
-const uint32 kParenLoop =  0x00000002;
+const uint32 kParenLoop = 0x00000002;
 
 // This class is a matcher that treats parens as multi-epsilon labels.
 // It is most efficient if the parens are in a range non-overlapping with
@@ -49,9 +34,7 @@ class ParenMatcher {
 
   ParenMatcher(const FST &fst, MatchType match_type,
                uint32 flags = (kParenLoop | kParenList))
-      : matcher_(fst, match_type),
-        match_type_(match_type),
-        flags_(flags) {
+      : matcher_(fst, match_type), match_type_(match_type), flags_(flags) {
     if (match_type == MATCH_INPUT) {
       loop_.ilabel = kNoLabel;
       loop_.olabel = 0;
@@ -86,13 +69,9 @@ class ParenMatcher {
 
   bool Find(Label match_label);
 
-  bool Done() const {
-    return done_;
-  }
+  bool Done() const { return done_; }
 
-  const Arc& Value() const {
-    return paren_loop_ ? loop_ : matcher_.Value();
-  }
+  const Arc &Value() const { return paren_loop_ ? loop_ : matcher_.Value(); }
 
   void Next();
 
@@ -138,21 +117,13 @@ class ParenMatcher {
     }
   }
 
-  void ClearOpenParens() {
-    open_parens_.Clear();
-  }
+  void ClearOpenParens() { open_parens_.Clear(); }
 
-  void ClearCloseParens() {
-    close_parens_.Clear();
-  }
+  void ClearCloseParens() { close_parens_.Clear(); }
 
-  bool IsOpenParen(Label label) const {
-    return open_parens_.Member(label);
-  }
+  bool IsOpenParen(Label label) const { return open_parens_.Member(label); }
 
-  bool IsCloseParen(Label label) const {
-    return close_parens_.Member(label);
-  }
+  bool IsCloseParen(Label label) const { return close_parens_.Member(label); }
 
  private:
   // Advances matcher to next open paren if it exists, returning true.
@@ -164,7 +135,7 @@ class ParenMatcher {
   bool NextCloseParen();
 
   M matcher_;
-  MatchType match_type_;          // Type of match to perform
+  MatchType match_type_;  // Type of match to perform
   uint32 flags_;
 
   // open paren label set
@@ -173,18 +144,17 @@ class ParenMatcher {
   // close paren label set
   CompactSet<Label, kNoLabel> close_parens_;
 
-
-  bool open_paren_list_;         // Matching open paren list
-  bool close_paren_list_;        // Matching close paren list
-  bool paren_loop_;              // Current arc is the implicit paren loop
-  mutable Arc loop_;             // For non-consuming symbols
-  bool done_;                    // Matching done
+  bool open_paren_list_;   // Matching open paren list
+  bool close_paren_list_;  // Matching close paren list
+  bool paren_loop_;        // Current arc is the implicit paren loop
+  mutable Arc loop_;       // For non-consuming symbols
+  bool done_;              // Matching done
 
   void operator=(const ParenMatcher<F> &);  // Disallow
 };
 
-template <class M> inline
-bool ParenMatcher<M>::Find(Label match_label) {
+template <class M>
+inline bool ParenMatcher<M>::Find(Label match_label) {
   open_paren_list_ = false;
   close_paren_list_ = false;
   paren_loop_ = false;
@@ -212,15 +182,14 @@ bool ParenMatcher<M>::Find(Label match_label) {
   }
 
   // Returns all other labels
-  if (matcher_.Find(match_label))
-    return true;
+  if (matcher_.Find(match_label)) return true;
 
   done_ = true;
   return false;
 }
 
-template <class F> inline
-void ParenMatcher<F>::Next() {
+template <class F>
+inline void ParenMatcher<F>::Next() {
   if (paren_loop_) {
     paren_loop_ = false;
     done_ = true;
@@ -248,34 +217,29 @@ void ParenMatcher<F>::Next() {
 
 // Advances matcher to next open paren if it exists, returning true.
 // O.w. returns false.
-template <class F> inline
-bool ParenMatcher<F>::NextOpenParen() {
+template <class F>
+inline bool ParenMatcher<F>::NextOpenParen() {
   for (; !matcher_.Done(); matcher_.Next()) {
-    Label label = match_type_ == MATCH_INPUT ?
-        matcher_.Value().ilabel : matcher_.Value().olabel;
-    if (label > open_parens_.UpperBound())
-      return false;
-    if (IsOpenParen(label))
-      return true;
+    Label label = match_type_ == MATCH_INPUT ? matcher_.Value().ilabel
+                                             : matcher_.Value().olabel;
+    if (label > open_parens_.UpperBound()) return false;
+    if (IsOpenParen(label)) return true;
   }
   return false;
 }
 
 // Advances matcher to next close paren if it exists, returning true.
 // O.w. returns false.
-template <class F> inline
-bool ParenMatcher<F>::NextCloseParen() {
+template <class F>
+inline bool ParenMatcher<F>::NextCloseParen() {
   for (; !matcher_.Done(); matcher_.Next()) {
-    Label label = match_type_ == MATCH_INPUT ?
-        matcher_.Value().ilabel : matcher_.Value().olabel;
-    if (label > close_parens_.UpperBound())
-      return false;
-    if (IsCloseParen(label))
-      return true;
+    Label label = match_type_ == MATCH_INPUT ? matcher_.Value().ilabel
+                                             : matcher_.Value().olabel;
+    if (label > close_parens_.UpperBound()) return false;
+    if (IsCloseParen(label)) return true;
   }
   return false;
 }
-
 
 template <class F>
 class ParenFilter {
@@ -295,12 +259,12 @@ class ParenFilter {
   typedef PairFilterState<FilterState1, FilterState2> FilterState;
   typedef ParenFilter<F> Filter;
 
-  ParenFilter(const FST1 &fst1, const FST2 &fst2,
-              Matcher1 *matcher1 = 0,  Matcher2 *matcher2 = 0,
-              const vector<pair<Label, Label> > *parens = 0,
+  ParenFilter(const FST1 &fst1, const FST2 &fst2, Matcher1 *matcher1 = 0,
+              Matcher2 *matcher2 = 0,
+              const std::vector<std::pair<Label, Label>> *parens = 0,
               bool expand = false, bool keep_parens = true)
       : filter_(fst1, fst2, matcher1, matcher2),
-        parens_(parens ? *parens : vector<pair<Label, Label> >()),
+        parens_(parens ? *parens : std::vector<std::pair<Label, Label>>()),
         expand_(expand),
         keep_parens_(keep_parens),
         f_(FilterState::NoState()),
@@ -308,7 +272,7 @@ class ParenFilter {
         paren_id_(-1) {
     if (parens) {
       for (size_t i = 0; i < parens->size(); ++i) {
-        const pair<Label, Label>  &p = (*parens)[i];
+        const std::pair<Label, Label> &p = (*parens)[i];
         parens_.push_back(p);
         GetMatcher1()->AddOpenParen(p.first);
         GetMatcher2()->AddOpenParen(p.first);
@@ -327,7 +291,7 @@ class ParenFilter {
         keep_parens_(filter.keep_parens_),
         f_(FilterState::NoState()),
         stack_(filter.parens_),
-        paren_id_(-1) { }
+        paren_id_(-1) {}
 
   FilterState Start() const {
     return FilterState(filter_.Start(), FilterState2(0));
@@ -336,8 +300,7 @@ class ParenFilter {
   void SetState(StateId s1, StateId s2, const FilterState &f) {
     f_ = f;
     filter_.SetState(s1, s2, f_.GetState1());
-    if (!expand_)
-      return;
+    if (!expand_) return;
 
     ssize_t paren_id = stack_.Top(f.GetState2().GetState());
     if (paren_id != paren_id_) {
@@ -356,10 +319,9 @@ class ParenFilter {
   FilterState FilterArc(Arc *arc1, Arc *arc2) const {
     FilterState1 f1 = filter_.FilterArc(arc1, arc2);
     const FilterState2 &f2 = f_.GetState2();
-    if (f1 == FilterState1::NoState())
-      return FilterState::NoState();
+    if (f1 == FilterState1::NoState()) return FilterState::NoState();
 
-    if (arc1->olabel == kNoLabel && arc2->ilabel) {         // arc2 parentheses
+    if (arc1->olabel == kNoLabel && arc2->ilabel) {  // arc2 parentheses
       if (keep_parens_) {
         arc1->ilabel = arc2->ilabel;
       } else if (arc2->ilabel) {
@@ -379,8 +341,7 @@ class ParenFilter {
   }
 
   void FilterFinal(Weight *w1, Weight *w2) const {
-    if (f_.GetState2().GetState() != 0)
-      *w1 = Weight::Zero();
+    if (f_.GetState2().GetState() != 0) *w1 = Weight::Zero();
     filter_.FilterFinal(w1, w2);
   }
 
@@ -396,8 +357,7 @@ class ParenFilter {
  private:
   const FilterState FilterParen(Label label, const FilterState1 &f1,
                                 const FilterState2 &f2) const {
-    if (!expand_)
-      return FilterState(f1, f2);
+    if (!expand_) return FilterState(f1, f2);
 
     StackId stack_id = stack_.Find(f2.GetState(), label);
     if (stack_id < 0) {
@@ -408,10 +368,10 @@ class ParenFilter {
   }
 
   F filter_;
-  vector<pair<Label, Label> > parens_;
-  bool expand_;                    // Expands to FST
-  bool keep_parens_;               // Retains parentheses in output
-  FilterState f_;                  // Current filter state
+  std::vector<std::pair<Label, Label>> parens_;
+  bool expand_;       // Expands to FST
+  bool keep_parens_;  // Retains parentheses in output
+  FilterState f_;     // Current filter state
   mutable ParenStack stack_;
   ssize_t paren_id_;
 };
@@ -419,69 +379,66 @@ class ParenFilter {
 // Class to setup composition options for PDT composition.
 // Default is for the PDT as the first composition argument.
 template <class Arc, bool left_pdt = true>
-class PdtComposeFstOptions : public
-ComposeFstOptions<Arc,
-                  ParenMatcher< Fst<Arc> >,
-                  ParenFilter<AltSequenceComposeFilter<
-                                ParenMatcher< Fst<Arc> > > > > {
+class PdtComposeFstOptions
+    : public ComposeFstOptions<
+          Arc, ParenMatcher<Fst<Arc>>,
+          ParenFilter<AltSequenceComposeFilter<ParenMatcher<Fst<Arc>> >> > {
  public:
   typedef typename Arc::Label Label;
-  typedef ParenMatcher< Fst<Arc> > PdtMatcher;
-  typedef ParenFilter<AltSequenceComposeFilter<PdtMatcher> > PdtFilter;
+  typedef ParenMatcher<Fst<Arc>> PdtMatcher;
+  typedef ParenFilter<AltSequenceComposeFilter<PdtMatcher>> PdtFilter;
   typedef ComposeFstOptions<Arc, PdtMatcher, PdtFilter> COptions;
   using COptions::matcher1;
   using COptions::matcher2;
   using COptions::filter;
 
   PdtComposeFstOptions(const Fst<Arc> &ifst1,
-                    const vector<pair<Label, Label> > &parens,
+                       const std::vector<std::pair<Label, Label>> &parens,
                        const Fst<Arc> &ifst2, bool expand = false,
                        bool keep_parens = true) {
     matcher1 = new PdtMatcher(ifst1, MATCH_OUTPUT, kParenList);
     matcher2 = new PdtMatcher(ifst2, MATCH_INPUT, kParenLoop);
 
-    filter = new PdtFilter(ifst1, ifst2, matcher1, matcher2, &parens,
-                           expand, keep_parens);
+    filter = new PdtFilter(ifst1, ifst2, matcher1, matcher2, &parens, expand,
+                           keep_parens);
   }
 };
 
 // Class to setup composition options for PDT with FST composition.
 // Specialization is for the FST as the first composition argument.
 template <class Arc>
-class PdtComposeFstOptions<Arc, false> : public
-ComposeFstOptions<Arc,
-                  ParenMatcher< Fst<Arc> >,
-                  ParenFilter<SequenceComposeFilter<
-                                ParenMatcher< Fst<Arc> > > > > {
+class PdtComposeFstOptions<Arc, false>
+    : public ComposeFstOptions<
+          Arc, ParenMatcher<Fst<Arc>>,
+          ParenFilter<SequenceComposeFilter<ParenMatcher<Fst<Arc>> >> > {
  public:
   typedef typename Arc::Label Label;
-  typedef ParenMatcher< Fst<Arc> > PdtMatcher;
-  typedef ParenFilter<SequenceComposeFilter<PdtMatcher> > PdtFilter;
+  typedef ParenMatcher<Fst<Arc>> PdtMatcher;
+  typedef ParenFilter<SequenceComposeFilter<PdtMatcher>> PdtFilter;
   typedef ComposeFstOptions<Arc, PdtMatcher, PdtFilter> COptions;
   using COptions::matcher1;
   using COptions::matcher2;
   using COptions::filter;
 
-  PdtComposeFstOptions(const Fst<Arc> &ifst1,
-                       const Fst<Arc> &ifst2,
-                       const vector<pair<Label, Label> > &parens,
+  PdtComposeFstOptions(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
+                       const std::vector<std::pair<Label, Label>> &parens,
                        bool expand = false, bool keep_parens = true) {
     matcher1 = new PdtMatcher(ifst1, MATCH_OUTPUT, kParenLoop);
     matcher2 = new PdtMatcher(ifst2, MATCH_INPUT, kParenList);
 
-    filter = new PdtFilter(ifst1, ifst2, matcher1, matcher2, &parens,
-                           expand, keep_parens);
+    filter = new PdtFilter(ifst1, ifst2, matcher1, matcher2, &parens, expand,
+                           keep_parens);
   }
 };
 
 enum PdtComposeFilter {
-  PAREN_FILTER,          // Bar-Hillel construction; keeps parentheses
-  EXPAND_FILTER,         // Bar-Hillel + expansion; removes parentheses
-  EXPAND_PAREN_FILTER,   // Bar-Hillel + expansion; keeps parentheses
+  PAREN_FILTER,         // Bar-Hillel construction; keeps parentheses
+  EXPAND_FILTER,        // Bar-Hillel + expansion; removes parentheses
+  EXPAND_PAREN_FILTER,  // Bar-Hillel + expansion; keeps parentheses
 };
 
 struct PdtComposeOptions {
-  bool connect;  // Connect output
+  bool connect;                  // Connect output
   PdtComposeFilter filter_type;  // Which pre-defined filter to use
 
   explicit PdtComposeOptions(bool c, PdtComposeFilter ft = PAREN_FILTER)
@@ -497,19 +454,17 @@ struct PdtComposeOptions {
 // are passed in 'parens'.
 template <class Arc>
 void Compose(const Fst<Arc> &ifst1,
-             const vector<pair<typename Arc::Label,
-                               typename Arc::Label> > &parens,
-             const Fst<Arc> &ifst2,
-             MutableFst<Arc> *ofst,
+             const std::vector<
+                 std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+             const Fst<Arc> &ifst2, MutableFst<Arc> *ofst,
              const PdtComposeOptions &opts = PdtComposeOptions()) {
   bool expand = opts.filter_type != PAREN_FILTER;
   bool keep_parens = opts.filter_type != EXPAND_FILTER;
-  PdtComposeFstOptions<Arc, true> copts(ifst1, parens, ifst2,
-                                        expand, keep_parens);
+  PdtComposeFstOptions<Arc, true> copts(ifst1, parens, ifst2, expand,
+                                        keep_parens);
   copts.gc_limit = 0;
   *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
-  if (opts.connect)
-    Connect(ofst);
+  if (opts.connect) Connect(ofst);
 }
 
 // Composes an FST (1st arg) and pushdown transducer (PDT) encoded as
@@ -519,20 +474,18 @@ void Compose(const Fst<Arc> &ifst1,
 // a path (see ExpandFst()). The open-close parenthesis label pairs
 // are passed in 'parens'.
 template <class Arc>
-void Compose(const Fst<Arc> &ifst1,
-             const Fst<Arc> &ifst2,
-             const vector<pair<typename Arc::Label,
-                               typename Arc::Label> > &parens,
+void Compose(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
+             const std::vector<
+                 std::pair<typename Arc::Label, typename Arc::Label>> &parens,
              MutableFst<Arc> *ofst,
              const PdtComposeOptions &opts = PdtComposeOptions()) {
   bool expand = opts.filter_type != PAREN_FILTER;
   bool keep_parens = opts.filter_type != EXPAND_FILTER;
-  PdtComposeFstOptions<Arc, false> copts(ifst1, ifst2, parens,
-                                         expand, keep_parens);
+  PdtComposeFstOptions<Arc, false> copts(ifst1, ifst2, parens, expand,
+                                         keep_parens);
   copts.gc_limit = 0;
   *ofst = ComposeFst<Arc>(ifst1, ifst2, copts);
-  if (opts.connect)
-    Connect(ofst);
+  if (opts.connect) Connect(ofst);
 }
 
 }  // namespace fst

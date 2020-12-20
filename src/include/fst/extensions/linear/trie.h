@@ -1,34 +1,14 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: wuke
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 
 #ifndef FST_EXTENSIONS_LINEAR_TRIE_H_
 #define FST_EXTENSIONS_LINEAR_TRIE_H_
 
 #include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 
 #include <fst/compat.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <fst/util.h>
 
 namespace fst {
@@ -54,13 +34,13 @@ struct ParentLabel {
     return parent == that.parent && label == that.label;
   }
 
-  istream &Read(istream &strm) {  // NOLINT
+  std::istream &Read(std::istream &strm) {  // NOLINT
     ReadType(strm, &parent);
     ReadType(strm, &label);
     return strm;
   }
 
-  ostream &Write(ostream &strm) const {  // NOLINT
+  std::ostream &Write(std::ostream &strm) const {  // NOLINT
     WriteType(strm, parent);
     WriteType(strm, label);
     return strm;
@@ -81,7 +61,7 @@ class NestedTrieTopology {
  public:
   typedef L Label;
   typedef H Hash;
-  typedef unordered_map<L, int, H> NextMap;
+  typedef std::unordered_map<L, int, H> NextMap;
 
   class const_iterator {
    public:
@@ -93,7 +73,7 @@ class NestedTrieTopology {
 
     friend class NestedTrieTopology<L, H>;
 
-    const_iterator() : ptr_(NULL), cur_node_(kNoTrieNodeId), cur_edge_() {}
+    const_iterator() : ptr_(nullptr), cur_node_(kNoTrieNodeId), cur_edge_() {}
 
     reference operator*() {
       UpdateStub();
@@ -153,15 +133,16 @@ class NestedTrieTopology {
   int Find(int parent, const L &label) const;
   const NextMap &ChildrenOf(int parent) const { return *nodes_[parent]; }
 
-  istream &Read(istream &strm);         // NOLINT
-  ostream &Write(ostream &strm) const;  // NOLINT
+  std::istream &Read(std::istream &strm);         // NOLINT
+  std::ostream &Write(std::ostream &strm) const;  // NOLINT
 
   const_iterator begin() const { return const_iterator(this, 0); }
   const_iterator end() const { return const_iterator(this, NumNodes()); }
 
  private:
-  vector<NextMap *> nodes_;  // Use pointers to avoid copying the maps when the
-                             // vector grows
+  std::vector<NextMap *>
+      nodes_;  // Use pointers to avoid copying the maps when the
+               // vector grows
 };
 
 template <class L, class H>
@@ -233,7 +214,8 @@ inline int NestedTrieTopology<L, H>::Find(int parent, const L &label) const {
 }
 
 template <class L, class H>
-inline istream &NestedTrieTopology<L, H>::Read(istream &strm) {  // NOLINT
+inline std::istream &NestedTrieTopology<L, H>::Read(
+    std::istream &strm) {  // NOLINT
   NestedTrieTopology new_trie;
   size_t num_nodes;
   if (!ReadType(strm, &num_nodes)) return strm;
@@ -244,17 +226,16 @@ inline istream &NestedTrieTopology<L, H>::Read(istream &strm) {  // NOLINT
 }
 
 template <class L, class H>
-inline ostream &NestedTrieTopology<L, H>::Write(
-    ostream &strm) const {  // NOLINT
+inline std::ostream &NestedTrieTopology<L, H>::Write(
+    std::ostream &strm) const {  // NOLINT
   WriteType(strm, NumNodes());
   for (size_t i = 0; i < NumNodes(); ++i) WriteType(strm, *nodes_[i]);
   return strm;
 }
 
 template <class L, class H>
-inline typename NestedTrieTopology<L, H>::const_iterator &
-NestedTrieTopology<L, H>::const_iterator::
-operator++() {
+inline typename NestedTrieTopology<L, H>::const_iterator
+    &NestedTrieTopology<L, H>::const_iterator::operator++() {
   ++cur_edge_;
   if (cur_edge_ == ptr_->nodes_[cur_node_]->end()) {
     ++cur_node_;
@@ -266,9 +247,8 @@ operator++() {
 }
 
 template <class L, class H>
-inline typename NestedTrieTopology<L, H>::const_iterator &
-NestedTrieTopology<L, H>::const_iterator::
-operator++(int) {  // NOLINT
+inline typename NestedTrieTopology<L, H>::const_iterator
+    &NestedTrieTopology<L, H>::const_iterator::operator++(int) {  // NOLINT
   const_iterator save(*this);
   ++(*this);
   return save;
@@ -279,10 +259,11 @@ operator++(int) {  // NOLINT
 template <class L, class H>
 class FlatTrieTopology {
  private:
-  typedef unordered_map<ParentLabel<L>, int, ParentLabelHash<L, H> > NextMap;
+  typedef std::unordered_map<ParentLabel<L>, int, ParentLabelHash<L, H>>
+      NextMap;
 
  public:
-  // Iterator over edges as pair<ParentLabel<L>, int>
+  // Iterator over edges as std::pair<ParentLabel<L>, int>
   typedef typename NextMap::const_iterator const_iterator;
   typedef L Label;
   typedef H Hash;
@@ -307,10 +288,10 @@ class FlatTrieTopology {
   int Insert(int parent, const L &label);
   int Find(int parent, const L &label) const;
 
-  istream &Read(istream &strm) {  // NOLINT
+  std::istream &Read(std::istream &strm) {  // NOLINT
     return ReadType(strm, &next_);
   }
-  ostream &Write(ostream &strm) const {  // NOLINT
+  std::ostream &Write(std::ostream &strm) const {  // NOLINT
     return WriteType(strm, next_);
   }
 
@@ -443,12 +424,12 @@ class MutableTrie {
 
   bool operator!=(const MutableTrie &that) const { return !(*this == that); }
 
-  istream &Read(istream &strm) {  // NOLINT
+  std::istream &Read(std::istream &strm) {  // NOLINT
     ReadType(strm, &topology_);
     ReadType(strm, &values_);
     return strm;
   }
-  ostream &Write(ostream &strm) const {  // NOLINT
+  std::ostream &Write(std::ostream &strm) const {  // NOLINT
     WriteType(strm, topology_);
     WriteType(strm, values_);
     return strm;
@@ -456,7 +437,7 @@ class MutableTrie {
 
  private:
   T topology_;
-  vector<V> values_;
+  std::vector<V> values_;
 };
 
 }  // namespace fst

@@ -1,24 +1,11 @@
-// fstdraw.cc
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+//
+// Draws a binary FSTs in the Graphviz dot text format.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: allauzen@google.com (Cyril Allauzen)
-// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
-//
-// \file
-// Draws a binary FSTs in the Graphviz dot text format
+#include <ostream>
 
+#include <fstream>
 #include <fst/script/draw.h>
 
 DEFINE_bool(acceptor, false, "Input in acceptor format");
@@ -44,7 +31,6 @@ DEFINE_bool(allow_negative_labels, false,
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
-  using fst::ostream;
   using fst::SymbolTable;
 
   string usage = "Prints out binary FSTs in dot text format.\n\n  Usage: ";
@@ -63,50 +49,48 @@ int main(int argc, char **argv) {
   s::FstClass *fst = s::FstClass::Read(in_name);
   if (!fst) return 1;
 
-  ostream *ostrm = &std::cout;
+  std::ostream *ostrm = &std::cout;
   string dest = "stdout";
   if (argc == 3) {
     dest = argv[2];
-    ostrm = new fst::ofstream(argv[2]);
+    ostrm = new std::ofstream(argv[2]);
     if (!*ostrm) {
       LOG(ERROR) << argv[0] << ": Open failed, file = " << argv[2];
       return 1;
     }
   }
-  ostrm->precision(FLAGS_precision);
 
-  const SymbolTable *isyms = 0, *osyms = 0, *ssyms = 0;
+  const SymbolTable *isyms = nullptr;
+  const SymbolTable *osyms = nullptr;
+  const SymbolTable *ssyms = nullptr;
 
   fst::SymbolTableTextOptions opts;
   opts.allow_negative = FLAGS_allow_negative_labels;
 
   if (!FLAGS_isymbols.empty() && !FLAGS_numeric) {
     isyms = SymbolTable::ReadText(FLAGS_isymbols, opts);
-    if (!isyms) exit(1);
+    if (!isyms) return 1;
   }
 
   if (!FLAGS_osymbols.empty() && !FLAGS_numeric) {
     osyms = SymbolTable::ReadText(FLAGS_osymbols, opts);
-    if (!osyms) exit(1);
+    if (!osyms) return 1;
   }
 
   if (!FLAGS_ssymbols.empty() && !FLAGS_numeric) {
     ssyms = SymbolTable::ReadText(FLAGS_ssymbols);
-    if (!ssyms) exit(1);
+    if (!ssyms) return 1;
   }
 
-  if (!isyms && !FLAGS_numeric)
-    isyms = fst->InputSymbols();
-  if (!osyms && !FLAGS_numeric)
-    osyms = fst->OutputSymbols();
+  if (!isyms && !FLAGS_numeric) isyms = fst->InputSymbols();
+  if (!osyms && !FLAGS_numeric) osyms = fst->OutputSymbols();
 
-  s::DrawFst(*fst, isyms, osyms, ssyms,  FLAGS_acceptor,
-             FLAGS_title, FLAGS_width, FLAGS_height,
-             FLAGS_portrait, FLAGS_vertical,
-             FLAGS_ranksep, FLAGS_nodesep,
-             FLAGS_fontsize, FLAGS_precision,
+  s::DrawFst(*fst, isyms, osyms, ssyms, FLAGS_acceptor, FLAGS_title,
+             FLAGS_width, FLAGS_height, FLAGS_portrait, FLAGS_vertical,
+             FLAGS_ranksep, FLAGS_nodesep, FLAGS_fontsize, FLAGS_precision,
              FLAGS_show_weight_one, ostrm, dest);
 
   if (ostrm != &std::cout) delete ostrm;
+
   return 0;
 }

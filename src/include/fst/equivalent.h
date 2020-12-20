@@ -1,36 +1,16 @@
-// equivalent.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: wojciech@google.com (Wojciech Skut)
-//
-// \file Functions and classes to determine the equivalence of two
-// FSTs.
+// Functions and classes to determine the equivalence of two FSTs.
 
 #ifndef FST_LIB_EQUIVALENT_H__
 #define FST_LIB_EQUIVALENT_H__
 
 #include <algorithm>
 #include <deque>
-using std::deque;
 #include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 
 #include <fst/encode.h>
 #include <fst/push.h>
@@ -67,12 +47,8 @@ struct EquivalenceUtil {
   // equivalence class. The parameter 'which_fst' takes the values 1
   // and 2, identifying the input FST.
   static MappedId MapState(StateId s, int32 which_fst) {
-    return
-      (kNoStateId == s)
-      ?
-      kDeadState
-      :
-      (static_cast<MappedId>(s) << 1) + which_fst;
+    return (kNoStateId == s) ? kDeadState
+                             : (static_cast<MappedId>(s) << 1) + which_fst;
   }
   // Maps set ID to State ID.
   static StateId UnMapState(MappedId id) {
@@ -81,9 +57,8 @@ struct EquivalenceUtil {
   // Convenience function: checks if state with MappedId 's' is final
   // in acceptor 'fa'.
   static bool IsFinal(const Fst<Arc> &fa, MappedId s) {
-    return
-      (kDeadState == s) ?
-      false : (fa.Final(UnMapState(s)) != Weight::Zero());
+    return (kDeadState == s) ? false
+                             : (fa.Final(UnMapState(s)) != Weight::Zero());
   }
   // Convenience function: returns the representative of 'id' in 'sets',
   // creating a new set if needed.
@@ -98,12 +73,11 @@ struct EquivalenceUtil {
   }
 };
 
-template <class Arc> const
-typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kDeadState;
+template <class Arc>
+const typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kDeadState;
 
-template <class Arc> const
-typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
-
+template <class Arc>
+const typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
 
 // Equivalence checking algorithm: determines if the two FSTs
 // <code>fst1</code> and <code>fst2</code> are equivalent. The input
@@ -127,8 +101,7 @@ typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
 //        by 4 by all practical purposes.
 //
 template <class Arc>
-bool Equivalent(const Fst<Arc> &fst1,
-                const Fst<Arc> &fst2,
+bool Equivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
                 double delta = kDelta, bool *error = 0) {
   typedef typename Arc::Weight Weight;
   if (error) *error = false;
@@ -136,7 +109,7 @@ bool Equivalent(const Fst<Arc> &fst1,
   // Check that the symbol table are compatible
   if (!CompatSymbols(fst1.InputSymbols(), fst2.InputSymbols()) ||
       !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols())) {
-    FSTERROR() << "Equivalent: input/output symbol tables of 1st argument "
+    FSTERROR() << "Equivalent: Input/output symbol tables of 1st argument "
                << "do not match input/output symbol tables of 2nd argument";
     if (error) *error = true;
     return false;
@@ -144,27 +117,27 @@ bool Equivalent(const Fst<Arc> &fst1,
   // Check properties first:
   uint64 props = kNoEpsilons | kIDeterministic | kAcceptor;
   if (fst1.Properties(props, true) != props) {
-    FSTERROR() << "Equivalent: first argument not an"
+    FSTERROR() << "Equivalent: 1st argument not an"
                << " epsilon-free deterministic acceptor";
     if (error) *error = true;
     return false;
   }
   if (fst2.Properties(props, true) != props) {
-    FSTERROR() << "Equivalent: second argument not an"
+    FSTERROR() << "Equivalent: 2nd argument not an"
                << " epsilon-free deterministic acceptor";
     if (error) *error = true;
     return false;
   }
 
-  if ((fst1.Properties(kUnweighted , true) != kUnweighted)
-      || (fst2.Properties(kUnweighted , true) != kUnweighted)) {
+  if ((fst1.Properties(kUnweighted, true) != kUnweighted) ||
+      (fst2.Properties(kUnweighted, true) != kUnweighted)) {
     VectorFst<Arc> efst1(fst1);
     VectorFst<Arc> efst2(fst2);
     Push(&efst1, REWEIGHT_TO_INITIAL, delta);
     Push(&efst2, REWEIGHT_TO_INITIAL, delta);
     ArcMap(&efst1, QuantizeMapper<Arc>(delta));
     ArcMap(&efst2, QuantizeMapper<Arc>(delta));
-    EncodeMapper<Arc> mapper(kEncodeWeights|kEncodeLabels, ENCODE);
+    EncodeMapper<Arc> mapper(kEncodeWeights | kEncodeLabels, ENCODE);
     ArcMap(&efst1, &mapper);
     ArcMap(&efst2, &mapper);
     return Equivalent(efst1, efst2);
@@ -190,14 +163,13 @@ bool Equivalent(const Fst<Arc> &fst1,
   // fst1 and fst2: input labels mapped to pairs of MappedId's
   // representing destination states of the corresponding arcs in fst1
   // and fst2, respectively.
-  typedef
-    unordered_map<typename Arc::Label, pair<MappedId, MappedId> >
-    Label2StatePairMap;
+  typedef std::unordered_map<typename Arc::Label, std::pair<MappedId, MappedId>>
+      Label2StatePairMap;
 
   Label2StatePairMap arc_pairs;
 
   // Pairs of MappedId's to be processed, organized in a queue.
-  deque<pair<MappedId, MappedId> > q;
+  std::deque<std::pair<MappedId, MappedId>> q;
 
   bool ret = true;
   // Early return if the start states differ w.r.t. being final.
@@ -223,35 +195,34 @@ bool Equivalent(const Fst<Arc> &fst1,
 
       // Copy outgoing arcs starting at s1 into the hashtable.
       if (Util::kDeadState != s1) {
-        ArcIterator<Fst<Arc> > arc_iter(fst1, Util::UnMapState(s1));
+        ArcIterator<Fst<Arc>> arc_iter(fst1, Util::UnMapState(s1));
         for (; !arc_iter.Done(); arc_iter.Next()) {
           const Arc &arc = arc_iter.Value();
           if (arc.weight != Weight::Zero()) {  // Zero-weight arcs
-                                                   // are treated as
-                                                   // non-exisitent.
+                                               // are treated as
+                                               // non-exisitent.
             arc_pairs[arc.ilabel].first = Util::MapState(arc.nextstate, FST1);
           }
         }
       }
       // Copy outgoing arcs starting at s2 into the hashtable.
       if (Util::kDeadState != s2) {
-        ArcIterator<Fst<Arc> > arc_iter(fst2, Util::UnMapState(s2));
+        ArcIterator<Fst<Arc>> arc_iter(fst2, Util::UnMapState(s2));
         for (; !arc_iter.Done(); arc_iter.Next()) {
           const Arc &arc = arc_iter.Value();
           if (arc.weight != Weight::Zero()) {  // Zero-weight arcs
-                                                   // are treated as
-                                                   // non-existent.
+                                               // are treated as
+                                               // non-existent.
             arc_pairs[arc.ilabel].second = Util::MapState(arc.nextstate, FST2);
           }
         }
       }
       // Iterate through the hashtable and process pairs of target
       // states.
-      for (typename Label2StatePairMap::const_iterator
-             arc_iter = arc_pairs.begin();
-           arc_iter != arc_pairs.end();
-           ++arc_iter) {
-        const pair<MappedId, MappedId> &p = arc_iter->second;
+      for (typename Label2StatePairMap::const_iterator arc_iter =
+               arc_pairs.begin();
+           arc_iter != arc_pairs.end(); ++arc_iter) {
+        const std::pair<MappedId, MappedId> &p = arc_iter->second;
         if (Util::IsFinal(fst1, p.first) != Util::IsFinal(fst2, p.second)) {
           // Detected inconsistency: return false.
           ret = false;

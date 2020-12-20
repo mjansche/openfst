@@ -1,21 +1,9 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: krr@google.com (Kasturi Rangan Raghavan)
-// \file
 // LogWeight along with sign information that represents the value X in the
 // linear domain as <sign(X), -ln(|X|)>
+//
 // The sign is a TropicalWeight:
 //  positive, TropicalWeight.Value() > 0.0, recommended value 1.0
 //  negative, TropicalWeight.Value() <= 0.0, recommended value -1.0
@@ -30,8 +18,7 @@
 
 namespace fst {
 template <class T>
-class SignedLogWeightTpl
-    : public PairWeight<TropicalWeight, LogWeightTpl<T> > {
+class SignedLogWeightTpl : public PairWeight<TropicalWeight, LogWeightTpl<T>> {
  public:
   typedef TropicalWeight X1;
   typedef LogWeightTpl<T> X2;
@@ -46,14 +33,11 @@ class SignedLogWeightTpl
 
   SignedLogWeightTpl() : PairWeight<X1, X2>() {}
 
-  SignedLogWeightTpl(const SignedLogWeightTpl<T>& w)
-      : PairWeight<X1, X2> (w) { }
+  SignedLogWeightTpl(const SignedLogWeightTpl<T> &w) : PairWeight<X1, X2>(w) {}
 
-  SignedLogWeightTpl(const PairWeight<X1, X2>& w)
-      : PairWeight<X1, X2> (w) { }
+  SignedLogWeightTpl(const PairWeight<X1, X2> &w) : PairWeight<X1, X2>(w) {}
 
-  SignedLogWeightTpl(const X1& x1, const X2& x2)
-      : PairWeight<X1, X2>(x1, x2) { }
+  SignedLogWeightTpl(const X1 &x1, const X2 &x2) : PairWeight<X1, X2>(x1, x2) {}
 
   static const SignedLogWeightTpl<T> &Zero() {
     static const SignedLogWeightTpl<T> zero(X1(1.0), X2::Zero());
@@ -79,13 +63,9 @@ class SignedLogWeightTpl
     return PairWeight<X1, X2>::Quantize();
   }
 
-  ReverseWeight Reverse() const {
-    return PairWeight<X1, X2>::Reverse();
-  }
+  ReverseWeight Reverse() const { return PairWeight<X1, X2>::Reverse(); }
 
-  bool Member() const {
-    return PairWeight<X1, X2>::Member();
-  }
+  bool Member() const { return PairWeight<X1, X2>::Member(); }
 
   static uint64 Properties() {
     // not idempotent nor path
@@ -108,8 +88,7 @@ class SignedLogWeightTpl
 template <class T>
 inline SignedLogWeightTpl<T> Plus(const SignedLogWeightTpl<T> &w1,
                                   const SignedLogWeightTpl<T> &w2) {
-  if (!w1.Member() || !w2.Member())
-    return SignedLogWeightTpl<T>::NoWeight();
+  if (!w1.Member() || !w2.Member()) return SignedLogWeightTpl<T>::NoWeight();
   bool s1 = w1.Value1().Value() > 0.0;
   bool s2 = w2.Value1().Value() > 0.0;
   T f1 = w1.Value2().Value();
@@ -125,19 +104,19 @@ inline SignedLogWeightTpl<T> Plus(const SignedLogWeightTpl<T> &w1,
       return SignedLogWeightTpl<T>::Zero();
   } else if (f1 > f2) {
     if (s1 == s2) {
-      return SignedLogWeightTpl<T>(
-        w1.Value1(), (f2 - log(1.0F + exp(f2 - f1))));
+      return SignedLogWeightTpl<T>(w1.Value1(),
+                                   (f2 - log(1.0F + exp(f2 - f1))));
     } else {
-      return SignedLogWeightTpl<T>(
-        w2.Value1(), (f2 - log(1.0F - exp(f2 - f1))));
+      return SignedLogWeightTpl<T>(w2.Value1(),
+                                   (f2 - log(1.0F - exp(f2 - f1))));
     }
   } else {
     if (s2 == s1) {
-      return SignedLogWeightTpl<T>(
-        w2.Value1(), (f1 - log(1.0F + exp(f1 - f2))));
+      return SignedLogWeightTpl<T>(w2.Value1(),
+                                   (f1 - log(1.0F + exp(f1 - f2))));
     } else {
-      return SignedLogWeightTpl<T>(
-        w1.Value1(), (f1 - log(1.0F - exp(f1 - f2))));
+      return SignedLogWeightTpl<T>(w1.Value1(),
+                                   (f1 - log(1.0F - exp(f1 - f2))));
     }
   }
 }
@@ -152,8 +131,7 @@ inline SignedLogWeightTpl<T> Minus(const SignedLogWeightTpl<T> &w1,
 template <class T>
 inline SignedLogWeightTpl<T> Times(const SignedLogWeightTpl<T> &w1,
                                    const SignedLogWeightTpl<T> &w2) {
-  if (!w1.Member() || !w2.Member())
-    return SignedLogWeightTpl<T>::NoWeight();
+  if (!w1.Member() || !w2.Member()) return SignedLogWeightTpl<T>::NoWeight();
   bool s1 = w1.Value1().Value() > 0.0;
   bool s2 = w2.Value1().Value() > 0.0;
   T f1 = w1.Value2().Value();
@@ -168,18 +146,17 @@ template <class T>
 inline SignedLogWeightTpl<T> Divide(const SignedLogWeightTpl<T> &w1,
                                     const SignedLogWeightTpl<T> &w2,
                                     DivideType typ = DIVIDE_ANY) {
-  if (!w1.Member() || !w2.Member())
-    return SignedLogWeightTpl<T>::NoWeight();
+  if (!w1.Member() || !w2.Member()) return SignedLogWeightTpl<T>::NoWeight();
   bool s1 = w1.Value1().Value() > 0.0;
   bool s2 = w2.Value1().Value() > 0.0;
   T f1 = w1.Value2().Value();
   T f2 = w2.Value2().Value();
   if (f2 == FloatLimits<T>::PosInfinity())
     return SignedLogWeightTpl<T>(TropicalWeight(1.0),
-      FloatLimits<T>::NumberBad());
+                                 FloatLimits<T>::NumberBad());
   else if (f1 == FloatLimits<T>::PosInfinity())
     return SignedLogWeightTpl<T>(TropicalWeight(1.0),
-      FloatLimits<T>::PosInfinity());
+                                 FloatLimits<T>::PosInfinity());
   else if (s1 == s2)
     return SignedLogWeightTpl<T>(TropicalWeight(1.0), (f1 - f2));
   else
@@ -188,15 +165,14 @@ inline SignedLogWeightTpl<T> Divide(const SignedLogWeightTpl<T> &w1,
 
 template <class T>
 inline bool ApproxEqual(const SignedLogWeightTpl<T> &w1,
-                        const SignedLogWeightTpl<T> &w2,
-                        float delta = kDelta) {
+                        const SignedLogWeightTpl<T> &w2, float delta = kDelta) {
   bool s1 = w1.Value1().Value() > 0.0;
   bool s2 = w2.Value1().Value() > 0.0;
   if (s1 == s2) {
     return ApproxEqual(w1.Value2(), w2.Value2(), delta);
   } else {
-    return w1.Value2() == LogWeightTpl<T>::Zero()
-        && w2.Value2() == LogWeightTpl<T>::Zero();
+    return w1.Value2() == LogWeightTpl<T>::Zero() &&
+           w2.Value2() == LogWeightTpl<T>::Zero();
   }
 }
 
@@ -212,7 +188,6 @@ inline bool operator==(const SignedLogWeightTpl<T> &w1,
            (w2.Value2() == LogWeightTpl<T>::Zero());
 }
 
-
 // Single-precision signed-log weight
 typedef SignedLogWeightTpl<float> SignedLogWeight;
 // Double-precision signed-log weight
@@ -225,8 +200,8 @@ typedef SignedLogWeightTpl<double> SignedLog64Weight;
 template <class W1, class W2>
 bool SignedLogConvertCheck(W1 w) {
   if (w.Value1().Value() < 0.0) {
-    FSTERROR() << "WeightConvert: can't convert weight from \""
-               << W1::Type() << "\" to \"" << W2::Type();
+    FSTERROR() << "WeightConvert: Can't convert weight from " << W1::Type()
+               << " to " << W2::Type();
     return false;
   }
   return true;

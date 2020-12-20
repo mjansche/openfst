@@ -17,15 +17,19 @@
 // \file
 // Google-style flag handling definitions
 
+#include <cstdlib>
 #include <cstring>
 
 #include <fst/compat.h>
 #include <fst/flags.h>
 
+static const char *private_tmpdir = getenv("TMPDIR");
+
 DEFINE_int32(v, 0, "verbose level");
 DEFINE_bool(help, false, "show usage information");
 DEFINE_bool(helpshort, false, "show brief usage information");
-DEFINE_string(tmpdir, "/tmp/", "temporary directory");
+DEFINE_string(tmpdir, private_tmpdir ? private_tmpdir : "/tmp",
+              "temporary directory");
 
 using namespace std;
 

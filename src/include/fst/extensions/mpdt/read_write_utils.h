@@ -1,51 +1,30 @@
-// read_write_utils.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: rws@google.com (Richard Sproat)
-//
-// \file
 // Definition of ReadLabelTriples based on ReadLabelPairs, like that in
 // nlp/fst/lib/util.h for pairs, and similarly for WriteLabelTriples.
 
 #ifndef FST_EXTENSIONS_MPDT_READ_WRITE_UTILS_H__
 #define FST_EXTENSIONS_MPDT_READ_WRITE_UTILS_H__
 
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
 
-#include <fst/test-properties.h>
-
-#include <iostream>
 #include <fstream>
-#include <sstream>
-
+#include <fst/test-properties.h>
 
 namespace fst {
 
 // Returns true on success
 template <typename Label>
-bool ReadLabelTriples(
-    const string& filename,
-    vector<pair<Label, Label> >* pairs,
-    vector<Label>* assignments,
-    bool allow_negative = false) {
-  ifstream strm(filename.c_str());
+bool ReadLabelTriples(const string& filename,
+                      std::vector<std::pair<Label, Label>>* pairs,
+                      std::vector<Label>* assignments,
+                      bool allow_negative = false) {
+  std::ifstream strm(filename.c_str());
 
   if (!strm) {
     LOG(ERROR) << "ReadIntTriples: Can't open file: " << filename;
@@ -59,11 +38,10 @@ bool ReadLabelTriples(
   pairs->clear();
   while (strm.getline(line, kLineLen)) {
     ++nline;
-    vector<char *> col;
+    std::vector<char*> col;
     SplitToVector(line, "\n\t ", &col, true);
     // empty line or comment?
-    if (col.size() == 0 || col[0][0] == '\0' || col[0][0] == '#')
-      continue;
+    if (col.size() == 0 || col[0][0] == '\0' || col[0][0] == '#') continue;
     if (col.size() != 3) {
       LOG(ERROR) << "ReadLabelTriples: Bad number of columns, "
                  << "file = " << filename << ", line = " << nline;
@@ -86,17 +64,16 @@ bool ReadLabelTriples(
 // Returns true on success
 template <typename Label>
 bool WriteLabelTriples(const string& filename,
-                       const vector<pair<Label, Label> >& pairs,
-                       const vector<Label>& assignments) {
-  ostream* strm = &std::cout;
+                       const std::vector<std::pair<Label, Label>>& pairs,
+                       const std::vector<Label>& assignments) {
+  std::ostream* strm = &std::cout;
   if (pairs.size() != assignments.size()) {
-    LOG(ERROR) <<
-        "WriteLabelTriples: pairs and assignments of different sizes";
+    LOG(ERROR) << "WriteLabelTriples: Pairs and assignments of different sizes";
     return false;
   }
 
   if (!filename.empty()) {
-    strm = new ofstream(filename.c_str());
+    strm = new std::ofstream(filename.c_str());
     if (!*strm) {
       LOG(ERROR) << "WriteLabelTriples: Can't open file: " << filename;
       return false;
@@ -104,9 +81,8 @@ bool WriteLabelTriples(const string& filename,
   }
 
   for (ssize_t n = 0; n < pairs.size(); ++n)
-    *strm << pairs[n].first << "\t"
-          << pairs[n].second << "\t"
-          << assignments[n] << "\n";
+    *strm << pairs[n].first << "\t" << pairs[n].second << "\t" << assignments[n]
+          << "\n";
 
   if (!*strm) {
     LOG(ERROR) << "WriteLabelTriples: Write failed: "

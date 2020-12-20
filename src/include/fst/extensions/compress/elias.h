@@ -1,12 +1,13 @@
-// Compress.h
-// Compresses and decompresses unweighted FSTs
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+//
+// Compresses and decompresses unweighted FSTs.
 
 #ifndef FST_EXTENSIONS_COMPRESS_ELIAS_H_
 #define FST_EXTENSIONS_COMPRESS_ELIAS_H_
 
 #include <stack>
 #include <vector>
-using std::vector;
 
 #include <fst/compat.h>
 namespace fst {
@@ -14,28 +15,26 @@ namespace fst {
 template <class Var>
 class Elias {
  public:
-// Gamma encoding is a subroutine for Delta encoding
-  static void GammaEncode(const Var &input, vector<bool> *code);
+  // Gamma encoding is a subroutine for Delta encoding
+  static void GammaEncode(const Var &input, std::vector<bool> *code);
 
-// Elias Delta encoding for a single integer
-  static void DeltaEncode(const Var &input, vector<bool> *code);
+  // Elias Delta encoding for a single integer
+  static void DeltaEncode(const Var &input, std::vector<bool> *code);
 
-// Batch decoding of a set of integers
-  static void BatchDecode(const vector<bool> &input, vector<Var> *output);
+  // Batch decoding of a set of integers
+  static void BatchDecode(const std::vector<bool> &input,
+                          std::vector<Var> *output);
 };
 
 template <class Var>
-void Elias<Var>::
-GammaEncode(const Var &input, vector<bool> *code) {
+void Elias<Var>::GammaEncode(const Var &input, std::vector<bool> *code) {
   Var input_copy = input;
   stack<bool> reverse_code;
   while (input_copy > 0) {
     reverse_code.push(input_copy % 2);
     input_copy = input_copy / 2;
   }
-  for (Var auxvar = 0;
-       auxvar < reverse_code.size() - 1;
-       auxvar++)
+  for (Var auxvar = 0; auxvar < reverse_code.size() - 1; auxvar++)
     code->push_back(0);
   while (reverse_code.empty() != 1) {
     code->push_back(reverse_code.top());
@@ -43,8 +42,7 @@ GammaEncode(const Var &input, vector<bool> *code) {
   }
 }
 template <class Var>
-  void Elias<Var>::
-DeltaEncode(const Var &input, vector<bool> *code) {
+void Elias<Var>::DeltaEncode(const Var &input, std::vector<bool> *code) {
   Var input_copy = input + 1;
   stack<bool> reverse_remainder;
   Var auxvar = 0;
@@ -62,13 +60,13 @@ DeltaEncode(const Var &input, vector<bool> *code) {
 }
 
 template <class Var>
-  void Elias<Var>::
-BatchDecode(const vector<bool> &input, vector<Var> *output) {
+void Elias<Var>::BatchDecode(const std::vector<bool> &input,
+                             std::vector<Var> *output) {
   Var lead_zeros = 0;
   Var remainder_bits = 0;
   Var current_word = 1;
   Var value = 1;
-  vector<bool>::const_iterator it = input.begin();
+  std::vector<bool>::const_iterator it = input.begin();
   while (it != input.end()) {
     lead_zeros = 0;
     remainder_bits = 0;

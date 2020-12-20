@@ -1,35 +1,18 @@
-// expand.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Expand a PDT to an FST.
+// Expands a PDT to an FST.
 
 #ifndef FST_EXTENSIONS_PDT_EXPAND_H__
 #define FST_EXTENSIONS_PDT_EXPAND_H__
 
 #include <forward_list>
-using std::forward_list;
 #include <vector>
-using std::vector;
 
-#include <fst/extensions/pdt/pdt.h>
 #include <fst/extensions/pdt/paren.h>
-#include <fst/extensions/pdt/shortest-path.h>
+#include <fst/extensions/pdt/pdt.h>
 #include <fst/extensions/pdt/reverse.h>
+#include <fst/extensions/pdt/shortest-path.h>
 #include <fst/cache.h>
 #include <fst/mutable-fst.h>
 #include <fst/queue.h>
@@ -39,29 +22,26 @@ using std::vector;
 namespace fst {
 
 template <class Arc>
-struct ExpandFstOptions : public CacheOptions {
+struct PdtExpandFstOptions : public CacheOptions {
   bool keep_parentheses;
   PdtStack<typename Arc::StateId, typename Arc::Label> *stack;
   PdtStateTable<typename Arc::StateId, typename Arc::StateId> *state_table;
 
-  ExpandFstOptions(
-      const CacheOptions &opts = CacheOptions(),
-      bool kp = false,
+  PdtExpandFstOptions(
+      const CacheOptions &opts = CacheOptions(), bool kp = false,
       PdtStack<typename Arc::StateId, typename Arc::Label> *s = 0,
       PdtStateTable<typename Arc::StateId, typename Arc::StateId> *st = 0)
       : CacheOptions(opts), keep_parentheses(kp), stack(s), state_table(st) {}
 };
 
 // Properties for an expanded PDT.
-inline uint64 ExpandProperties(uint64 inprops) {
+inline uint64 PdtExpandProperties(uint64 inprops) {
   return inprops & (kAcceptor | kAcyclic | kInitialAcyclic | kUnweighted);
 }
 
-
-// Implementation class for ExpandFst
+// Implementation class for PdtExpandFst
 template <class A>
-class ExpandFstImpl
-    : public CacheImpl<A> {
+class PdtExpandFstImpl : public CacheImpl<A> {
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
@@ -69,13 +49,13 @@ class ExpandFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::PushArc;
-  using CacheBaseImpl< CacheState<A> >::HasArcs;
-  using CacheBaseImpl< CacheState<A> >::HasFinal;
-  using CacheBaseImpl< CacheState<A> >::HasStart;
-  using CacheBaseImpl< CacheState<A> >::SetArcs;
-  using CacheBaseImpl< CacheState<A> >::SetFinal;
-  using CacheBaseImpl< CacheState<A> >::SetStart;
+  using CacheBaseImpl<CacheState<A>>::PushArc;
+  using CacheBaseImpl<CacheState<A>>::HasArcs;
+  using CacheBaseImpl<CacheState<A>>::HasFinal;
+  using CacheBaseImpl<CacheState<A>>::HasStart;
+  using CacheBaseImpl<CacheState<A>>::SetArcs;
+  using CacheBaseImpl<CacheState<A>>::SetFinal;
+  using CacheBaseImpl<CacheState<A>>::SetStart;
 
   typedef A Arc;
   typedef typename A::Label Label;
@@ -84,31 +64,35 @@ class ExpandFstImpl
   typedef StateId StackId;
   typedef PdtStateTuple<StateId, StackId> StateTuple;
 
-  ExpandFstImpl(const Fst<A> &fst,
-                const vector<pair<typename Arc::Label,
-                                  typename Arc::Label> > &parens,
-                const ExpandFstOptions<A> &opts)
-      : CacheImpl<A>(opts), fst_(fst.Copy()),
-        stack_(opts.stack ? opts.stack: new PdtStack<StateId, Label>(parens)),
-        state_table_(opts.state_table ? opts.state_table :
-                     new PdtStateTable<StateId, StackId>()),
-        own_stack_(opts.stack == 0), own_state_table_(opts.state_table == 0),
+  PdtExpandFstImpl(
+      const Fst<A> &fst,
+      const std::vector<std::pair<typename Arc::Label, typename Arc::Label>>
+          &parens,
+      const PdtExpandFstOptions<A> &opts)
+      : CacheImpl<A>(opts),
+        fst_(fst.Copy()),
+        stack_(opts.stack ? opts.stack : new PdtStack<StateId, Label>(parens)),
+        state_table_(opts.state_table ? opts.state_table
+                                      : new PdtStateTable<StateId, StackId>()),
+        own_stack_(opts.stack == 0),
+        own_state_table_(opts.state_table == 0),
         keep_parentheses_(opts.keep_parentheses) {
     SetType("expand");
 
     uint64 props = fst.Properties(kFstProperties, false);
-    SetProperties(ExpandProperties(props), kCopyProperties);
+    SetProperties(PdtExpandProperties(props), kCopyProperties);
 
     SetInputSymbols(fst.InputSymbols());
     SetOutputSymbols(fst.OutputSymbols());
   }
 
-  ExpandFstImpl(const ExpandFstImpl &impl)
+  PdtExpandFstImpl(const PdtExpandFstImpl &impl)
       : CacheImpl<A>(impl),
         fst_(impl.fst_->Copy(true)),
         stack_(new PdtStack<StateId, Label>(*impl.stack_)),
         state_table_(new PdtStateTable<StateId, StackId>()),
-        own_stack_(true), own_state_table_(true),
+        own_stack_(true),
+        own_state_table_(true),
         keep_parentheses_(impl.keep_parentheses_) {
     SetType("expand");
     SetProperties(impl.Properties(), kCopyProperties);
@@ -116,19 +100,16 @@ class ExpandFstImpl
     SetOutputSymbols(impl.OutputSymbols());
   }
 
-  ~ExpandFstImpl() {
+  ~PdtExpandFstImpl() override {
     delete fst_;
-    if (own_stack_)
-      delete stack_;
-    if (own_state_table_)
-      delete state_table_;
+    if (own_stack_) delete stack_;
+    if (own_state_table_) delete state_table_;
   }
 
   StateId Start() {
     if (!HasStart()) {
       StateId s = fst_->Start();
-      if (s == kNoStateId)
-        return kNoStateId;
+      if (s == kNoStateId) return kNoStateId;
       StateTuple tuple(s, 0);
       StateId start = state_table_->FindState(tuple);
       SetStart(start);
@@ -156,20 +137,17 @@ class ExpandFstImpl
   }
 
   size_t NumInputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      ExpandState(s);
+    if (!HasArcs(s)) ExpandState(s);
     return CacheImpl<A>::NumInputEpsilons(s);
   }
 
   size_t NumOutputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      ExpandState(s);
+    if (!HasArcs(s)) ExpandState(s);
     return CacheImpl<A>::NumOutputEpsilons(s);
   }
 
   void InitArcIterator(StateId s, ArcIteratorData<A> *data) {
-    if (!HasArcs(s))
-      ExpandState(s);
+    if (!HasArcs(s)) ExpandState(s);
     CacheImpl<A>::InitArcIterator(s, data);
   }
 
@@ -177,8 +155,8 @@ class ExpandFstImpl
   // states as needed.
   void ExpandState(StateId s) {
     StateTuple tuple = state_table_->Tuple(s);
-    for (ArcIterator< Fst<A> > aiter(*fst_, tuple.state_id);
-         !aiter.Done(); aiter.Next()) {
+    for (ArcIterator<Fst<A>> aiter(*fst_, tuple.state_id); !aiter.Done();
+         aiter.Next()) {
       Arc arc = aiter.Value();
       StackId stack_id = stack_->Find(tuple.stack_id, arc.ilabel);
       if (stack_id == -1) {
@@ -211,7 +189,7 @@ class ExpandFstImpl
   bool own_state_table_;
   bool keep_parentheses_;
 
-  void operator=(const ExpandFstImpl<A> &);  // disallow
+  void operator=(const PdtExpandFstImpl<A> &);  // disallow
 };
 
 // Expands a pushdown transducer (PDT) encoded as an FST into an FST.
@@ -224,10 +202,10 @@ class ExpandFstImpl
 // This class attaches interface to implementation and handles
 // reference counting, delegating most methods to ImplToFst.
 template <class A>
-class ExpandFst : public ImplToFst< ExpandFstImpl<A> > {
+class PdtExpandFst : public ImplToFst<PdtExpandFstImpl<A>> {
  public:
-  friend class ArcIterator< ExpandFst<A> >;
-  friend class StateIterator< ExpandFst<A> >;
+  friend class ArcIterator<PdtExpandFst<A>>;
+  friend class StateIterator<PdtExpandFst<A>>;
 
   typedef A Arc;
   typedef typename A::Label Label;
@@ -236,32 +214,33 @@ class ExpandFst : public ImplToFst< ExpandFstImpl<A> > {
   typedef StateId StackId;
   typedef DefaultCacheStore<A> Store;
   typedef typename Store::State State;
-  typedef ExpandFstImpl<A> Impl;
+  typedef PdtExpandFstImpl<A> Impl;
 
-  ExpandFst(const Fst<A> &fst,
-            const vector<pair<typename Arc::Label,
-                              typename Arc::Label> > &parens)
-      : ImplToFst<Impl>(new Impl(fst, parens, ExpandFstOptions<A>())) {}
+  PdtExpandFst(const Fst<A> &fst,
+            const std::vector<
+                std::pair<typename Arc::Label, typename Arc::Label>> &parens)
+      : ImplToFst<Impl>(
+            std::make_shared<Impl>(fst, parens, PdtExpandFstOptions<A>())) {}
 
-  ExpandFst(const Fst<A> &fst,
-            const vector<pair<typename Arc::Label,
-                              typename Arc::Label> > &parens,
-            const ExpandFstOptions<A> &opts)
-      : ImplToFst<Impl>(new Impl(fst, parens, opts)) {}
+  PdtExpandFst(const Fst<A> &fst,
+            const std::vector<
+                std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+            const PdtExpandFstOptions<A> &opts)
+      : ImplToFst<Impl>(std::make_shared<Impl>(fst, parens, opts)) {}
 
   // See Fst<>::Copy() for doc.
-  ExpandFst(const ExpandFst<A> &fst, bool safe = false)
+  PdtExpandFst(const PdtExpandFst<A> &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
   // Get a copy of this ExpandFst. See Fst<>::Copy() for further doc.
-  virtual ExpandFst<A> *Copy(bool safe = false) const {
-    return new ExpandFst<A>(*this, safe);
+  PdtExpandFst<A> *Copy(bool safe = false) const override {
+    return new PdtExpandFst<A>(*this, safe);
   }
 
-  virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
+  inline void InitStateIterator(StateIteratorData<A> *data) const override;
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    GetImpl()->InitArcIterator(s, data);
+  void InitArcIterator(StateId s, ArcIteratorData<A> *data) const override {
+    GetMutableImpl()->InitArcIterator(s, data);
   }
 
   const PdtStack<StackId, Label> &GetStack() const {
@@ -273,45 +252,40 @@ class ExpandFst : public ImplToFst< ExpandFstImpl<A> > {
   }
 
  private:
-  // Makes visible to friends.
-  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
+  using ImplToFst<Impl>::GetImpl;
+  using ImplToFst<Impl>::GetMutableImpl;
 
-  void operator=(const ExpandFst<A> &fst);  // Disallow
+  void operator=(const PdtExpandFst<A> &fst);  // Disallow
 };
-
-
-// Specialization for ExpandFst.
-template<class A>
-class StateIterator< ExpandFst<A> >
-    : public CacheStateIterator< ExpandFst<A> > {
- public:
-  explicit StateIterator(const ExpandFst<A> &fst)
-      : CacheStateIterator< ExpandFst<A> >(fst, fst.GetImpl()) {}
-};
-
 
 // Specialization for ExpandFst.
 template <class A>
-class ArcIterator< ExpandFst<A> >
-    : public CacheArcIterator< ExpandFst<A> > {
+class StateIterator<PdtExpandFst<A>>
+    : public CacheStateIterator<PdtExpandFst<A>> {
+ public:
+  explicit StateIterator(const PdtExpandFst<A> &fst)
+      : CacheStateIterator<PdtExpandFst<A>>(fst, fst.GetMutableImpl()) {}
+};
+
+// Specialization for ExpandFst.
+template <class A>
+class ArcIterator<PdtExpandFst<A>> : public CacheArcIterator<PdtExpandFst<A>> {
  public:
   typedef typename A::StateId StateId;
 
-  ArcIterator(const ExpandFst<A> &fst, StateId s)
-      : CacheArcIterator< ExpandFst<A> >(fst.GetImpl(), s) {
-    if (!fst.GetImpl()->HasArcs(s))
-      fst.GetImpl()->ExpandState(s);
+  ArcIterator(const PdtExpandFst<A> &fst, StateId s)
+      : CacheArcIterator<PdtExpandFst<A>>(fst.GetMutableImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->ExpandState(s);
   }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
 
-
-template <class A> inline
-void ExpandFst<A>::InitStateIterator(StateIteratorData<A> *data) const
-{
-  data->base = new StateIterator< ExpandFst<A> >(*this);
+template <class A>
+inline void PdtExpandFst<A>::InitStateIterator(StateIteratorData<A> *data)
+    const {
+  data->base = new StateIterator<PdtExpandFst<A>>(*this);
 }
 
 //
@@ -335,7 +309,7 @@ void ExpandFst<A>::InitStateIterator(StateIteratorData<A> *data) const
 // MutableFst 'ofst_' to improve readability of the code.
 //
 template <class A>
-class PrunedExpand {
+class PdtPrunedExpand {
  public:
   typedef A Arc;
   typedef typename A::Label Label;
@@ -350,33 +324,37 @@ class PrunedExpand {
   // 'keep_parentheses' specifies whether parentheses are replaced by
   // epsilons or not during the expansion. 'opts' is the cache options
   // used to instantiate the underlying ExpandFst.
-  PrunedExpand(const Fst<A> &ifst,
-               const vector<pair<Label, Label> > &parens,
+  PdtPrunedExpand(const Fst<A> &ifst,
+               const std::vector<std::pair<Label, Label>> &parens,
                bool keep_parentheses = false,
                const CacheOptions &opts = CacheOptions())
       : ifst_(ifst.Copy()),
         keep_parentheses_(keep_parentheses),
         stack_(parens),
         efst_(ifst, parens,
-              ExpandFstOptions<Arc>(opts, true, &stack_, &state_table_)),
-        queue_(state_table_, stack_, stack_length_, distance_, fdistance_) {
+              PdtExpandFstOptions<Arc>(opts, true, &stack_, &state_table_)),
+        queue_(state_table_, stack_, stack_length_, distance_, fdistance_),
+        error_(false) {
     Reverse(*ifst_, parens, &rfst_);
     VectorFst<Arc> path;
-    reverse_shortest_path_ = new SP(
-        rfst_, parens,
-        PdtShortestPathOptions<A, FifoQueue<StateId> >(true, false));
+    reverse_shortest_path_ =
+        new SP(rfst_, parens,
+               PdtShortestPathOptions<A, FifoQueue<StateId>>(true, false));
     reverse_shortest_path_->ShortestPath(&path);
+    error_ = (path.Properties(kError, true) == kError);
     balance_data_ = reverse_shortest_path_->GetBalanceData()->Reverse(
         rfst_.NumStates(), 10, -1);
 
     InitCloseParenMultimap(parens);
   }
 
-  ~PrunedExpand() {
+  ~PdtPrunedExpand() {
     delete ifst_;
     delete reverse_shortest_path_;
     delete balance_data_;
   }
+
+  bool Error() const { return error_; }
 
   // Expands and prunes with weight threshold 'threshold' the input PDT.
   // Writes the result in 'ofst'.
@@ -393,25 +371,28 @@ class PrunedExpand {
   // 3. among states with the same stack, shortest-first order is used.
   class StackCompare {
    public:
-    StackCompare(const StateTable &st,
-                 const Stack &s, const vector<StackId> &sl,
-                 const vector<Weight> &d, const vector<Weight> &fd)
-        : state_table_(st), stack_(s), stack_length_(sl),
-          distance_(d), fdistance_(fd) {}
+    StackCompare(const StateTable &st, const Stack &s,
+                 const std::vector<StackId> &sl, const std::vector<Weight> &d,
+                 const std::vector<Weight> &fd)
+        : state_table_(st),
+          stack_(s),
+          stack_length_(sl),
+          distance_(d),
+          fdistance_(fd) {}
 
     bool operator()(StateId s1, StateId s2) const {
       StackId si1 = state_table_.Tuple(s1).stack_id;
       StackId si2 = state_table_.Tuple(s2).stack_id;
-      if (stack_length_[si1] < stack_length_[si2])
-        return true;
-      if  (stack_length_[si1] > stack_length_[si2])
-        return false;
+      if (stack_length_[si1] < stack_length_[si2]) return true;
+      if (stack_length_[si1] > stack_length_[si2]) return false;
       // If stack id equal, use A*
       if (si1 == si2) {
-        Weight w1 = (s1 < distance_.size()) && (s1 < fdistance_.size()) ?
-            Times(distance_[s1], fdistance_[s1]) : Weight::Zero();
-        Weight w2 = (s2 < distance_.size()) && (s2 < fdistance_.size()) ?
-            Times(distance_[s2], fdistance_[s2]) : Weight::Zero();
+        Weight w1 = (s1 < distance_.size()) && (s1 < fdistance_.size())
+                        ? Times(distance_[s1], fdistance_[s1])
+                        : Weight::Zero();
+        Weight w2 = (s2 < distance_.size()) && (s2 < fdistance_.size())
+                        ? Times(distance_[s2], fdistance_[s2])
+                        : Weight::Zero();
         return less_(w1, w2);
       }
       // If lenghts are equal, use reverse lexico.
@@ -425,26 +406,25 @@ class PrunedExpand {
    private:
     const StateTable &state_table_;
     const Stack &stack_;
-    const vector<StackId> &stack_length_;
-    const vector<Weight> &distance_;
-    const vector<Weight> &fdistance_;
+    const std::vector<StackId> &stack_length_;
+    const std::vector<Weight> &distance_;
+    const std::vector<Weight> &fdistance_;
     NaturalLess<Weight> less_;
   };
 
   class ShortestStackFirstQueue
       : public ShortestFirstQueue<StateId, StackCompare> {
    public:
-    ShortestStackFirstQueue(
-        const PdtStateTable<StateId, StackId> &st,
-        const Stack &s,
-        const vector<StackId> &sl,
-        const vector<Weight> &d, const vector<Weight> &fd)
+    ShortestStackFirstQueue(const PdtStateTable<StateId, StackId> &st,
+                            const Stack &s, const std::vector<StackId> &sl,
+                            const std::vector<Weight> &d,
+                            const std::vector<Weight> &fd)
         : ShortestFirstQueue<StateId, StackCompare>(
-            StackCompare(st, s, sl, d, fd)) {}
+              StackCompare(st, s, sl, d, fd)) {}
   };
 
-
-  void InitCloseParenMultimap(const vector<pair<Label, Label> > &parens);
+  void InitCloseParenMultimap(
+      const std::vector<std::pair<Label, Label>> &parens);
   Weight DistanceToDest(StateId state, StateId source) const;
   uint8 Flags(StateId s) const;
   void SetFlags(StateId s, uint8 flags, uint8 mask);
@@ -464,22 +444,23 @@ class PrunedExpand {
   bool ProcCloseParen(StateId s, const A &arc);
   void ProcDestStates(StateId s, StackId si);
 
-  Fst<A> *ifst_;                   // Input PDT
-  VectorFst<Arc> rfst_;            // Reversed PDT
-  bool keep_parentheses_;          // Keep parentheses in ofst?
-  StateTable state_table_;         // State table for efst_
-  Stack stack_;                    // Stack trie
-  ExpandFst<Arc> efst_;            // Expanded PDT
-  vector<StackId> stack_length_;   // Length of stack for given stack id
-  vector<Weight> distance_;        // Distance from initial state in efst_/ofst
-  vector<Weight> fdistance_;       // Distance to final states in efst_/ofst
+  Fst<A> *ifst_;                       // Input PDT
+  VectorFst<Arc> rfst_;                // Reversed PDT
+  bool keep_parentheses_;              // Keep parentheses in ofst?
+  StateTable state_table_;             // State table for efst_
+  Stack stack_;                        // Stack trie
+  PdtExpandFst<Arc> efst_;             // Expanded PDT
+  std::vector<StackId> stack_length_;  // Length of stack for given stack id
+  std::vector<Weight> distance_;   // Distance from initial state in efst_/ofst
+  std::vector<Weight> fdistance_;  // Distance to final states in efst_/ofst
   ShortestStackFirstQueue queue_;  // Queue used to visit efst_
-  vector<uint8> flags_;            // Status flags for states in efst_/ofst
-  vector<StateId> sources_;        // PDT source state for each expanded state
+  bool error_;                     // Indicates construction time failure.
+  std::vector<uint8> flags_;       // Status flags for states in efst_/ofst
+  std::vector<StateId> sources_;   // PDT source state for each expanded state
 
-  typedef PdtShortestPath<Arc, FifoQueue<StateId> > SP;
+  typedef PdtShortestPath<Arc, FifoQueue<StateId>> SP;
   typedef typename SP::CloseParenMultimap ParenMultimap;
-  SP *reverse_shortest_path_;  // Shortest path for rfst_
+  SP *reverse_shortest_path_;           // Shortest path for rfst_
   PdtBalanceData<Arc> *balance_data_;   // Not owned by shortest_path_
   ParenMultimap close_paren_multimap_;  // Maps open paren arcs to
   // balancing close paren arcs.
@@ -487,7 +468,7 @@ class PrunedExpand {
   MutableFst<Arc> *ofst_;  // Output fst
   Weight limit_;           // Weight limit
 
-  typedef unordered_map<StateId, Weight> DestMap;
+  typedef std::unordered_map<StateId, Weight> DestMap;
   DestMap dest_map_;
   StackId current_stack_id_;
   // 'current_stack_id_' is the stack id of the states currently at the top
@@ -499,7 +480,7 @@ class PrunedExpand {
   ssize_t current_paren_id_;  // Paren id at top of current stack
   ssize_t cached_stack_id_;
   StateId cached_source_;
-  std::forward_list<pair<StateId, Weight> > cached_dest_list_;
+  std::forward_list<std::pair<StateId, Weight>> cached_dest_list_;
   // 'cached_dest_list_' contains the set of pair of destination
   // states and weight to final states for source state
   // 'cached_source_' and paren id 'cached_paren_id': the set of
@@ -510,30 +491,31 @@ class PrunedExpand {
   NaturalLess<Weight> less_;
 };
 
-template <class A> const uint8 PrunedExpand<A>::kEnqueued = 0x01;
-template <class A> const uint8 PrunedExpand<A>::kExpanded = 0x02;
-template <class A> const uint8 PrunedExpand<A>::kSourceState = 0x04;
-
+template <class A>
+const uint8 PdtPrunedExpand<A>::kEnqueued = 0x01;
+template <class A>
+const uint8 PdtPrunedExpand<A>::kExpanded = 0x02;
+template <class A>
+const uint8 PdtPrunedExpand<A>::kSourceState = 0x04;
 
 // Initializes close paren multimap, mapping pairs (s,paren_id) to
 // all the arcs out of s labeled with close parenthese for paren_id.
 template <class A>
-void PrunedExpand<A>::InitCloseParenMultimap(
-    const vector<pair<Label, Label> > &parens) {
-  unordered_map<Label, Label> paren_id_map;
+void PdtPrunedExpand<A>::InitCloseParenMultimap(
+    const std::vector<std::pair<Label, Label>> &parens) {
+  std::unordered_map<Label, Label> paren_id_map;
   for (Label i = 0; i < parens.size(); ++i) {
-    const pair<Label, Label>  &p = parens[i];
+    const auto &p = parens[i];
     paren_id_map[p.first] = i;
     paren_id_map[p.second] = i;
   }
 
-  for (StateIterator<Fst<Arc> > siter(*ifst_); !siter.Done(); siter.Next()) {
+  for (StateIterator<Fst<Arc>> siter(*ifst_); !siter.Done(); siter.Next()) {
     StateId s = siter.Value();
-    for (ArcIterator<Fst<Arc> > aiter(*ifst_, s);
-         !aiter.Done(); aiter.Next()) {
+    for (ArcIterator<Fst<Arc>> aiter(*ifst_, s); !aiter.Done(); aiter.Next()) {
       const Arc &arc = aiter.Value();
-      typename unordered_map<Label, Label>::const_iterator pit
-          = paren_id_map.find(arc.ilabel);
+      typename std::unordered_map<Label, Label>::const_iterator pit =
+          paren_id_map.find(arc.ilabel);
       if (pit == paren_id_map.end()) continue;
       if (arc.ilabel == parens[pit->second].second) {  // Close paren
         ParenState<Arc> paren_state(pit->second, s);
@@ -543,69 +525,66 @@ void PrunedExpand<A>::InitCloseParenMultimap(
   }
 }
 
-
 // Returns the weight of the shortest balanced path from 'source' to 'dest'
 // in 'ifst_', 'dest' must be the source state of a close paren arc.
 template <class A>
-typename A::Weight PrunedExpand<A>::DistanceToDest(StateId source,
-                                                   StateId dest) const {
+typename A::Weight PdtPrunedExpand<A>::DistanceToDest(StateId source,
+                                                      StateId dest) const {
   typename SP::SearchState s(source + 1, dest + 1);
-  VLOG(2) << "D(" << source << ", " << dest << ") ="
-            << reverse_shortest_path_->GetShortestPathData().Distance(s);
+  VLOG(2) << "D(" << source << ", " << dest
+          << ") =" << reverse_shortest_path_->GetShortestPathData().Distance(s);
   return reverse_shortest_path_->GetShortestPathData().Distance(s);
 }
 
 // Returns the flags for state 's' in 'ofst_'.
 template <class A>
-uint8 PrunedExpand<A>::Flags(StateId s) const {
+uint8 PdtPrunedExpand<A>::Flags(StateId s) const {
   return s < flags_.size() ? flags_[s] : 0;
 }
 
 // Modifies the flags for state 's' in 'ofst_'.
 template <class A>
-void PrunedExpand<A>::SetFlags(StateId s, uint8 flags, uint8 mask) {
+void PdtPrunedExpand<A>::SetFlags(StateId s, uint8 flags, uint8 mask) {
   while (flags_.size() <= s) flags_.push_back(0);
   flags_[s] &= ~mask;
   flags_[s] |= flags & mask;
 }
 
-
 // Returns the shortest distance from the initial state to 's' in 'ofst_'.
 template <class A>
-typename A::Weight PrunedExpand<A>::Distance(StateId s) const {
+typename A::Weight PdtPrunedExpand<A>::Distance(StateId s) const {
   return s < distance_.size() ? distance_[s] : Weight::Zero();
 }
 
 // Sets the shortest distance from the initial state to 's' in 'ofst_' to 'w'.
 template <class A>
-void PrunedExpand<A>::SetDistance(StateId s, Weight w) {
-  while (distance_.size() <= s ) distance_.push_back(Weight::Zero());
+void PdtPrunedExpand<A>::SetDistance(StateId s, Weight w) {
+  while (distance_.size() <= s) distance_.push_back(Weight::Zero());
   distance_[s] = w;
 }
 
-
 // Returns the shortest distance from 's' to the final states in 'ofst_'.
 template <class A>
-typename A::Weight PrunedExpand<A>::FinalDistance(StateId s) const {
+typename A::Weight PdtPrunedExpand<A>::FinalDistance(StateId s) const {
   return s < fdistance_.size() ? fdistance_[s] : Weight::Zero();
 }
 
 // Sets the shortest distance from 's' to the final states in 'ofst_' to 'w'.
 template <class A>
-void PrunedExpand<A>::SetFinalDistance(StateId s, Weight w) {
+void PdtPrunedExpand<A>::SetFinalDistance(StateId s, Weight w) {
   while (fdistance_.size() <= s) fdistance_.push_back(Weight::Zero());
   fdistance_[s] = w;
 }
 
 // Returns the PDT "source" state of state 's' in 'ofst_'.
 template <class A>
-typename A::StateId PrunedExpand<A>::SourceState(StateId s) const {
+typename A::StateId PdtPrunedExpand<A>::SourceState(StateId s) const {
   return s < sources_.size() ? sources_[s] : kNoStateId;
 }
 
 // Sets the PDT "source" state of state 's' in 'ofst_' to state 'p' in 'ifst_'.
 template <class A>
-void PrunedExpand<A>::SetSourceState(StateId s, StateId p) {
+void PdtPrunedExpand<A>::SetSourceState(StateId s, StateId p) {
   while (sources_.size() <= s) sources_.push_back(kNoStateId);
   sources_[s] = p;
 }
@@ -613,7 +592,7 @@ void PrunedExpand<A>::SetSourceState(StateId s, StateId p) {
 // Adds state 's' of 'efst_' to 'ofst_' and inserts it in the queue,
 // modifying the flags for 's' accordingly.
 template <class A>
-void PrunedExpand<A>::AddStateAndEnqueue(StateId s) {
+void PdtPrunedExpand<A>::AddStateAndEnqueue(StateId s) {
   if (!(Flags(s) & (kEnqueued | kExpanded))) {
     while (ofst_->NumStates() <= s) ofst_->AddState();
     queue_.Enqueue(s);
@@ -631,7 +610,7 @@ void PrunedExpand<A>::AddStateAndEnqueue(StateId s) {
 // * if 'fd' is less than the currently stored distance from 'arc.nextstate'
 //   to the final state, updates with new estimate.
 template <class A>
-void PrunedExpand<A>::Relax(StateId s, const A &arc, Weight fd) {
+void PdtPrunedExpand<A>::Relax(StateId s, const A &arc, Weight fd) {
   Weight nd = Times(Distance(s), arc.weight);
   if (less_(nd, Distance(arc.nextstate))) {
     SetDistance(arc.nextstate, nd);
@@ -640,14 +619,14 @@ void PrunedExpand<A>::Relax(StateId s, const A &arc, Weight fd) {
   if (less_(fd, FinalDistance(arc.nextstate)))
     SetFinalDistance(arc.nextstate, fd);
   VLOG(2) << "Relax: " << s << ", d[s] = " << Distance(s) << ", to "
-            << arc.nextstate << ", d[ns] = " << Distance(arc.nextstate)
-            << ", nd = " << nd;
+          << arc.nextstate << ", d[ns] = " << Distance(arc.nextstate)
+          << ", nd = " << nd;
 }
 
 // Returns 'true' if the arc 'arc' out of state 's' in 'efst_' needs to
 // be pruned.
 template <class A>
-bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
+bool PdtPrunedExpand<A>::PruneArc(StateId s, const A &arc) {
   VLOG(2) << "Prune ?";
   Weight fd = Weight::Zero();
 
@@ -672,8 +651,8 @@ bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
     }
   }
 
-  for (typename std::forward_list<pair<StateId, Weight> >::const_iterator iter =
-           cached_dest_list_.begin();
+  for (typename std::forward_list<std::pair<StateId, Weight>>::const_iterator
+           iter = cached_dest_list_.begin();
        iter != cached_dest_list_.end(); ++iter) {
     fd = Plus(fd,
               Times(DistanceToDest(state_table_.Tuple(arc.nextstate).state_id,
@@ -688,7 +667,7 @@ bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
 // Adds start state of 'efst_' to 'ofst_', enqueues it and initializes
 // the distance data structures.
 template <class A>
-void PrunedExpand<A>::ProcStart() {
+void PdtPrunedExpand<A>::ProcStart() {
   StateId s = efst_.Start();
   AddStateAndEnqueue(s);
   ofst_->SetStart(s);
@@ -697,7 +676,7 @@ void PrunedExpand<A>::ProcStart() {
   current_stack_id_ = 0;
   current_paren_id_ = -1;
   stack_length_.push_back(0);
-  dest_map_[rfst_.Start() - 1] = Weight::One(); // not needed
+  dest_map_[rfst_.Start() - 1] = Weight::One();  // not needed
 
   cached_source_ = ifst_->Start();
   cached_stack_id_ = 0;
@@ -714,7 +693,7 @@ void PrunedExpand<A>::ProcStart() {
 // Makes 's' final in 'ofst_' if shortest accepting path ending in 's'
 // is below threshold.
 template <class A>
-void PrunedExpand<A>::ProcFinal(StateId s) {
+void PdtPrunedExpand<A>::ProcFinal(StateId s) {
   Weight final = efst_.Final(s);
   if ((final == Weight::Zero()) || less_(limit_, Times(Distance(s), final)))
     return;
@@ -724,12 +703,12 @@ void PrunedExpand<A>::ProcFinal(StateId s) {
 // Returns true when arc (or meta-arc) 'arc' out of 's' in 'efst_' is
 // below the threshold.  When 'add_arc' is true, 'arc' is added to 'ofst_'.
 template <class A>
-bool PrunedExpand<A>::ProcNonParen(StateId s, const A &arc, bool add_arc) {
-  VLOG(2) << "ProcNonParen: " << s << " to " << arc.nextstate
-          << ", " << arc.ilabel << ":" << arc.olabel << " / " << arc.weight
+bool PdtPrunedExpand<A>::ProcNonParen(StateId s, const A &arc, bool add_arc) {
+  VLOG(2) << "ProcNonParen: " << s << " to " << arc.nextstate << ", "
+          << arc.ilabel << ":" << arc.olabel << " / " << arc.weight
           << ", add_arc = " << (add_arc ? "true" : "false");
   if (PruneArc(s, arc)) return false;
-  if(add_arc) ofst_->AddArc(s, arc);
+  if (add_arc) ofst_->AddArc(s, arc);
   AddStateAndEnqueue(arc.nextstate);
   return true;
 }
@@ -744,16 +723,15 @@ bool PrunedExpand<A>::ProcNonParen(StateId s, const A &arc, bool add_arc) {
 //    adds the destination of 'arc' to 'ofst_' as a new source state
 //    for the stack id 'nsi' and inserts it in the queue.
 template <class A>
-bool PrunedExpand<A>::ProcOpenParen(StateId s, const A &arc, StackId si,
-                                    StackId nsi) {
+bool PdtPrunedExpand<A>::ProcOpenParen(StateId s, const A &arc, StackId si,
+                                       StackId nsi) {
   // Update the stack lenght when needed: |nsi| = |si| + 1.
   while (stack_length_.size() <= nsi) stack_length_.push_back(-1);
-  if (stack_length_[nsi] == -1)
-    stack_length_[nsi] = stack_length_[si] + 1;
+  if (stack_length_[nsi] == -1) stack_length_[nsi] = stack_length_[si] + 1;
 
   StateId ns = arc.nextstate;
   VLOG(2) << "Open paren: " << s << "(" << state_table_.Tuple(s).state_id
-            << ") to " << ns << "(" << state_table_.Tuple(ns).state_id << ")";
+          << ") to " << ns << "(" << state_table_.Tuple(ns).state_id << ")";
   bool proc_arc = false;
   Weight fd = Weight::Zero();
   ssize_t paren_id = stack_.ParenId(arc.ilabel);
@@ -775,31 +753,30 @@ bool PrunedExpand<A>::ProcOpenParen(StateId s, const A &arc, StackId si,
          ++iter) {
       Arc meta_arc = iter->second;
       PdtStateTuple<StateId, StackId> tuple(meta_arc.nextstate, si);
-      meta_arc.nextstate =  state_table_.FindState(tuple);
+      meta_arc.nextstate = state_table_.FindState(tuple);
       VLOG(2) << state_table_.Tuple(ns).state_id << ", " << source;
       VLOG(2) << "Meta arc weight = " << arc.weight << " Times "
-                << DistanceToDest(state_table_.Tuple(ns).state_id, source)
-                << " Times " << meta_arc.weight;
-      meta_arc.weight = Times(
-          arc.weight,
-          Times(DistanceToDest(state_table_.Tuple(ns).state_id, source),
-                meta_arc.weight));
+              << DistanceToDest(state_table_.Tuple(ns).state_id, source)
+              << " Times " << meta_arc.weight;
+      meta_arc.weight =
+          Times(arc.weight,
+                Times(DistanceToDest(state_table_.Tuple(ns).state_id, source),
+                      meta_arc.weight));
       proc_arc |= ProcNonParen(s, meta_arc, false);
-      fd = Plus(fd, Times(
-          Times(
-              DistanceToDest(state_table_.Tuple(ns).state_id, source),
-              iter->second.weight),
-          FinalDistance(meta_arc.nextstate)));
+      fd = Plus(
+          fd,
+          Times(Times(DistanceToDest(state_table_.Tuple(ns).state_id, source),
+                      iter->second.weight),
+                FinalDistance(meta_arc.nextstate)));
     }
   }
   if (proc_arc) {
     VLOG(2) << "Proc open paren " << s << " to " << arc.nextstate;
     ofst_->AddArc(
-      s, keep_parentheses_ ? arc : Arc(0, 0, arc.weight, arc.nextstate));
+        s, keep_parentheses_ ? arc : Arc(0, 0, arc.weight, arc.nextstate));
     AddStateAndEnqueue(arc.nextstate);
     Weight nd = Times(Distance(s), arc.weight);
-    if(less_(nd, Distance(arc.nextstate)))
-      SetDistance(arc.nextstate, nd);
+    if (less_(nd, Distance(arc.nextstate))) SetDistance(arc.nextstate, nd);
     // FinalDistance not necessary for source state since pruning
     // decided using the meta-arcs above.  But this is a problem with
     // A*, hence:
@@ -813,13 +790,12 @@ bool PrunedExpand<A>::ProcOpenParen(StateId s, const A &arc, StackId si,
 // Checks that shortest path through close paren arc in 'efst_' is
 // below threshold, if so adds it to 'ofst_'.
 template <class A>
-bool PrunedExpand<A>::ProcCloseParen(StateId s, const A &arc) {
-  Weight w = Times(Distance(s),
-                   Times(arc.weight, FinalDistance(arc.nextstate)));
-  if (less_(limit_, w))
-    return false;
-  ofst_->AddArc(
-      s, keep_parentheses_ ? arc : Arc(0, 0, arc.weight, arc.nextstate));
+bool PdtPrunedExpand<A>::ProcCloseParen(StateId s, const A &arc) {
+  Weight w =
+      Times(Distance(s), Times(arc.weight, FinalDistance(arc.nextstate)));
+  if (less_(limit_, w)) return false;
+  ofst_->AddArc(s,
+                keep_parentheses_ ? arc : Arc(0, 0, arc.weight, arc.nextstate));
   return true;
 }
 
@@ -830,7 +806,7 @@ bool PrunedExpand<A>::ProcCloseParen(StateId s, const A &arc) {
 // state 't', computes the shortest distance from (t, si) to the final
 // states in 'ofst_'. Stores this information in 'dest_map_'.
 template <class A>
-void PrunedExpand<A>::ProcDestStates(StateId s, StackId si) {
+void PdtPrunedExpand<A>::ProcDestStates(StateId s, StackId si) {
   if (!(Flags(s) & kSourceState)) return;
   if (si != current_stack_id_) {
     dest_map_.clear();
@@ -847,8 +823,7 @@ void PrunedExpand<A>::ProcDestStates(StateId s, StackId si) {
            balance_data_->Find(paren_id, state_table_.Tuple(s).state_id);
        !set_iter.Done(); set_iter.Next()) {
     StateId dest_state = set_iter.Element();
-    if (dest_map_.find(dest_state) != dest_map_.end())
-      continue;
+    if (dest_map_.find(dest_state) != dest_map_.end()) continue;
     Weight dest_weight = Weight::Zero();
     ParenState<Arc> paren_state(paren_id, dest_state);
     for (typename ParenMultimap::const_iterator iter =
@@ -857,22 +832,28 @@ void PrunedExpand<A>::ProcDestStates(StateId s, StackId si) {
          ++iter) {
       const Arc &arc = iter->second;
       PdtStateTuple<StateId, StackId> tuple(arc.nextstate, stack_.Pop(si));
-      dest_weight = Plus(dest_weight,
-                         Times(arc.weight,
-                               FinalDistance(state_table_.FindState(tuple))));
+      dest_weight =
+          Plus(dest_weight,
+               Times(arc.weight, FinalDistance(state_table_.FindState(tuple))));
     }
     dest_map_[dest_state] = dest_weight;
-    VLOG(2) << "State " << dest_state << " is a dest state for stack id "
-              << si << " with weight " << dest_weight;
+    VLOG(2) << "State " << dest_state << " is a dest state for stack id " << si
+            << " with weight " << dest_weight;
   }
 }
 
 // Expands and prunes with weight threshold 'threshold' the input PDT.
 // Writes the result in 'ofst'.
 template <class A>
-void PrunedExpand<A>::Expand(
-    MutableFst<A> *ofst, const typename A::Weight &threshold) {
+void PdtPrunedExpand<A>::Expand(MutableFst<A> *ofst,
+                                const typename A::Weight &threshold) {
   ofst_ = ofst;
+
+  if (error_) {
+    ofst_->SetProperties(kError, kError);
+    return;
+  }
+
   ofst_->DeleteStates();
   ofst_->SetInputSymbols(ifst_->InputSymbols());
   ofst_->SetOutputSymbols(ifst_->OutputSymbols());
@@ -892,8 +873,7 @@ void PrunedExpand<A>::Expand(
     StackId stack_id = state_table_.Tuple(s).stack_id;
     ProcDestStates(s, stack_id);
 
-    for (ArcIterator<ExpandFst<Arc> > aiter(efst_, s);
-         !aiter.Done();
+    for (ArcIterator<PdtExpandFst<Arc>> aiter(efst_, s); !aiter.Done();
          aiter.Next()) {
       Arc arc = aiter.Value();
       StackId nextstack_id = state_table_.Tuple(arc.nextstate).stack_id;
@@ -904,8 +884,8 @@ void PrunedExpand<A>::Expand(
       else
         ProcCloseParen(s, arc);
     }
-    VLOG(2) << "d[" << s << "] = " << Distance(s)
-            << ", fd[" << s << "] = " << FinalDistance(s);
+    VLOG(2) << "d[" << s << "] = " << Distance(s) << ", fd[" << s
+            << "] = " << FinalDistance(s);
   }
 }
 
@@ -914,12 +894,12 @@ void PrunedExpand<A>::Expand(
 //
 
 template <class Arc>
-struct ExpandOptions {
+struct PdtExpandOptions {
   bool connect;
   bool keep_parentheses;
   typename Arc::Weight weight_threshold;
 
-  ExpandOptions(bool c  = true, bool k = false,
+  PdtExpandOptions(bool c = true, bool k = false,
                 typename Arc::Weight w = Arc::Weight::Zero())
       : connect(c), keep_parentheses(k), weight_threshold(w) {}
 };
@@ -932,28 +912,25 @@ struct ExpandOptions {
 // 'parens'. The expansion enforces the parenthesis constraints. The
 // PDT must be expandable as an FST.
 template <class Arc>
-void Expand(
-    const Fst<Arc> &ifst,
-    const vector<pair<typename Arc::Label, typename Arc::Label> > &parens,
-    MutableFst<Arc> *ofst,
-    const ExpandOptions<Arc> &opts) {
+void Expand(const Fst<Arc> &ifst,
+            const std::vector<
+            std::pair<typename Arc::Label, typename Arc::Label>> &parens,
+            MutableFst<Arc> *ofst,
+            const fst::PdtExpandOptions<Arc> &opts) {
   typedef typename Arc::Label Label;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
-  typedef typename ExpandFst<Arc>::StackId StackId;
-
-  ExpandFstOptions<Arc> eopts;
+  typedef typename PdtExpandFst<Arc>::StackId StackId;
+  PdtExpandFstOptions<Arc> eopts;
   eopts.gc_limit = 0;
   if (opts.weight_threshold == Weight::Zero()) {
     eopts.keep_parentheses = opts.keep_parentheses;
-    *ofst = ExpandFst<Arc>(ifst, parens, eopts);
+    *ofst = PdtExpandFst<Arc>(ifst, parens, eopts);
   } else {
-    PrunedExpand<Arc> pruned_expand(ifst, parens, opts.keep_parentheses);
+    PdtPrunedExpand<Arc> pruned_expand(ifst, parens, opts.keep_parentheses);
     pruned_expand.Expand(ofst, opts.weight_threshold);
   }
-
-  if (opts.connect)
-    Connect(ofst);
+  if (opts.connect) Connect(ofst);
 }
 
 // Expands a pushdown transducer (PDT) encoded as an FST into an FST.
@@ -963,13 +940,12 @@ void Expand(
 // a path. The open-close parenthesis label pairs are passed in
 // 'parens'. The expansion enforces the parenthesis constraints. The
 // PDT must be expandable as an FST.
-template<class Arc>
-void Expand(
-    const Fst<Arc> &ifst,
-    const vector<pair<typename Arc::Label, typename Arc::Label> > &parens,
-    MutableFst<Arc> *ofst,
-    bool connect = true, bool keep_parentheses = false) {
-  Expand(ifst, parens, ofst, ExpandOptions<Arc>(connect, keep_parentheses));
+template <class Arc>
+void Expand(const Fst<Arc> &ifst,
+    const std::vector<std::pair<typename Arc::Label, typename Arc::Label>>
+    &parens, MutableFst<Arc> *ofst, bool connect = true,
+    bool keep_parentheses = false) {
+  Expand(ifst, parens, ofst, PdtExpandOptions<Arc>(connect, keep_parentheses));
 }
 
 }  // namespace fst

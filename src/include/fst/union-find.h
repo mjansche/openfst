@@ -1,29 +1,14 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: wojciech@google.com (Wojciech Skut)
-//
-// \file Union-Find algorithm for dense sets of non-negative
-// integers. Implemented using disjoint tree forests with rank
-// heuristics and path compression.
+// Union-Find algorithm for dense sets of non-negative integers, implemented
+// using disjoint tree forests with rank heuristics and path compression.
 
 #ifndef FST_LIB_UNION_FIND_H_
 #define FST_LIB_UNION_FIND_H_
 
 #include <stack>
 #include <vector>
-using std::vector;
 #include <fst/types.h>
 
 namespace fst {
@@ -37,30 +22,26 @@ class UnionFind {
   // 'fail' is a value indicating that an element hasn't been
   // initialized using MakeSet(...). The upper bound of the range
   // can be reset (increased) using MakeSet(...).
-  UnionFind(T max, T fail)
-      : parent_(max, fail), rank_(max), fail_(fail) { }
+  UnionFind(T max, T fail) : parent_(max, fail), rank_(max), fail_(fail) {}
 
   // Finds the representative of the set 'item' belongs to.
   // Performs path compression if needed.
   T FindSet(T item) {
-    if (item >= parent_.size()
-        || item == fail_
-        || parent_[item] == fail_) return fail_;
+    if (item >= parent_.size() || item == fail_ || parent_[item] == fail_)
+      return fail_;
 
     T *p = &parent_[item];
     for (; *p != item; item = *p, p = &parent_[item]) {
       exec_stack_.push(p);
     }
-    for (; ! exec_stack_.empty(); exec_stack_.pop()) {
+    for (; !exec_stack_.empty(); exec_stack_.pop()) {
       *exec_stack_.top() = *p;
     }
     return *p;
   }
 
   // Creates the (destructive) union of the sets x and y belong to.
-  void Union(T x, T y) {
-    Link(FindSet(x), FindSet(y));
-  }
+  void Union(T x, T y) { Link(FindSet(x), FindSet(y)); }
 
   // Initialization of an element: creates a singleton set containing
   // 'item'. The range [0;max) is reset if item >= max.
@@ -84,10 +65,10 @@ class UnionFind {
   }
 
  private:
-  vector<T> parent_;      // Parent nodes.
-  vector<int> rank_;      // Rank of an element = min. depth in tree.
-  T fail_;                // Value indicating lookup failure.
-  stack<T*> exec_stack_;  // Used for path compression.
+  std::vector<T> parent_;       // Parent nodes.
+  std::vector<int> rank_;       // Rank of an element = min. depth in tree.
+  T fail_;                 // Value indicating lookup failure.
+  std::stack<T *> exec_stack_;  // Used for path compression.
 
   // Links trees rooted in 'x' and 'y'.
   void Link(T x, T y) {

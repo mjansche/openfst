@@ -1,21 +1,6 @@
-// algo_test.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
 // Regression test for various FST algorithms.
 
 #include "./algo_test.h"
@@ -81,48 +66,46 @@ int main(int argc, char **argv) {
 
 #ifdef TEST_TROPICAL
   TropicalWeightGenerator tropical_generator(seed, false);
-  AlgoTester<StdArc, TropicalWeightGenerator>
-    tropical_tester(tropical_generator, seed);
+  AlgoTester<StdArc, TropicalWeightGenerator> tropical_tester(
+      tropical_generator, seed);
   tropical_tester.Test();
 #endif  // TEST_TROPICAL
 
 #ifdef TEST_LOG
   LogWeightGenerator log_generator(seed, false);
-  AlgoTester<LogArc, LogWeightGenerator>
-    log_tester(log_generator, seed);
+  AlgoTester<LogArc, LogWeightGenerator> log_tester(log_generator, seed);
   log_tester.Test();
 #endif  // TEST_LOG
 
 #ifdef TEST_MINMAX
   MinMaxWeightGenerator minmax_generator(seed, false);
-  AlgoTester<MinMaxArc, MinMaxWeightGenerator>
-      minmax_tester(minmax_generator, seed);
+  AlgoTester<MinMaxArc, MinMaxWeightGenerator> minmax_tester(minmax_generator,
+                                                             seed);
   minmax_tester.Test();
 #endif
 
 #ifdef TEST_LEFT_STRING
   StringWeightGenerator<int> left_string_generator(seed, false);
-  AlgoTester<StringArc<>, StringWeightGenerator<int> >
-    left_string_tester(left_string_generator, seed);
+  AlgoTester<StringArc<>, StringWeightGenerator<int>> left_string_tester(
+      left_string_generator, seed);
   left_string_tester.Test();
 #endif  // TEST_LEFT_STRING
 
 #ifdef TEST_RIGHT_STRING
   StringWeightGenerator<int, STRING_RIGHT> right_string_generator(seed, false);
-  AlgoTester<StringArc<STRING_RIGHT>,
-    StringWeightGenerator<int, STRING_RIGHT> >
-    right_string_tester(right_string_generator, seed);
+  AlgoTester<StringArc<STRING_RIGHT>, StringWeightGenerator<int, STRING_RIGHT>>
+      right_string_tester(right_string_generator, seed);
   right_string_tester.Test();
 #endif  // TEST_RIGHT_STRING
 
 #ifdef TEST_GALLIC
   typedef GallicArc<StdArc> StdGallicArc;
   typedef GallicWeightGenerator<int, TropicalWeightGenerator>
-    TropicalGallicWeightGenerator;
+      TropicalGallicWeightGenerator;
 
   TropicalGallicWeightGenerator tropical_gallic_generator(seed, false);
-  AlgoTester<StdGallicArc, TropicalGallicWeightGenerator>
-    gallic_tester(tropical_gallic_generator, seed);
+  AlgoTester<StdGallicArc, TropicalGallicWeightGenerator> gallic_tester(
+      tropical_gallic_generator, seed);
   gallic_tester.Test();
 #endif  // TEST_GALLIC
 
@@ -130,7 +113,8 @@ int main(int argc, char **argv) {
   typedef LexicographicArc<TropicalWeight, TropicalWeight>
       TropicalLexicographicArc;
   typedef LexicographicWeightGenerator<TropicalWeightGenerator,
-      TropicalWeightGenerator> TropicalLexicographicWeightGenerator;
+                                       TropicalWeightGenerator>
+      TropicalLexicographicWeightGenerator;
   TropicalLexicographicWeightGenerator lexicographic_generator(seed, false);
   AlgoTester<TropicalLexicographicArc, TropicalLexicographicWeightGenerator>
       lexicographic_tester(lexicographic_generator, seed);
@@ -141,11 +125,11 @@ int main(int argc, char **argv) {
   typedef PowerWeight<TropicalWeight, 3> TropicalCubeWeight;
   typedef ArcTpl<TropicalCubeWeight> TropicalCubeArc;
   typedef PowerWeightGenerator<TropicalWeightGenerator, 3>
-    TropicalCubeWeightGenerator;
+      TropicalCubeWeightGenerator;
 
   TropicalCubeWeightGenerator tropical_cube_generator(seed, false);
-  AlgoTester<TropicalCubeArc, TropicalCubeWeightGenerator>
-    tropical_cube_tester(tropical_cube_generator, seed);
+  AlgoTester<TropicalCubeArc, TropicalCubeWeightGenerator> tropical_cube_tester(
+      tropical_cube_generator, seed);
   tropical_cube_tester.Test();
 #endif  // TEST_POWER
 

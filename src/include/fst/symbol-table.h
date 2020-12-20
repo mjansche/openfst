@@ -1,45 +1,23 @@
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// All Rights Reserved.
-//
-// Author : Johan Schalkwyk
-//
-// \file
 // Classes to provide symbol-to-integer and integer-to-symbol mappings.
 
 #ifndef FST_LIB_SYMBOL_TABLE_H__
 #define FST_LIB_SYMBOL_TABLE_H__
 
 #include <cstring>
-#include <unordered_map>
-using std::unordered_map;
-using std::unordered_multimap;
+#include <ios>
+#include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
-using std::pair; using std::make_pair;
 #include <vector>
-using std::vector;
-
 
 #include <fst/compat.h>
-#include <iostream>
 #include <fstream>
-#include <sstream>
-
-
 #include <map>
 
 DECLARE_bool(fst_compat_symbols);
@@ -50,14 +28,14 @@ namespace fst {
 //          not be used. This is a temporary work around for
 //          reading symbol ranges of previously stored symbol sets.
 struct SymbolTableReadOptions {
-  SymbolTableReadOptions() { }
+  SymbolTableReadOptions() {}
 
-  SymbolTableReadOptions(vector<pair<int64, int64> > string_hash_ranges_,
-                         const string& source_)
-      : string_hash_ranges(string_hash_ranges_),
-        source(source_) { }
+  SymbolTableReadOptions(
+      std::vector<std::pair<int64, int64> > string_hash_ranges_,
+      const string& source_)
+      : string_hash_ranges(string_hash_ranges_), source(source_) {}
 
-  vector<pair<int64, int64> > string_hash_ranges;
+  std::vector<std::pair<int64, int64> > string_hash_ranges;
   string source;
 };
 
@@ -84,7 +62,7 @@ class DenseSymbolMap {
   DenseSymbolMap(const DenseSymbolMap& x);
   ~DenseSymbolMap();
 
-  pair<int64, bool> InsertOrFind(const string& key);
+  std::pair<int64, bool> InsertOrFind(const string& key);
   int64 Find(const string& key) const;
 
   const size_t size() const { return symbols_.size(); }
@@ -97,9 +75,9 @@ class DenseSymbolMap {
   const char* NewSymbol(const string& sym);
 
   int64 empty_;
-  vector<const char*> symbols_;
+  std::vector<const char*> symbols_;
   std::hash<string> str_hash_;
-  vector<int64> buckets_;
+  std::vector<int64> buckets_;
   uint64 hash_mask_;
   int size_;
 };
@@ -108,7 +86,7 @@ class DenseSymbolMap {
 
 class SymbolTableImpl {
  public:
-  SymbolTableImpl(const string &name)
+  SymbolTableImpl(const string& name)
       : name_(name),
         available_key_(0),
         dense_key_limit_(0),
@@ -130,21 +108,21 @@ class SymbolTableImpl {
   }
 
   static SymbolTableImpl* ReadText(
-      istream &strm, const string &name,
-      const SymbolTableTextOptions &opts = SymbolTableTextOptions());
+      std::istream& strm, const string& name,  // NOLINT
+      const SymbolTableTextOptions& opts = SymbolTableTextOptions());
 
-  static SymbolTableImpl* Read(istream &strm,
+  static SymbolTableImpl* Read(std::istream& strm,  // NOLINT
                                const SymbolTableReadOptions& opts);
 
-  bool Write(ostream &strm) const;
+  bool Write(std::ostream& strm) const;  // NOLINT
 
   // Return the string associated with the key. If the key is out of
   // range (<0, >max), return an empty string.
   string Find(int64 key) const {
     int64 idx = key;
     if (key < 0 || key >= dense_key_limit_) {
-      map<int64, int64>::const_iterator iter
-          = key_map_.find(key);
+      map<int64, int64>::const_iterator iter =
+          key_map_.find(key);
       if (iter == key_map_.end()) return "";
       idx = iter->second;
     }
@@ -162,9 +140,7 @@ class SymbolTableImpl {
 
   // Return the key associated with the symbol. If the symbol
   // does not exists, return SymbolTable::kNoSymbol.
-  int64 Find(const char* symbol) const {
-    return Find(string(symbol));
-  }
+  int64 Find(const char* symbol) const { return Find(string(symbol)); }
 
   int64 GetNthKey(ssize_t pos) const {
     if (pos < 0 || pos >= symbols_.size()) return -1;
@@ -174,15 +150,7 @@ class SymbolTableImpl {
 
   const string& Name() const { return name_; }
 
-  int IncrRefCount() const {
-    return ref_count_.Incr();
-  }
-  int DecrRefCount() const {
-    return ref_count_.Decr();
-  }
-  int RefCount() const {
-    return ref_count_.count();
-  }
+  void SetName(const string &new_name) { name_ = new_name; }
 
   string CheckSum() const {
     MaybeRecomputeCheckSum();
@@ -194,13 +162,9 @@ class SymbolTableImpl {
     return labeled_check_sum_string_;
   }
 
-  int64 AvailableKey() const {
-    return available_key_;
-  }
+  int64 AvailableKey() const { return available_key_; }
 
-  size_t NumSymbols() const {
-    return symbols_.size();
-  }
+  size_t NumSymbols() const { return symbols_.size(); }
 
  private:
   // Recomputes the checksums (both of them) if we've had changes since the last
@@ -214,10 +178,9 @@ class SymbolTableImpl {
   int64 dense_key_limit_;
 
   internal::DenseSymbolMap symbols_;
-  vector<int64> idx_key_;
+  std::vector<int64> idx_key_;
   map<int64, int64> key_map_;
 
-  mutable RefCounter ref_count_;
   mutable bool check_sum_finalized_;
   mutable string check_sum_string_;
   mutable string labeled_check_sum_string_;
@@ -242,36 +205,25 @@ class SymbolTable {
   static const int64 kNoSymbol = -1;
 
   // Construct symbol table with an unspecified name.
-  SymbolTable() : impl_(new SymbolTableImpl("<unspecified>")) {}
+  SymbolTable() : impl_(std::make_shared<SymbolTableImpl>("<unspecified>")) {}
 
   // Construct symbol table with a unique name.
-  explicit SymbolTable(const string& name) : impl_(new SymbolTableImpl(name)) {}
+  explicit SymbolTable(const string& name)
+      : impl_(std::make_shared<SymbolTableImpl>(name)) {}
 
   // Create a reference counted copy.
-  SymbolTable(const SymbolTable& table) : impl_(table.impl_) {
-    impl_->IncrRefCount();
-  }
+  SymbolTable(const SymbolTable& table) : impl_(table.impl_) {}
 
-  // Derefence implentation object. When reference count hits 0, delete
-  // implementation.
-  virtual ~SymbolTable() {
-    if (!impl_->DecrRefCount()) delete impl_;
-  }
+  virtual ~SymbolTable() {}
 
   // Copys the implemenation from one symbol table to another.
-  void operator=(const SymbolTable &st) {
-    if (impl_ != st.impl_) {
-      st.impl_->IncrRefCount();
-      if (!impl_->DecrRefCount()) delete impl_;
-      impl_ = st.impl_;
-    }
-  }
+  void operator=(const SymbolTable& st) { impl_ = st.impl_; }
 
   // Read an ascii representation of the symbol table from an istream. Pass a
   // name to give the resulting SymbolTable.
   static SymbolTable* ReadText(
-      istream &strm, const string& name,
-      const SymbolTableTextOptions &opts = SymbolTableTextOptions()) {
+      std::istream& strm, const string& name,  // NOLINT
+      const SymbolTableTextOptions& opts = SymbolTableTextOptions()) {
     SymbolTableImpl* impl = SymbolTableImpl::ReadText(strm, name, opts);
     if (!impl)
       return 0;
@@ -280,9 +232,10 @@ class SymbolTable {
   }
 
   // read an ascii representation of the symbol table
-  static SymbolTable* ReadText(const string& filename,
-      const SymbolTableTextOptions &opts = SymbolTableTextOptions()) {
-    ifstream strm(filename.c_str(), std::ios_base::in);
+  static SymbolTable* ReadText(
+      const string& filename,
+      const SymbolTableTextOptions& opts = SymbolTableTextOptions()) {
+    std::ifstream strm(filename.c_str(), std::ios_base::in);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::ReadText: Can't open file " << filename;
       return 0;
@@ -290,10 +243,9 @@ class SymbolTable {
     return ReadText(strm, filename, opts);
   }
 
-
   // WARNING: Reading via symbol table read options should
   //          not be used. This is a temporary work around.
-  static SymbolTable* Read(istream &strm,
+  static SymbolTable* Read(std::istream& strm,  // NOLINT
                            const SymbolTableReadOptions& opts) {
     SymbolTableImpl* impl = SymbolTableImpl::Read(strm, opts);
     if (!impl)
@@ -303,7 +255,8 @@ class SymbolTable {
   }
 
   // read a binary dump of the symbol table from a stream
-  static SymbolTable* Read(istream &strm, const string& source) {
+  static SymbolTable* Read(std::istream& strm,  // NOLINT
+                           const string& source) {
     SymbolTableReadOptions opts;
     opts.source = source;
     return Read(strm, opts);
@@ -311,7 +264,8 @@ class SymbolTable {
 
   // read a binary dump of the symbol table
   static SymbolTable* Read(const string& filename) {
-    ifstream strm(filename.c_str(), std::ios_base::in | std::ios_base::binary);
+    std::ifstream strm(filename.c_str(),
+                            std::ios_base::in | std::ios_base::binary);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::Read: Can't open file " << filename;
       return 0;
@@ -323,9 +277,7 @@ class SymbolTable {
   // Derivable Interface (final)
   //--------------------------------------------------------
   // create a reference counted copy
-  virtual SymbolTable* Copy() const {
-    return new SymbolTable(*this);
-  }
+  virtual SymbolTable* Copy() const { return new SymbolTable(*this); }
 
   // Add a symbol with given key to table. A symbol table also
   // keeps track of the last available key (highest key value in
@@ -349,29 +301,30 @@ class SymbolTable {
   // value. Adding symbol tables do not result in changes in the base table.
   virtual void AddTable(const SymbolTable& table);
 
-  // return the name of the symbol table
-  virtual const string& Name() const {
-    return impl_->Name();
+  // Returns the name of the symbol table.
+  virtual const string& Name() const { return impl_->Name(); }
+
+  // Sets the name of the symbol table.
+  virtual void SetName(const string &new_name) {
+    MutateCheck();
+    impl_->SetName(new_name);
   }
 
   // Return the label-agnostic MD5 check-sum for this table.  All new symbols
   // added to the table will result in an updated checksum.
   // DEPRECATED.
-  virtual string CheckSum() const {
-    return impl_->CheckSum();
-  }
+  virtual string CheckSum() const { return impl_->CheckSum(); }
 
   // Same as CheckSum(), but this returns an label-dependent version.
-  virtual string LabeledCheckSum() const {
-    return impl_->LabeledCheckSum();
-  }
+  virtual string LabeledCheckSum() const { return impl_->LabeledCheckSum(); }
 
-  virtual bool Write(ostream &strm) const {
+  virtual bool Write(std::ostream& strm) const {  // NOLINT
     return impl_->Write(strm);
   }
 
   bool Write(const string& filename) const {
-    ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
+    std::ofstream strm(filename.c_str(),
+                             std::ios_base::out | std::ios_base::binary);
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::Write: Can't open file " << filename;
       return false;
@@ -381,12 +334,12 @@ class SymbolTable {
 
   // Dump an ascii text representation of the symbol table via a stream
   virtual bool WriteText(
-      ostream &strm,
-      const SymbolTableTextOptions &opts = SymbolTableTextOptions()) const;
+      std::ostream& strm,  // NOLINT
+      const SymbolTableTextOptions& opts = SymbolTableTextOptions()) const;
 
   // Dump an ascii text representation of the symbol table
   bool WriteText(const string& filename) const {
-    ofstream strm(filename.c_str());
+    std::ofstream strm(filename.c_str());
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::WriteText: Can't open file " << filename;
       return false;
@@ -396,57 +349,40 @@ class SymbolTable {
 
   // Return the string associated with the key. If the key is out of
   // range (<0, >max), return an empty string.
-  virtual string Find(int64 key) const {
-    return impl_->Find(key);
-  }
+  virtual string Find(int64 key) const { return impl_->Find(key); }
 
   // Return the key associated with the symbol. If the symbol
   // does not exist, return SymbolTable::kNoSymbol
-  virtual int64 Find(const string& symbol) const {
-    return impl_->Find(symbol);
-  }
+  virtual int64 Find(const string& symbol) const { return impl_->Find(symbol); }
 
   // Return the key associated with the symbol. If the symbol
   // does not exist, return SymbolTable::kNoSymbol
-  virtual int64 Find(const char* symbol) const {
-    return impl_->Find(symbol);
-  }
+  virtual int64 Find(const char* symbol) const { return impl_->Find(symbol); }
 
   // Return the current available key (i.e highest key number+1) in
   // the symbol table
-  virtual int64 AvailableKey(void) const {
-    return impl_->AvailableKey();
-  }
+  virtual int64 AvailableKey(void) const { return impl_->AvailableKey(); }
 
   // Return the current number of symbols in table (not necessarily
   // equal to AvailableKey())
-  virtual size_t NumSymbols(void) const {
-    return impl_->NumSymbols();
-  }
+  virtual size_t NumSymbols(void) const { return impl_->NumSymbols(); }
 
-  virtual int64 GetNthKey(ssize_t pos) const {
-    return impl_->GetNthKey(pos);
-  }
+  virtual int64 GetNthKey(ssize_t pos) const { return impl_->GetNthKey(pos); }
 
  private:
   explicit SymbolTable(SymbolTableImpl* impl) : impl_(impl) {}
 
   void MutateCheck() {
-    // Copy on write
-    if (impl_->RefCount() > 1) {
-      impl_->DecrRefCount();
-      impl_ = new SymbolTableImpl(*impl_);
+    if (!impl_.unique()) {
+      impl_.reset(new SymbolTableImpl(*impl_));
     }
   }
 
-  const SymbolTableImpl* Impl() const {
-    return impl_;
-  }
+  const SymbolTableImpl* Impl() const { return impl_.get(); }
 
  private:
-  SymbolTableImpl* impl_;
+  std::shared_ptr<SymbolTableImpl> impl_;
 };
-
 
 //
 // \class SymbolTableIterator
@@ -457,24 +393,18 @@ class SymbolTableIterator {
       : table_(table),
         pos_(0),
         nsymbols_(table.NumSymbols()),
-        key_(table.GetNthKey(0)) { }
+        key_(table.GetNthKey(0)) {}
 
-  ~SymbolTableIterator() { }
+  ~SymbolTableIterator() {}
 
   // is iterator done
-  bool Done(void) {
-    return (pos_ == nsymbols_);
-  }
+  bool Done(void) const { return (pos_ == nsymbols_); }
 
   // return the Value() of the current symbol (int64 key)
-  int64 Value(void) {
-    return key_;
-  }
+  int64 Value(void) const { return key_; }
 
   // return the string of the current symbol
-  string Symbol(void) {
-    return table_.Find(key_);
-  }
+  string Symbol(void) const { return table_.Find(key_); }
 
   // advance iterator forward
   void Next(void) {
@@ -495,10 +425,9 @@ class SymbolTableIterator {
   int64 key_;
 };
 
-
 // Returns true if the two symbol tables have equal checksums. Passing in
 // nullptr for either table always returns true.
-inline bool CompatSymbols(const SymbolTable *syms1, const SymbolTable *syms2,
+inline bool CompatSymbols(const SymbolTable* syms1, const SymbolTable* syms2,
                           bool warning = true) {
   // Flag can explicitly override this check.
   if (!FLAGS_fst_compat_symbols) {
@@ -518,18 +447,18 @@ inline bool CompatSymbols(const SymbolTable *syms1, const SymbolTable *syms2,
   }
 }
 
-
 // Relabels a symbol table as specified by the input vector of pairs
 // (old label, new label). The new symbol table only retains symbols
 // for which a relabeling is *explicitely* specified.
 // TODO(allauzen): consider adding options to allow for some form
 // of implicit identity relabeling.
 template <class Label>
-SymbolTable *RelabelSymbolTable(const SymbolTable *table,
-                                const vector<pair<Label, Label> > &pairs) {
-  SymbolTable *new_table = new SymbolTable(
-      table->Name().empty() ? string() :
-      (string("relabeled_") + table->Name()));
+SymbolTable* RelabelSymbolTable(
+    const SymbolTable* table,
+    const std::vector<std::pair<Label, Label> >& pairs) {
+  SymbolTable* new_table =
+      new SymbolTable(table->Name().empty() ? string() : (string("relabeled_") +
+                                                          table->Name()));
 
   for (size_t i = 0; i < pairs.size(); ++i)
     new_table->AddSymbol(table->Find(pairs[i].first), pairs[i].second);
@@ -538,14 +467,14 @@ SymbolTable *RelabelSymbolTable(const SymbolTable *table,
 }
 
 // Symbol Table Serialization
-inline void SymbolTableToString(const SymbolTable *table, string *result) {
-  ostringstream ostrm;
+inline void SymbolTableToString(const SymbolTable* table, string* result) {
+  std::ostringstream ostrm;
   table->Write(ostrm);
   *result = ostrm.str();
 }
 
-inline SymbolTable *StringToSymbolTable(const string &s) {
-  istringstream istrm(s);
+inline SymbolTable* StringToSymbolTable(const string& s) {
+  std::istringstream istrm(s);
   return SymbolTable::Read(istrm, SymbolTableReadOptions());
 }
 

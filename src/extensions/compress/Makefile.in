@@ -125,10 +125,9 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(libfstdir)" "$(DESTDIR)$(bindir)"
 LTLIBRARIES = $(libfst_LTLIBRARIES)
 libfstcompressscript_la_LIBADD =
-am__libfstcompressscript_la_SOURCES_DIST = compress-script.cc \
-	fstgzfile.cc
+am__libfstcompressscript_la_SOURCES_DIST = compress-script.cc
 @HAVE_SCRIPT_TRUE@am_libfstcompressscript_la_OBJECTS =  \
-@HAVE_SCRIPT_TRUE@	compress-script.lo fstgzfile.lo
+@HAVE_SCRIPT_TRUE@	compress-script.lo
 libfstcompressscript_la_OBJECTS =  \
 	$(am_libfstcompressscript_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -141,30 +140,19 @@ libfstcompressscript_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(LDFLAGS) -o $@
 @HAVE_SCRIPT_TRUE@am_libfstcompressscript_la_rpath = -rpath \
 @HAVE_SCRIPT_TRUE@	$(libfstdir)
-libfstgzfile_la_LIBADD =
-am_libfstgzfile_la_OBJECTS = fstgzfile.lo
-libfstgzfile_la_OBJECTS = $(am_libfstgzfile_la_OBJECTS)
-libfstgzfile_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) $(libfstgzfile_la_LDFLAGS) \
-	$(LDFLAGS) -o $@
-@HAVE_SCRIPT_FALSE@am_libfstgzfile_la_rpath = -rpath $(libfstdir)
-@HAVE_SCRIPT_TRUE@am_libfstgzfile_la_rpath = -rpath $(libfstdir)
 PROGRAMS = $(bin_PROGRAMS)
 am__fstcompress_SOURCES_DIST = fstcompress.cc
 @HAVE_BIN_TRUE@am_fstcompress_OBJECTS = fstcompress.$(OBJEXT)
 fstcompress_OBJECTS = $(am_fstcompress_OBJECTS)
 fstcompress_LDADD = $(LDADD)
-@HAVE_BIN_TRUE@fstcompress_DEPENDENCIES = libfstgzfile.la \
-@HAVE_BIN_TRUE@	libfstcompressscript.la \
+@HAVE_BIN_TRUE@fstcompress_DEPENDENCIES = libfstcompressscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
 @HAVE_BIN_TRUE@	../../lib/libfst.la
 am__fstrandmod_SOURCES_DIST = fstrandmod.cc
 @HAVE_BIN_TRUE@am_fstrandmod_OBJECTS = fstrandmod.$(OBJEXT)
 fstrandmod_OBJECTS = $(am_fstrandmod_OBJECTS)
 fstrandmod_LDADD = $(LDADD)
-@HAVE_BIN_TRUE@fstrandmod_DEPENDENCIES = libfstgzfile.la \
-@HAVE_BIN_TRUE@	libfstcompressscript.la \
+@HAVE_BIN_TRUE@fstrandmod_DEPENDENCIES = libfstcompressscript.la \
 @HAVE_BIN_TRUE@	../../script/libfstscript.la \
 @HAVE_BIN_TRUE@	../../lib/libfst.la
 AM_V_P = $(am__v_P_@AM_V@)
@@ -201,12 +189,10 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(libfstcompressscript_la_SOURCES) \
-	$(libfstgzfile_la_SOURCES) $(fstcompress_SOURCES) \
+SOURCES = $(libfstcompressscript_la_SOURCES) $(fstcompress_SOURCES) \
 	$(fstrandmod_SOURCES)
 DIST_SOURCES = $(am__libfstcompressscript_la_SOURCES_DIST) \
-	$(libfstgzfile_la_SOURCES) $(am__fstcompress_SOURCES_DIST) \
-	$(am__fstrandmod_SOURCES_DIST)
+	$(am__fstcompress_SOURCES_DIST) $(am__fstrandmod_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -367,19 +353,16 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
-libfstgzfile_la_SOURCES = fstgzfile.cc
-libfstgzfile_la_LDFLAGS = -version-info 1:5:0
-@HAVE_BIN_TRUE@LDADD = libfstgzfile.la libfstcompressscript.la \
+@HAVE_BIN_TRUE@LDADD = libfstcompressscript.la \
 @HAVE_BIN_TRUE@        ../../script/libfstscript.la \
 @HAVE_BIN_TRUE@        ../../lib/libfst.la \
-@HAVE_BIN_TRUE@        -lfstgzfile -lz -lm -ldl
+@HAVE_BIN_TRUE@        -lz -lm -ldl
 
 @HAVE_BIN_TRUE@fstcompress_SOURCES = fstcompress.cc
 @HAVE_BIN_TRUE@fstrandmod_SOURCES = fstrandmod.cc
-@HAVE_SCRIPT_TRUE@libfstcompressscript_la_SOURCES = compress-script.cc fstgzfile.cc
-@HAVE_SCRIPT_TRUE@libfstcompressscript_la_LDFLAGS = -version-info 1:5:0
-@HAVE_SCRIPT_FALSE@libfst_LTLIBRARIES = libfstgzfile.la
-@HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = libfstcompressscript.la libfstgzfile.la
+@HAVE_SCRIPT_TRUE@libfstcompressscript_la_SOURCES = compress-script.cc
+@HAVE_SCRIPT_TRUE@libfstcompressscript_la_LDFLAGS = -version-info 2:5:0
+@HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = libfstcompressscript.la
 all: all-am
 
 .SUFFIXES:
@@ -452,9 +435,6 @@ clean-libfstLTLIBRARIES:
 
 libfstcompressscript.la: $(libfstcompressscript_la_OBJECTS) $(libfstcompressscript_la_DEPENDENCIES) $(EXTRA_libfstcompressscript_la_DEPENDENCIES) 
 	$(AM_V_CXXLD)$(libfstcompressscript_la_LINK) $(am_libfstcompressscript_la_rpath) $(libfstcompressscript_la_OBJECTS) $(libfstcompressscript_la_LIBADD) $(LIBS)
-
-libfstgzfile.la: $(libfstgzfile_la_OBJECTS) $(libfstgzfile_la_DEPENDENCIES) $(EXTRA_libfstgzfile_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(libfstgzfile_la_LINK) $(am_libfstgzfile_la_rpath) $(libfstgzfile_la_OBJECTS) $(libfstgzfile_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
@@ -521,7 +501,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/compress-script.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstcompress.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstgzfile.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstrandmod.Po@am__quote@
 
 .cc.o:

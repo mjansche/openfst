@@ -1,23 +1,8 @@
-// pair-weight.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: shumash@google.com (Masha Maria Shugrina)
-//
-// \file
-// Pair weight templated base class for weight classes that
-// contain two weights (e.g. Product, Lexicographic)
+// Pair weight templated base class for weight classes that contain two weights
+// (e.g. Product, Lexicographic).
 
 #ifndef FST_LIB_PAIR_WEIGHT_H_
 #define FST_LIB_PAIR_WEIGHT_H_
@@ -31,7 +16,7 @@
 
 namespace fst {
 
-template<class W1, class W2>
+template <class W1, class W2>
 class PairWeight {
  public:
   typedef W1 Weight1;
@@ -41,7 +26,7 @@ class PairWeight {
 
   PairWeight() {}
 
-  PairWeight(const PairWeight& w) : value1_(w.value1_), value2_(w.value2_) {}
+  PairWeight(const PairWeight &w) : value1_(w.value1_), value2_(w.value2_) {}
 
   PairWeight(W1 w1, W2 w2) : value1_(w1), value2_(w2) {}
 
@@ -60,12 +45,12 @@ class PairWeight {
     return no_weight;
   }
 
-  istream &Read(istream &strm) {
+  std::istream &Read(std::istream &strm) {
     value1_.Read(strm);
     return value2_.Read(strm);
   }
 
-  ostream &Write(ostream &strm) const {
+  std::ostream &Write(std::ostream &strm) const {
     value1_.Write(strm);
     return value2_.Write(strm);
   }
@@ -87,17 +72,16 @@ class PairWeight {
   }
 
   PairWeight<W1, W2> Quantize(float delta = kDelta) const {
-    return PairWeight<W1, W2>(value1_.Quantize(delta),
-                                 value2_.Quantize(delta));
+    return PairWeight<W1, W2>(value1_.Quantize(delta), value2_.Quantize(delta));
   }
 
   ReverseWeight Reverse() const {
     return ReverseWeight(value1_.Reverse(), value2_.Reverse());
   }
 
-  const W1& Value1() const { return value1_; }
+  const W1 &Value1() const { return value1_; }
 
-  const W2& Value2() const { return value2_; }
+  const W2 &Value2() const { return value2_; }
 
   void SetValue1(const W1 &w) { value1_ = w; }
   void SetValue2(const W2 &w) { value2_ = w; }
@@ -105,7 +89,6 @@ class PairWeight {
  private:
   W1 value1_;
   W2 value2_;
-
 };
 
 template <class W1, class W2>
@@ -120,17 +103,16 @@ inline bool operator!=(const PairWeight<W1, W2> &w1,
   return w1.Value1() != w2.Value1() || w1.Value2() != w2.Value2();
 }
 
-
 template <class W1, class W2>
 inline bool ApproxEqual(const PairWeight<W1, W2> &w1,
-                        const PairWeight<W1, W2> &w2,
-                        float delta = kDelta) {
+                        const PairWeight<W1, W2> &w2, float delta = kDelta) {
   return ApproxEqual(w1.Value1(), w2.Value1(), delta) &&
-      ApproxEqual(w1.Value2(), w2.Value2(), delta);
+         ApproxEqual(w1.Value2(), w2.Value2(), delta);
 }
 
 template <class W1, class W2>
-inline ostream &operator<<(ostream &strm, const PairWeight<W1, W2> &w) {
+inline std::ostream &operator<<(std::ostream &strm,
+                                const PairWeight<W1, W2> &w) {
   CompositeWeightWriter writer(strm);
   writer.WriteBegin();
   writer.WriteElement(w.Value1());
@@ -140,7 +122,7 @@ inline ostream &operator<<(ostream &strm, const PairWeight<W1, W2> &w) {
 }
 
 template <class W1, class W2>
-inline istream &operator>>(istream &strm, PairWeight<W1, W2> &w) {
+inline std::istream &operator>>(std::istream &strm, PairWeight<W1, W2> &w) {
   CompositeWeightReader reader(strm);
   reader.ReadBegin();
   W1 w1;

@@ -1,40 +1,27 @@
-// mutable-fst.h
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Copyright 2005-2010 Google, Inc.
-// Author: riley@google.com (Michael Riley)
-//
-// \file
-// Expanded FST augmented with mutators - interface class definition
-// and mutable arc iterator interface.
-//
+// Expanded FST augmented with mutators; interface class definition and
+// mutable arc iterator interface.
 
 #ifndef FST_LIB_MUTABLE_FST_H__
 #define FST_LIB_MUTABLE_FST_H__
 
 #include <stddef.h>
 #include <sys/types.h>
+#include <istream>
 #include <string>
 #include <vector>
-using std::vector;
+
+#include <fstream>
 
 #include <fst/expanded-fst.h>
 
 
 namespace fst {
 
-template <class A> struct MutableArcIteratorData;
+template <class A>
+struct MutableArcIteratorData;
 
 // An expanded FST plus mutators (use MutableArcIterator to modify arcs).
 template <class A>
@@ -50,49 +37,49 @@ class MutableFst : public ExpandedFst<A> {
     return operator=(static_cast<const Fst<A> &>(fst));
   }
 
-  virtual void SetStart(StateId) = 0;           // Set the initial state
-  virtual void SetFinal(StateId, Weight) = 0;   // Set a state's final weight
+  virtual void SetStart(StateId) = 0;          // Set the initial state
+  virtual void SetFinal(StateId, Weight) = 0;  // Set a state's final weight
   virtual void SetProperties(uint64 props,
                              uint64 mask) = 0;  // Set property bits wrt mask
 
-  virtual StateId AddState() = 0;               // Add a state, return its ID
-  virtual void AddArc(StateId, const A &arc) = 0;   // Add an arc to state
+  virtual StateId AddState() = 0;                  // Add a state, return its ID
+  virtual void AddArc(StateId, const A &arc) = 0;  // Add an arc to state
 
-  virtual void DeleteStates(const vector<StateId>&) = 0;  // Delete some states
-  virtual void DeleteStates() = 0;              // Delete all states
+  // Delete some states. Retains original StateId ordering.
+  virtual void DeleteStates(const std::vector<StateId> &) = 0;
+  virtual void DeleteStates() = 0;                         // Delete all states
   virtual void DeleteArcs(StateId, size_t n) = 0;  // Delete some arcs at state
-  virtual void DeleteArcs(StateId) = 0;         // Delete all arcs at state
+  virtual void DeleteArcs(StateId) = 0;            // Delete all arcs at state
 
-  virtual void ReserveStates(StateId n) { }  // Optional, best effort only.
-  virtual void ReserveArcs(StateId s, size_t n) { }  // Optional, Best effort.
-
-  // Return input label symbol table; return NULL if not specified
-  virtual const SymbolTable* InputSymbols() const = 0;
-  // Return output label symbol table; return NULL if not specified
-  virtual const SymbolTable* OutputSymbols() const = 0;
+  virtual void ReserveStates(StateId n) {}  // Optional, best effort only.
+  virtual void ReserveArcs(StateId s, size_t n) {}  // Optional, Best effort.
 
   // Return input label symbol table; return NULL if not specified
-  virtual SymbolTable* MutableInputSymbols() = 0;
+  const SymbolTable *InputSymbols() const override = 0;
   // Return output label symbol table; return NULL if not specified
-  virtual SymbolTable* MutableOutputSymbols() = 0;
+  const SymbolTable *OutputSymbols() const override = 0;
+
+  // Return input label symbol table; return NULL if not specified
+  virtual SymbolTable *MutableInputSymbols() = 0;
+  // Return output label symbol table; return NULL if not specified
+  virtual SymbolTable *MutableOutputSymbols() = 0;
 
   // Set input label symbol table; NULL signifies not unspecified
-  virtual void SetInputSymbols(const SymbolTable* isyms) = 0;
+  virtual void SetInputSymbols(const SymbolTable *isyms) = 0;
   // Set output label symbol table; NULL signifies not unspecified
-  virtual void SetOutputSymbols(const SymbolTable* osyms) = 0;
+  virtual void SetOutputSymbols(const SymbolTable *osyms) = 0;
 
   // Get a copy of this MutableFst. See Fst<>::Copy() for further doc.
-  virtual MutableFst<A> *Copy(bool safe = false) const = 0;
+  MutableFst<A> *Copy(bool safe = false) const override = 0;
 
   // Read an MutableFst from an input stream; return NULL on error.
-  static MutableFst<A> *Read(istream &strm, const FstReadOptions &opts) {
+  static MutableFst<A> *Read(std::istream &strm, const FstReadOptions &opts) {
     FstReadOptions ropts(opts);
     FstHeader hdr;
     if (ropts.header)
       hdr = *opts.header;
     else {
-      if (!hdr.Read(strm, opts.source))
-        return 0;
+      if (!hdr.Read(strm, opts.source)) return 0;
       ropts.header = &hdr;
     }
     if (!(hdr.Properties() & kMutable)) {
@@ -101,11 +88,10 @@ class MutableFst : public ExpandedFst<A> {
     }
     FstRegister<A> *registr = FstRegister<A>::GetRegister();
     const typename FstRegister<A>::Reader reader =
-      registr->GetReader(hdr.FstType());
+        registr->GetReader(hdr.FstType());
     if (!reader) {
       LOG(ERROR) << "MutableFst::Read: Unknown FST type \"" << hdr.FstType()
-                 << "\" (arc type = \"" << A::Type()
-                 << "\"): " << ropts.source;
+                 << "\" (arc type = \"" << A::Type() << "\"): " << ropts.source;
       return 0;
     }
     Fst<A> *fst = reader(strm, ropts);
@@ -121,8 +107,8 @@ class MutableFst : public ExpandedFst<A> {
                              const string &convert_type = "vector") {
     if (convert == false) {
       if (!filename.empty()) {
-        ifstream strm(filename.c_str(),
-                      std::ios_base::in | std::ios_base::binary);
+        std::ifstream strm(filename.c_str(),
+                                std::ios_base::in | std::ios_base::binary);
         if (!strm) {
           LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
           return 0;
@@ -139,9 +125,9 @@ class MutableFst : public ExpandedFst<A> {
       } else {
         Fst<A> *ofst = Convert(*ifst, convert_type);
         delete ifst;
-        if (!ofst) return 0;
+        if (!ofst) return nullptr;
         if (!ofst->Properties(kMutable, false))
-          LOG(ERROR) << "MutableFst: bad convert type: " << convert_type;
+          LOG(ERROR) << "MutableFst: Bad convert type: " << convert_type;
         return static_cast<MutableFst *>(ofst);
       }
     }
@@ -197,182 +183,172 @@ class MutableArcIterator {
   ~MutableArcIterator() { delete data_.base; }
 
   bool Done() const { return data_.base->Done(); }
-  const Arc& Value() const { return data_.base->Value(); }
+  const Arc &Value() const { return data_.base->Value(); }
   void Next() { data_.base->Next(); }
   size_t Position() const { return data_.base->Position(); }
   void Reset() { data_.base->Reset(); }
   void Seek(size_t a) { data_.base->Seek(a); }
   void SetValue(const Arc &a) { data_.base->SetValue(a); }
   uint32 Flags() const { return data_.base->Flags(); }
-  void SetFlags(uint32 f, uint32 m) {
-    return data_.base->SetFlags(f, m);
-  }
+  void SetFlags(uint32 f, uint32 m) { return data_.base->SetFlags(f, m); }
 
  private:
   MutableArcIteratorData<Arc> data_;
   DISALLOW_COPY_AND_ASSIGN(MutableArcIterator);
 };
 
-
 namespace internal {
 
 //  MutableFst<A> case - abstract methods.
-template <class A> inline
-typename A::Weight Final(const MutableFst<A> &fst, typename A::StateId s) {
+template <class A>
+inline typename A::Weight Final(const MutableFst<A> &fst,
+                                typename A::StateId s) {
   return fst.Final(s);
 }
 
-template <class A> inline
-ssize_t NumArcs(const MutableFst<A> &fst, typename A::StateId s) {
+template <class A>
+inline ssize_t NumArcs(const MutableFst<A> &fst, typename A::StateId s) {
   return fst.NumArcs(s);
 }
 
-template <class A> inline
-ssize_t NumInputEpsilons(const MutableFst<A> &fst, typename A::StateId s) {
+template <class A>
+inline ssize_t NumInputEpsilons(const MutableFst<A> &fst,
+                                typename A::StateId s) {
   return fst.NumInputEpsilons(s);
 }
 
-template <class A> inline
-ssize_t NumOutputEpsilons(const MutableFst<A> &fst, typename A::StateId s) {
+template <class A>
+inline ssize_t NumOutputEpsilons(const MutableFst<A> &fst,
+                                 typename A::StateId s) {
   return fst.NumOutputEpsilons(s);
 }
 
 }  // namespace internal
 
-
 // A useful alias when using StdArc.
 typedef MutableFst<StdArc> StdMutableFst;
-
 
 // This is a helper class template useful for attaching a MutableFst
 // interface to its implementation, handling reference counting and
 // copy-on-write.
-template <class I, class F = MutableFst<typename I::Arc> >
+template <class I, class F = MutableFst<typename I::Arc>>
 class ImplToMutableFst : public ImplToExpandedFst<I, F> {
  public:
   typedef typename I::Arc Arc;
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
 
-  using ImplToFst<I, F>::GetImpl;
-  using ImplToFst<I, F>::SetImpl;
-
-  virtual void SetStart(StateId s) {
+  void SetStart(StateId s) override {
     MutateCheck();
-    GetImpl()->SetStart(s);
+    GetMutableImpl()->SetStart(s);
   }
 
-  virtual void SetFinal(StateId s, Weight w) {
+  void SetFinal(StateId s, Weight w) override {
     MutateCheck();
-    GetImpl()->SetFinal(s, w);
+    GetMutableImpl()->SetFinal(s, w);
   }
 
-  virtual void SetProperties(uint64 props, uint64 mask) {
+  void SetProperties(uint64 props, uint64 mask) override {
     // Can skip mutate check if extrinsic properties don't change,
     // since it is then safe to update all (shallow) copies
     uint64 exprops = kExtrinsicProperties & mask;
-    if (GetImpl()->Properties(exprops) != (props & exprops))
-      MutateCheck();
-    GetImpl()->SetProperties(props, mask);
+    if (GetImpl()->Properties(exprops) != (props & exprops)) MutateCheck();
+    GetMutableImpl()->SetProperties(props, mask);
   }
 
-  virtual StateId AddState() {
+  StateId AddState() override {
     MutateCheck();
-    return GetImpl()->AddState();
+    return GetMutableImpl()->AddState();
   }
 
-  virtual void AddArc(StateId s, const Arc &arc) {
+  void AddArc(StateId s, const Arc &arc) override {
     MutateCheck();
-    GetImpl()->AddArc(s, arc);
+    GetMutableImpl()->AddArc(s, arc);
   }
 
-  virtual void DeleteStates(const vector<StateId> &dstates) {
+  void DeleteStates(const std::vector<StateId> &dstates) override {
     MutateCheck();
-    GetImpl()->DeleteStates(dstates);
+    GetMutableImpl()->DeleteStates(dstates);
   }
 
-  virtual void DeleteStates() {
+  void DeleteStates() override {
+    if (!Unique()) {
+      const SymbolTable *isymbols = GetImpl()->InputSymbols();
+      const SymbolTable *osymbols = GetImpl()->OutputSymbols();
+      SetImpl(std::make_shared<I>());
+      GetMutableImpl()->SetInputSymbols(isymbols);
+      GetMutableImpl()->SetOutputSymbols(osymbols);
+    } else {
+      GetMutableImpl()->DeleteStates();
+    }
+  }
+
+  void DeleteArcs(StateId s, size_t n) override {
     MutateCheck();
-    GetImpl()->DeleteStates();
+    GetMutableImpl()->DeleteArcs(s, n);
   }
 
-  virtual void DeleteArcs(StateId s, size_t n) {
+  void DeleteArcs(StateId s) override {
     MutateCheck();
-    GetImpl()->DeleteArcs(s, n);
+    GetMutableImpl()->DeleteArcs(s);
   }
 
-  virtual void DeleteArcs(StateId s) {
+  void ReserveStates(StateId s) override {
     MutateCheck();
-    GetImpl()->DeleteArcs(s);
+    GetMutableImpl()->ReserveStates(s);
   }
 
-  virtual void ReserveStates(StateId s) {
+  void ReserveArcs(StateId s, size_t n) override {
     MutateCheck();
-    GetImpl()->ReserveStates(s);
+    GetMutableImpl()->ReserveArcs(s, n);
   }
 
-  virtual void ReserveArcs(StateId s, size_t n) {
-    MutateCheck();
-    GetImpl()->ReserveArcs(s, n);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
+  const SymbolTable *InputSymbols() const override {
     return GetImpl()->InputSymbols();
   }
 
-  virtual const SymbolTable* OutputSymbols() const {
+  const SymbolTable *OutputSymbols() const override {
     return GetImpl()->OutputSymbols();
   }
 
-  virtual SymbolTable* MutableInputSymbols() {
+  SymbolTable *MutableInputSymbols() override {
     MutateCheck();
-    return GetImpl()->InputSymbols();
+    return GetMutableImpl()->InputSymbols();
   }
 
-  virtual SymbolTable* MutableOutputSymbols() {
+  SymbolTable *MutableOutputSymbols() override {
     MutateCheck();
-    return GetImpl()->OutputSymbols();
+    return GetMutableImpl()->OutputSymbols();
   }
 
-  virtual void SetInputSymbols(const SymbolTable* isyms) {
+  void SetInputSymbols(const SymbolTable *isyms) override {
     MutateCheck();
-    GetImpl()->SetInputSymbols(isyms);
+    GetMutableImpl()->SetInputSymbols(isyms);
   }
 
-  virtual void SetOutputSymbols(const SymbolTable* osyms) {
+  void SetOutputSymbols(const SymbolTable *osyms) override {
     MutateCheck();
-    GetImpl()->SetOutputSymbols(osyms);
+    GetMutableImpl()->SetOutputSymbols(osyms);
   }
 
  protected:
-  ImplToMutableFst() : ImplToExpandedFst<I, F>() {}
+  using ImplToExpandedFst<I, F>::GetImpl;
+  using ImplToExpandedFst<I, F>::GetMutableImpl;
+  using ImplToExpandedFst<I, F>::Unique;
+  using ImplToExpandedFst<I, F>::SetImpl;
+  using ImplToExpandedFst<I, F>::InputSymbols;
 
-  ImplToMutableFst(I *impl) : ImplToExpandedFst<I, F>(impl) {}
-
-
-  ImplToMutableFst(const ImplToMutableFst<I, F> &fst)
-      : ImplToExpandedFst<I, F>(fst) {}
+  explicit ImplToMutableFst(std::shared_ptr<I> impl)
+      : ImplToExpandedFst<I, F>(impl) {}
 
   ImplToMutableFst(const ImplToMutableFst<I, F> &fst, bool safe)
       : ImplToExpandedFst<I, F>(fst, safe) {}
 
   void MutateCheck() {
     // Copy on write
-    if (GetImpl()->RefCount() > 1)
-      SetImpl(new I(*this));
-  }
-
- private:
-  // Disallow
-  ImplToMutableFst<I, F>  &operator=(const ImplToMutableFst<I, F> &fst);
-
-  ImplToMutableFst<I, F> &operator=(const Fst<Arc> &fst) {
-    FSTERROR() << "ImplToMutableFst: Assignment operator disallowed";
-    GetImpl()->SetProperties(kError, kError);
-    return *this;
+    if (!Unique()) SetImpl(std::make_shared<I>(*this));
   }
 };
-
 
 }  // namespace fst
 

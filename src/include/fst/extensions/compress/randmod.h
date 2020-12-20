@@ -1,11 +1,12 @@
-// randmod.h
-// Generates a random FST according to a class-specifi transition model
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+//
+// Generates a random FST according to a class-specific transition model.
 
 #ifndef FST_EXTENSIONS_COMPRESS_RANDMOD_H_
 #define FST_EXTENSIONS_COMPRESS_RANDMOD_H_
 
 #include <vector>
-using std::vector;
 
 #include <fst/compat.h>
 #include <fst/mutable-fst.h>
@@ -23,13 +24,13 @@ class RandMod {
   // the probability generation model, and 'nlabels' in the alphabet.
   // If 'trans' = true, then generate a transducer.
   // If 'weight_gen' is non-NULL, output a weighted FST.
-  RandMod(StateId nstates, StateId nclasses,
-          Label nlabels, bool trans, const G *weight_gen)
+  RandMod(StateId nstates, StateId nclasses, Label nlabels, bool trans,
+          const G *weight_gen)
       : nstates_(nstates),
         nclasses_(nclasses),
         nlabels_(nlabels),
         trans_(trans),
-        weight_gen_(weight_gen)  {
+        weight_gen_(weight_gen) {
     for (StateId s = 0; s < nstates; ++s) {
       classes_.push_back(rand() % nclasses);  // NOLINT
     }
@@ -41,13 +42,11 @@ class RandMod {
     fst->DeleteStates();
     for (StateId s = 0; s < nstates_; ++s) {
       fst->AddState();
-      if (s == start)
-        fst->SetStart(start);
+      if (s == start) fst->SetStart(start);
       for (StateId n = 0; n <= nstates_; ++n) {
         Arc arc;
         StateId d = n == nstates_ ? kNoStateId : n;
-        if (!RandArc(s, d, &arc))
-          continue;
+        if (!RandArc(s, d, &arc)) continue;
         if (d == kNoStateId) {  // a super-final transition?
           fst->SetFinal(s, arc.weight);
         } else {
@@ -82,9 +81,7 @@ class RandMod {
     }
 
     Weight weight = Weight::One();
-    if (weight_gen_)
-      weight = (*weight_gen_)();
-
+    if (weight_gen_) weight = (*weight_gen_)();
 
     arc->ilabel = ilabel;
     arc->olabel = olabel;
@@ -97,7 +94,7 @@ class RandMod {
   Label nlabels_;
   bool trans_;
   const G *weight_gen_;
-  vector<StateId> classes_;
+  std::vector<StateId> classes_;
 };
 
 }  // namespace fst

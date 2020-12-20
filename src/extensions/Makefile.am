@@ -40,4 +40,4 @@ endif
 
 SUBDIRS = $(compactdir) $(compressdir) $(constdir) $(fardir) \
           $(lineardir) $(lookaheaddir) $(mpdtdir) $(ngramdir) $(pdtdir) \
-				  $(pywrapfstdir)
+          $(pywrapfstdir)
