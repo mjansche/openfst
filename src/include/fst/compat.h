@@ -16,6 +16,14 @@
   type(const type&);                      \
   void operator=(const type&)
 
+#if defined(__GNUC__) || defined(__clang__)
+#define OPENFST_DEPRECATED(message) __attribute__((deprecated(message)))
+#elif defined(_MSC_VER)
+#define OPENFST_DEPRECATED(message) __declspec(deprecated(message))
+#else
+#define OPENFST_DEPRECATED(message)
+#endif
+
 #include <fst/config.h>
 #include <fst/types.h>
 #include <fst/lock.h>

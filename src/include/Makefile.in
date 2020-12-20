@@ -153,11 +153,11 @@ am__nobase_include_HEADERS_DIST = fst/arc-arena.h fst/arc.h \
 	fst/extensions/far/create.h fst/extensions/far/equal.h \
 	fst/extensions/far/extract.h fst/extensions/far/far.h \
 	fst/extensions/far/far-class.h fst/extensions/far/farlib.h \
-	fst/extensions/far/farscript.h fst/extensions/far/info.h \
-	fst/extensions/far/isomorphic.h \
+	fst/extensions/far/farscript.h fst/extensions/far/getters.h \
+	fst/extensions/far/info.h fst/extensions/far/isomorphic.h \
 	fst/extensions/far/print-strings.h \
 	fst/extensions/far/script-impl.h fst/extensions/far/stlist.h \
-	fst/extensions/far/sttable.h fst/extensions/far/util.h \
+	fst/extensions/far/sttable.h \
 	fst/extensions/linear/linear-fst-data-builder.h \
 	fst/extensions/linear/linear-fst-data.h \
 	fst/extensions/linear/linear-fst.h \
@@ -203,7 +203,9 @@ am__nobase_include_HEADERS_DIST = fst/arc-arena.h fst/arc.h \
 	fst/script/synchronize.h fst/script/text-io.h \
 	fst/script/topsort.h fst/script/union.h \
 	fst/script/weight-class.h fst/script/fstscript-decl.h \
-	fst/script/verify.h
+	fst/script/verify.h fst/extensions/special/phi-fst.h \
+	fst/extensions/special/rho-fst.h \
+	fst/extensions/special/sigma-fst.h
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -396,15 +398,30 @@ top_srcdir = @top_srcdir@
 @HAVE_FAR_TRUE@fst/extensions/far/create.h fst/extensions/far/equal.h \
 @HAVE_FAR_TRUE@fst/extensions/far/extract.h fst/extensions/far/far.h \
 @HAVE_FAR_TRUE@fst/extensions/far/far-class.h fst/extensions/far/farlib.h \
-@HAVE_FAR_TRUE@fst/extensions/far/farscript.h fst/extensions/far/info.h \
-@HAVE_FAR_TRUE@fst/extensions/far/isomorphic.h fst/extensions/far/print-strings.h \
-@HAVE_FAR_TRUE@fst/extensions/far/script-impl.h fst/extensions/far/stlist.h \
-@HAVE_FAR_TRUE@fst/extensions/far/sttable.h fst/extensions/far/util.h
+@HAVE_FAR_TRUE@fst/extensions/far/farscript.h fst/extensions/far/getters.h \
+@HAVE_FAR_TRUE@fst/extensions/far/info.h fst/extensions/far/isomorphic.h \
+@HAVE_FAR_TRUE@fst/extensions/far/print-strings.h fst/extensions/far/script-impl.h \
+@HAVE_FAR_TRUE@fst/extensions/far/stlist.h fst/extensions/far/sttable.h
+
+@HAVE_GRM_TRUE@far_include_headers = fst/extensions/far/compile-strings.h \
+@HAVE_GRM_TRUE@fst/extensions/far/create.h fst/extensions/far/equal.h \
+@HAVE_GRM_TRUE@fst/extensions/far/extract.h fst/extensions/far/far.h \
+@HAVE_GRM_TRUE@fst/extensions/far/far-class.h fst/extensions/far/farlib.h \
+@HAVE_GRM_TRUE@fst/extensions/far/farscript.h fst/extensions/far/getters.h \
+@HAVE_GRM_TRUE@fst/extensions/far/info.h fst/extensions/far/isomorphic.h \
+@HAVE_GRM_TRUE@fst/extensions/far/print-strings.h fst/extensions/far/script-impl.h \
+@HAVE_GRM_TRUE@fst/extensions/far/stlist.h fst/extensions/far/sttable.h
 
 @HAVE_LINEAR_TRUE@linear_include_headers = fst/extensions/linear/linear-fst-data-builder.h \
 @HAVE_LINEAR_TRUE@fst/extensions/linear/linear-fst-data.h fst/extensions/linear/linear-fst.h \
 @HAVE_LINEAR_TRUE@fst/extensions/linear/linearscript.h fst/extensions/linear/loglinear-apply.h \
 @HAVE_LINEAR_TRUE@fst/extensions/linear/trie.h
+
+@HAVE_GRM_TRUE@mpdt_include_headers = fst/extensions/mpdt/compose.h \
+@HAVE_GRM_TRUE@fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
+@HAVE_GRM_TRUE@fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtlib.h \
+@HAVE_GRM_TRUE@fst/extensions/mpdt/mpdtscript.h fst/extensions/mpdt/read_write_utils.h \
+@HAVE_GRM_TRUE@fst/extensions/mpdt/reverse.h
 
 @HAVE_MPDT_TRUE@mpdt_include_headers = fst/extensions/mpdt/compose.h \
 @HAVE_MPDT_TRUE@fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
@@ -415,6 +432,14 @@ top_srcdir = @top_srcdir@
 @HAVE_NGRAM_TRUE@ngram_include_headers = fst/extensions/ngram/bitmap-index.h \
 @HAVE_NGRAM_TRUE@fst/extensions/ngram/ngram-fst.h fst/extensions/ngram/nthbit.h
 
+@HAVE_GRM_TRUE@pdt_include_headers = fst/extensions/pdt/collection.h \
+@HAVE_GRM_TRUE@fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
+@HAVE_GRM_TRUE@fst/extensions/pdt/getters.h fst/extensions/pdt/info.h \
+@HAVE_GRM_TRUE@fst/extensions/pdt/paren.h fst/extensions/pdt/pdt.h \
+@HAVE_GRM_TRUE@fst/extensions/pdt/pdtlib.h fst/extensions/pdt/pdtscript.h \
+@HAVE_GRM_TRUE@fst/extensions/pdt/replace.h fst/extensions/pdt/reverse.h \
+@HAVE_GRM_TRUE@fst/extensions/pdt/shortest-path.h
+
 @HAVE_PDT_TRUE@pdt_include_headers = fst/extensions/pdt/collection.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/getters.h fst/extensions/pdt/info.h \
@@ -422,6 +447,9 @@ top_srcdir = @top_srcdir@
 @HAVE_PDT_TRUE@fst/extensions/pdt/pdtlib.h fst/extensions/pdt/pdtscript.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/replace.h fst/extensions/pdt/reverse.h \
 @HAVE_PDT_TRUE@fst/extensions/pdt/shortest-path.h
+
+@HAVE_SPECIAL_TRUE@special_include_headers = fst/extensions/special/phi-fst.h \
+@HAVE_SPECIAL_TRUE@fst/extensions/special/rho-fst.h fst/extensions/special/sigma-fst.h
 
 script_include_headers = fst/script/arc-class.h \
 fst/script/arciterator-class.h fst/script/arcsort.h \
@@ -476,7 +504,8 @@ $(linear_include_headers) \
 $(mpdt_include_headers) \
 $(ngram_include_headers) \
 $(pdt_include_headers) \
-$(script_include_headers)
+$(script_include_headers) \
+$(special_include_headers)
 
 all: all-am
 
