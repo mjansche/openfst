@@ -499,6 +499,10 @@ void AcceptorMinimize(MutableFst<A>* fst) {
 
   // sum in appropriate semiring
   ArcSum(fst);
+  // ArcSum is not the right thing to do. Can create a non unweighted
+  // machine when semiring not idempotent.
+  // Temporary fix: remove weights.
+  Map(fst, RmWeightMapper<A>());
 }
 
 

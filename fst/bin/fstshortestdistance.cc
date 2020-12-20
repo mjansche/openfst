@@ -23,6 +23,7 @@ namespace fst {
 
 // Register templated main for common arcs types.
 REGISTER_FST_MAIN(ShortestDistanceMain, StdArc);
+REGISTER_FST_MAIN(ShortestDistanceMain, LogArc);
 
 }  // namespace fst
 

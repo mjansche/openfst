@@ -382,10 +382,9 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
     explicit SubsetEqual(vector<Element *> *elements)
         : elements_(elements) {}
 
-    // At each call to operator(), elements_[state] must be defined and
-    // NULL for each state in the subset arguments. When this operator
-    // returns, elements_ will preserve that property. We keep it
-    // full of NULLs so that it is ready for the next call.
+    // At each call to operator(), the elements_ vector should contain
+    // only NULLs. When this operator returns, elements_ will still
+    // have this property.
     bool operator()(Subset* subset1, Subset* subset2) const {
         if (subset1->size() != subset2->size())
           return false;
@@ -395,6 +394,8 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
            iter1 != subset1->end();
            ++iter1) {
         Element &element1 = *iter1;
+        while (elements_->size() <= element1.state_id)
+          elements_->push_back(0);
         (*elements_)[element1.state_id] = &element1;
       }
 
@@ -403,6 +404,8 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
            iter2 != subset2->end();
            ++iter2) {
         Element &element2 = *iter2;
+        while (elements_->size() <= element2.state_id)
+          elements_->push_back(0);
         Element *element1 = (*elements_)[element2.state_id];
         if (!element1 || element1->weight != element2.weight) {
           // Mismatch found. Resets element vector before returning false.

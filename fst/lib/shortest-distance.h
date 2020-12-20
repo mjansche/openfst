@@ -17,16 +17,17 @@
 // \file
 // Functions and classes to find shortest distance in an FST.
 
-#ifndef FST_LIB_SHORTEST_DISTANCE_H__
-#define FST_LIB_SHORTEST_DISTANCE_H__
+#ifndef FST_LIB_SHORTEST_DISTANCE_INL_H__
+#define FST_LIB_SHORTEST_DISTANCE_INL_H__
 
 #include <deque>
+#include <vector>
 
-#include "fst/lib/arcfilter.h"
-#include "fst/lib/cache.h"
-#include "fst/lib/queue.h"
-#include "fst/lib/reverse.h"
-#include "fst/lib/test-properties.h"
+#include "arcfilter.h"
+#include "cache.h"
+#include "queue.h"
+#include "reverse.h"
+#include "test-properties.h"
 
 namespace fst {
 
@@ -62,20 +63,18 @@ class ShortestDistanceState {
       vector<Weight> *distance,
       const ShortestDistanceOptions<Arc, Queue, ArcFilter> &opts,
       bool retain)
-      : fst_(fst.Copy()), distance_(distance), state_queue_(opts.state_queue),
+      : fst_(fst), distance_(distance), state_queue_(opts.state_queue),
         arc_filter_(opts.arc_filter),
         delta_(opts.delta), retain_(retain) {
     distance_->clear();
   }
 
-  ~ShortestDistanceState() {
-    delete fst_;
-  }
+  ~ShortestDistanceState() {}
 
   void ShortestDistance(StateId source);
 
  private:
-  const Fst<Arc> *fst_;
+  const Fst<Arc> &fst_;
   vector<Weight> *distance_;
   Queue *state_queue_;
   ArcFilter arc_filter_;
@@ -93,7 +92,7 @@ class ShortestDistanceState {
 template <class Arc, class Queue, class ArcFilter>
 void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     StateId source) {
-  if (fst_->Start() == kNoStateId)
+  if (fst_.Start() == kNoStateId)
     return;
 
   if (!(Weight::Properties() & kRightSemiring))
@@ -109,7 +108,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
   }
 
   if (source == kNoStateId)
-    source = fst_->Start();
+    source = fst_.Start();
 
   while (distance_->size() <= source) {
     distance_->push_back(Weight::Zero());
@@ -138,7 +137,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
     enqueued_[s] = false;
     Weight r = rdistance_[s];
     rdistance_[s] = Weight::Zero();
-    for (ArcIterator< Fst<Arc> > aiter(*fst_, s);
+    for (ArcIterator< Fst<Arc> > aiter(fst_, s);
          !aiter.Done();
          aiter.Next()) {
       const Arc &arc = aiter.Value();
@@ -259,4 +258,4 @@ void ShortestDistance(const Fst<Arc> &fst,
 
 }  // namespace fst
 
-#endif  // FST_LIB_SHORTEST_DISTANCE_H__
+#endif  // FST_LIB_SHORTEST_DISTANCE_INL_H__

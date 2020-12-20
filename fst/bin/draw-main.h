@@ -247,7 +247,7 @@ int DrawMain(int argc, char **argv, istream &istrm,
       return 0;
     }
   }
-  std::cout.precision(9);
+  ostrm->precision(9);
 
   const SymbolTable *isyms = 0, *osyms = 0, *ssyms = 0;
 

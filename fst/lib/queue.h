@@ -188,7 +188,8 @@ class LifoQueue : public QueueBase<S>, public deque<S> {
 // comparison function object.  Comparison function object COMP is
 // used to compare two StateIds. If a (single) state's order changes,
 // it can be reordered in the queue with a call to Update().
-template <typename S, typename C>
+// If 'update == false', call to Update() does not reorder the queue.
+template <typename S, typename C, bool update = true>
 class ShortestFirstQueue : public QueueBase<S> {
  public:
   typedef S StateId;
@@ -200,16 +201,25 @@ class ShortestFirstQueue : public QueueBase<S> {
   StateId Head() const { return heap_.Top(); }
 
   void Enqueue(StateId s) {
-    for (StateId i = key_.size(); i <= s; ++i)
-      key_.push_back(kNoKey);
-    key_[s] = heap_.Insert(s);
+    if (update) {
+      for (StateId i = key_.size(); i <= s; ++i)
+        key_.push_back(kNoKey);
+      key_[s] = heap_.Insert(s);
+    } else {
+      heap_.Insert(s);
+    }
   }
 
   void Dequeue() {
-    key_[heap_.Pop()] = kNoKey;
+    if (update)
+      key_[heap_.Pop()] = kNoKey;
+    else
+      heap_.Pop();
   }
 
   void Update(StateId s) {
+    if (!update)
+      return;
     if (s >= key_.size() || key_[s] == kNoKey) {
       Enqueue(s);
     } else {
@@ -221,7 +231,7 @@ class ShortestFirstQueue : public QueueBase<S> {
 
   void Clear() {
     heap_.Clear();
-    key_.clear();
+    if (update) key_.clear();
   }
 
  private:
@@ -565,7 +575,7 @@ public:
             break;
           case SHORTEST_FIRST_QUEUE:
             CHECK(comp);
-            queues_[i] = new ShortestFirstQueue<StateId, Compare>(*comp);
+            queues_[i] = new ShortestFirstQueue<StateId, Compare, false>(*comp);
             VLOG(3) << "AutoQueue: SCC #" << i <<
               ": using shortest-first discipline";
             break;

@@ -29,14 +29,14 @@ REGISTER_FST_MAIN(DrawMain, LogArc);
 
 
 int main(int argc, char **argv) {
-  string usage = "Prints out binary FSTs in simple text format.\n\n  Usage: ";
+  string usage = "Prints out binary FSTs in dot text format.\n\n  Usage: ";
   usage += argv[0];
   usage += " binary.fst [text.fst]\n";
   usage += "  Flags: acceptor, isymbols, numeric, osymbols, save_isymbols\n";
   usage += "  save_osymbols, ssymbols\n";
 
   InitFst(usage.c_str(), &argc, &argv, true);
-  if (argc < 2 || argc > 3) {
+  if (argc > 3) {
     ShowUsage();
     return 1;
   }
