@@ -4,8 +4,8 @@
 // Cartesian power weight semiring operation definitions.
 // Uses SparseTupleWeight as underlying representation.
 
-#ifndef FST_LIB_SPARSE_POWER_WEIGHT_H__
-#define FST_LIB_SPARSE_POWER_WEIGHT_H__
+#ifndef FST_LIB_SPARSE_POWER_WEIGHT_H_
+#define FST_LIB_SPARSE_POWER_WEIGHT_H_
 
 #include <string>
 
@@ -200,4 +200,4 @@ inline SparsePowerWeight<W, K> Divide(const SparsePowerWeight<W, K> &w1,
 
 }  // namespace fst
 
-#endif  // FST_LIB_SPARSE_POWER_WEIGHT_H__
+#endif  // FST_LIB_SPARSE_POWER_WEIGHT_H_

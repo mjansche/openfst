@@ -53,8 +53,8 @@
 //      Idempotent: for all a: Plus(a, a) == a.
 //      Path: for all a, b: Plus(a, b) == a or Plus(a, b) == b.
 
-#ifndef FST_LIB_WEIGHT_H__
-#define FST_LIB_WEIGHT_H__
+#ifndef FST_LIB_WEIGHT_H_
+#define FST_LIB_WEIGHT_H_
 
 #include <cctype>
 #include <cmath>
@@ -330,4 +330,4 @@ inline bool CompositeWeightReader::ReadElement(T *comp, bool last) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_WEIGHT_H__
+#endif  // FST_LIB_WEIGHT_H_

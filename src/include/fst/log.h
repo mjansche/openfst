@@ -17,8 +17,8 @@
 // \file
 // Google-style logging declarations and inline definitions.
 
-#ifndef FST_LIB_LOG_H__
-#define FST_LIB_LOG_H__
+#ifndef FST_LIB_LOG_H_
+#define FST_LIB_LOG_H_
 
 #include <cassert>
 #include <iostream>
@@ -81,4 +81,4 @@ inline void FstCheck(bool x, const char* expr,
 // Ports
 #define ATTRIBUTE_DEPRECATED __attribute__((deprecated))
 
-#endif  // FST_LIB_LOG_H__
+#endif  // FST_LIB_LOG_H_

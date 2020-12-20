@@ -28,7 +28,7 @@ class FarReaderImplBase {
   virtual bool Done() const = 0;
   virtual bool Error() const = 0;
   virtual const string &GetKey() const = 0;
-  virtual const FstClass &GetFstClass() = 0;
+  virtual const FstClass *GetFstClass() const = 0;
   virtual bool Find(const string &key) = 0;
   virtual void Next() = 0;
   virtual void Reset() = 0;
@@ -55,9 +55,9 @@ class FarReaderClassImpl : public FarReaderImplBase {
 
   bool Find(const string &key) override { return impl_->Find(key); }
 
-  const FstClass &GetFstClass() override {
-    fstc_ = FstClass(impl_->GetFst());
-    return fstc_;
+  const FstClass *GetFstClass() const override {
+    fstc_.reset(new FstClass(*(impl_->GetFst())));
+    return fstc_.get();
   }
 
   const string &GetKey() const override { return impl_->GetKey(); }
@@ -70,7 +70,7 @@ class FarReaderClassImpl : public FarReaderImplBase {
 
  private:
   std::unique_ptr<FarReader<Arc>> impl_;
-  FstClass fstc_;
+  mutable std::unique_ptr<FstClass> fstc_;
 };
 
 
@@ -96,7 +96,7 @@ class FarReaderClass {
 
   bool Find(const string &key) { return impl_->Find(key); }
 
-  const FstClass &GetFstClass() { return impl_->GetFstClass(); }
+  const FstClass *GetFstClass() const { return impl_->GetFstClass(); }
 
   const string &GetKey() const { return impl_->GetKey(); }
 

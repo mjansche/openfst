@@ -5,8 +5,8 @@
 // and arc re-ordering. FSTs should be deterministic when viewed as
 // unweighted automata.
 
-#ifndef FST_LIB_ISOMORPHIC_H__
-#define FST_LIB_ISOMORPHIC_H__
+#ifndef FST_LIB_ISOMORPHIC_H_
+#define FST_LIB_ISOMORPHIC_H_
 
 #include <algorithm>
 
@@ -188,4 +188,4 @@ bool Isomorphic(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 
 }  // namespace fst
 
-#endif  // FST_LIB_ISOMORPHIC_H__
+#endif  // FST_LIB_ISOMORPHIC_H_

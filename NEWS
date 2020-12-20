@@ -48,9 +48,13 @@ OpenFst: Release 1.5
       - Added FST compilation from arclists (cf. fstcompile)
       - Added FST printing and drawing
       - Added FarReader and FarWriter classes.
-    * Fixed build flags for `dlopen` (1.5.2)
+    * FarReader's GetFst method now returns a pointer (1.5.2)
     * Fixed FSTERROR macro (1.5.2)
+    * Fixed build flags for `dlopen` (1.5.2)
     * Consolidated Python extension into single module (1.5.2)
+    * Python add_arc now takes an Arc object (1.5.2)
+    * Mutation methods of the Python `Fst` object now return `self`, allowing
+      so they can be chained (1.5.2)
 
 OpenFst: Release 1.4
     * Port to C++11 (1.4.0)

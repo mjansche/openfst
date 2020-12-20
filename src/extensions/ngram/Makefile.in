@@ -122,7 +122,9 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libfstdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(libfst_LTLIBRARIES)
-libfstngram_la_LIBADD =
+am__DEPENDENCIES_1 =
+libfstngram_la_DEPENDENCIES = ../../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am_libfstngram_la_OBJECTS = bitmap-index.lo ngram-fst.lo nthbit.lo
 libfstngram_la_OBJECTS = $(am_libfstngram_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -341,7 +343,10 @@ lib_LTLIBRARIES = libfstngram.la
 ngram_fst_la_SOURCES = bitmap-index.cc ngram-fst.cc nthbit.cc
 ngram_fst_la_LDFLAGS = -module
 libfstngram_la_SOURCES = bitmap-index.cc ngram-fst.cc nthbit.cc
-libfstngram_la_LDFLAGS = -version-info 2:5:0
+libfstngram_la_LDFLAGS = -version-info 3:0:0
+libfstngram_la_LIBADD = \
+    ../../lib/libfst.la -lm $(DL_LIBS)
+
 all: all-am
 
 .SUFFIXES:

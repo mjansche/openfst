@@ -3,8 +3,8 @@
 //
 // Functions and classes to disambiguate an FST.
 
-#ifndef FST_LIB_DISAMBIGUATE_H__
-#define FST_LIB_DISAMBIGUATE_H__
+#ifndef FST_LIB_DISAMBIGUATE_H_
+#define FST_LIB_DISAMBIGUATE_H_
 
 #include <algorithm>
 #include <climits>
@@ -590,4 +590,4 @@ void Disambiguate(
 
 }  // namespace fst
 
-#endif  // FST_LIB_DISAMBIGUATE_H__
+#endif  // FST_LIB_DISAMBIGUATE_H_

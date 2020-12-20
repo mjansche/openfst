@@ -3,8 +3,8 @@
 //
 // Functions and classes for various FST state queues with a unified interface.
 
-#ifndef FST_LIB_QUEUE_H__
-#define FST_LIB_QUEUE_H__
+#ifndef FST_LIB_QUEUE_H_
+#define FST_LIB_QUEUE_H_
 
 #include <deque>
 #include <vector>

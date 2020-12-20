@@ -3,8 +3,8 @@
 //
 // Functions and classes to sort arcs in an FST.
 
-#ifndef FST_LIB_REVERSE_H__
-#define FST_LIB_REVERSE_H__
+#ifndef FST_LIB_REVERSE_H_
+#define FST_LIB_REVERSE_H_
 
 #include <algorithm>
 #include <vector>
@@ -119,4 +119,4 @@ void Reverse(const Fst<Arc> &ifst, MutableFst<RevArc> *ofst,
 
 }  // namespace fst
 
-#endif  // FST_LIB_REVERSE_H__
+#endif  // FST_LIB_REVERSE_H_

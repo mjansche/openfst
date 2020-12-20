@@ -3,8 +3,8 @@
 //
 // Functions and classes to determinize an FST.
 
-#ifndef FST_LIB_DETERMINIZE_H__
-#define FST_LIB_DETERMINIZE_H__
+#ifndef FST_LIB_DETERMINIZE_H_
+#define FST_LIB_DETERMINIZE_H_
 
 #include <algorithm>
 #include <climits>
@@ -1086,4 +1086,4 @@ void Determinize(
 
 }  // namespace fst
 
-#endif  // FST_LIB_DETERMINIZE_H__
+#endif  // FST_LIB_DETERMINIZE_H_

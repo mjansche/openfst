@@ -11,8 +11,8 @@
 //
 // Sparse tuple weight set operation definitions.
 
-#ifndef FST_LIB_SPARSE_TUPLE_WEIGHT_H__
-#define FST_LIB_SPARSE_TUPLE_WEIGHT_H__
+#ifndef FST_LIB_SPARSE_TUPLE_WEIGHT_H_
+#define FST_LIB_SPARSE_TUPLE_WEIGHT_H_
 
 #include <list>
 #include <stack>
@@ -320,4 +320,4 @@ inline std::istream &operator>>(std::istream &strm,
 
 }  // namespace fst
 
-#endif  // FST_LIB_SPARSE_TUPLE_WEIGHT_H__
+#endif  // FST_LIB_SPARSE_TUPLE_WEIGHT_H_

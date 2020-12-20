@@ -3,8 +3,8 @@
 //
 // An FST implementation that caches FST elements of a delayed computation.
 
-#ifndef FST_LIB_CACHE_H__
-#define FST_LIB_CACHE_H__
+#ifndef FST_LIB_CACHE_H_
+#define FST_LIB_CACHE_H_
 
 #include <functional>
 #include <unordered_map>
@@ -710,6 +710,12 @@ class GCCacheStore {
   // widens cache_limit_ to fulfill condition.
   void GC(const State *current, bool free_recent, float cache_fraction = 0.666);
 
+  // Returns the current cache size in bytes or 0 if GC is disabled.
+  size_t CacheSize() const { return cache_size_; }
+
+  // Returns the cache limit in bytes.
+  size_t CacheLimit() const { return cache_limit_; }
+
  private:
   static const size_t kMinCacheLimit = 8096;  // Min. cache limit
 
@@ -780,11 +786,10 @@ const size_t GCCacheStore<C>::kMinCacheLimit;
 // and GCCacheStore to do (optional) garbage collection.
 template <class A>
 class DefaultCacheStore
-    : public GCCacheStore<FirstCacheStore<VectorCacheStore<CacheState<A>> >> {
+    : public GCCacheStore<FirstCacheStore<VectorCacheStore<CacheState<A>>>> {
  public:
   explicit DefaultCacheStore(const CacheOptions &opts)
-      : GCCacheStore<FirstCacheStore<VectorCacheStore<CacheState<A>> >>(
-            opts) {}
+      : GCCacheStore<FirstCacheStore<VectorCacheStore<CacheState<A>>>>(opts) {}
 };
 
 // This class is used to cache FST elements stored in states of type S
@@ -1244,4 +1249,4 @@ class CacheMutableArcIterator : public MutableArcIteratorBase<typename F::Arc> {
 
 }  // namespace fst
 
-#endif  // FST_LIB_CACHE_H__
+#endif  // FST_LIB_CACHE_H_

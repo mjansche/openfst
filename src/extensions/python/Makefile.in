@@ -14,8 +14,9 @@
 
 @SET_MAKE@
 
-# NB: we use the Cython-generated .cc, rather than the .pyx source file, so
-# modifications to the .pyx files will not influence the build.
+# NB: we use the Cython-generated .cc files rather than the *.pxd/.pyx sources
+# used to generate them. Consequently, modifications to the .pyx files will not
+# influence the build unless the .cc files are regenerated using Cython.
 
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
@@ -125,30 +126,16 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(pythondir)"
 LTLIBRARIES = $(python_LTLIBRARIES)
-fst_exceptions_la_LIBADD =
-am_fst_exceptions_la_OBJECTS = fst_exceptions_la-fst_exceptions.lo
-fst_exceptions_la_OBJECTS = $(am_fst_exceptions_la_OBJECTS)
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
-fst_exceptions_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) $(fst_exceptions_la_LDFLAGS) \
-	$(LDFLAGS) -o $@
-fst_properties_la_DEPENDENCIES = ../../lib/libfst.la
-am_fst_properties_la_OBJECTS = fst_properties_la-fst_properties.lo
-fst_properties_la_OBJECTS = $(am_fst_properties_la_OBJECTS)
-fst_properties_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) $(fst_properties_la_LDFLAGS) \
-	$(LDFLAGS) -o $@
 am__DEPENDENCIES_1 =
 pywrapfst_la_DEPENDENCIES = ../far/libfstfarscript.la \
 	../far/libfstfar.la ../../script/libfstscript.la \
 	../../lib/libfst.la $(am__DEPENDENCIES_1)
 am_pywrapfst_la_OBJECTS = pywrapfst_la-pywrapfst.lo
 pywrapfst_la_OBJECTS = $(am_pywrapfst_la_OBJECTS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 pywrapfst_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(pywrapfst_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -186,10 +173,8 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(fst_exceptions_la_SOURCES) $(fst_properties_la_SOURCES) \
-	$(pywrapfst_la_SOURCES)
-DIST_SOURCES = $(fst_exceptions_la_SOURCES) \
-	$(fst_properties_la_SOURCES) $(pywrapfst_la_SOURCES)
+SOURCES = $(pywrapfst_la_SOURCES)
+DIST_SOURCES = $(pywrapfst_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -350,22 +335,18 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-python_LTLIBRARIES = fst_exceptions.la fst_properties.la pywrapfst.la
-pyexec_LTILIBRARIES = fst_exceptions.la fst_properties.la pywrapfst.la
-fst_exceptions_la_SOURCES = fst_exceptions.cc
-fst_exceptions_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
-fst_exceptions_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
-fst_properties_la_SOURCES = fst_properties.cc
-fst_properties_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
-fst_properties_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
-fst_properties_la_LIBADD = ../../lib/libfst.la -lfst
+python_LTLIBRARIES = pywrapfst.la
+pyexec_LTILIBRARIES = pywrapfst.la
 pywrapfst_la_SOURCES = pywrapfst.cc
 pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
 pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
 pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la    \
-											../../script/libfstscript.la ../../lib/libfst.la \
-                      -lfstfarscript -lfstfar -lfstscript -lfst -lm $(DL_LIBS)
+              ../../script/libfstscript.la ../../lib/libfst.la \
+                      -lm $(DL_LIBS)
 
+
+# Exports the *.pxd/*.pxd source files.
+EXTRA_DIST = basictypes.pxd fst.pxd ios.pxd pywrapfst.pxd pywrapfst.pyx
 all: all-am
 
 .SUFFIXES:
@@ -436,12 +417,6 @@ clean-pythonLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-fst_exceptions.la: $(fst_exceptions_la_OBJECTS) $(fst_exceptions_la_DEPENDENCIES) $(EXTRA_fst_exceptions_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(fst_exceptions_la_LINK) -rpath $(pythondir) $(fst_exceptions_la_OBJECTS) $(fst_exceptions_la_LIBADD) $(LIBS)
-
-fst_properties.la: $(fst_properties_la_OBJECTS) $(fst_properties_la_DEPENDENCIES) $(EXTRA_fst_properties_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(fst_properties_la_LINK) -rpath $(pythondir) $(fst_properties_la_OBJECTS) $(fst_properties_la_LIBADD) $(LIBS)
-
 pywrapfst.la: $(pywrapfst_la_OBJECTS) $(pywrapfst_la_DEPENDENCIES) $(EXTRA_pywrapfst_la_DEPENDENCIES) 
 	$(AM_V_CXXLD)$(pywrapfst_la_LINK) -rpath $(pythondir) $(pywrapfst_la_OBJECTS) $(pywrapfst_la_LIBADD) $(LIBS)
 
@@ -451,8 +426,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fst_exceptions_la-fst_exceptions.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fst_properties_la-fst_properties.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pywrapfst_la-pywrapfst.Plo@am__quote@
 
 .cc.o:
@@ -475,20 +448,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-fst_exceptions_la-fst_exceptions.lo: fst_exceptions.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fst_exceptions_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT fst_exceptions_la-fst_exceptions.lo -MD -MP -MF $(DEPDIR)/fst_exceptions_la-fst_exceptions.Tpo -c -o fst_exceptions_la-fst_exceptions.lo `test -f 'fst_exceptions.cc' || echo '$(srcdir)/'`fst_exceptions.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fst_exceptions_la-fst_exceptions.Tpo $(DEPDIR)/fst_exceptions_la-fst_exceptions.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='fst_exceptions.cc' object='fst_exceptions_la-fst_exceptions.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fst_exceptions_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o fst_exceptions_la-fst_exceptions.lo `test -f 'fst_exceptions.cc' || echo '$(srcdir)/'`fst_exceptions.cc
-
-fst_properties_la-fst_properties.lo: fst_properties.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fst_properties_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT fst_properties_la-fst_properties.lo -MD -MP -MF $(DEPDIR)/fst_properties_la-fst_properties.Tpo -c -o fst_properties_la-fst_properties.lo `test -f 'fst_properties.cc' || echo '$(srcdir)/'`fst_properties.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fst_properties_la-fst_properties.Tpo $(DEPDIR)/fst_properties_la-fst_properties.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='fst_properties.cc' object='fst_properties_la-fst_properties.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fst_properties_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o fst_properties_la-fst_properties.lo `test -f 'fst_properties.cc' || echo '$(srcdir)/'`fst_properties.cc
 
 pywrapfst_la-pywrapfst.lo: pywrapfst.cc
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(pywrapfst_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pywrapfst_la-pywrapfst.lo -MD -MP -MF $(DEPDIR)/pywrapfst_la-pywrapfst.Tpo -c -o pywrapfst_la-pywrapfst.lo `test -f 'pywrapfst.cc' || echo '$(srcdir)/'`pywrapfst.cc

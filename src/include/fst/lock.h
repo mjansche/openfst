@@ -20,8 +20,8 @@
 // Classes and functions here are no-ops (by design); proper locking requires
 // actual implementation.
 
-#ifndef FST_LIB_LOCK_H__
-#define FST_LIB_LOCK_H__
+#ifndef FST_LIB_LOCK_H_
+#define FST_LIB_LOCK_H_
 
 #include <fst/compat.h>  // for DISALLOW_COPY_AND_ASSIGN
 
@@ -74,4 +74,4 @@ class ReaderMutexLock {
 
 }  // namespace fst
 
-#endif  // FST_LIB_LOCK_H__
+#endif  // FST_LIB_LOCK_H_

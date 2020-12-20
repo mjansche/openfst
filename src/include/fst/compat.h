@@ -17,8 +17,8 @@
 // \file
 // Google compatibility declarations and inline definitions.
 
-#ifndef FST_LIB_COMPAT_H__
-#define FST_LIB_COMPAT_H__
+#ifndef FST_LIB_COMPAT_H_
+#define FST_LIB_COMPAT_H_
 
 #include <climits>
 #include <cstdlib>
@@ -101,4 +101,4 @@ class CheckSummer {
 
 }  // namespace fst
 
-#endif  // FST_LIB_COMPAT_H__
+#endif  // FST_LIB_COMPAT_H_

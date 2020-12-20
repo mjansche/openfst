@@ -3,8 +3,8 @@
 //
 // Classes and functions to generate random paths through an FST.
 
-#ifndef FST_LIB_RANDGEN_H__
-#define FST_LIB_RANDGEN_H__
+#ifndef FST_LIB_RANDGEN_H_
+#define FST_LIB_RANDGEN_H_
 
 #include <cmath>
 #include <cstdlib>
@@ -210,6 +210,35 @@ class ArcSampler {
   ArcSampler<A, S> &operator=(const ArcSampler<A, S> &s);
 };
 
+// Samples one sample of num_to_sample dimensions from a multinomial
+// distribution parameterized by probs. The result container should be
+// pre-initialized (e.g. an empty map or a zeroed vector with size ==
+// probs.size()).
+template <class C, class R>
+void OneMultinomialSample(const vector<double> &probs, size_t num_to_sample,
+                          C *sample, R *rng) {
+  // Left-over probability mass.
+  double norm = 0;
+  for (double p : probs) {
+    norm += p;
+  }
+
+  // Left-over number of samples needed.
+
+  for (size_t i = 0; i < probs.size(); ++i) {
+    size_t num_sampled = 0;
+    if (probs[i] > 0) {
+      std::binomial_distribution<> d(num_to_sample, probs[i] / norm);
+      num_sampled = d(*rng);
+    }
+    if (num_sampled != 0) {
+      (*sample)[i] = num_sampled;
+    }
+    norm -= probs[i];
+    num_to_sample -= num_sampled;
+  }
+}
+
 // Specialization for FastLogProbArcSelector.
 template <class A>
 class ArcSampler<A, FastLogProbArcSelector<A>> {
@@ -286,25 +315,7 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
     if (fst_.Final(rstate.state_id) != Weight::Zero())
       p_.push_back(exp(-to_log_weight_(fst_.Final(rstate.state_id)).Value()));
     if (rstate.nsamples < std::numeric_limits<RNG::result_type>::max()) {
-      // Left-over probability mass.
-      double norm = 0;
-      for (double p : p_) {
-        norm += p;
-      }
-
-      // Left-over number of samples needed.
-      size_t num_to_sample = rstate.nsamples;
-
-      for (auto i = 0; i < p_.size(); ++i) {
-        size_t num_sampled = 0;
-        if (p_[i] > 0) {
-          std::binomial_distribution<> d(num_to_sample, p_[i] / norm);
-          num_sampled = d(rng_);
-        }
-        if (num_sampled != 0) sample_map_[i] = num_sampled;
-        norm -= p_[i];
-        num_to_sample -= num_sampled;
-      }
+      OneMultinomialSample(p_, rstate.nsamples, &sample_map_, &rng_);
     } else {
       for (auto i = 0; i < p_.size(); ++i)
         sample_map_[i] = ceil(p_[i] * rstate.nsamples);
@@ -721,4 +732,4 @@ void RandGen(const Fst<IArc> &ifst, MutableFst<OArc> *ofst) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_RANDGEN_H__
+#endif  // FST_LIB_RANDGEN_H_

@@ -3,8 +3,8 @@
 //
 // Classes and functions to remove unsuccessful paths from an FST.
 
-#ifndef FST_LIB_CONNECT_H__
-#define FST_LIB_CONNECT_H__
+#ifndef FST_LIB_CONNECT_H_
+#define FST_LIB_CONNECT_H_
 
 #include <vector>
 
@@ -307,4 +307,4 @@ void Condense(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
 
 }  // namespace fst
 
-#endif  // FST_LIB_CONNECT_H__
+#endif  // FST_LIB_CONNECT_H_

@@ -101,26 +101,85 @@ class LogAccumulator {
   void operator=(const LogAccumulator<A> &);  // Disallow
 };
 
-// Stores shareable data for fast log accumulator copies.
+// Interface for shareable data for fast log accumulator copies. Holds pointers
+// to data only, storage is provided by derived classes.
 class FastLogAccumulatorData {
  public:
-  FastLogAccumulatorData() {}
+  FastLogAccumulatorData(int arc_limit, int arc_period)
+      : arc_limit_(arc_limit),
+        arc_period_(arc_period),
+        weights_ptr_(nullptr),
+        num_weights_(0),
+        weight_positions_ptr_(nullptr),
+        num_positions_(0) {}
 
-  std::vector<double> *Weights() { return &weights_; }
-  std::vector<ssize_t> *WeightPositions() { return &weight_positions_; }
-  double *WeightEnd() { return &(weights_[weights_.size() - 1]); }
+  virtual ~FastLogAccumulatorData() {}
 
- private:
   // Cummulative weight per state for all states s.t. # of arcs >
   // arc_limit_ with arcs in order. Special first element per state
   // being Log64Weight::Zero();
-  std::vector<double> weights_;
+  const double *Weights() const { return weights_ptr_; }
+  int NumWeights() const { return num_weights_; }
+
   // Maps from state to corresponding beginning weight position in
   // weights_. Position -1 means no pre-computed weights for that
   // state.
-  std::vector<ssize_t> weight_positions_;
+  const int *WeightPositions() const { return weight_positions_ptr_; }
+  int NumPositions() const { return num_positions_; }
+
+  int ArcLimit() const { return arc_limit_; }
+  int ArcPeriod() const { return arc_period_; }
+
+  // Returns true if the data object is mutable and supports SetData().
+  virtual bool IsMutable() const = 0;
+
+  // Does not take ownership but may invalidate the contents of weights and
+  // weight_positions.
+  virtual void SetData(vector<double> *weights,
+                       vector<int> *weight_positions) = 0;
+
+ protected:
+  void Init(int num_weights, const double *weights, int num_positions,
+            const int *weight_positions) {
+    weights_ptr_ = weights;
+    num_weights_ = num_weights;
+    weight_positions_ptr_ = weight_positions;
+    num_positions_ = num_positions;
+  }
+
+ private:
+  const int arc_limit_;
+  const int arc_period_;
+  const double *weights_ptr_;
+  int num_weights_;
+  const int *weight_positions_ptr_;
+  int num_positions_;
 
   DISALLOW_COPY_AND_ASSIGN(FastLogAccumulatorData);
+};
+
+// FastLogAccumulatorData with mutable storage.
+// Filled by FastLogAccumulator::Init.
+class MutableFastLogAccumulatorData : public FastLogAccumulatorData {
+ public:
+  MutableFastLogAccumulatorData(int arc_limit, int arc_period)
+      : FastLogAccumulatorData(arc_limit, arc_period) {}
+
+  bool IsMutable() const override { return true; }
+
+  void SetData(vector<double> *weights,
+               vector<int> *weight_positions) override {
+    weights_.swap(*weights);
+    weight_positions_.swap(*weight_positions);
+    Init(weights_.size(), weights_.data(), weight_positions_.size(),
+         weight_positions_.data());
+  }
+
+ private:
+  vector<double> weights_;
+  vector<int> weight_positions_;
+
+  DISALLOW_COPY_AND_ASSIGN(MutableFastLogAccumulatorData);
 };
 
 // This class accumulates arc weights using the log semiring Plus()
@@ -135,44 +194,55 @@ class FastLogAccumulator {
   typedef typename A::Weight Weight;
 
   explicit FastLogAccumulator(ssize_t arc_limit = 20, ssize_t arc_period = 10)
-      : arc_limit_(arc_limit),
+
+      : to_log_weight_(),
+        to_weight_(),
+        arc_limit_(arc_limit),
         arc_period_(arc_period),
-        data_(std::make_shared<FastLogAccumulatorData>()),
+        data_(std::make_shared<MutableFastLogAccumulatorData>(arc_limit,
+                                                              arc_period)),
+        state_weights_(nullptr),
+        error_(false) {}
+
+  explicit FastLogAccumulator(std::shared_ptr<FastLogAccumulatorData> data)
+      : to_log_weight_(),
+        to_weight_(),
+        arc_limit_(data->ArcLimit()),
+        arc_period_(data->ArcPeriod()),
+        data_(data),
+        state_weights_(nullptr),
         error_(false) {}
 
   FastLogAccumulator(const FastLogAccumulator<A> &acc, bool safe = false)
-      : arc_limit_(acc.arc_limit_),
+      : to_log_weight_(),
+        to_weight_(),
+        arc_limit_(acc.arc_limit_),
         arc_period_(acc.arc_period_),
         data_(acc.data_),
+        state_weights_(nullptr),
         error_(acc.error_) {}
 
   void SetState(StateId s) {
-    std::vector<double> &weights = *data_->Weights();
-    std::vector<ssize_t> &weight_positions = *data_->WeightPositions();
+    const double *weights = data_->Weights();
+    const int *weight_positions = data_->WeightPositions();
 
-    if (weight_positions.size() <= s) {
-      FSTERROR() << "FastLogAccumulator::SetState: Invalid state ID";
-      error_ = true;
-      return;
+    state_weights_ = nullptr;
+    if (s < data_->NumPositions()) {
+      const int pos = weight_positions[s];
+      if (pos >= 0) state_weights_ = &(weights[pos]);
     }
-
-    ssize_t pos = weight_positions[s];
-    if (pos >= 0)
-      state_weights_ = &(weights[pos]);
-    else
-      state_weights_ = 0;
   }
 
-  Weight Sum(Weight w, Weight v) { return LogPlus(w, v); }
+  Weight Sum(Weight w, Weight v) const { return LogPlus(w, v); }
 
   template <class ArcIterator>
-  Weight Sum(Weight w, ArcIterator *aiter, ssize_t begin, ssize_t end) {
+  Weight Sum(Weight w, ArcIterator *aiter, ssize_t begin, ssize_t end) const {
     if (error_) return Weight::NoWeight();
     Weight sum = w;
     // Finds begin and end of pre-stored weights
     ssize_t index_begin = -1, index_end = -1;
     ssize_t stored_begin = end, stored_end = end;
-    if (state_weights_ != 0) {
+    if (state_weights_ != nullptr) {
       index_begin = begin > 0 ? (begin - 1) / arc_period_ + 1 : 0;
       index_end = end / arc_period_;
       stored_begin = index_begin * arc_period_;
@@ -212,17 +282,19 @@ class FastLogAccumulator {
 
   template <class F>
   void Init(const F &fst, bool copy = false) {
-    if (copy) return;
-    std::vector<double> &weights = *data_->Weights();
-    std::vector<ssize_t> &weight_positions = *data_->WeightPositions();
-    if (!weights.empty() || arc_limit_ < arc_period_) {
+    if (copy || !data_->IsMutable()) {
+      return;
+    }
+    if (data_->NumPositions() != 0 || arc_limit_ < arc_period_) {
       FSTERROR() << "FastLogAccumulator: Initialization error";
       error_ = true;
       return;
     }
+    vector<double> weights;
+    vector<int> weight_positions;
     weight_positions.reserve(CountStates(fst));
 
-    ssize_t weight_position = 0;
+    int weight_position = 0;
     for (StateIterator<F> siter(fst); !siter.Done(); siter.Next()) {
       StateId s = siter.Value();
       if (fst.NumArcs(s) >= arc_limit_) {
@@ -244,22 +316,25 @@ class FastLogAccumulator {
         weight_positions.push_back(-1);
       }
     }
+    data_->SetData(&weights, &weight_positions);
   }
 
   bool Error() const { return error_; }
 
+  std::shared_ptr<FastLogAccumulatorData> GetData() const { return data_; }
+
  private:
-  double LogPosExp(double x) {
+  static double LogPosExp(double x) {
     return x == FloatLimits<double>::PosInfinity() ? 0.0
                                                    : log(1.0F + exp(-x));
   }
 
-  double LogMinusExp(double x) {
+  static double LogMinusExp(double x) {
     return x == FloatLimits<double>::PosInfinity() ? 0.0
                                                    : log(1.0F - exp(-x));
   }
 
-  Weight LogPlus(Weight w, Weight v) {
+  Weight LogPlus(Weight w, Weight v) const {
     double f1 = to_log_weight_(w).Value();
     double f2 = to_log_weight_(v).Value();
     if (f1 > f2)
@@ -268,7 +343,7 @@ class FastLogAccumulator {
       return to_weight_(f1 - LogPosExp(f2 - f1));
   }
 
-  double LogPlus(double f1, Weight v) {
+  double LogPlus(double f1, Weight v) const {
     double f2 = to_log_weight_(v).Value();
     if (f1 == FloatLimits<double>::PosInfinity())
       return f2;
@@ -279,21 +354,20 @@ class FastLogAccumulator {
   }
 
   // Assumes f1 < f2
-  Weight LogMinus(double f1, double f2) {
+  Weight LogMinus(double f1, double f2) const {
     if (f2 == FloatLimits<double>::PosInfinity())
       return to_weight_(f1);
     else
       return to_weight_(f1 - LogMinusExp(f2 - f1));
   }
 
-  WeightConvert<Weight, Log64Weight> to_log_weight_;
-  WeightConvert<Log64Weight, Weight> to_weight_;
+  const WeightConvert<Weight, Log64Weight> to_log_weight_;
+  const WeightConvert<Log64Weight, Weight> to_weight_;
 
-  ssize_t arc_limit_;   // Minimum # of arcs to pre-compute state
-  ssize_t arc_period_;  // Save cumulative weights per 'arc_period_'.
-  bool init_;           // Cumulative weights initialized?
+  const ssize_t arc_limit_;   // Minimum # of arcs to pre-compute state.
+  const ssize_t arc_period_;  // Save cumulative weights per 'arc_period_'.
   std::shared_ptr<FastLogAccumulatorData> data_;
-  double *state_weights_;
+  const double *state_weights_;
   bool error_;
 
   void operator=(const FastLogAccumulator<A> &);  // Disallow
@@ -482,16 +556,18 @@ class CacheLogAccumulator {
     }
   }
 
+  // Arc iterator position determines beginning point of lower bound.
   template <class Iterator>
   size_t LowerBound(double w, Iterator *aiter) {
     if (weights_ != 0) {
-      return std::lower_bound(weights_->begin() + 1, weights_->end(), w,
-                              std::greater<double>()) -
+      ssize_t pos = aiter->Position();
+      return std::lower_bound(weights_->begin() + pos + 1,
+                              weights_->end(), w, std::greater<double>()) -
              weights_->begin() - 1;
     } else {
       size_t n = 0;
       double x = FloatLimits<double>::PosInfinity();
-      for (aiter->Reset(); !aiter->Done(); aiter->Next(), ++n) {
+      for (; !aiter->Done(); aiter->Next(), ++n) {
         x = LogPlus(x, aiter->Value().weight);
         if (x < w) break;
       }

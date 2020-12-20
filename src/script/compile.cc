@@ -17,9 +17,9 @@ void CompileFst(std::istream &istrm, const string &source, const string &dest,
                 const SymbolTable *isyms, const SymbolTable *osyms,
                 const SymbolTable *ssyms, bool accep, bool ikeep, bool okeep,
                 bool nkeep, bool allow_negative_labels) {
-  FstClass *fst =
+  std::unique_ptr<FstClass> fst(
       CompileFstInternal(istrm, source, fst_type, arc_type, isyms, osyms, ssyms,
-                         accep, ikeep, okeep, nkeep, allow_negative_labels);
+                         accep, ikeep, okeep, nkeep, allow_negative_labels));
   fst->Write(dest);
 }
 

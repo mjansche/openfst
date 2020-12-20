@@ -3,8 +3,8 @@
 //
 // Class to compute the composition of two FSTs.
 
-#ifndef FST_LIB_COMPOSE_H__
-#define FST_LIB_COMPOSE_H__
+#ifndef FST_LIB_COMPOSE_H_
+#define FST_LIB_COMPOSE_H_
 
 #include <algorithm>
 #include <string>
@@ -214,7 +214,7 @@ template <class C, class F, class T>
 class ComposeFstMatcher;
 
 // Implementaion of delayed composition templated on the matchers (see
-// matcher.h), composition filter (see compose-filter-inl.h) and
+// matcher.h), composition filter (see compose-filter.h) and
 // the composition state table (see compose-state-table.h).
 template <class C, class F, class T>
 class ComposeFstImpl : public ComposeFstImplBase<typename C::Arc, C> {
@@ -473,13 +473,13 @@ void ComposeFstImpl<C, F, T>::SetMatchType() {
   // Ensures any required matching is possible and known.
   if ((matcher1_->Flags() & kRequireMatch) &&
       matcher1_->Type(true) != MATCH_OUTPUT) {
-    FSTERROR() << "ComposeFst: 1st argument requires matching but cannot.";
+    FSTERROR() << "ComposeFst: 1st argument cannot perform required matching.";
     match_type_ = MATCH_NONE;
     return;
   }
   if ((matcher2_->Flags() & kRequireMatch) &&
       matcher2_->Type(true) != MATCH_INPUT) {
-    FSTERROR() << "ComposeFst: 2nd argument requires matching but cannot.";
+    FSTERROR() << "ComposeFst: 2nd argument cannot perform required matching.";
     match_type_ = MATCH_NONE;
     return;
   }
@@ -982,4 +982,4 @@ void Compose(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
 
 }  // namespace fst
 
-#endif  // FST_LIB_COMPOSE_H__
+#endif  // FST_LIB_COMPOSE_H_

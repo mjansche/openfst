@@ -3,8 +3,8 @@
 //
 // Function to remove of final states that have epsilon-only input arcs.
 
-#ifndef FST_LIB_RMFINALEPSILON_H__
-#define FST_LIB_RMFINALEPSILON_H__
+#ifndef FST_LIB_RMFINALEPSILON_H_
+#define FST_LIB_RMFINALEPSILON_H_
 
 #include <unordered_set>
 #include <vector>
@@ -86,4 +86,4 @@ void RmFinalEpsilon(MutableFst<A>* fst) {
 
 }  // namespace fst
 
-#endif  // FST_LIB_RMFINALEPSILON_H__
+#endif  // FST_LIB_RMFINALEPSILON_H_

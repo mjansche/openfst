@@ -3,8 +3,8 @@
 //
 // Class to compute the difference between two FSAs.
 
-#ifndef FST_LIB_DIFFERENCE_H__
-#define FST_LIB_DIFFERENCE_H__
+#ifndef FST_LIB_DIFFERENCE_H_
+#define FST_LIB_DIFFERENCE_H_
 
 #include <algorithm>
 #include <vector>
@@ -171,4 +171,4 @@ void Difference(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
 
 }  // namespace fst
 
-#endif  // FST_LIB_DIFFERENCE_H__
+#endif  // FST_LIB_DIFFERENCE_H_

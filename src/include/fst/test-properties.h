@@ -3,8 +3,8 @@
 //
 // Functions to manipulate and test property bits.
 
-#ifndef FST_LIB_TEST_PROPERTIES_H__
-#define FST_LIB_TEST_PROPERTIES_H__
+#ifndef FST_LIB_TEST_PROPERTIES_H_
+#define FST_LIB_TEST_PROPERTIES_H_
 
 #include <unordered_set>
 
@@ -252,4 +252,4 @@ uint64 CheckProperties(
 
 }  // namespace fst
 
-#endif  // FST_LIB_TEST_PROPERTIES_H__
+#endif  // FST_LIB_TEST_PROPERTIES_H_

@@ -3,8 +3,8 @@
 //
 // Queue-dependent visitation of finite-state transducers. See also dfs-visit.h.
 
-#ifndef FST_LIB_VISIT_H__
-#define FST_LIB_VISIT_H__
+#ifndef FST_LIB_VISIT_H_
+#define FST_LIB_VISIT_H_
 
 
 #include <fst/arcfilter.h>
@@ -230,13 +230,12 @@ class PartialVisitor {
   typedef typename A::StateId StateId;
 
   explicit PartialVisitor(StateId maxvisit)
-      : fst_(0), maxvisit_(maxvisit), start_(kNoStateId) {}
+      : fst_(0), maxvisit_(maxvisit) {}
 
   void InitVisit(const Fst<A> &ifst) {
     fst_ = &ifst;
     ninit_ = 0;
     nfinish_ = 0;
-    start_ = ifst.Start();
   }
 
   bool InitState(StateId s, StateId root) {
@@ -262,9 +261,60 @@ class PartialVisitor {
   StateId maxvisit_;
   StateId ninit_;
   StateId nfinish_;
-  StateId start_;
+};
+
+// Copies input FST to mutable FST up to a state limit following queue order.
+template <class A>
+class PartialCopyVisitor : public CopyVisitor<A> {
+ public:
+  typedef A Arc;
+  typedef typename A::StateId StateId;
+  using CopyVisitor<A>::WhiteArc;
+
+  PartialCopyVisitor(MutableFst<Arc> *ofst, StateId maxvisit,
+                     bool copy_grey = true, bool copy_black = true)
+      : CopyVisitor<A>(ofst), maxvisit_(maxvisit),
+        copy_grey_(copy_grey), copy_black_(copy_black) {}
+
+  void InitVisit(const Fst<A> &ifst) {
+    CopyVisitor<A>::InitVisit(ifst);
+    ninit_ = 0;
+    nfinish_ = 0;
+  }
+
+  bool InitState(StateId s, StateId root) {
+    CopyVisitor<A>::InitState(s, root);
+    ++ninit_;
+    return ninit_ <= maxvisit_;
+  }
+
+  bool GreyArc(StateId s, const Arc &arc) {
+    if (copy_grey_) return CopyVisitor<A>::GreyArc(s, arc);
+    return true;
+  }
+
+  bool BlackArc(StateId s, const Arc &arc) {
+    if (copy_black_) return CopyVisitor<A>::BlackArc(s, arc);
+    return true;
+  }
+
+  void FinishState(StateId s) {
+    CopyVisitor<A>::FinishState(s);
+    ++nfinish_;
+  }
+
+  void FinishVisit() {}
+  StateId NumInitialized() { return ninit_; }
+  StateId NumFinished() { return nfinish_; }
+
+ private:
+  StateId maxvisit_;
+  StateId ninit_;
+  StateId nfinish_;
+  const bool copy_grey_;
+  const bool copy_black_;
 };
 
 }  // namespace fst
 
-#endif  // FST_LIB_VISIT_H__
+#endif  // FST_LIB_VISIT_H_

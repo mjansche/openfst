@@ -3,8 +3,8 @@
 //
 // Classes for representing the mapping between state tuples and state IDs.
 
-#ifndef FST_LIB_STATE_TABLE_H__
-#define FST_LIB_STATE_TABLE_H__
+#ifndef FST_LIB_STATE_TABLE_H_
+#define FST_LIB_STATE_TABLE_H_
 
 #include <deque>
 #include <utility>
