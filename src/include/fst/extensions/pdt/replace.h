@@ -61,28 +61,37 @@ void Replace(const vector<pair<typename Arc::Label,
   ofst->DeleteStates();
   parens->clear();
 
+  // Builds map from non-terminal label to FST id.
   unordered_map<Label, size_t> label2id;
   for (size_t i = 0; i < ifst_array.size(); ++i)
     label2id[ifst_array[i].first] = i;
 
   Label max_label = kNoLabel;
-  size_t max_non_term_count = 0;
 
   // Queue of non-terminals to replace
   deque<size_t> non_term_queue;
-  // Map of non-terminals to replace to count
-  unordered_map<Label, size_t> non_term_map;
   non_term_queue.push_back(root);
-  non_term_map[root] = 1;;
 
   // PDT state corr. to ith replace FST start state.
-  vector<StateId> fst_start(ifst_array.size(), kNoLabel);
+  vector<StateId> fst_start(ifst_array.size(), kNoStateId);
   // PDT state, weight pairs corr. to ith replace FST final state & weights.
   vector< vector<pair<StateId, Weight> > > fst_final(ifst_array.size());
 
+  typedef unordered_map<pair<size_t, StateId>, size_t,
+                   ReplaceParenHash<StateId> > ParenMap;
+  // Map that gives the paren ID for a (non-terminal, dest. state) pair
+  // (which can be unique).
+  ParenMap paren_map;
+  // # of distinct parenthesis pairs per fst.
+  vector<size_t> nparens(ifst_array.size(), 0);
+  // # of distinct parenthesis pairs overall.
+  size_t total_nparens = 0;
+
   // Builds single Fst combining all referenced input Fsts. Leaves in the
   // non-termnals for now.  Tabulate the PDT states that correspond to
-  // the start and final states of the input Fsts.
+  // the start and final states of the input Fsts. For each non-terminal
+  // assigns an paren ID to each instance starting at 0; they are distinct
+  // IDs unless the instances have the same destination state.
   for (StateId soff = 0; !non_term_queue.empty(); soff = ofst->NumStates()) {
     Label label = non_term_queue.front();
     non_term_queue.pop_front();
@@ -106,24 +115,35 @@ void Replace(const vector<pair<typename Arc::Label,
       for (ArcIterator< Fst<Arc> > aiter(*ifst, is);
            !aiter.Done(); aiter.Next()) {
         Arc arc = aiter.Value();
+        arc.nextstate += soff;
         if (max_label == kNoLabel || arc.olabel > max_label)
           max_label = arc.olabel;
         typename unordered_map<Label, size_t>::const_iterator it =
             label2id.find(arc.olabel);
         if (it != label2id.end()) {
           size_t nfst_id = it->second;
-          if (ifst_array[nfst_id].second->Start() == -1)
+          if (ifst_array[nfst_id].second->Start() == kNoStateId)
             continue;
-          size_t count = non_term_map[arc.olabel]++;
-          if (count == 0)
+          if (arc.olabel != root && nparens[nfst_id] == 0)
             non_term_queue.push_back(arc.olabel);
-          if (count > max_non_term_count)
-            max_non_term_count = count;
+          pair<size_t, StateId> paren_key(nfst_id, arc.nextstate);
+          typename ParenMap::const_iterator pit = paren_map.find(paren_key);
+          if (pit == paren_map.end()) {
+            paren_map[paren_key] = nparens[nfst_id]++;
+            if (nparens[nfst_id] > total_nparens)
+              total_nparens = nparens[nfst_id];
+          }
         }
-        arc.nextstate += soff;
         ofst->AddArc(os, arc);
       }
     }
+  }
+
+  // Assigns parenthesis labels
+  for (size_t paren_id = 0; paren_id < total_nparens; ++paren_id) {
+    Label open_paren = max_label + paren_id + 1;
+    Label close_paren = open_paren + total_nparens;
+    parens->push_back(make_pair(open_paren, close_paren));
   }
 
   // Changes each non-terminal transition to an open parenthesis
@@ -132,19 +152,7 @@ void Replace(const vector<pair<typename Arc::Label,
   // transitions from the PDT states corr. to the final states of the
   // input FST for the non-terminal to the former destination state of the
   // non-terminal transition.
-
   typedef MutableArcIterator< MutableFst<Arc> > MIter;
-  typedef unordered_map<pair<size_t, StateId >, size_t,
-                   ReplaceParenHash<StateId> > ParenMap;
-
-  // Parenthesis pair ID per fst, state pair.
-  ParenMap paren_map;
-  // # of parenthesis pairs per fst.
-  vector<size_t> nparens(ifst_array.size(), 0);
-  // Initial open parenthesis label
-  Label first_open_paren = max_label + 1;
-  Label first_close_paren = max_label + max_non_term_count + 1;
-
   for (StateIterator< Fst<Arc> > siter(*ofst);
        !siter.Done(); siter.Next()) {
     StateId os = siter.Value();
@@ -156,23 +164,12 @@ void Replace(const vector<pair<typename Arc::Label,
       if (lit != label2id.end()) {
         size_t nfst_id = lit->second;
 
-        // Get parentheses. Ensures distinct parenthesis pair per
-        // non-terminal and destination state but otherwise reuses them.
-        Label open_paren = kNoLabel, close_paren = kNoLabel;
+        // Get parentheses.
         pair<size_t, StateId> paren_key(nfst_id, arc.nextstate);
         typename ParenMap::const_iterator pit = paren_map.find(paren_key);
-        if (pit != paren_map.end()) {
-          size_t paren_id = pit->second;
-          open_paren = (*parens)[paren_id].first;
-          close_paren = (*parens)[paren_id].second;
-        } else {
-          size_t paren_id = nparens[nfst_id]++;
-          open_paren = first_open_paren + paren_id;
-          close_paren = first_close_paren + paren_id;
-          paren_map[paren_key] = paren_id;
-          if (paren_id >= parens->size())
-            parens->push_back(make_pair(open_paren, close_paren));
-        }
+        size_t paren_id = pit->second;
+        Label open_paren = (*parens)[paren_id].first;
+        Label close_paren = (*parens)[paren_id].second;
 
         // Sets open parenthesis.
         Arc sarc(open_paren, open_paren, arc.weight, fst_start[nfst_id]);

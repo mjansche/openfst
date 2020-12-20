@@ -23,6 +23,8 @@ OpenFst - Release 1.3
   * Fixed NGramFst off-by-one issue (1.3.3)
   * farextract now allows one to specify a list of comma-separated keys,
     including key ranges (1.3.3)
+  * Fixed bug in PDT replace that could cause close paren IDs to collide
+    with oopen paren IDs (1.3.4)
 
 OpenFst - Release 1.2
    * Added lookahead matching and filtering for faster composition
