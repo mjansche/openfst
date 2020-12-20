@@ -25,6 +25,7 @@
 using std::vector;
 
 #include <fst/extensions/pdt/pdt.h>
+#include <fst/extensions/pdt/paren.h>
 #include <fst/extensions/pdt/shortest-path.h>
 #include <fst/extensions/pdt/reverse.h>
 #include <fst/cache.h>
@@ -66,7 +67,7 @@ class ExpandFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::AddArc;
+  using CacheBaseImpl< CacheState<A> >::PushArc;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
   using CacheBaseImpl< CacheState<A> >::HasFinal;
   using CacheBaseImpl< CacheState<A> >::HasStart;
@@ -188,7 +189,7 @@ class ExpandFstImpl
 
       StateTuple ntuple(arc.nextstate, stack_id);
       arc.nextstate = state_table_->FindState(ntuple);
-      AddArc(s, arc);
+      PushArc(s, arc);
     }
     SetArcs(s);
   }
@@ -340,6 +341,7 @@ class PrunedExpand {
   typedef StateId StackId;
   typedef PdtStack<StackId, Label> Stack;
   typedef PdtStateTable<StateId, StackId> StateTable;
+  typedef typename PdtBalanceData<Arc>::SetIterator SetIterator;
 
   // Constructor taking as input a PDT specified by 'ifst' and 'parens'.
   // 'keep_parentheses' specifies whether parentheses are replaced by
@@ -474,10 +476,10 @@ class PrunedExpand {
 
   typedef PdtShortestPath<Arc, FifoQueue<StateId> > SP;
   typedef typename SP::CloseParenMultimap ParenMultimap;
-  typedef typename SP::ParenKey ParenKey;
   SP *reverse_shortest_path_;  // Shortest path for rfst_
   PdtBalanceData<Arc> *balance_data_;   // Not owned by shortest_path_
-  ParenMultimap close_paren_multimap_;  // TODO
+  ParenMultimap close_paren_multimap_;  // Maps open paren arcs to
+  // balancing close paren arcs.
 
   MutableFst<Arc> *ofst_;  // Output fst
   Weight limit_;           // Weight limit
@@ -495,12 +497,12 @@ class PrunedExpand {
   ssize_t cached_stack_id_;
   StateId cached_source_;
   slist<pair<StateId, Weight> > cached_dest_list_;
-  // TODO(allauzen): rewrite this comment.
-  // 'cached_dest_list_' contains the set of destination states for
-  // source state 'cached_source_' and paren id 'cached_paren_id':
-  // the set of source state of a close parenthesis with paren id
-  // 'cached_paren_id' balancing an incoming open parenthesis with paren
-  // id 'cached_paren_id' in state 'cached_source_'.
+  // 'cached_dest_list_' contains the set of pair of destination
+  // states and weight to final states for source state
+  // 'cached_source_' and paren id 'cached_paren_id': the set of
+  // source state of a close parenthesis with paren id
+  // 'cached_paren_id' balancing an incoming open parenthesis with
+  // paren id 'cached_paren_id' in state 'cached_source_'.
 
   NaturalLess<Weight> less_;
 };
@@ -531,8 +533,8 @@ void PrunedExpand<A>::InitCloseParenMultimap(
           = paren_id_map.find(arc.ilabel);
       if (pit == paren_id_map.end()) continue;
       if (arc.ilabel == parens[pit->second].second) {  // Close paren
-        ParenKey key(pit->second, s);
-        close_paren_multimap_.insert(make_pair(key, arc));
+        ParenState<Arc> paren_state(pit->second, s);
+        close_paren_multimap_.insert(make_pair(paren_state, arc));
       }
     }
   }
@@ -653,9 +655,10 @@ bool PrunedExpand<A>::PruneArc(StateId s, const A &arc) {
     cached_stack_id_ = current_stack_id_;
     cached_dest_list_.clear();
     if (cached_source_ != ifst_->Start()) {
-      balance_data_->Find(current_paren_id_, cached_source_);
-      for (; !balance_data_->Done(); balance_data_->Next()) {
-        StateId dest = balance_data_->Value();
+      for (SetIterator set_iter =
+               balance_data_->Find(current_paren_id_, cached_source_);
+           !set_iter.Done(); set_iter.Next()) {
+        StateId dest = set_iter.Element();
         typename DestMap::const_iterator iter = dest_map_.find(dest);
         CHECK(iter != dest_map_.end());
         CHECK_EQ(iter->first, dest);
@@ -756,18 +759,20 @@ bool PrunedExpand<A>::ProcOpenParen(StateId s, const A &arc, StackId si,
   Weight fd = Weight::Zero();
   ssize_t paren_id = stack_.ParenId(arc.ilabel);
   slist<StateId> sources;
-  balance_data_->Find(paren_id, state_table_.Tuple(ns).state_id);
-  for (; !balance_data_->Done(); balance_data_->Next())
-    sources.push_front(balance_data_->Value());
+  for (SetIterator set_iter =
+           balance_data_->Find(paren_id, state_table_.Tuple(ns).state_id);
+       !set_iter.Done(); set_iter.Next()) {
+    sources.push_front(set_iter.Element());
+  }
   for (typename slist<StateId>::const_iterator sources_iter = sources.begin();
        sources_iter != sources.end();
        ++ sources_iter) {
-    StateId source = *sources_iter;//balance_data_->Value();
+    StateId source = *sources_iter;
     VLOG(2) << "Close paren source: " << source;
-    ParenKey paren_key(paren_id, source);
+    ParenState<Arc> paren_state(paren_id, source);
     for (typename ParenMultimap::const_iterator iter =
-             close_paren_multimap_.find(paren_key);
-         iter != close_paren_multimap_.end() && paren_key == iter->first;
+             close_paren_multimap_.find(paren_state);
+         iter != close_paren_multimap_.end() && paren_state == iter->first;
          ++iter) {
       Arc meta_arc = iter->second;
       PdtStateTuple<StateId, StackId> tuple(meta_arc.nextstate, si);
@@ -839,16 +844,17 @@ void PrunedExpand<A>::ProcDestStates(StateId s, StackId si) {
   SetSourceState(s, state_table_.Tuple(s).state_id);
 
   ssize_t paren_id = stack_.Top(si);
-  balance_data_->Find(paren_id, state_table_.Tuple(s).state_id);
-  for (; !balance_data_->Done(); balance_data_->Next()) {
-    StateId dest_state = balance_data_->Value();
+  for (SetIterator set_iter =
+           balance_data_->Find(paren_id, state_table_.Tuple(s).state_id);
+       !set_iter.Done(); set_iter.Next()) {
+    StateId dest_state = set_iter.Element();
     if (dest_map_.find(dest_state) != dest_map_.end())
       continue;
     Weight dest_weight = Weight::Zero();
-    ParenKey paren_key(paren_id, dest_state);
+    ParenState<Arc> paren_state(paren_id, dest_state);
     for (typename ParenMultimap::const_iterator iter =
-             close_paren_multimap_.find(paren_key);
-         iter != close_paren_multimap_.end() && paren_key == iter->first;
+             close_paren_multimap_.find(paren_state);
+         iter != close_paren_multimap_.end() && paren_state == iter->first;
          ++iter) {
       const Arc &arc = iter->second;
       PdtStateTuple<StateId, StackId> tuple(arc.nextstate, stack_.Pop(si));

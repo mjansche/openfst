@@ -25,6 +25,7 @@
 #include <fst/const-fst.h>
 #include <fst/lookahead-matcher.h>
 
+
 namespace fst {
 
 // WRITABLE MATCHERS - these have the interface of Matchers (see

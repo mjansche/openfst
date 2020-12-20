@@ -30,6 +30,7 @@ void Reweight(MutableFstClass *fst, const vector<WeightClass> &potential,
 
 REGISTER_FST_OPERATION(Reweight, StdArc, ReweightArgs);
 REGISTER_FST_OPERATION(Reweight, LogArc, ReweightArgs);
+REGISTER_FST_OPERATION(Reweight, Log64Arc, ReweightArgs);
 
 }  // namespace script
 }  // namespace fst

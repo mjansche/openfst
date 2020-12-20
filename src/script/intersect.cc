@@ -41,8 +41,10 @@ void Intersect(const FstClass &ifst1, const FstClass &ifst2,
 
 REGISTER_FST_OPERATION(Intersect, StdArc, IntersectArgs1);
 REGISTER_FST_OPERATION(Intersect, LogArc, IntersectArgs1);
+REGISTER_FST_OPERATION(Intersect, Log64Arc, IntersectArgs1);
 REGISTER_FST_OPERATION(Intersect, StdArc, IntersectArgs2);
 REGISTER_FST_OPERATION(Intersect, LogArc, IntersectArgs2);
+REGISTER_FST_OPERATION(Intersect, Log64Arc, IntersectArgs2);
 
 }  // namespace script
 }  // namespace fst

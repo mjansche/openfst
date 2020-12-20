@@ -30,6 +30,7 @@ using std::vector;
 #include <fst/connect.h>
 #include <fst/mutable-fst.h>
 
+
 namespace fst {
 
 template<class A>
@@ -101,6 +102,6 @@ void RmFinalEpsilon(MutableFst<A>* fst) {
   Connect(fst);
 }
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_RMFINALEPSILON_H__

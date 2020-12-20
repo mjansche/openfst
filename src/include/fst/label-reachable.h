@@ -35,6 +35,7 @@ using std::vector;
 #include <fst/state-reachable.h>
 #include <fst/vector-fst.h>
 
+
 namespace fst {
 
 // Stores shareable data for label reachable class copies.

@@ -30,6 +30,7 @@ void Minimize(MutableFstClass *ofst1, MutableFstClass *ofst2, float delta) {
 
 REGISTER_FST_OPERATION(Minimize, StdArc, MinimizeArgs);
 REGISTER_FST_OPERATION(Minimize, LogArc, MinimizeArgs);
+REGISTER_FST_OPERATION(Minimize, Log64Arc, MinimizeArgs);
 
 }  // namespace script
 }  // namespace fst

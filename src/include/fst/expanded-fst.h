@@ -22,8 +22,11 @@
 #ifndef FST_LIB_EXPANDED_FST_H__
 #define FST_LIB_EXPANDED_FST_H__
 
+#include <sys/types.h>
 #include <string>
+
 #include <fst/fst.h>
+
 
 namespace fst {
 
@@ -85,6 +88,8 @@ class ExpandedFst : public Fst<A> {
 };
 
 
+namespace internal {
+
 //  ExpandedFst<A> case - abstract methods.
 template <class A> inline
 typename A::Weight Final(const ExpandedFst<A> &fst, typename A::StateId s) {
@@ -105,6 +110,8 @@ template <class A> inline
 ssize_t NumOutputEpsilons(const ExpandedFst<A> &fst, typename A::StateId s) {
   return fst.NumOutputEpsilons(s);
 }
+
+}  // namespace internal
 
 
 // A useful alias when using StdArc.

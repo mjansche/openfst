@@ -22,6 +22,7 @@
 
 #include <vector>
 using std::vector;
+
 #include <fst/cache.h>
 
 namespace fst {
@@ -549,6 +550,12 @@ class EditFstImpl : public FstImpl<A> {
     MutateCheck();
     data_->DeleteArcs(s, wrapped_);
     SetProperties(DeleteArcsProperties(FstImpl<A>::Properties()));
+  }
+
+  void ReserveStates(StateId s) {
+  }
+
+  void ReserveArcs(StateId s, size_t n) {
   }
 
   // end non-const MutableFst operations

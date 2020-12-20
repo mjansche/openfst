@@ -25,8 +25,10 @@
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/mutable-fst.h>
 #include <fst/test-properties.h>
+
 
 namespace fst {
 
@@ -297,6 +299,8 @@ VectorFstImpl<A>::VectorFstImpl(const Fst<A> &fst) {
   SetInputSymbols(fst.InputSymbols());
   SetOutputSymbols(fst.OutputSymbols());
   BaseImpl::SetStart(fst.Start());
+  if (fst.Properties(kExpanded, false))
+    BaseImpl::ReserveStates(CountStates(fst));
 
   for (StateIterator< Fst<A> > siter(fst);
        !siter.Done();

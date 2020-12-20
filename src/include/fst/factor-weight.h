@@ -35,6 +35,7 @@ using std::vector;
 #include <fst/cache.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 const uint32 kFactorFinalWeights = 0x00000001;
@@ -158,7 +159,7 @@ class FactorWeightFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::AddArc;
+  using CacheBaseImpl< CacheState<A> >::PushArc;
   using CacheBaseImpl< CacheState<A> >::HasStart;
   using CacheBaseImpl< CacheState<A> >::HasFinal;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
@@ -306,13 +307,13 @@ class FactorWeightFstImpl
         FactorIterator fit(w);
         if (!(mode_ & kFactorArcWeights) || fit.Done()) {
           StateId d = FindState(Element(arc.nextstate, Weight::One()));
-          AddArc(s, Arc(arc.ilabel, arc.olabel, w, d));
+          PushArc(s, Arc(arc.ilabel, arc.olabel, w, d));
         } else {
           for (; !fit.Done(); fit.Next()) {
             const pair<Weight, Weight> &p = fit.Value();
             StateId d = FindState(Element(arc.nextstate,
                                           p.second.Quantize(delta_)));
-            AddArc(s, Arc(arc.ilabel, arc.olabel, p.first, d));
+            PushArc(s, Arc(arc.ilabel, arc.olabel, p.first, d));
           }
         }
       }
@@ -330,7 +331,7 @@ class FactorWeightFstImpl
         const pair<Weight, Weight> &p = fit.Value();
         StateId d = FindState(Element(kNoStateId,
                                       p.second.Quantize(delta_)));
-        AddArc(s, Arc(final_ilabel_, final_olabel_, p.first, d));
+        PushArc(s, Arc(final_ilabel_, final_olabel_, p.first, d));
       }
     }
     SetArcs(s);

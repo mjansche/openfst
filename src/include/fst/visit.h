@@ -22,8 +22,10 @@
 #ifndef FST_LIB_VISIT_H__
 #define FST_LIB_VISIT_H__
 
+
 #include <fst/arcfilter.h>
 #include <fst/mutable-fst.h>
+
 
 namespace fst {
 

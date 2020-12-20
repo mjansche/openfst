@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     ostrm = new fst::ofstream(argv[2]);
     if (!*ostrm) {
       LOG(ERROR) << argv[0] << ": Open failed, file = " << argv[2];
-      return 0;
+      return 1;
     }
   }
   ostrm->precision(FLAGS_precision);

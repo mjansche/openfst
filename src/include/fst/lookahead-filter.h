@@ -28,6 +28,7 @@ using std::vector;
 #include <fst/fst.h>
 #include <fst/lookahead-matcher.h>
 
+
 namespace fst {
 
 // Identifies and verifies the capabilities of the matcher to be used for

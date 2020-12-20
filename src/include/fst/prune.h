@@ -28,6 +28,7 @@ using std::vector;
 #include <fst/heap.h>
 #include <fst/shortest-distance.h>
 
+
 namespace fst {
 
 template <class A, class ArcFilter>
@@ -327,6 +328,6 @@ void Prune(const Fst<Arc> &ifst,
   Prune(ifst, ofst, opts);
 }
 
-} // namespace fst
+}  // namespace fst
 
 #endif // FST_LIB_PRUNE_H_

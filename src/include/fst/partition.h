@@ -25,7 +25,9 @@
 using std::vector;
 #include <algorithm>
 
+
 #include <fst/queue.h>
+
 
 
 namespace fst {
@@ -283,6 +285,6 @@ class PartitionIterator {
 
   T class_id_;
 };
-}
+}  // namespace fst
 
 #endif  // FST_LIB_PARTITION_H__

@@ -21,14 +21,19 @@
 namespace fst {
 namespace script {
 
-void Map(MutableFstClass *ofst, MapType map_type,
-         float delta, const WeightClass &w) {
-  MapArgs args(ofst, map_type, delta, w);
-  Apply<Operation<MapArgs> >("Map", ofst->ArcType(), &args);
+FstClass *Map(const FstClass& ifst, MapType map_type,
+              float delta, const WeightClass &w) {
+  MapInnerArgs args(ifst, map_type, delta, w);
+  MapArgs args_with_retval(args);
+
+  Apply<Operation<MapArgs> >("Map", ifst.ArcType(), &args_with_retval);
+
+  return args_with_retval.retval;
 }
 
 REGISTER_FST_OPERATION(Map, StdArc, MapArgs);
 REGISTER_FST_OPERATION(Map, LogArc, MapArgs);
+REGISTER_FST_OPERATION(Map, Log64Arc, MapArgs);
 
 }  // namespace script
 }  // namespace fst

@@ -36,6 +36,7 @@ bool Equivalent(const FstClass &fst1, const FstClass &fst2,
 
 REGISTER_FST_OPERATION(Equivalent, StdArc, EquivalentArgs);
 REGISTER_FST_OPERATION(Equivalent, LogArc, EquivalentArgs);
+REGISTER_FST_OPERATION(Equivalent, Log64Arc, EquivalentArgs);
 
 }  // namespace script
 }  // namespace fst

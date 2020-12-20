@@ -28,6 +28,7 @@ using std::vector;
 
 #include <fst/vector-fst.h>
 
+
 DECLARE_bool(fst_default_cache_gc);
 DECLARE_int64(fst_default_cache_gc_limit);
 
@@ -37,21 +38,59 @@ struct CacheOptions {
   bool gc;          // enable GC
   size_t gc_limit;  // # of bytes allowed before GC
 
-
   CacheOptions(bool g, size_t l) : gc(g), gc_limit(l) {}
   CacheOptions()
       : gc(FLAGS_fst_default_cache_gc),
         gc_limit(FLAGS_fst_default_cache_gc_limit) {}
 };
 
+// A CacheStateAllocator allocates and frees CacheStates
+// template <class S>
+// struct CacheStateAllocator {
+//   S *Allocate(StateId s);
+//   void Free(S *state, StateId s);
+// };
+//
 
-// This is a VectorFstBaseImpl container that holds a State similar to
+// A simple allocator class, can be overridden as needed,
+// maintains a single entry cache.
+template <class S>
+struct DefaultCacheStateAllocator {
+  typedef typename S::Arc::StateId StateId;
+
+  DefaultCacheStateAllocator() : mru_(NULL) { }
+
+  ~DefaultCacheStateAllocator() {
+    delete mru_;
+  }
+
+  S *Allocate(StateId s) {
+    if (mru_) {
+      S *state = mru_;
+      mru_ = NULL;
+      state->Reset();
+      return state;
+    }
+    return new S();
+  }
+
+  void Free(S *state, StateId s) {
+    if (mru_) {
+      delete mru_;
+    }
+    mru_ = state;
+  }
+
+ private:
+  S *mru_;
+};
+
 // VectorState but additionally has a flags data member (see
 // CacheState below). This class is used to cache FST elements with
 // the flags used to indicate what has been cached. Use HasStart()
 // HasFinal(), and HasArcs() to determine if cached and SetStart(),
-// SetFinal(), AddArc(), and SetArcs() to cache. Note you must set the
-// final weight even if the state is non-final to mark it as
+// SetFinal(), AddArc(), (or PushArc() and SetArcs()) to cache. Note you
+// must set the final weight even if the state is non-final to mark it as
 // cached. If the 'gc' option is 'false', cached items have the extent
 // of the FST - minimizing computation. If the 'gc' option is 'true',
 // garbage collection of states (not in use in an arc iterator) is
@@ -59,43 +98,53 @@ struct CacheOptions {
 // bytes is reached - controlling memory use. When 'gc_limit' is 0,
 // special optimizations apply - minimizing memory use.
 
-template <class S>
+template <class S, class C = DefaultCacheStateAllocator<S> >
 class CacheBaseImpl : public VectorFstBaseImpl<S> {
  public:
-  using FstImpl<typename S::Arc>::Type;
-  using VectorFstBaseImpl<S>::NumStates;
-  using VectorFstBaseImpl<S>::AddState;
-  using VectorFstBaseImpl<S>::SetState;
-
   typedef S State;
-  typedef typename S::Arc Arc;
+  typedef C Allocator;
+  typedef typename State::Arc Arc;
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
 
-  CacheBaseImpl()
+  using FstImpl<Arc>::Type;
+  using FstImpl<Arc>::Properties;
+  using FstImpl<Arc>::SetProperties;
+  using VectorFstBaseImpl<State>::NumStates;
+  using VectorFstBaseImpl<State>::AddState;
+  using VectorFstBaseImpl<State>::SetState;
+
+  explicit CacheBaseImpl(C *allocator = 0)
       : cache_start_(false), nknown_states_(0), min_unexpanded_state_id_(0),
         cache_first_state_id_(kNoStateId), cache_first_state_(0),
         cache_gc_(FLAGS_fst_default_cache_gc),  cache_size_(0),
         cache_limit_(FLAGS_fst_default_cache_gc_limit > kMinCacheLimit ||
                      FLAGS_fst_default_cache_gc_limit == 0 ?
-                     FLAGS_fst_default_cache_gc_limit : kMinCacheLimit) {}
+                     FLAGS_fst_default_cache_gc_limit : kMinCacheLimit) {
+          allocator_ = allocator ? allocator : new C();
+        }
 
-  explicit CacheBaseImpl(const CacheOptions &opts)
+  explicit CacheBaseImpl(const CacheOptions &opts, C *allocator = 0)
       : cache_start_(false), nknown_states_(0),
         min_unexpanded_state_id_(0), cache_first_state_id_(kNoStateId),
         cache_first_state_(0), cache_gc_(opts.gc), cache_size_(0),
         cache_limit_(opts.gc_limit > kMinCacheLimit || opts.gc_limit == 0 ?
-                     opts.gc_limit : kMinCacheLimit) {}
+                     opts.gc_limit : kMinCacheLimit) {
+          allocator_ = allocator ? allocator : new C();
+        }
 
   // Preserve gc parameters, but initially cache nothing.
   CacheBaseImpl(const CacheBaseImpl &impl)
     : cache_start_(false), nknown_states_(0),
-          min_unexpanded_state_id_(0), cache_first_state_id_(kNoStateId),
-          cache_first_state_(0), cache_gc_(impl.cache_gc_), cache_size_(0),
-      cache_limit_(impl.cache_limit_) {}
+      min_unexpanded_state_id_(0), cache_first_state_id_(kNoStateId),
+      cache_first_state_(0), cache_gc_(impl.cache_gc_), cache_size_(0),
+      cache_limit_(impl.cache_limit_) {
+        allocator_ = new C();
+      }
 
   ~CacheBaseImpl() {
-    delete cache_first_state_;
+    allocator_->Free(cache_first_state_, cache_first_state_id_);
+    delete allocator_;
   }
 
   // Gets a state from its ID; state must exist.
@@ -130,18 +179,20 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
       return cache_first_state_;                   // Return 1st cached state
     } else if (cache_limit_ == 0 && cache_first_state_id_ == kNoStateId) {
       cache_first_state_id_ = s;                   // Remember 1st cached state
-      cache_first_state_ = new S;
+      cache_first_state_ = allocator_->Allocate(s);
       return cache_first_state_;
     } else if (cache_first_state_id_ != kNoStateId &&
                cache_first_state_->ref_count == 0) {
-      cache_first_state_id_ = s;                   // Reuse 1st cached state
-      cache_first_state_->Reset();
+      // With Default allocator, the Free and Allocate will reuse the same S*.
+      allocator_->Free(cache_first_state_, cache_first_state_id_);
+      cache_first_state_id_ = s;
+      cache_first_state_ = allocator_->Allocate(s);
       return cache_first_state_;                   // Return 1st cached state
     } else {
       while (NumStates() <= s)                     // Add state to main cache
         AddState(0);
       if (!VectorFstBaseImpl<S>::GetState(s)) {
-        SetState(s, new S);
+        SetState(s, allocator_->Allocate(s));
         if (cache_first_state_id_ != kNoStateId) {  // Forget 1st cached state
           while (NumStates() <= cache_first_state_id_)
             AddState(0);
@@ -162,7 +213,8 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
             GC(s, false);
         }
       }
-      return VectorFstBaseImpl<S>::GetState(s);
+      S *state = VectorFstBaseImpl<S>::GetState(s);
+      return state;
     }
   }
 
@@ -176,15 +228,41 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   void SetFinal(StateId s, Weight w) {
     S *state = ExtendState(s);
     state->final = w;
-    state->flags |= kCacheFinal | kCacheRecent;
+    state->flags |= kCacheFinal | kCacheRecent | kCacheModified;
   }
 
+  // AddArc adds a single arc to state s and does incremental cache
+  // book-keeping.  For efficiency, prefer PushArc and SetArcs below
+  // when possible.
   void AddArc(StateId s, const Arc &arc) {
+    S *state = ExtendState(s);
+    state->arcs.push_back(arc);
+    if (arc.ilabel == 0) {
+      ++state->niepsilons;
+    }
+    if (arc.olabel == 0) {
+      ++state->noepsilons;
+    }
+    const Arc *parc = state->arcs.empty() ? 0 : &(state->arcs.back());
+    SetProperties(AddArcProperties(Properties(), s, arc, parc));
+    state->flags |= kCacheModified;
+    if (cache_gc_ && s != cache_first_state_id_) {
+      cache_size_ += sizeof(Arc);
+      if (cache_size_ > cache_limit_)
+        GC(s, false);
+    }
+  }
+
+  // Adds a single arc to state s but delays cache book-keeping.
+  // SetArcs must be called when all PushArc calls at a state are
+  // complete.  Do not mix with calls to AddArc.
+  void PushArc(StateId s, const Arc &arc) {
     S *state = ExtendState(s);
     state->arcs.push_back(arc);
   }
 
-  // Marks arcs of state s as cached.
+  // Marks arcs of state s as cached and does cache book-keeping after all
+  // calls to PushArc have been completed.  Do not mix with calls to AddArc.
   void SetArcs(StateId s) {
     S *state = ExtendState(s);
     vector<Arc> &arcs = state->arcs;
@@ -199,7 +277,7 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
         ++state->noepsilons;
     }
     ExpandedState(s);
-    state->flags |= kCacheArcs | kCacheRecent;
+    state->flags |= kCacheArcs | kCacheRecent | kCacheModified;
     if (cache_gc_ && s != cache_first_state_id_) {
       cache_size_ += arcs.capacity() * sizeof(Arc);
       if (cache_size_ > cache_limit_)
@@ -212,10 +290,34 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
     state->arcs.reserve(n);
   }
 
+  void DeleteArcs(StateId s, size_t n) {
+    S *state = ExtendState(s);
+    const vector<Arc> &arcs = GetState(s)->arcs;
+    for (size_t i = 0; i < n; ++i) {
+      size_t j = arcs.size() - i - 1;
+      if (arcs[j].ilabel == 0)
+        --GetState(s)->niepsilons;
+      if (arcs[j].olabel == 0)
+        --GetState(s)->noepsilons;
+    }
+    state->arcs.resize(arcs.size() - n);
+    SetProperties(DeleteArcsProperties(Properties()));
+    state->flags |= kCacheModified;
+  }
+
+  void DeleteArcs(StateId s) {
+    S *state = ExtendState(s);
+    state->niepsilons = 0;
+    state->noepsilons = 0;
+    state->arcs.clear();
+    SetProperties(DeleteArcsProperties(Properties()));
+    state->flags |= kCacheModified;
+  }
+
   // Is the start state cached?
   bool HasStart() const { return cache_start_; }
-  // Is the final weight of state s cached?
 
+  // Is the final weight of state s cached?
   bool HasFinal(StateId s) const {
     const S *state = CheckState(s);
     if (state && state->flags & kCacheFinal) {
@@ -305,7 +407,7 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
       if (cache_size_ > cache_target && state->ref_count == 0 &&
           (free_recent || !(state->flags & kCacheRecent)) && s != current) {
         cache_size_ -= sizeof(S) + state->arcs.capacity() * sizeof(Arc);
-        delete state;
+        allocator_->Free(state, s);
         SetState(s, 0);
         cache_states_.erase(siter++);
       } else {
@@ -341,12 +443,20 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   size_t GetCacheSize() const { return cache_size_; }
 
  private:
+  static const size_t kMinCacheLimit = 8096;  // Minimum (non-zero) cache limit
   static const uint32 kCacheFinal =  0x0001;  // Final weight has been cached
   static const uint32 kCacheArcs =   0x0002;  // Arcs have been cached
   static const uint32 kCacheRecent = 0x0004;  // Mark as visited since GC
 
-  static const size_t kMinCacheLimit = 8096;  // Minimum (non-zero) cache limit
+ public:
+  static const uint32 kCacheModified = 0x0008;  // Mark state as modified
+  static const uint32 kCacheFlags = kCacheFinal | kCacheArcs | kCacheRecent
+                                    | kCacheModified;
 
+ protected:
+  C *allocator_;                             // used to allocate new states
+
+ private:
   bool cache_start_;                         // Is the start state cached?
   StateId nknown_states_;                    // # of known states
   vector<bool> expanded_states_;             // states that have been expanded
@@ -358,14 +468,14 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   size_t cache_size_;                        // # of bytes cached
   size_t cache_limit_;                       // # of bytes allowed before GC
 
-  void InitStateIterator(StateIteratorData<Arc> *);  // disallow
-  void operator=(const CacheBaseImpl<Arc> &impl);    // disallow
+  void operator=(const CacheBaseImpl<S> &impl);    // disallow
 };
 
-template <class S> const uint32 CacheBaseImpl<S>::kCacheFinal;
-template <class S> const uint32 CacheBaseImpl<S>::kCacheArcs;
-template <class S> const uint32 CacheBaseImpl<S>::kCacheRecent;
-template <class S> const size_t CacheBaseImpl<S>::kMinCacheLimit;
+template <class S, class C> const uint32 CacheBaseImpl<S, C>::kCacheFinal;
+template <class S, class C> const uint32 CacheBaseImpl<S, C>::kCacheArcs;
+template <class S, class C> const uint32 CacheBaseImpl<S, C>::kCacheRecent;
+template <class S, class C> const uint32 CacheBaseImpl<S, C>::kCacheModified;
+template <class S, class C> const size_t CacheBaseImpl<S, C>::kMinCacheLimit;
 
 // Arcs implemented by an STL vector per state. Similar to VectorState
 // but adds flags and ref count to keep track of what has been cached.
@@ -389,6 +499,8 @@ struct CacheState {
   size_t noepsilons;         // # of output epsilons
   mutable uint32 flags;
   mutable int ref_count;
+
+  DISALLOW_COPY_AND_ASSIGN(CacheState);
 };
 
 // A CacheBaseImpl with a commonly used CacheState.
@@ -423,12 +535,6 @@ class CacheStateIterator : public StateIteratorBase<typename F::Arc> {
 
   CacheStateIterator(const F &fst, Impl *impl)
       : fst_(fst), impl_(impl), s_(0) {}
-
-
-  // You'll need to make this class a friend of your derived Fst for
-  // this constructor and 'fst.impl_' must be defined.
-  explicit CacheStateIterator(const F &fst)
-  : fst_(fst), impl_(fst.impl_), s_(0) {}
 
   bool Done() const {
     if (s_ < impl_->NumKnownStates())
@@ -474,23 +580,17 @@ class CacheStateIterator : public StateIteratorBase<typename F::Arc> {
 
 // Use this to make an arc iterator for a CacheBaseImpl-derived Fst,
 // which must have types 'Arc' and 'State' defined.
-template <class F>
+template <class F,
+          class C = DefaultCacheStateAllocator<CacheState<typename F::Arc> > >
 class CacheArcIterator {
  public:
   typedef typename F::Arc Arc;
   typedef typename F::State State;
   typedef typename Arc::StateId StateId;
-  typedef CacheBaseImpl<State> Impl;
+  typedef CacheBaseImpl<State, C> Impl;
 
   CacheArcIterator(Impl *impl, StateId s) : i_(0) {
     state_ = impl->ExtendState(s);
-    ++state_->ref_count;
-  }
-
-  // You'll need to make this class a friend of your derived Fst for
-  // this constructor and 'fst.impl_' must be defined.
-  CacheArcIterator(const F &fst, StateId s) : i_(0) {
-    state_ = fst.impl_->ExtendState(s);
     ++state_->ref_count;
   }
 
@@ -519,6 +619,113 @@ class CacheArcIterator {
   size_t i_;
 
   DISALLOW_COPY_AND_ASSIGN(CacheArcIterator);
+};
+
+// Use this to make a mutable arc iterator for a CacheBaseImpl-derived Fst,
+// which must have types 'Arc' and 'State' defined.
+template <class F,
+          class C = DefaultCacheStateAllocator<CacheState<typename F::Arc> > >
+class CacheMutableArcIterator
+    : public MutableArcIteratorBase<typename F::Arc> {
+ public:
+  typedef typename F::State State;
+  typedef typename F::Arc Arc;
+  typedef typename Arc::StateId StateId;
+  typedef typename Arc::Weight Weight;
+  typedef CacheBaseImpl<State, C> Impl;
+
+  // You will need to call MutateCheck() in the constructor.
+  CacheMutableArcIterator(Impl *impl, StateId s) : i_(0), s_(s), impl_(impl) {
+    state_ = impl_->ExtendState(s_);
+    ++state_->ref_count;
+  };
+
+  ~CacheMutableArcIterator() {
+    --state_->ref_count;
+  }
+
+  bool Done() const { return i_ >= state_->arcs.size(); }
+
+  const Arc& Value() const { return state_->arcs[i_]; }
+
+  void Next() { ++i_; }
+
+  size_t Position() const { return i_; }
+
+  void Reset() { i_ = 0; }
+
+  void Seek(size_t a) { i_ = a; }
+
+  void SetValue(const Arc& arc) {
+    state_->flags |= CacheBaseImpl<State, C>::kCacheModified;
+    uint64 properties = impl_->Properties();
+    Arc& oarc = state_->arcs[i_];
+    if (oarc.ilabel != oarc.olabel)
+      properties &= ~kNotAcceptor;
+    if (oarc.ilabel == 0) {
+      --state_->niepsilons;
+      properties &= ~kIEpsilons;
+      if (oarc.olabel == 0)
+        properties &= ~kEpsilons;
+    }
+    if (oarc.olabel == 0) {
+      --state_->noepsilons;
+      properties &= ~kOEpsilons;
+    }
+    if (oarc.weight != Weight::Zero() && oarc.weight != Weight::One())
+      properties &= ~kWeighted;
+    oarc = arc;
+    if (arc.ilabel != arc.olabel) {
+      properties |= kNotAcceptor;
+      properties &= ~kAcceptor;
+    }
+    if (arc.ilabel == 0) {
+      ++state_->niepsilons;
+      properties |= kIEpsilons;
+      properties &= ~kNoIEpsilons;
+      if (arc.olabel == 0) {
+        properties |= kEpsilons;
+        properties &= ~kNoEpsilons;
+      }
+    }
+    if (arc.olabel == 0) {
+      ++state_->noepsilons;
+      properties |= kOEpsilons;
+      properties &= ~kNoOEpsilons;
+    }
+    if (arc.weight != Weight::Zero() && arc.weight != Weight::One()) {
+      properties |= kWeighted;
+      properties &= ~kUnweighted;
+    }
+    properties &= kSetArcProperties | kAcceptor | kNotAcceptor |
+        kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons |
+        kOEpsilons | kNoOEpsilons | kWeighted | kUnweighted;
+    impl_->SetProperties(properties);
+  }
+
+  uint32 Flags() const {
+    return kArcValueFlags;
+  }
+
+  void SetFlags(uint32 f, uint32 m) {}
+
+ private:
+  virtual bool Done_() const { return Done(); }
+  virtual const Arc& Value_() const { return Value(); }
+  virtual void Next_() { Next(); }
+  virtual size_t Position_() const { return Position(); }
+  virtual void Reset_() { Reset(); }
+  virtual void Seek_(size_t a) { Seek(a); }
+  virtual void SetValue_(const Arc &a) { SetValue(a); }
+  uint32 Flags_() const { return Flags(); }
+  void SetFlags_(uint32 f, uint32 m) { SetFlags(f, m); }
+
+  size_t i_;
+  StateId s_;
+  Impl *impl_;
+  State *state_;
+
+  DISALLOW_COPY_AND_ASSIGN(CacheMutableArcIterator);
 };
 
 }  // namespace fst

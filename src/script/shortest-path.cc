@@ -43,9 +43,11 @@ void ShortestPath(const FstClass &ifst, MutableFstClass *ofst,
 
 REGISTER_FST_OPERATION(ShortestPath, StdArc, ShortestPathArgs1);
 REGISTER_FST_OPERATION(ShortestPath, LogArc, ShortestPathArgs1);
+REGISTER_FST_OPERATION(ShortestPath, Log64Arc, ShortestPathArgs1);
 
 REGISTER_FST_OPERATION(ShortestPath, StdArc, ShortestPathArgs2);
 REGISTER_FST_OPERATION(ShortestPath, LogArc, ShortestPathArgs2);
+REGISTER_FST_OPERATION(ShortestPath, Log64Arc, ShortestPathArgs2);
 
 }  // namespace script
 }  // namespace fst

@@ -106,6 +106,7 @@ void FarPrintStrings(const vector<string> &ifilenames,
 
 REGISTER_FST_FAR_OPERATIONS(StdArc);
 REGISTER_FST_FAR_OPERATIONS(LogArc);
+REGISTER_FST_FAR_OPERATIONS(Log64Arc);
 
 }  // namespace script
 }  // namespace fst

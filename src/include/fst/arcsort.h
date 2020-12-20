@@ -25,14 +25,16 @@
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/cache.h>
 #include <fst/test-properties.h>
+
 
 namespace fst {
 
 // Sorts the arcs in an FST according to function object 'comp' of
 // type Compare. This version modifies its input.  Comparison function
-// objects IlabelCompare and OlabelCompare are provived by the
+// objects ILabelCompare and OLabelCompare are provived by the
 // library. In general, Compare must meet the requirements for an STL
 // sort comparision function object. It must also have a member
 // Properties(uint64) that specifies the known properties of the
@@ -84,7 +86,7 @@ class ArcSortFstImpl : public CacheImpl<A> {
 
   using VectorFstBaseImpl<typename CacheImpl<A>::State>::NumStates;
 
-  using CacheImpl<A>::AddArc;
+  using CacheImpl<A>::PushArc;
   using CacheImpl<A>::GetState;
   using CacheImpl<A>::HasArcs;
   using CacheImpl<A>::HasFinal;
@@ -160,7 +162,7 @@ class ArcSortFstImpl : public CacheImpl<A> {
 
   void Expand(StateId s) {
     for (ArcIterator< Fst<A> > aiter(*fst_, s); !aiter.Done(); aiter.Next())
-      AddArc(s, aiter.Value());
+      PushArc(s, aiter.Value());
     SetArcs(s);
 
     vector<A> &carcs = GetState(s)->arcs;
@@ -177,7 +179,7 @@ class ArcSortFstImpl : public CacheImpl<A> {
 
 // Sorts the arcs in an FST according to function object 'comp' of
 // type Compare. This version is a delayed Fst.  Comparsion function
-// objects IlabelCompare and OlabelCompare are provided by the
+// objects ILabelCompare and OLabelCompare are provided by the
 // library. In general, Compare must meet the requirements for an STL
 // comparision function object (e.g. as used for STL sort). It must
 // also have a member Properties(uint64) that specifies the known

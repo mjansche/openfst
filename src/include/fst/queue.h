@@ -31,6 +31,7 @@ using std::vector;
 #include <fst/heap.h>
 #include <fst/topsort.h>
 
+
 namespace fst {
 
 // template <class S>

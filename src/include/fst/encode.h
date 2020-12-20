@@ -28,8 +28,10 @@ using std::tr1::unordered_multimap;
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/map.h>
 #include <fst/rmfinalepsilon.h>
+
 
 namespace fst {
 
@@ -369,7 +371,7 @@ template <class A> class EncodeMapper {
   static EncodeMapper<A> *Read(istream &strm,
                                const string& source,
                                EncodeType type = ENCODE) {
-    EncodeTable<A> *table = table->Read(strm, source);
+    EncodeTable<A> *table = EncodeTable<A>::Read(strm, source);
     return table ? new EncodeMapper(table->flags(), type, table) : 0;
   }
 
@@ -572,6 +574,6 @@ typedef EncodeFst<StdArc> StdEncodeFst;
 
 typedef DecodeFst<StdArc> StdDecodeFst;
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_ENCODE_H__

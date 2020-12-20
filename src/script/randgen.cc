@@ -31,6 +31,7 @@ void RandGen(const FstClass &ifst, MutableFstClass *ofst, int32 seed,
 
 REGISTER_FST_OPERATION(RandGen, StdArc, RandGenArgs);
 REGISTER_FST_OPERATION(RandGen, LogArc, RandGenArgs);
+REGISTER_FST_OPERATION(RandGen, Log64Arc, RandGenArgs);
 
 }  // namespace script
 }  // namespace fst

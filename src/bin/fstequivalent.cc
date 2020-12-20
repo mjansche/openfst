@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
   namespace s = fst::script;
   using fst::script::FstClass;
 
-  string usage = "Two DFAs are equivalent iff the exit status is zero\n\n";
-  usage += "Usage: ";
+  string usage = "Two DFAs are equivalent iff the exit status is zero.\n\n"
+      "  Usage: ";
   usage += argv[0];
   usage += " in1.fst in2.fst\n";
 

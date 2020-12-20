@@ -29,6 +29,7 @@
 #include <fst/shortest-distance.h>
 #include <fst/vector-fst.h>
 
+
 namespace fst {
 
 // Test if two FSTs are equivalent by randomly generating 'num_paths'

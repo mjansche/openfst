@@ -4,12 +4,13 @@ fst/extensions/far/create.h fst/extensions/far/extract.h \
 fst/extensions/far/far.h fst/extensions/far/farlib.h \
 fst/extensions/far/farscript.h fst/extensions/far/info.h \
 fst/extensions/far/main.h fst/extensions/far/print-strings.h \
-fst/extensions/far/sttable.h
+fst/extensions/far/stlist.h fst/extensions/far/sttable.h
 endif
 
 if HAVE_PDT
-pdt_include_headers = fst/extensions/pdt/compose.h \
-fst/extensions/pdt/expand.h fst/extensions/pdt/info.h \
+pdt_include_headers = fst/extensions/pdt/collection.h \
+fst/extensions/pdt/compose.h fst/extensions/pdt/expand.h \
+fst/extensions/pdt/info.h fst/extensions/pdt/paren.h \
 fst/extensions/pdt/pdt.h fst/extensions/pdt/pdtlib.h \
 fst/extensions/pdt/pdtscript.h fst/extensions/pdt/replace.h \
 fst/extensions/pdt/reverse.h fst/extensions/pdt/shortest-path.h
@@ -59,6 +60,7 @@ fst/accumulator.h fst/interval-set.h fst/state-reachable.h \
 fst/lookahead-filter.h fst/generic-register.h fst/edit-fst.h \
 fst/replace-util.h fst/icu.h fst/string.h fst/signed-log-weight.h \
 fst/sparse-tuple-weight.h fst/sparse-power-weight.h fst/expectation-weight.h \
+fst/symbol-table-ops.h fst/bi-table.h \
 $(far_include_headers) \
 $(pdt_include_headers) \
 $(script_include_headers)

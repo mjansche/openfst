@@ -30,6 +30,7 @@ void Synchronize(const FstClass &ifst, MutableFstClass *ofst) {
 
 REGISTER_FST_OPERATION(Synchronize, StdArc, SynchronizeArgs);
 REGISTER_FST_OPERATION(Synchronize, LogArc, SynchronizeArgs);
+REGISTER_FST_OPERATION(Synchronize, Log64Arc, SynchronizeArgs);
 
 }  // namespace script
 }  // namespace fst

@@ -214,11 +214,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
 AM_LDFLAGS = -lm -ldl
-fst_test_SOURCES = fst_test.cc
+fst_test_SOURCES = fst_test.cc fst_test.h
 fst_test_LDADD = ../lib/libfst.la
 weight_test_SOURCES = weight_test.cc weight-tester.h
 weight_test_LDADD = ../lib/libfst.la
-algo_test_SOURCES = algo_test.cc
+algo_test_SOURCES = algo_test.cc algo_test.h
 algo_test_LDADD = ../lib/libfst.la
 all: all-am
 

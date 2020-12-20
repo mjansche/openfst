@@ -523,6 +523,6 @@ struct GallicWeight : public ProductWeight<StringWeight<L, S>, W> {
       : ProductWeight<StringWeight<L, S>, W>(w) {}
 };
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_STRING_WEIGHT_H__

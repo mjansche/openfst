@@ -201,6 +201,6 @@ class Heap {
   // DISALLOW_COPY_AND_ASSIGN(Heap);
 };
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_HEAP_H__

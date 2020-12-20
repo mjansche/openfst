@@ -19,11 +19,11 @@
 // Functions for updating property bits for various FST operations and
 // string names of the properties.
 
+#include <fst/properties.h>
+
+#include <stddef.h>
 #include <vector>
 using std::vector;
-
-#include <fst/properties.h>
-#include <fst/encode.h>
 
 namespace fst {
 
@@ -227,6 +227,22 @@ uint64 ProjectProperties(uint64 inprops, bool project_input) {
   return outprops;
 }
 
+// Properties for a randgen FST.
+uint64 RandGenProperties(uint64 inprops, bool weighted) {
+  uint64 outprops = kAcyclic | kInitialAcyclic | kAccessible;
+  if (weighted) {
+    outprops |= kTopSorted;
+    outprops |= (kAcceptor | kNoEpsilons |
+                 kNoIEpsilons | kNoOEpsilons |
+                 kIDeterministic | kODeterministic |
+                 kILabelSorted | kOLabelSorted) & inprops;
+  } else {
+    outprops |= kUnweighted;
+    outprops |= (kAcceptor | kILabelSorted | kOLabelSorted) & inprops;
+  }
+  return outprops;
+}
+
 // Properties for a replace FST.
 uint64 ReplaceProperties(const vector<uint64>& inprops,
                          ssize_t root,
@@ -235,10 +251,10 @@ uint64 ReplaceProperties(const vector<uint64>& inprops,
   if (inprops.size() == 0)
     return kNullProperties;
   uint64 outprops = 0;
-  uint64 access_props = no_empty_fsts ? kAccessible || kCoAccessible : 0;
+  uint64 access_props = no_empty_fsts ? kAccessible | kCoAccessible : 0;
   for (size_t i = 0; i < inprops.size(); ++i)
-    access_props &= (inprops[i] & (kAccessible || kCoAccessible));
-  if (access_props == kAccessible || kCoAccessible) {
+    access_props &= (inprops[i] & (kAccessible | kCoAccessible));
+  if (access_props == (kAccessible | kCoAccessible)) {
     outprops |= access_props;
     if (inprops[root] & kInitialCyclic)
       outprops |= kInitialCyclic;
@@ -401,4 +417,4 @@ const char *PropertyNames[] = {
   "string", "not string",
 };
 
-}
+}  // namespace fst

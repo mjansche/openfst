@@ -32,6 +32,7 @@ using std::vector;
 #include <fst/matcher.h>
 #include <fst/queue.h>
 #include <fst/test-properties.h>
+#include <fst/verify.h>
 #include <fst/visit.h>
 
 namespace fst {
@@ -72,6 +73,11 @@ template <class A> class FstInfo {
 
     if (!long_info_)
       return;
+
+    // If the FST is not sane, we return, PrintFstInfo will exit with a CHECK
+    // failure.
+    if (!Verify(fst))
+      LOG(FATAL) << "FstInfo: Verify: FST not well-formed.";
 
     start_ = fst.Start();
     properties_ = fst.Properties(kFstProperties, test_properties);

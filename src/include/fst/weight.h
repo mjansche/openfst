@@ -76,7 +76,9 @@
 #include <sstream>
 
 #include <fst/compat.h>
+
 #include <fst/util.h>
+
 
 namespace fst {
 
@@ -114,12 +116,14 @@ enum DivideType { DIVIDE_LEFT,   // left division
 //
 // By definition:
 //                 a <= b iff a + b = a
-// The natural order is a monotonic and negative partial order iff the
-// semiring is idempotent and (left and right) distributive. It is a
-// total order iff the semiring has the path property. See Mohri,
-// "Semiring Framework and Algorithms for Shortest-Distance Problems",
-// Journal of Automata, Languages and Combinatorics 7(3):321-350,
-// 2002. We define the strict version of this order below.
+// The natural order is a negative partial order iff the semiring is
+// idempotent. It is trivially monotonic for plus. It is left
+// (resp. right) monotonic for times iff the semiring is left
+// (resp. right) distributive. It is a total order iff the semiring
+// has the path property. See Mohri, "Semiring Framework and
+// Algorithms for Shortest-Distance Problems", Journal of Automata,
+// Languages and Combinatorics 7(3):321-350, 2002. We define the
+// strict version of this order below.
 
 template <class W>
 class NaturalLess {
@@ -127,10 +131,9 @@ class NaturalLess {
   typedef W Weight;
 
   NaturalLess() {
-    uint64 props = kIdempotent | kLeftSemiring | kRightSemiring;
-    if ((W::Properties() & props) != props)
-      LOG(ERROR) << "NaturalLess: Weight type is not idempotent and "
-                 << "(left and right) distributive: " << W::Type();
+    if (!(W::Properties() & kIdempotent))
+      LOG(ERROR) << "NaturalLess: Weight type is not idempotent: "
+                 << W::Type();
   }
 
   bool operator()(const W &w1, const W &w2) const {
@@ -152,6 +155,22 @@ W Power(W w, size_t n) {
   return result;
 }
 
-}  // namespace fst;
+// General weight converter - raises error.
+template <class W1, class W2>
+struct WeightConvert {
+  W2 operator()(W1 w1) const {
+    LOG(FATAL) << "WeightConvert: can't convert weight from \""
+               << W1::Type() << "\" to \"" << W2::Type();
+    return W2::Zero();
+  }
+};
+
+// Specialized weight converter to self.
+template <class W>
+struct WeightConvert<W, W> {
+  W operator()(W w) const { return w; }
+};
+
+}  // namespace fst
 
 #endif  // FST_LIB_WEIGHT_H__

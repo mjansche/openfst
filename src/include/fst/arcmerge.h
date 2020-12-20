@@ -24,8 +24,10 @@
 #include <vector>
 using std::vector;
 
+
 #include <fst/mutable-fst.h>
 #include <fst/weight.h>
+
 
 namespace fst {
 
@@ -92,6 +94,6 @@ void ArcMerge(MutableFst<A>* fst) {
     fst->AddArc(s, current_arc);
   }
 }
-}
+}  // namespace fst
 
 #endif  // FST_LIB_ARCMERGE_H__

@@ -23,11 +23,13 @@
 
 #include <vector>
 using std::vector;
+
 #include <fst/factor-weight.h>
 #include <fst/fst.h>
 #include <fst/map.h>
 #include <fst/reweight.h>
 #include <fst/shortest-distance.h>
+
 
 namespace fst {
 
@@ -78,6 +80,7 @@ void RemoveWeight(MutableFst<Arc> *fst, typename Arc::Weight w, bool at_final) {
       arc.weight = Divide(arc.weight, w, DIVIDE_LEFT);
       ait.SetValue(arc);
     }
+    fst->SetFinal(start, Divide(fst->Final(start), w, DIVIDE_LEFT));
   }
 }
 }  // namespace internal

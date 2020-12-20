@@ -42,8 +42,10 @@ void Compose(const FstClass &ifst1, const FstClass &ifst2,
 
 REGISTER_FST_OPERATION(Compose, StdArc, ComposeArgs1);
 REGISTER_FST_OPERATION(Compose, LogArc, ComposeArgs1);
+REGISTER_FST_OPERATION(Compose, Log64Arc, ComposeArgs1);
 REGISTER_FST_OPERATION(Compose, StdArc, ComposeArgs2);
 REGISTER_FST_OPERATION(Compose, LogArc, ComposeArgs2);
+REGISTER_FST_OPERATION(Compose, Log64Arc, ComposeArgs2);
 
 }  // namespace script
 }  // namespace fst

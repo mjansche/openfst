@@ -23,17 +23,19 @@
 namespace fst {
 namespace script {
 
-void PrintFst(const FstClass &fst, const SymbolTable *isyms,
-              const SymbolTable *osyms, const SymbolTable *ssyms,
-              bool accept, bool show_weight_one, ostream *ostrm,
-              const string &dest) {
+void PrintFst(const FstClass &fst, ostream &ostrm, const string &dest,
+              const SymbolTable *isyms,
+              const SymbolTable *osyms,
+              const SymbolTable *ssyms,
+              bool accept, bool show_weight_one) {
   FstPrinterArgs args(fst, isyms, osyms, ssyms, accept, show_weight_one,
-                      ostrm, dest);
+                      &ostrm, dest);
   Apply<Operation<FstPrinterArgs> >("PrintFst", fst.ArcType(), &args);
 }
 
 REGISTER_FST_OPERATION(PrintFst, StdArc, FstPrinterArgs);
 REGISTER_FST_OPERATION(PrintFst, LogArc, FstPrinterArgs);
+REGISTER_FST_OPERATION(PrintFst, Log64Arc, FstPrinterArgs);
 
 }  // namespace script
 }  // namespace fst

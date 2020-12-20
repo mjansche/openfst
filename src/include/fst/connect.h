@@ -28,6 +28,7 @@ using std::vector;
 #include <fst/union-find.h>
 #include <fst/mutable-fst.h>
 
+
 namespace fst {
 
 // Finds and returns connected components. Use with Visit().
@@ -120,7 +121,7 @@ template <class A>
 class SccVisitor {
  public:
   typedef A Arc;
-  typedef typename Arc::Weight Weight;
+  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
 
   // scc[i]: strongly-connected component number for state i.
@@ -129,7 +130,7 @@ class SccVisitor {
   // coaccess[i]: coaccessibility of state i.
   // Any of above can be NULL.
   // props: related property bits (cyclicity, initial cyclicity,
-  //   accessibiliity, coaccessiblity) set/cleared (o.w. unchanged).
+  //   accessibility, coaccessibility) set/cleared (o.w. unchanged).
   SccVisitor(vector<StateId> *scc, vector<bool> *access,
              vector<bool> *coaccess, uint64 *props)
       : scc_(scc), access_(access), coaccess_(coaccess), props_(props) {}

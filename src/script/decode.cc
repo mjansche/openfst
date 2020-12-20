@@ -30,6 +30,7 @@ void Decode(MutableFstClass *ofst, const string &coder_fname) {
 
 REGISTER_FST_OPERATION(Decode, StdArc, DecodeArgs);
 REGISTER_FST_OPERATION(Decode, LogArc, DecodeArgs);
+REGISTER_FST_OPERATION(Decode, Log64Arc, DecodeArgs);
 
 }  // namespace script
 }  // namespace fst

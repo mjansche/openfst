@@ -29,6 +29,7 @@ void ArcSort(MutableFstClass *fst, ArcSortType sort_type) {
 
 REGISTER_FST_OPERATION(ArcSort, StdArc, ArcSortArgs);
 REGISTER_FST_OPERATION(ArcSort, LogArc, ArcSortArgs);
+REGISTER_FST_OPERATION(ArcSort, Log64Arc, ArcSortArgs);
 
 }  // namespace script
 }  // namespace fst

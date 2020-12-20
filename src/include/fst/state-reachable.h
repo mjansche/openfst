@@ -22,14 +22,13 @@
 #ifndef FST_LIB_STATE_REACHABLE_H__
 #define FST_LIB_STATE_REACHABLE_H__
 
-
 #include <vector>
 using std::vector;
 
 #include <fst/dfs-visit.h>
 #include <fst/fst.h>
-
 #include <fst/interval-set.h>
+
 
 namespace fst {
 

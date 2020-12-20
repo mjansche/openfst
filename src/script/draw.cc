@@ -49,6 +49,7 @@ void DrawFst(const FstClass &fst,
 
 REGISTER_FST_OPERATION(DrawFst, StdArc, FstDrawerArgs);
 REGISTER_FST_OPERATION(DrawFst, LogArc, FstDrawerArgs);
+REGISTER_FST_OPERATION(DrawFst, Log64Arc, FstDrawerArgs);
 
 }  // namespace script
 }  // namespace fst

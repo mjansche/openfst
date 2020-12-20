@@ -20,11 +20,11 @@
 #ifndef FST_LIB_PROPERTIES_H__
 #define FST_LIB_PROPERTIES_H__
 
-#include <cmath>
+#include <sys/types.h>
 #include <vector>
 using std::vector;
+
 #include <fst/compat.h>
-#include <fst/types.h>
 
 namespace fst {
 
@@ -322,6 +322,7 @@ uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label);
 uint64 FactorWeightProperties(uint64 inprops);
 uint64 InvertProperties(uint64 inprops);
 uint64 ProjectProperties(uint64 inprops, bool project_input);
+uint64 RandGenProperties(uint64 inprops, bool weighted);
 uint64 RelabelProperties(uint64 inprops);
 uint64 ReplaceProperties(const vector<uint64>& inprops,
                          ssize_t root,

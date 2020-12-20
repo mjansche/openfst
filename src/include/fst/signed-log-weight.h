@@ -26,6 +26,7 @@
 #include <fst/float-weight.h>
 #include <fst/pair-weight.h>
 
+
 namespace fst {
   template <class T>
   class SignedLogWeightTpl
@@ -191,7 +192,12 @@ namespace fst {
              (w2.Value2() == LogWeightTpl<T>::Zero());
   }
 
-  typedef SignedLogWeightTpl<float> SignedLogWeight;
-}  // fst
+
+// Single-precision signed-log weight
+typedef SignedLogWeightTpl<float> SignedLogWeight;
+// Double-precision signed-log weight
+typedef SignedLogWeightTpl<double> SignedLog64Weight;
+
+}  // namespace fst
 
 #endif  // FST_LIB_SIGNED_LOG_WEIGHT_H_

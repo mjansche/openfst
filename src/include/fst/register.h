@@ -24,11 +24,13 @@
 
 #include <string>
 
+
 #include <fst/compat.h>
 #include <iostream>
 #include <fstream>
 #include <fst/util.h>
 #include <fst/generic-register.h>
+
 
 #include <fst/types.h>
 
@@ -125,6 +127,6 @@ Fst<A> *Convert(const Fst<A> &fst, const string &ftype) {
   return converter(fst);
 }
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_REGISTER_H__

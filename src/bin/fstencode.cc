@@ -35,8 +35,7 @@ int main(int argc, char **argv) {
   using fst::script::MutableFstClass;
   using fst::script::VectorFstClass;
 
-  string usage = "Encodes transducer labels and/or weights.\n";
-  usage += "  Usage: ";
+  string usage = "Encodes transducer labels and/or weights.\n\n  Usage: ";
   usage += argv[0];
   usage += " in.fst codex [out.fst]\n";
 
@@ -53,7 +52,7 @@ int main(int argc, char **argv) {
 
   FstClass *ifst1 = FstClass::Read(in_name);
   if (!ifst1) {
-    return 0;
+    return 1;
   }
 
   MutableFstClass *ofst = 0;

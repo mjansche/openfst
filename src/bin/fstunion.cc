@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
   FstClass *ifst1 = FstClass::Read(in1_name);
   if (!ifst1) {
-    return 0;
+    return 1;
   }
 
   MutableFstClass *ofst = 0;

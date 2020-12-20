@@ -62,6 +62,7 @@ template <class A> class IntersectFst;
 template <class A> class InvertFst;
 template <class A, class B, class C> class MapFst;
 template <class A> class ProjectFst;
+template <class A, class B, class S> class RandGenFst;
 template <class A> class RelabelFst;
 template <class A, class T> class ReplaceFst;
 template <class A> class RmEpsilonFst;
@@ -119,6 +120,6 @@ template <class M1, class M2 = M1> class SequenceComposeFilter;
 template <class M1, class M2 = M1> class AltSequenceComposeFilter;
 template <class M1, class M2 = M1> class MatchComposeFilter;
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_FST_DECL_H__

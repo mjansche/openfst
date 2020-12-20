@@ -72,8 +72,8 @@ class DefaultAccumulator {
 
 
 // This class accumulates arc weights using the log semiring Plus()
-// assuming an arc weight that has a member 'float Value()' and a float
-// constructor.
+// assuming an arc weight has a WeightConvert specialization to
+// and from log64 weights.
 template <class A>
 class LogAccumulator {
  public:
@@ -107,16 +107,20 @@ class LogAccumulator {
   double LogPosExp(double x) { return log(1.0F + exp(-x)); }
 
   Weight LogPlus(Weight w, Weight v) {
-    float f1 = w.Value();
-    float f2 = v.Value();
+    double f1 = to_log_weight_(w).Value();
+    double f2 = to_log_weight_(v).Value();
     if (f1 > f2)
-      return Weight(f2 - LogPosExp(f1 - f2));
+      return to_weight_(f2 - LogPosExp(f1 - f2));
     else
-      return Weight(f1 - LogPosExp(f2 - f1));
+      return to_weight_(f1 - LogPosExp(f2 - f1));
   }
+
+  WeightConvert<Weight, Log64Weight> to_log_weight_;
+  WeightConvert<Log64Weight, Weight> to_weight_;
 
   void operator=(const LogAccumulator<A> &);   // Disallow
 };
+
 
 // Stores shareable data for fast log accumulator copies.
 class FastLogAccumulatorData {
@@ -133,7 +137,7 @@ class FastLogAccumulatorData {
  private:
   // Cummulative weight per state for all states s.t. # of arcs >
   // arc_limit_ with arcs in order. Special first element per state
-  // being LogWeight::Zero();
+  // being Log64Weight::Zero();
   vector<double> weights_;
   // Maps from state to corresponding beginning weight position in
   // weights_. Position -1 means no pre-computed weights for that
@@ -146,9 +150,9 @@ class FastLogAccumulatorData {
 
 
 // This class accumulates arc weights using the log semiring Plus()
-// assuming an arc weight that has a member 'float Value()' and a float
-// constructor. The member function Init(fst) has to be called to
-// setup pre-computed weight information.
+// assuming an arc weight has a WeightConvert specialization to and
+// from log64 weights. The member function Init(fst) has to be called
+// to setup pre-computed weight information.
 template <class A>
 class FastLogAccumulator {
  public:
@@ -272,16 +276,16 @@ class FastLogAccumulator {
   }
 
   Weight LogPlus(Weight w, Weight v) {
-    float f1 = w.Value();
-    float f2 = v.Value();
+    double f1 = to_log_weight_(w).Value();
+    double f2 = to_log_weight_(v).Value();
     if (f1 > f2)
-      return Weight(f2 - LogPosExp(f1 - f2));
+      return to_weight_(f2 - LogPosExp(f1 - f2));
     else
-      return Weight(f1 - LogPosExp(f2 - f1));
+      return to_weight_(f1 - LogPosExp(f2 - f1));
   }
 
   double LogPlus(double f1, Weight v) {
-    float f2 = v.Value();
+    double f2 = to_log_weight_(v).Value();
     if (f1 == FloatLimits<double>::kPosInfinity)
       return f2;
     else if (f1 > f2)
@@ -293,10 +297,14 @@ class FastLogAccumulator {
   Weight LogMinus(double f1, double f2) {
     CHECK_LT(f1, f2);
     if (f2 == FloatLimits<double>::kPosInfinity)
-      return f1;
+      return to_weight_(f1);
     else
-      return Weight(f1 - LogMinusExp(f2 - f1));
+      return to_weight_(f1 - LogMinusExp(f2 - f1));
   }
+
+  WeightConvert<Weight, Log64Weight> to_log_weight_;
+  WeightConvert<Log64Weight, Weight> to_weight_;
+
   ssize_t arc_limit_;     // Minimum # of arcs to pre-compute state
   ssize_t arc_period_;    // Save cumulative weights per 'arc_period_'.
   bool init_;             // Cumulative weights initialized?
@@ -391,11 +399,11 @@ class CacheLogAccumulatorData {
 };
 
 // This class accumulates arc weights using the log semiring Plus()
-// assuming an arc weight that has a member 'float Value()' and a
-// float constructor. It is similar to the FastLogAccumator. However
-// here, the accumulated weights are pre-computed and stored only for
-// the states that are visited. The member function Init(fst) has to
-// be called to setup this accumulator.
+//  has a WeightConvert specialization to and from log64 weights.  It
+//  is similar to the FastLogAccumator. However here, the accumulated
+//  weights are pre-computed and stored only for the states that are
+//  visited. The member function Init(fst) has to be called to setup
+//  this accumulator.
 template <class A>
 class CacheLogAccumulator {
  public:
@@ -487,7 +495,7 @@ class CacheLogAccumulator {
       size_t n = 0;
       double x =  FloatLimits<double>::kPosInfinity;
       for(aiter->Reset(); !aiter->Done(); aiter->Next(), ++n) {
-        x = LogPlus(x, aiter->Value().weight.Value());
+        x = LogPlus(x, aiter->Value().weight);
         if (x < w) break;
       }
       return n;
@@ -506,16 +514,16 @@ class CacheLogAccumulator {
   }
 
   Weight LogPlus(Weight w, Weight v) {
-    float f1 = w.Value();
-    float f2 = v.Value();
+    double f1 = to_log_weight_(w).Value();
+    double f2 = to_log_weight_(v).Value();
     if (f1 > f2)
-      return Weight(f2 - LogPosExp(f1 - f2));
+      return to_weight_(f2 - LogPosExp(f1 - f2));
     else
-      return Weight(f1 - LogPosExp(f2 - f1));
+      return to_weight_(f1 - LogPosExp(f2 - f1));
   }
 
   double LogPlus(double f1, Weight v) {
-    float f2 = v.Value();
+    double f2 = to_log_weight_(v).Value();
     if (f1 == FloatLimits<double>::kPosInfinity)
       return f2;
     else if (f1 > f2)
@@ -527,10 +535,13 @@ class CacheLogAccumulator {
   Weight LogMinus(double f1, double f2) {
     CHECK_LT(f1, f2);
     if (f2 == FloatLimits<double>::kPosInfinity)
-      return f1;
+      return to_weight_(f1);
     else
-      return Weight(f1 - LogMinusExp(f2 - f1));
+      return to_weight_(f1 - LogMinusExp(f2 - f1));
   }
+
+  WeightConvert<Weight, Log64Weight> to_log_weight_;
+  WeightConvert<Log64Weight, Weight> to_weight_;
 
   ssize_t arc_limit_;                    // Minimum # of arcs to cache a state
   vector<double> *weights_;              // Accumulated weights for cur. state

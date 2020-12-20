@@ -23,7 +23,9 @@
 
 #include <vector>
 using std::vector;
+
 #include <fst/mutable-fst.h>
+
 
 namespace fst {
 

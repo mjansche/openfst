@@ -33,7 +33,9 @@ namespace fst {
 // Return the 'FarType' value corresponding to a far type name.
 FarType FarTypeFromString(const string &str) {
   FarType type = FAR_DEFAULT;
-  if (str == "sttable")
+  if (str == "stlist")
+    type = FAR_STLIST;
+  else if (str == "sttable")
     type = FAR_STTABLE;
   else if (str == "default")
     type = FAR_DEFAULT;
@@ -44,6 +46,8 @@ FarType FarTypeFromString(const string &str) {
 // Return the textual name  corresponding to a 'FarType;.
 string FarTypeToString(FarType type) {
   switch (type) {
+    case FAR_STLIST:
+      return "stlist";
     case FAR_STTABLE:
       return "sttable";
     case FAR_DEFAULT:
@@ -80,6 +84,11 @@ FarTokenType StringToFarTokenType(const string &s) {
 
 string LoadArcTypeFromFar(const string &far_fname) {
   FarHeader hdr;
+
+  if (far_fname.empty()) {
+    LOG(ERROR) << "Reading FAR from standard in not supported";
+    return "";
+  }
 
   if (!hdr.Read(far_fname)) {
     LOG(ERROR) << "Error reading FAR: " << far_fname;

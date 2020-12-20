@@ -30,10 +30,12 @@ using std::tr1::unordered_multimap;
 using std::pair; using std::make_pair;
 #include <vector>
 using std::vector;
+
 #include <fst/encode.h>
 #include <fst/push.h>
 #include <fst/union-find.h>
 #include <fst/vector-fst.h>
+
 
 namespace fst {
 

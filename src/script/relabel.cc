@@ -52,14 +52,17 @@ void Relabel(MutableFstClass *fst,
 // 1
 REGISTER_FST_OPERATION(Relabel, StdArc, RelabelArgs1);
 REGISTER_FST_OPERATION(Relabel, LogArc, RelabelArgs1);
+REGISTER_FST_OPERATION(Relabel, Log64Arc, RelabelArgs1);
 
 // 2
 REGISTER_FST_OPERATION(Relabel, StdArc, RelabelArgs2);
 REGISTER_FST_OPERATION(Relabel, LogArc, RelabelArgs2);
+REGISTER_FST_OPERATION(Relabel, Log64Arc, RelabelArgs2);
 
 // 3
 REGISTER_FST_OPERATION(Relabel, StdArc, RelabelArgs3);
 REGISTER_FST_OPERATION(Relabel, LogArc, RelabelArgs3);
+REGISTER_FST_OPERATION(Relabel, Log64Arc, RelabelArgs3);
 
 }  // namespace script
 }  // namespace fst

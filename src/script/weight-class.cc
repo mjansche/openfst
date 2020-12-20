@@ -24,6 +24,7 @@ namespace script {
 
 REGISTER_FST_WEIGHT(StdArc::Weight);
 REGISTER_FST_WEIGHT(LogArc::Weight);
+REGISTER_FST_WEIGHT(Log64Arc::Weight);
 
 WeightClass::WeightClass(const string &weight_type,
                          const string &weight_str)

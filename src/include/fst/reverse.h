@@ -27,6 +27,7 @@ using std::vector;
 
 #include <fst/cache.h>
 
+
 namespace fst {
 
 // Reverses an FST. The reversed result is written to an output

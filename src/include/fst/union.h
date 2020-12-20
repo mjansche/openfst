@@ -24,8 +24,10 @@
 #include <vector>
 using std::vector;
 #include <algorithm>
+
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
+
 
 namespace fst {
 

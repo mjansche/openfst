@@ -50,7 +50,7 @@ class STTableWriter {
   typedef T EntryType;
   typedef W EntryWriter;
 
-  STTableWriter(const string &filename)
+  explicit STTableWriter(const string &filename)
       : stream_(filename.c_str(), ofstream::out | ofstream::binary) {
     WriteType(stream_, kSTTableMagicNumber);
     WriteType(stream_, kSTTableFileVersion);
@@ -60,6 +60,10 @@ class STTableWriter {
   }
 
   static STTableWriter<T, W> *Create(const string &filename) {
+    if (filename.empty()) {
+      LOG(ERROR) << "STTableWriter: writing to standard out unsupported.";
+      return 0;
+    }
     return new STTableWriter<T, W>(filename);
   }
 
@@ -103,7 +107,7 @@ class STTableReader {
   typedef T EntryType;
   typedef R EntryReader;
 
-  STTableReader(const vector<string> &filenames)
+  explicit STTableReader(const vector<string> &filenames)
       : sources_(filenames), entry_(0) {
     compare_ = new Compare(&keys_);
     keys_.resize(filenames.size());
@@ -145,8 +149,11 @@ class STTableReader {
       delete entry_;
   }
 
-
   static STTableReader<T, R> *Open(const string &filename) {
+    if (filename.empty()) {
+      LOG(ERROR) << "STTableReader: reading from standard in not supported";
+      return 0;
+    }
     vector<string> filenames;
     filenames.push_back(filename);
     return new STTableReader<T, R>(filenames);

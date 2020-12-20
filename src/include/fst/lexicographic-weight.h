@@ -29,8 +29,10 @@
 #define FST_LIB_LEXICOGRAPHIC_WEIGHT_H__
 
 #include <string>
+
 #include <fst/pair-weight.h>
 #include <fst/weight.h>
+
 
 namespace fst {
 
@@ -131,6 +133,6 @@ inline LexicographicWeight<W1, W2> Divide(const LexicographicWeight<W1, W2> &w,
                                      Divide(w.Value2(), v.Value2(), typ));
 }
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_LEXICOGRAPHIC_WEIGHT_H__

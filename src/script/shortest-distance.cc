@@ -51,12 +51,15 @@ WeightClass ShortestDistance(const FstClass &ifst) {
 
 REGISTER_FST_OPERATION(ShortestDistance, StdArc, ShortestDistanceArgs1);
 REGISTER_FST_OPERATION(ShortestDistance, LogArc, ShortestDistanceArgs1);
+REGISTER_FST_OPERATION(ShortestDistance, Log64Arc, ShortestDistanceArgs1);
 
 REGISTER_FST_OPERATION(ShortestDistance, StdArc, ShortestDistanceArgs2);
 REGISTER_FST_OPERATION(ShortestDistance, LogArc, ShortestDistanceArgs2);
+REGISTER_FST_OPERATION(ShortestDistance, Log64Arc, ShortestDistanceArgs2);
 
 REGISTER_FST_OPERATION(ShortestDistance, StdArc, ShortestDistanceArgs3);
 REGISTER_FST_OPERATION(ShortestDistance, LogArc, ShortestDistanceArgs3);
+REGISTER_FST_OPERATION(ShortestDistance, Log64Arc, ShortestDistanceArgs3);
 
 
 }  // namespace script

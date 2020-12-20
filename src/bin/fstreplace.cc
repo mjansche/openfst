@@ -25,8 +25,8 @@ int main(int argc, char **argv) {
   using fst::script::FstClass;
   using fst::script::VectorFstClass;
 
-  string usage = "Recursively replace Fst arcs with other Fst(s).\n";
-  usage += " Usage: ";
+  string usage = "Recursively replaces FST arcs with other FST(s).\n\n"
+      "  Usage: ";
   usage += argv[0];
   usage += " root.fst rootlabel [rule1.fst label1 ...] [out.fst]\n";
 

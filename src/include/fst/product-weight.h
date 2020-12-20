@@ -23,8 +23,10 @@
 
 #include <stack>
 #include <string>
+
 #include <fst/pair-weight.h>
 #include <fst/weight.h>
+
 
 namespace fst {
 
@@ -101,6 +103,6 @@ inline ProductWeight<W1, W2> Divide(const ProductWeight<W1, W2> &w,
                                Divide(w.Value2(), v.Value2(), typ));
 }
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_PRODUCT_WEIGHT_H__

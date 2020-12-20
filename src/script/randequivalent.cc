@@ -52,8 +52,10 @@ bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, int32 seed,
 
 REGISTER_FST_OPERATION(RandEquivalent, StdArc, RandEquivalentArgs1);
 REGISTER_FST_OPERATION(RandEquivalent, LogArc, RandEquivalentArgs1);
+REGISTER_FST_OPERATION(RandEquivalent, Log64Arc, RandEquivalentArgs1);
 REGISTER_FST_OPERATION(RandEquivalent, StdArc, RandEquivalentArgs2);
 REGISTER_FST_OPERATION(RandEquivalent, LogArc, RandEquivalentArgs2);
+REGISTER_FST_OPERATION(RandEquivalent, Log64Arc, RandEquivalentArgs2);
 
 }  // namespace script
 }  // namespace fst

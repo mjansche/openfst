@@ -43,6 +43,7 @@ using std::vector;
 #include <fst/shortest-distance.h>
 #include <fst/topsort.h>
 
+
 namespace fst {
 
 template <class Arc, class Queue>
@@ -228,9 +229,27 @@ void RmEpsilon(MutableFst<Arc> *fst,
   typedef typename Arc::Weight Weight;
   typedef typename Arc::Label Label;
 
+  if (fst->Start() == kNoStateId) {
+    return;
+  }
+
+  // 'noneps_in[s]' will be set to true iff 's' admits a non-epsilon
+  // incoming transition or is the start state.
+  vector<bool> noneps_in(fst->NumStates(), false);
+  noneps_in[fst->Start()] = true;
+  for (StateId i = 0; i < fst->NumStates(); ++i) {
+    for (ArcIterator<Fst<Arc> > aiter(*fst, i);
+         !aiter.Done();
+         aiter.Next()) {
+      if (aiter.Value().ilabel != 0 || aiter.Value().olabel != 0)
+        noneps_in[aiter.Value().nextstate] = true;
+    }
+  }
+
   // States sorted in topological order when (acyclic) or generic
   // topological order (cyclic).
   vector<StateId> states;
+  states.reserve(fst->NumStates());
 
   if (fst->Properties(kTopSorted, false) & kTopSorted) {
     for (StateId i = 0; i < fst->NumStates(); i++)
@@ -268,6 +287,8 @@ void RmEpsilon(MutableFst<Arc> *fst,
   while (!states.empty()) {
     StateId state = states.back();
     states.pop_back();
+    if (!noneps_in[state])
+      continue;
     rmeps_state.Expand(state);
     fst->SetFinal(state, rmeps_state.Final());
     fst->DeleteArcs(state);
@@ -276,6 +297,11 @@ void RmEpsilon(MutableFst<Arc> *fst,
       fst->AddArc(state, arcs.back());
       arcs.pop_back();
     }
+  }
+
+  for (StateId s = 0; s < fst->NumStates(); ++s) {
+    if (!noneps_in[s])
+      fst->DeleteArcs(s);
   }
 
   fst->SetProperties(RmEpsilonProperties(
@@ -348,7 +374,7 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::AddArc;
+  using CacheBaseImpl< CacheState<A> >::PushArc;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
   using CacheBaseImpl< CacheState<A> >::HasFinal;
   using CacheBaseImpl< CacheState<A> >::HasStart;
@@ -444,7 +470,7 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
     SetFinal(s, rmeps_state_.Final());
     vector<A> &arcs = rmeps_state_.Arcs();
     while (!arcs.empty()) {
-      AddArc(s, arcs.back());
+      PushArc(s, arcs.back());
       arcs.pop_back();
     }
     SetArcs(s);

@@ -64,15 +64,15 @@ void RandEquivalent(RandEquivalentArgs2 *args) {
     args->retval = RandEquivalent(fst1, fst2, args->args.arg4,
                                   args->args.arg5, ropts);
   } else if (opts.arc_selector == FAST_LOG_PROB_ARC_SELECTOR) {
-    FastLogProbArcSelectorGuard<Arc> arc_selector(seed);
-    RandGenOptions< FastLogProbArcSelectorGuard<Arc> >
+    FastLogProbArcSelector<Arc> arc_selector(seed);
+    RandGenOptions< FastLogProbArcSelector<Arc> >
         ropts(arc_selector, opts.max_length, opts.npath);
 
     args->retval = RandEquivalent(fst1, fst2, args->args.arg4,
                                   args->args.arg5, ropts);
   } else {
-    LogProbArcSelectorGuard<Arc> arc_selector(seed);
-    RandGenOptions< LogProbArcSelectorGuard<Arc> >
+    LogProbArcSelector<Arc> arc_selector(seed);
+    RandGenOptions< LogProbArcSelector<Arc> >
         ropts(arc_selector, opts.max_length, opts.npath);
     args->retval = RandEquivalent(fst1, fst2, args->args.arg4,
                                   args->args.arg5, ropts);

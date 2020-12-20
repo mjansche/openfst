@@ -25,7 +25,9 @@
 #include <vector>
 using std::vector;
 
+#include <fst/bi-table.h>
 #include <fst/expanded-fst.h>
+
 
 namespace fst {
 
@@ -65,142 +67,43 @@ namespace fst {
 // The state tuple T must have == defined and the default constructor
 // must produce a tuple that will never be seen. H is the hash function.
 template <class T, class H>
-class HashStateTable {
+class HashStateTable : public HashBiTable<typename T::StateId, T, H> {
  public:
   typedef T StateTuple;
   typedef typename StateTuple::StateId StateId;
+  using HashBiTable<StateId, T, H>::FindId;
+  using HashBiTable<StateId, T, H>::FindEntry;
+  using HashBiTable<StateId, T, H>::Size;
 
-  HashStateTable() {
-    StateTuple empty_tuple;
-  }
-
-  StateId FindState(const StateTuple &tuple) {
-    StateId &id_ref = tuple2id_[tuple];
-    if (id_ref == 0) {  // Tuple not found; store and assign it a new ID.
-      id2tuple_.push_back(tuple);
-      id_ref = id2tuple_.size();
-    }
-    return id_ref - 1;  // NB: id_ref = ID + 1
-  }
-
-  const StateTuple &Tuple(StateId s) const {
-    return id2tuple_[s];
-  }
-
-  StateId Size() const { return id2tuple_.size(); }
-
- private:
-  unordered_map<StateTuple, StateId, H> tuple2id_;
-  vector<StateTuple> id2tuple_;
-
-  DISALLOW_COPY_AND_ASSIGN(HashStateTable);
+  HashStateTable() : HashBiTable<StateId, T, H>() {}
+  StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
+  const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
 
 
 // An implementation using a hash set for the tuple to state ID
-// mapping.  The hash set holds 'keys' which are either the state ID
-// or kCurrentKey.  These keys can be mapped to tuples either by
-// looking up in the tuple vector or, if kCurrentKey, in current_tuple_
-// member. The hash and key equality functions map to tuples first.
-// The state tuple T must have == defined and the default constructor
-// must produce a tuple that will never be seen. H is the hash
-// function.
+// mapping. The state tuple T must have == defined and the default
+// constructor must produce a tuple that will never be seen. H is the
+// hash function.
 template <class T, class H>
-class CompactHashStateTable {
+class CompactHashStateTable
+    : public CompactHashBiTable<typename T::StateId, T, H> {
  public:
-  friend class HashFunc;
-  friend class HashEqual;
   typedef T StateTuple;
   typedef typename StateTuple::StateId StateId;
-  typedef StateId Key;
+  using CompactHashBiTable<StateId, T, H>::FindId;
+  using CompactHashBiTable<StateId, T, H>::FindEntry;
+  using CompactHashBiTable<StateId, T, H>::Size;
 
-  CompactHashStateTable()
-      : hash_func_(*this),
-        hash_equal_(*this),
-        keys_(0, hash_func_, hash_equal_) {
-  }
+  CompactHashStateTable() : CompactHashBiTable<StateId, T, H>() {}
 
   // Reserves space for table_size elements.
   explicit CompactHashStateTable(size_t table_size)
-      : hash_func_(*this),
-        hash_equal_(*this),
-        keys_(table_size, hash_func_, hash_equal_) {
-    id2tuple_.reserve(table_size);
-  }
+      : CompactHashBiTable<StateId, T, H>(table_size) {}
 
-  StateId FindState(const StateTuple &tuple) {
-    current_tuple_ = &tuple;
-    typename KeyHashSet::const_iterator it = keys_.find(kCurrentKey);
-    if (it == keys_.end()) {
-      Key key = id2tuple_.size();
-      id2tuple_.push_back(tuple);
-      keys_.insert(key);
-      return key;
-    } else {
-      return *it;
-    }
-  }
-
-  const StateTuple &Tuple(StateId s) const {
-    return id2tuple_[s];
-  }
-
-  StateId Size() const { return id2tuple_.size(); }
-
- private:
-  static const StateId kEmptyKey;    // -1
-  static const StateId kCurrentKey;  // -2
-
-  class HashFunc {
-   public:
-    HashFunc(const CompactHashStateTable &ht) : ht_(&ht) {}
-
-    size_t operator()(Key k) const { return hf(ht_->Key2Tuple(k)); }
-   private:
-    const CompactHashStateTable *ht_;
-    H hf;
-  };
-
-  class HashEqual {
-   public:
-    HashEqual(const CompactHashStateTable &ht) : ht_(&ht) {}
-
-    bool operator()(Key k1, Key k2) const {
-      return ht_->Key2Tuple(k1) == ht_->Key2Tuple(k2);
-    }
-   private:
-    const CompactHashStateTable *ht_;
-  };
-
-  typedef unordered_set<Key, HashFunc, HashEqual> KeyHashSet;
-
-  const StateTuple &Key2Tuple(Key k) const {
-    if (k == kEmptyKey)
-      return empty_tuple_;
-    else if (k == kCurrentKey)
-      return *current_tuple_;
-    else
-      return id2tuple_[k];
-  }
-
-  HashFunc hash_func_;
-  HashEqual hash_equal_;
-  KeyHashSet keys_;
-  vector<StateTuple> id2tuple_;
-  const StateTuple empty_tuple_;
-  const StateTuple *current_tuple_;
-
-  DISALLOW_COPY_AND_ASSIGN(CompactHashStateTable);
+  StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
+  const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
-
-template <class T, class H>
-const typename CompactHashStateTable<T, H>::StateId
-CompactHashStateTable<T, H>::kEmptyKey = -1;
-
-template <class T, class H>
-const typename CompactHashStateTable<T, H>::StateId
-CompactHashStateTable<T, H>::kCurrentKey = -2;
-
 
 // An implementation using a vector for the tuple to state mapping.
 // It is passed a function object FP that should fingerprint tuples
@@ -209,91 +112,19 @@ CompactHashStateTable<T, H>::kCurrentKey = -2;
 // pass in this object; in that case, VectorStateTable takes its
 // ownership.
 template <class T, class FP>
-class VectorStateTable {
+class VectorStateTable
+    : public VectorBiTable<typename T::StateId, T, FP> {
  public:
   typedef T StateTuple;
   typedef typename StateTuple::StateId StateId;
-  typedef typename StateTuple::FilterState FilterState;
+  using VectorBiTable<StateId, T, FP>::FindId;
+  using VectorBiTable<StateId, T, FP>::FindEntry;
+  using VectorBiTable<StateId, T, FP>::Size;
+  using VectorBiTable<StateId, T, FP>::Fingerprint;
 
-  explicit VectorStateTable(FP *fp = 0)
-      : fp_(fp ? fp : new FP()) {}
-
-  ~VectorStateTable() { delete fp_; }
-
-  StateId FindState(const StateTuple &tuple) {
-    ssize_t fp = (*fp_)(tuple);
-    if (fp >= fp2id_.size())
-      fp2id_.resize(fp + 1);
-    StateId &id_ref = fp2id_[fp];
-    if (id_ref == 0) {  // Tuple not found; store and assign it a new ID.
-      id2tuple_.push_back(tuple);
-      id_ref = id2tuple_.size();
-    }
-    return id_ref - 1;  // NB: id_ref = ID + 1
-  }
-
-  const StateTuple &Tuple(StateId s) const {
-    return id2tuple_[s];
-  }
-
-  StateId Size() const { return id2tuple_.size(); }
-
-  const FP &Fingerprint() const { return *fp_; }
-
- private:
-  FP *fp_;
-  vector<StateId> fp2id_;
-  vector<StateTuple> id2tuple_;
-
-  DISALLOW_COPY_AND_ASSIGN(VectorStateTable);
-};
-
-// An implementation using a hash map for the tuple to state ID
-// mapping. This version permits erasing of states.  The state tuple T
-// must have == defined and its default constructor must produce a
-// tuple that will never be seen. F is the hash function.
-template <class T, class F>
-class ErasableStateTable {
- public:
-  typedef T StateTuple;
-  typedef typename StateTuple::StateId StateId;
-
-  ErasableStateTable() : first_(0) {}
-
-  StateId FindState(const StateTuple &tuple) {
-    StateId &id_ref = tuple2id_[tuple];
-    if (id_ref == 0) {  // Tuple not found; store and assign it a new ID.
-      id2tuple_.push_back(tuple);
-      id_ref = id2tuple_.size() + first_;
-    }
-    return id_ref - 1;  // NB: id_ref = ID + 1
-  }
-
-  const StateTuple &Tuple(StateId s) const {
-    return id2tuple_[s - first_];
-  }
-
-  StateId Size() const { return id2tuple_.size(); }
-
-  void Erase(StateId s) {
-    StateTuple &tuple = id2tuple_[s - first_];
-    typename unordered_map<StateTuple, StateId, F>::iterator it =
-        tuple2id_.find(tuple);
-    tuple2id_.erase(it);
-    id2tuple_[s - first_] = empty_tuple_;
-    while (!id2tuple_.empty() && id2tuple_.front() == empty_tuple_) {
-      id2tuple_.pop_front();
-      ++first_;
-    }
-  }
-
- private:
-  unordered_map<StateTuple, StateId, F> tuple2id_;
-  deque<StateTuple> id2tuple_;
-  const StateTuple empty_tuple_;
-  StateId first_;        // StateId of first element in the deque;
-
-  DISALLOW_COPY_AND_ASSIGN(ErasableStateTable);
+  explicit VectorStateTable(FP *fp = 0) : VectorBiTable<StateId, T, FP>(fp) {}
+  StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
+  const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
 
 
@@ -304,133 +135,47 @@ class ErasableStateTable {
 // suitable for indexing in a vector).  The hash functor H is used when
 // hashing tuple into the compact hash table.
 template <class T, class S, class FP, class H>
-class VectorHashStateTable {
+class VectorHashStateTable
+    : public VectorHashBiTable<typename T::StateId, T, S, FP, H> {
  public:
-  friend class HashFunc;
-  friend class HashEqual;
   typedef T StateTuple;
   typedef typename StateTuple::StateId StateId;
-  typedef StateId Key;
+  using VectorHashBiTable<StateId, T, S, FP, H>::FindId;
+  using VectorHashBiTable<StateId, T, S, FP, H>::FindEntry;
+  using VectorHashBiTable<StateId, T, S, FP, H>::Size;
+  using VectorHashBiTable<StateId, T, S, FP, H>::Selector;
+  using VectorHashBiTable<StateId, T, S, FP, H>::Fingerprint;
+  using VectorHashBiTable<StateId, T, S, FP, H>::Hash;
 
   VectorHashStateTable(S *s, FP *fp, H *h,
                        size_t vector_size = 0,
                        size_t tuple_size = 0)
-      : selector_(s),
-        fp_(fp),
-        h_(h),
-        hash_func_(*this),
-        hash_equal_(*this),
-        keys_(0, hash_func_, hash_equal_) {
-    if (vector_size)
-      fp2id_.reserve(vector_size);
-    if (tuple_size)
-      id2tuple_.reserve(tuple_size);
-  }
+      : VectorHashBiTable<StateId, T, S, FP, H>(
+          s, fp, h, vector_size, tuple_size) {}
 
-  ~VectorHashStateTable() {
-    delete selector_;
-    delete fp_;
-    delete h_;
-  }
-
-  StateId FindState(const StateTuple &tuple) {
-    if ((*selector_)(tuple)) {  // Use the vector if 'selector_(tuple) == true'
-      uint64 fp = (*fp_)(tuple);
-      if (fp2id_.size() <= fp)
-        fp2id_.resize(fp + 1, 0);
-      if (fp2id_[fp] == 0) {
-        id2tuple_.push_back(tuple);
-        fp2id_[fp] = id2tuple_.size();
-      }
-      return fp2id_[fp] - 1;  // NB: assoc_value = ID + 1
-    } else {  // Use the hash table otherwise.
-      current_tuple_ = &tuple;
-      typename KeyHashSet::const_iterator it = keys_.find(kCurrentKey);
-      if (it == keys_.end()) {
-        Key key = id2tuple_.size();
-        id2tuple_.push_back(tuple);
-        keys_.insert(key);
-        return key;
-      } else {
-        return *it;
-      }
-    }
-  }
-
-  const StateTuple &Tuple(StateId s) const {
-    return id2tuple_[s];
-  }
-
-  StateId Size() const { return id2tuple_.size(); }
-
-  const S &Selector() const { return *selector_; }
-
-  const FP &Fingerprint() const { return *fp_; }
-
-  const H &Hash() const { return *h_; }
-
- private:
-  static const StateId kEmptyKey;
-  static const StateId kCurrentKey;
-
-  class HashFunc {
-   public:
-    HashFunc(const VectorHashStateTable &ht) : ht_(&ht) {}
-
-    size_t operator()(Key k) const { return (*(ht_->h_))(ht_->Key2Tuple(k)); }
-   private:
-    const VectorHashStateTable *ht_;
-  };
-
-  class HashEqual {
-   public:
-    HashEqual(const VectorHashStateTable &ht) : ht_(&ht) {}
-
-    bool operator()(Key k1, Key k2) const {
-      return ht_->Key2Tuple(k1) == ht_->Key2Tuple(k2);
-    }
-   private:
-    const VectorHashStateTable *ht_;
-  };
-
-  typedef unordered_set<Key, HashFunc, HashEqual> KeyHashSet;
-
-  const StateTuple &Key2Tuple(Key k) const {
-    if (k == kEmptyKey)
-      return empty_tuple_;
-    else if (k == kCurrentKey)
-      return *current_tuple_;
-    else
-      return id2tuple_[k];
-  }
-
-
-  S *selector_;  // Returns true if tuple hashed into vector
-  FP *fp_;       // Fingerprint used when hashing tuple into vector
-  H *h_;         // Hash function used when hashing tuple into hash_set
-
-  vector<StateTuple> id2tuple_;  // Maps state IDs to tuple
-  vector<StateId> fp2id_;        // Maps tuple fingerprints to IDs
-
-  // Compact implementation of the hash table mapping tuples to
-  // state IDs using the hash function 'h_'
-  HashFunc hash_func_;
-  HashEqual hash_equal_;
-  KeyHashSet keys_;
-  const StateTuple empty_tuple_;
-  const StateTuple *current_tuple_;
-
-  DISALLOW_COPY_AND_ASSIGN(VectorHashStateTable);
+  StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
+  const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
 };
 
-template <class T, class S, class FP, class H>
-const typename VectorHashStateTable<T, S, FP, H>::StateId
-VectorHashStateTable<T, S, FP, H>::kEmptyKey = -1;
 
-template <class T, class S, class FP, class H>
-const typename VectorHashStateTable<T, S, FP, H>::StateId
-VectorHashStateTable<T, S, FP, H>::kCurrentKey = -2;
+// An implementation using a hash map for the tuple to state ID
+// mapping. This version permits erasing of states.  The state tuple T
+// must have == defined and its default constructor must produce a
+// tuple that will never be seen. F is the hash function.
+template <class T, class F>
+class ErasableStateTable : public ErasableBiTable<typename T::StateId, T, F> {
+ public:
+  typedef T StateTuple;
+  typedef typename StateTuple::StateId StateId;
+  using ErasableBiTable<StateId, T, F>::FindId;
+  using ErasableBiTable<StateId, T, F>::FindEntry;
+  using ErasableBiTable<StateId, T, F>::Size;
+  using ErasableBiTable<StateId, T, F>::Erase;
 
+  ErasableStateTable() : ErasableBiTable<StateId, T, F>() {}
+  StateId FindState(const StateTuple &tuple) { return FindId(tuple); }
+  const StateTuple &Tuple(StateId s) const { return FindEntry(s); }
+};
 
 //
 // COMPOSITION STATE TUPLES AND TABLES

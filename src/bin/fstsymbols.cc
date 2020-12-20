@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   using fst::SymbolTable;
 
   string usage = "Performs operations (set, clear, relabel) on the symbol"
-      "tables attached to an FST.\n\n  Usage: ";
+      " tables attached to an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
 

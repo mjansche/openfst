@@ -25,7 +25,9 @@
 #include <vector>
 using std::vector;
 
+
 #include <fst/util.h>
+
 
 namespace fst {
 

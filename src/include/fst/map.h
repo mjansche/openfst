@@ -28,8 +28,10 @@ using std::tr1::unordered_multimap;
 #include <string>
 #include <utility>
 using std::pair; using std::make_pair;
+
 #include <fst/cache.h>
 #include <fst/mutable-fst.h>
+
 
 namespace fst {
 
@@ -290,7 +292,7 @@ class MapFstImpl : public CacheImpl<B> {
 
   using VectorFstBaseImpl<typename CacheImpl<B>::State>::NumStates;
 
-  using CacheImpl<B>::AddArc;
+  using CacheImpl<B>::PushArc;
   using CacheImpl<B>::HasArcs;
   using CacheImpl<B>::HasFinal;
   using CacheImpl<B>::HasStart;
@@ -413,7 +415,7 @@ class MapFstImpl : public CacheImpl<B> {
       A aarc(aiter.Value());
       aarc.nextstate = FindOState(aarc.nextstate);
       const B& barc = (*mapper_)(aarc);
-      AddArc(s, barc);
+      PushArc(s, barc);
     }
 
     // Check for superfinal arcs.
@@ -429,7 +431,7 @@ class MapFstImpl : public CacheImpl<B> {
             if (superfinal_ == kNoStateId)
               superfinal_ = nstates_++;
             final_arc.nextstate = superfinal_;
-            AddArc(s, final_arc);
+            PushArc(s, final_arc);
           }
           break;
         }
@@ -438,7 +440,7 @@ class MapFstImpl : public CacheImpl<B> {
                                       kNoStateId));
         if (final_arc.ilabel != 0 || final_arc.olabel != 0 ||
             final_arc.weight != B::Weight::Zero())
-          AddArc(s, B(final_arc.ilabel, final_arc.olabel,
+          PushArc(s, B(final_arc.ilabel, final_arc.olabel,
                       final_arc.weight, superfinal_));
         break;
       }
@@ -685,12 +687,19 @@ struct SuperFinalMapper {
 
 
 // Mapper that leaves labels and nextstate unchanged and constructs a new weight
-// from the underlying value of the arc weight.  Primarily useful for Std<->Log
-// conversion.  Requires that there is a method FromArc::Weight::Value().
-template <class FromArc, class ToArc>
-struct WeightConvertMapper {
+// from the underlying value of the arc weight.  Requires that there is a
+// WeightConvert class specialization that converts the weights.
+template <class A, class B>
+class WeightConvertMapper {
+ public:
+  typedef A FromArc;
+  typedef B ToArc;
+  typedef typename FromArc::Weight FromWeight;
+  typedef typename ToArc::Weight ToWeight;
+
   ToArc operator()(const FromArc &arc) const {
-    return ToArc(arc.ilabel, arc.olabel, arc.weight.Value(), arc.nextstate);
+    return ToArc(arc.ilabel, arc.olabel,
+                 convert_weight_(arc.weight), arc.nextstate);
   }
 
   MapFinalAction FinalAction() const { return MAP_NO_SUPERFINAL; }
@@ -700,11 +709,21 @@ struct WeightConvertMapper {
   MapSymbolsAction OutputSymbolsAction() const { return MAP_COPY_SYMBOLS;}
 
   uint64 Properties(uint64 props) const { return props; }
+
+ private:
+  WeightConvert<FromWeight, ToWeight> convert_weight_;
 };
 
+// Non-precision-changing weight conversions.
 // Consider using more efficient Cast (fst.h) instead.
 typedef WeightConvertMapper<StdArc, LogArc> StdToLogMapper;
 typedef WeightConvertMapper<LogArc, StdArc> LogToStdMapper;
+
+// Precision-changing weight conversions.
+typedef WeightConvertMapper<StdArc, Log64Arc> StdToLog64Mapper;
+typedef WeightConvertMapper<LogArc, Log64Arc> LogToLog64Mapper;
+typedef WeightConvertMapper<Log64Arc, StdArc> Log64ToStdMapper;
+typedef WeightConvertMapper<Log64Arc, LogArc> Log64ToLogMapper;
 
 // Mapper from A to GallicArc<A>.
 template <class A, StringType S = STRING_LEFT>
@@ -903,6 +922,8 @@ struct GallicToNewSymbolsMapper {
 // Mapper to add a constant to all weights.
 template <class A>
 struct PlusMapper {
+  typedef A FromArc;
+  typedef A ToArc;
   typedef typename A::Weight Weight;
 
   explicit PlusMapper(Weight w) : weight_(w) {}
@@ -935,6 +956,8 @@ struct PlusMapper {
 // Mapper to (right) multiply a constant to all weights.
 template <class A>
 struct TimesMapper {
+  typedef A FromArc;
+  typedef A ToArc;
   typedef typename A::Weight Weight;
 
   explicit TimesMapper(Weight w) : weight_(w) {}
@@ -964,6 +987,8 @@ struct TimesMapper {
 // Mapper to reciprocate all non-Zero() weights.
 template <class A>
 struct InvertWeightMapper {
+  typedef A FromArc;
+  typedef A ToArc;
   typedef typename A::Weight Weight;
 
   A operator()(const A &arc) const {
@@ -1066,34 +1091,6 @@ struct ReverseWeightMapper {
 
   uint64 Properties(uint64 props) const { return props; }
 };
-
-
-// Convenience function for mapping with one of several predefined map types.
-
-enum MapType { IDENTITY_MAPPER, INVERT_MAPPER, PLUS_MAPPER, QUANTIZE_MAPPER,
-               RMWEIGHT_MAPPER, SUPERFINAL_MAPPER, TIMES_MAPPER };
-
-template<class Arc>
-void Map(MutableFst<Arc> *ofst, MapType map_type, float delta = kDelta,
-         typename Arc::Weight weight_thresh = Arc::Weight::Zero()) {
-  if (map_type == IDENTITY_MAPPER) {
-    Map(ofst, IdentityMapper<Arc>());
-  } else if (map_type == INVERT_MAPPER) {
-    Map(ofst, InvertWeightMapper<Arc>());
-  } else if (map_type == PLUS_MAPPER) {
-    Map(ofst, PlusMapper<Arc>(weight_thresh));
-  } else if (map_type == QUANTIZE_MAPPER) {
-    Map(ofst, QuantizeMapper<Arc>(delta));
-  } else if (map_type == RMWEIGHT_MAPPER) {
-    Map(ofst, RmWeightMapper<Arc>());
-  } else if (map_type == SUPERFINAL_MAPPER) {
-    Map(ofst, SuperFinalMapper<Arc>());
-  } else if (map_type == TIMES_MAPPER) {
-    Map(ofst, TimesMapper<Arc>(weight_thresh));
-  } else {
-    LOG(FATAL) << "Error: unknown/unsupported type in map enum: " << map_type;
-  }
-}
 
 }  // namespace fst
 

@@ -40,8 +40,10 @@ void Push(const FstClass &ifst, MutableFstClass *ofst, uint32 flags,
 
 REGISTER_FST_OPERATION(Push, StdArc, PushArgs1);
 REGISTER_FST_OPERATION(Push, LogArc, PushArgs1);
+REGISTER_FST_OPERATION(Push, Log64Arc, PushArgs1);
 REGISTER_FST_OPERATION(Push, StdArc, PushArgs2);
 REGISTER_FST_OPERATION(Push, LogArc, PushArgs2);
+REGISTER_FST_OPERATION(Push, Log64Arc, PushArgs2);
 
 }  // namespace script
 }  // namespace fst

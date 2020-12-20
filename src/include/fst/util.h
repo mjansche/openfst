@@ -38,6 +38,7 @@ using std::vector;
 
 #include <fst/compat.h>
 #include <fst/types.h>
+
 #include <iostream>
 #include <fstream>
 
@@ -365,6 +366,6 @@ private:
   void operator=(const CompactSet<Key, NoKey> &);  //disallow
 };
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_UTIL_H__

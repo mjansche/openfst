@@ -24,6 +24,7 @@
 #include <fst/map.h>
 #include <fst/mutable-fst.h>
 
+
 namespace fst {
 
 // This specifies whether to project on input or output.

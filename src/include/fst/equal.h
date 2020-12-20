@@ -23,6 +23,7 @@
 
 #include <fst/fst.h>
 
+
 namespace fst {
 
 // Tests if two Fsts have the same states and arcs in the same order.

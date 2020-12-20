@@ -27,6 +27,7 @@ void Invert(MutableFstClass *fst) {
 
 REGISTER_FST_OPERATION(Invert, StdArc, MutableFstClass);
 REGISTER_FST_OPERATION(Invert, LogArc, MutableFstClass);
+REGISTER_FST_OPERATION(Invert, Log64Arc, MutableFstClass);
 
 }  // namespace script
 }  // namespace fst

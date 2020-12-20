@@ -25,9 +25,11 @@
 #include <vector>
 using std::vector;
 
+
 #include <fst/dfs-visit.h>
 #include <fst/fst.h>
 #include <fst/statesort.h>
+
 
 namespace fst {
 

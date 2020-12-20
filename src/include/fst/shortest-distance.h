@@ -31,6 +31,7 @@ using std::vector;
 #include <fst/reverse.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 template <class Arc, class Queue, class ArcFilter>

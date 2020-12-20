@@ -24,6 +24,7 @@
 #include <fst/fst.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 // Verifies that an Fst's contents are sane.

@@ -39,6 +39,7 @@ void Replace(const vector<pair<int64, const FstClass *> > &tuples,
 
 REGISTER_FST_OPERATION(Replace, StdArc, ReplaceArgs);
 REGISTER_FST_OPERATION(Replace, LogArc, ReplaceArgs);
+REGISTER_FST_OPERATION(Replace, Log64Arc, ReplaceArgs);
 
 }  // namespace script
 }  // namespace fst

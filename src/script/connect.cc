@@ -27,6 +27,7 @@ void Connect(MutableFstClass *fst) {
 
 REGISTER_FST_OPERATION(Connect, StdArc, MutableFstClass);
 REGISTER_FST_OPERATION(Connect, LogArc, MutableFstClass);
+REGISTER_FST_OPERATION(Connect, Log64Arc, MutableFstClass);
 
 }  // namespace script
 }  // namespace fst

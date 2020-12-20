@@ -37,6 +37,7 @@ using std::vector;
 #include <fst/cache.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 typedef CacheOptions SynchronizeFstOptions;
@@ -53,7 +54,7 @@ class SynchronizeFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::AddArc;
+  using CacheBaseImpl< CacheState<A> >::PushArc;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
   using CacheBaseImpl< CacheState<A> >::HasFinal;
   using CacheBaseImpl< CacheState<A> >::HasStart;
@@ -239,13 +240,13 @@ class SynchronizeFstImpl
           const String *istring = Cdr(e.istring, arc.ilabel);
           const String *ostring = Cdr(e.ostring, arc.olabel);
           StateId d = FindState(Element(arc.nextstate, istring, ostring));
-          AddArc(s, Arc(Car(e.istring, arc.ilabel),
+          PushArc(s, Arc(Car(e.istring, arc.ilabel),
                         Car(e.ostring, arc.olabel), arc.weight, d));
         } else {
           const String *istring = Concat(e.istring, arc.ilabel);
           const String *ostring = Concat(e.ostring, arc.olabel);
           StateId d = FindState(Element(arc.nextstate, istring, ostring));
-          AddArc(s, Arc(0 , 0, arc.weight, d));
+          PushArc(s, Arc(0 , 0, arc.weight, d));
         }
       }
 
@@ -255,7 +256,7 @@ class SynchronizeFstImpl
       const String *istring = Cdr(e.istring);
       const String *ostring = Cdr(e.ostring);
       StateId d = FindState(Element(kNoStateId, istring, ostring));
-      AddArc(s, Arc(Car(e.istring), Car(e.ostring), w, d));
+      PushArc(s, Arc(Car(e.istring), Car(e.ostring), w, d));
     }
     SetArcs(s);
   }

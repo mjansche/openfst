@@ -44,6 +44,7 @@
 #ifndef FST_LIB_FSTLIB_H__
 #define FST_LIB_FSTLIB_H__
 
+
 // Abstract FST classes
 #include <fst/fst.h>
 #include <fst/expanded-fst.h>
@@ -57,6 +58,7 @@
 
 // FST algorithms and delayed FST classes
 #include <fst/arcsort.h>
+#include <fst/arcsum.h>
 #include <fst/closure.h>
 #include <fst/compose.h>
 #include <fst/concat.h>
@@ -77,18 +79,73 @@
 #include <fst/push.h>
 #include <fst/randequivalent.h>
 #include <fst/randgen.h>
+#include <fst/rational.h>
 #include <fst/relabel.h>
 #include <fst/replace.h>
+#include <fst/replace-util.h>
 #include <fst/reverse.h>
 #include <fst/reweight.h>
 #include <fst/rmepsilon.h>
 #include <fst/rmfinalepsilon.h>
 #include <fst/shortest-distance.h>
 #include <fst/shortest-path.h>
+#include <fst/statesort.h>
 #include <fst/synchronize.h>
 #include <fst/topsort.h>
 #include <fst/union.h>
 #include <fst/verify.h>
 #include <fst/visit.h>
+
+// Weights
+#include <fst/weight.h>
+#include <fst/expectation-weight.h>
+#include <fst/float-weight.h>
+#include <fst/lexicographic-weight.h>
+#include <fst/pair-weight.h>
+#include <fst/power-weight.h>
+#include <fst/product-weight.h>
+#include <fst/random-weight.h>
+#include <fst/signed-log-weight.h>
+#include <fst/sparse-power-weight.h>
+#include <fst/sparse-tuple-weight.h>
+#include <fst/string-weight.h>
+#include <fst/tuple-weight.h>
+
+// Auxiliary classes for composition
+#include <fst/compose-filter.h>
+#include <fst/lookahead-filter.h>
+#include <fst/lookahead-matcher.h>
+#include <fst/matcher-fst.h>
+#include <fst/matcher.h>
+#include <fst/state-table.h>
+
+// Data structures
+#include <fst/heap.h>
+#include <fst/interval-set.h>
+#include <fst/queue.h>
+#include <fst/union-find.h>
+
+// Miscellaneous
+#include <fst/accumulator.h>
+#include <fst/add-on.h>
+#include <fst/arc.h>
+#include <fst/arcfilter.h>
+#include <fst/arcmerge.h>
+#include <fst/cache.h>
+#include <fst/complement.h>
+#include <fst/dfs-visit.h>
+#include <fst/generic-register.h>
+#include <fst/label-reachable.h>
+#include <fst/partition.h>
+#include <fst/properties.h>
+#include <fst/register.h>
+#include <fst/state-reachable.h>
+#include <iostream>
+#include <fstream>
+#include <fst/symbol-table.h>
+#include <fst/symbol-table-ops.h>
+#include <fst/test-properties.h>
+#include <fst/util.h>
+
 
 #endif  // FST_LIB_FSTLIB_H__

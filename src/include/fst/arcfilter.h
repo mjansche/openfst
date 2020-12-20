@@ -21,8 +21,10 @@
 #ifndef FST_LIB_ARCFILTER_H__
 #define FST_LIB_ARCFILTER_H__
 
+
 #include <fst/fst.h>
 #include <fst/util.h>
+
 
 namespace fst {
 

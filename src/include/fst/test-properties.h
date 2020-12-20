@@ -24,8 +24,10 @@
 #include <tr1/unordered_set>
 using std::tr1::unordered_set;
 using std::tr1::unordered_multiset;
+
 #include <fst/dfs-visit.h>
 #include <fst/connect.h>
+
 
 DECLARE_bool(fst_verify_properties);
 

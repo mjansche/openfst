@@ -28,6 +28,7 @@ using std::vector;
 #include <fst/cache.h>
 #include <fst/compose.h>
 
+
 namespace fst {
 
 template <class A,

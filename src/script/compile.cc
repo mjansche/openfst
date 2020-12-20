@@ -37,6 +37,7 @@ void CompileFst(istream &istrm, const string &source, const string &dest,
 
 REGISTER_FST_OPERATION(CompileFst, StdArc, FstCompileArgs);
 REGISTER_FST_OPERATION(CompileFst, LogArc, FstCompileArgs);
+REGISTER_FST_OPERATION(CompileFst, Log64Arc, FstCompileArgs);
 
 }  // namespace script
 }  // namespace fst

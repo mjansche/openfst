@@ -26,8 +26,10 @@
 #include <climits>
 #include <sstream>
 #include <string>
+
 #include <fst/util.h>
 #include <fst/weight.h>
+
 
 namespace fst {
 
@@ -98,7 +100,7 @@ class FloatWeightTpl {
   T value_;
 };
 
-// Single precision FloatWeight
+// Single-precision float weight
 typedef FloatWeightTpl<float> FloatWeight;
 
 template <class T>
@@ -224,7 +226,7 @@ class TropicalWeightTpl : public FloatWeightTpl<T> {
   }
 };
 
-// Single precision TropicalWeight
+// Single precision tropical weight
 typedef TropicalWeightTpl<float> TropicalWeight;
 
 template <class T>
@@ -339,8 +341,10 @@ class LogWeightTpl : public FloatWeightTpl<T> {
   }
 };
 
-// Single precision LogWeight
+// Single-precision log weight
 typedef LogWeightTpl<float> LogWeight;
+// Double-precision log weight
+typedef LogWeightTpl<double> Log64Weight;
 
 template <class T>
 inline T LogExp(T x) { return log(1.0F + exp(-x)); }
@@ -466,7 +470,7 @@ class MinMaxWeightTpl : public FloatWeightTpl<T> {
   }
 };
 
-// Single precision MinMaxWeight
+// Single-precision min-max weight
 typedef MinMaxWeightTpl<float> MinMaxWeight;
 
 // Min
@@ -524,7 +528,43 @@ inline MinMaxWeightTpl<double> Divide(const MinMaxWeightTpl<double> &w1,
   return Divide<double>(w1, w2, typ);
 }
 
+//
+// WEIGHT CONVERTER SPECIALIZATIONS.
+//
 
-}  // namespace fst;
+// Convert to tropical
+template <>
+struct WeightConvert<LogWeight, TropicalWeight> {
+  TropicalWeight operator()(LogWeight w) const { return w.Value(); }
+};
+
+template <>
+struct WeightConvert<Log64Weight, TropicalWeight> {
+  TropicalWeight operator()(Log64Weight w) const { return w.Value(); }
+};
+
+// Convert to log
+template <>
+struct WeightConvert<TropicalWeight, LogWeight> {
+  LogWeight operator()(TropicalWeight w) const { return w.Value(); }
+};
+
+template <>
+struct WeightConvert<Log64Weight, LogWeight> {
+  LogWeight operator()(Log64Weight w) const { return w.Value(); }
+};
+
+// Convert to log64
+template <>
+struct WeightConvert<TropicalWeight, Log64Weight> {
+  Log64Weight operator()(TropicalWeight w) const { return w.Value(); }
+};
+
+template <>
+struct WeightConvert<LogWeight, Log64Weight> {
+  Log64Weight operator()(LogWeight w) const { return w.Value(); }
+};
+
+}  // namespace fst
 
 #endif  // FST_LIB_FLOAT_WEIGHT_H__

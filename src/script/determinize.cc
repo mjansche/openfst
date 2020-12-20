@@ -32,6 +32,7 @@ void Determinize(const FstClass &ifst,
 
 REGISTER_FST_OPERATION(Determinize, StdArc, DeterminizeArgs);
 REGISTER_FST_OPERATION(Determinize, LogArc, DeterminizeArgs);
+REGISTER_FST_OPERATION(Determinize, Log64Arc, DeterminizeArgs);
 
 }  // namespace script
 }  // namespace fst

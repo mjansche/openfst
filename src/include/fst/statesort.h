@@ -27,6 +27,7 @@ using std::vector;
 
 #include <fst/mutable-fst.h>
 
+
 namespace fst {
 
 // Sorts the input states of an FST, modifying it. ORDER[i] gives the

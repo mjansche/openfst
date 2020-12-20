@@ -25,8 +25,10 @@
 #include <vector>
 using std::vector;
 
+
 #include <fst/mutable-fst.h>
 #include <fst/weight.h>
+
 
 namespace fst {
 
@@ -97,6 +99,6 @@ void ArcSum(MutableFst<A>* fst) {
   }
 }
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_ARCSUM_H__

@@ -23,8 +23,11 @@
 #ifndef FST_LIB_ADD_ON_FST_H__
 #define FST_LIB_ADD_ON_FST_H__
 
+#include <stddef.h>
+#include <string>
+
 #include <fst/fst.h>
-#include <fst/add-on.h>
+
 
 namespace fst {
 

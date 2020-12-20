@@ -29,6 +29,7 @@ void Closure(MutableFstClass *fst, ClosureType closure_type) {
 
 REGISTER_FST_OPERATION(Closure, StdArc, ClosureArgs);
 REGISTER_FST_OPERATION(Closure, LogArc, ClosureArgs);
+REGISTER_FST_OPERATION(Closure, Log64Arc, ClosureArgs);
 
 }  // namespace script
 }  // namespace fst

@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
   using fst::script::VectorFstClass;
   using fst::script::Reverse;
 
-  string usage = "Reverse the paths in an FST.\n\n  Usage: ";
+  string usage = "Reverses the paths in an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
 

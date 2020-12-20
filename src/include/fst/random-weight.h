@@ -27,6 +27,7 @@
 #include <vector>
 using std::vector;
 
+
 #include <fst/float-weight.h>
 #include <fst/product-weight.h>
 #include <fst/string-weight.h>
@@ -34,6 +35,7 @@ using std::vector;
 #include <fst/power-weight.h>
 #include <fst/signed-log-weight.h>
 #include <fst/sparse-power-weight.h>
+
 
 namespace fst {
 
@@ -341,6 +343,6 @@ class SparsePowerWeightGenerator {
   G generator_;
 };
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_RANDOM_WEIGHT_H__

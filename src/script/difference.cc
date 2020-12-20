@@ -41,8 +41,10 @@ void Difference(const FstClass &ifst1, const FstClass &ifst2,
 
 REGISTER_FST_OPERATION(Difference, StdArc, DifferenceArgs1);
 REGISTER_FST_OPERATION(Difference, LogArc, DifferenceArgs1);
+REGISTER_FST_OPERATION(Difference, Log64Arc, DifferenceArgs1);
 REGISTER_FST_OPERATION(Difference, StdArc, DifferenceArgs2);
 REGISTER_FST_OPERATION(Difference, LogArc, DifferenceArgs2);
+REGISTER_FST_OPERATION(Difference, Log64Arc, DifferenceArgs2);
 
 }  // namespace script
 }  // namespace fst

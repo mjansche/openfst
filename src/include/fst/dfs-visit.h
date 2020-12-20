@@ -25,8 +25,10 @@
 #include <stack>
 #include <vector>
 using std::vector;
+
 #include <fst/arcfilter.h>
 #include <fst/fst.h>
+
 
 namespace fst {
 

@@ -26,10 +26,12 @@
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/map.h>
 #include <fst/mutable-fst.h>
 #include <fst/replace.h>
 #include <fst/test-properties.h>
+
 
 namespace fst {
 

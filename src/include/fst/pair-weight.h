@@ -25,7 +25,9 @@
 #include <climits>
 #include <stack>
 #include <string>
+
 #include <fst/weight.h>
+
 
 DECLARE_string(fst_weight_parentheses);
 DECLARE_string(fst_weight_separator);

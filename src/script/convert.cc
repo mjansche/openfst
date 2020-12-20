@@ -34,6 +34,7 @@ FstClass *Convert(const FstClass &ifst, const string &new_type) {
 
 REGISTER_FST_OPERATION(Convert, StdArc, ConvertArgs);
 REGISTER_FST_OPERATION(Convert, LogArc, ConvertArgs);
+REGISTER_FST_OPERATION(Convert, Log64Arc, ConvertArgs);
 
 }  // namespace script
 }  // namespace fst

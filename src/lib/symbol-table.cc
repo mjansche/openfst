@@ -50,8 +50,10 @@ SymbolTableImpl* SymbolTableImpl::ReadText(istream &strm,
     if (col.size() == 0)  // empty line
       continue;
     if (col.size() != 2) {
-      LOG(ERROR) << "SymbolTable::ReadText: Bad number of columns (skipping), "
-                 << "file = " << filename << ", line = " << nline;
+      LOG(ERROR) << "SymbolTable::ReadText: Bad number of columns ("
+                 << col.size() << " skipping), "
+                 << "file = " << filename << ", line = " << nline
+                 << ":<" << line << ">";
       continue;
     }
     const char *symbol = col[0];
@@ -197,7 +199,7 @@ bool SymbolTableImpl::Write(ostream &strm) const {
   // next write out the remaining non densely packed keys
   for (map<const char *, int64, StrCmp>::const_iterator it =
            symbol_map_.begin(); it != symbol_map_.end(); ++it) {
-    if (it->second < dense_key_limit_)
+    if ((it->second >= 0) && (it->second < dense_key_limit_))
       continue;
     WriteType(strm, string(it->first));
     WriteType(strm, it->second);

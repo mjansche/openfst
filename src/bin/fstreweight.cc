@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
   using fst::script::MutableFstClass;
   using fst::script::VectorFstClass;
 
-  string usage = "Reweight an FST.\n\n  Usage: ";
+  string usage = "Reweights an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " in.fst potential.txt [out.fst]\n";
 

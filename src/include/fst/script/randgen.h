@@ -30,62 +30,6 @@ enum RandArcSelection {
   FAST_LOG_PROB_ARC_SELECTOR
 };
 
-// This is to prevent log probabilities from working with other than
-// StdArc and LogArc
-template<class A>
-struct LogProbArcSelectorGuard {
-  typedef typename A::StateId StateId;
-  typedef typename A::Weight Weight;
-
-  explicit LogProbArcSelectorGuard(int seed) {
-    LOG(FATAL) << "LogProbArcSelectorGuard: bad weight type: "
-               << Weight::Type();
-  }
-  size_t operator()(const Fst<A> &fst, StateId s) const { return 0; }
-};
-
-template<class T>
-struct LogProbArcSelectorGuard<ArcTpl<TropicalWeightTpl<T> > >
-    : public LogProbArcSelector<ArcTpl<TropicalWeightTpl<T> > > {
-  LogProbArcSelectorGuard(int seed = time(0))
-      : LogProbArcSelector<ArcTpl<TropicalWeightTpl<T> > >(seed) {}
-};
-
-template<class T>
-struct LogProbArcSelectorGuard<ArcTpl<LogWeightTpl<T> > >
-    : public LogProbArcSelector<ArcTpl<LogWeightTpl<T> > > {
-  LogProbArcSelectorGuard(int seed = time(0))
-      : LogProbArcSelector<ArcTpl<LogWeightTpl<T> > >(seed) {}
-};
-
-// This is to prevent log probabilities from working with other than
-// StdArc and LogArc
-template<class A>
-struct FastLogProbArcSelectorGuard {
-  typedef typename A::StateId StateId;
-  typedef typename A::Weight Weight;
-
-  explicit FastLogProbArcSelectorGuard(int seed) {
-    LOG(FATAL) << "LogProbArcSelectorGuard: bad weight type: "
-               << Weight::Type();
-  }
-  size_t operator()(const Fst<A> &fst, StateId s) const { return 0; }
-};
-
-template<class T>
-struct FastLogProbArcSelectorGuard<ArcTpl<TropicalWeightTpl<T> > >
-    : public FastLogProbArcSelector<ArcTpl<TropicalWeightTpl<T> > > {
-  FastLogProbArcSelectorGuard(int seed = time(0))
-      : FastLogProbArcSelector<ArcTpl<TropicalWeightTpl<T> > >(seed) {}
-};
-
-template<class T>
-struct FastLogProbArcSelectorGuard<ArcTpl<LogWeightTpl<T> > >
-    : public FastLogProbArcSelector<ArcTpl<LogWeightTpl<T> > > {
-  FastLogProbArcSelectorGuard(int seed = time(0))
-      : FastLogProbArcSelector<ArcTpl<LogWeightTpl<T> > >(seed) {}
-};
-
 typedef args::Package<const FstClass &, MutableFstClass*, int32,
                       const RandGenOptions<RandArcSelection> &> RandGenArgs;
 
@@ -100,19 +44,19 @@ void RandGen(RandGenArgs *args) {
     UniformArcSelector<Arc> arc_selector(seed);
     RandGenOptions< UniformArcSelector<Arc> >
         ropts(arc_selector, opts.max_length,
-              opts.npath);
+              opts.npath, opts.weighted);
     RandGen(ifst, ofst, ropts);
   } else if (opts.arc_selector == FAST_LOG_PROB_ARC_SELECTOR) {
-    FastLogProbArcSelectorGuard<Arc> arc_selector(seed);
-    RandGenOptions< FastLogProbArcSelectorGuard<Arc> >
+    FastLogProbArcSelector<Arc> arc_selector(seed);
+    RandGenOptions< FastLogProbArcSelector<Arc> >
         ropts(arc_selector, opts.max_length,
-              opts.npath);
+              opts.npath, opts.weighted);
     RandGen(ifst, ofst, ropts);
   } else {
-    LogProbArcSelectorGuard<Arc> arc_selector(seed);
-    RandGenOptions< LogProbArcSelectorGuard<Arc> >
+    LogProbArcSelector<Arc> arc_selector(seed);
+    RandGenOptions< LogProbArcSelector<Arc> >
         ropts(arc_selector, opts.max_length,
-              opts.npath);
+              opts.npath, opts.weighted);
     RandGen(ifst, ofst, ropts);
   }
 }

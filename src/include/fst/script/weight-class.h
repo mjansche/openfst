@@ -105,7 +105,7 @@ class WeightClass {
       case OTHER: return impl_->to_string();
     }
 
-    CHECK(false);
+    LOG(FATAL);
   }
 
   bool operator == (const WeightClass &other) const {

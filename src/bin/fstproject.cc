@@ -30,8 +30,8 @@ int main(int argc, char **argv) {
   using fst::script::MutableFstClass;
   using fst::script::VectorFstClass;
 
-  string usage = "Projects a transduction onto its input";
-  usage += " or output language.\n  Usage: ";
+  string usage = "Projects a transduction onto its input"
+      " or output language.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
 

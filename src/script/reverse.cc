@@ -31,6 +31,7 @@ void Reverse(const FstClass &fst1, MutableFstClass *fst2) {
 
 REGISTER_FST_OPERATION(Reverse, StdArc, ReverseArgs);
 REGISTER_FST_OPERATION(Reverse, LogArc, ReverseArgs);
+REGISTER_FST_OPERATION(Reverse, Log64Arc, ReverseArgs);
 
 }  // namespace script
 }  // namespace fst

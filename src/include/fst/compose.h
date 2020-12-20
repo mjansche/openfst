@@ -34,6 +34,7 @@ using std::vector;
 #include <fst/state-table.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 // Delayed composition options templated on the arc type, the matcher,
@@ -308,7 +309,7 @@ class ComposeFstImpl : public ComposeFstImplBase<typename M1::Arc> {
     StateTuple tuple(arc1.nextstate, arc2.nextstate, f);
     Arc oarc(arc1.ilabel, arc2.olabel, Times(arc1.weight, arc2.weight),
            state_table_->FindState(tuple));
-    CacheImpl<Arc>::AddArc(s, oarc);
+    CacheImpl<Arc>::PushArc(s, oarc);
   }
 
   StateId ComputeStart() {

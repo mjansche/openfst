@@ -39,8 +39,10 @@ void Concat(const FstClass &ifst, MutableFstClass *ofst) {
 
 REGISTER_FST_OPERATION(Concat, StdArc, ConcatArgs1);
 REGISTER_FST_OPERATION(Concat, LogArc, ConcatArgs1);
+REGISTER_FST_OPERATION(Concat, Log64Arc, ConcatArgs1);
 REGISTER_FST_OPERATION(Concat, StdArc, ConcatArgs2);
 REGISTER_FST_OPERATION(Concat, LogArc, ConcatArgs2);
+REGISTER_FST_OPERATION(Concat, Log64Arc, ConcatArgs2);
 
 }  // namespace script
 }  // namespace fst

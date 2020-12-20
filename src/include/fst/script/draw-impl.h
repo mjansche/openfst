@@ -113,6 +113,17 @@ template <class A> class FstDrawer {
     *ostrm_ << s;
   }
 
+  // Escapes backslash and double quote if these occur in the string. Dot will
+  // not deal gracefully with these if they are not escaped.
+  inline void EscapeChars(const string &s, string* ns) const {
+    const char* c = s.c_str();
+    while (*c) {
+      if (*c == '\\' || *c == '"') ns->push_back('\\');
+      ns->push_back(*c);
+      ++c;
+    }
+  }
+
   void PrintId(int64 id, const SymbolTable *syms,
                const char *name) const {
     if (syms) {
@@ -124,7 +135,9 @@ template <class A> class FstDrawer {
                    << ", destination = " << dest_;
         exit(1);
       }
-      PrintString(symbol);
+      string nsymbol;
+      EscapeChars(symbol, &nsymbol);
+      PrintString(nsymbol);
     } else {
       char sid[kLineLen];
       snprintf(sid, kLineLen, "%lld", id);

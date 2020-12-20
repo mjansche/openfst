@@ -28,6 +28,7 @@ using std::vector;
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
 
+
 namespace fst {
 
 // Computes the concatenative closure. This version modifies its

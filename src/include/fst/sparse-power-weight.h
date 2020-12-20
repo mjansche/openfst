@@ -28,6 +28,7 @@
 #include <fst/sparse-tuple-weight.h>
 #include <fst/weight.h>
 
+
 namespace fst {
 
 // Below SparseTupleWeight*Mapper are used in conjunction with

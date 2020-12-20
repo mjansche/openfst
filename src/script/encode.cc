@@ -31,6 +31,7 @@ void Encode(MutableFstClass *ofst, uint32 flags, bool reuse_encoder,
 
 REGISTER_FST_OPERATION(Encode, StdArc, EncodeArgs);
 REGISTER_FST_OPERATION(Encode, LogArc, EncodeArgs);
+REGISTER_FST_OPERATION(Encode, Log64Arc, EncodeArgs);
 
 }  // namespace script
 }  // namespace fst

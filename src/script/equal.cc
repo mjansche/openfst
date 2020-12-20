@@ -34,6 +34,7 @@ bool Equal(const FstClass &fst1, const FstClass &fst2, float kDelta) {
 
 REGISTER_FST_OPERATION(Equal, StdArc, EqualArgs);
 REGISTER_FST_OPERATION(Equal, LogArc, EqualArgs);
+REGISTER_FST_OPERATION(Equal, Log64Arc, EqualArgs);
 
 }  // namespace script
 }  // namespace fst

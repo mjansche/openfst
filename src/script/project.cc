@@ -29,6 +29,7 @@ void Project(MutableFstClass *ofst, ProjectType project_type) {
 
 REGISTER_FST_OPERATION(Project, StdArc, ProjectArgs);
 REGISTER_FST_OPERATION(Project, LogArc, ProjectArgs);
+REGISTER_FST_OPERATION(Project, Log64Arc, ProjectArgs);
 
 }  // namespace script
 }  // namespace fst

@@ -47,8 +47,8 @@ int main(int argc, char **argv) {
   using fst::script::MutableFstClass;
   using fst::script::VectorFstClass;
 
-  string usage = "Relabel the input and/or the output labels of the Fst.\n";
-  usage += " Usage: ";
+  string usage = "Relabels the input and/or the output labels of the FST.\n\n"
+      "  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
   usage += " Using SymbolTables flags:\n";
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
   FstClass *ifst = FstClass::Read(in_name);
   if (!ifst) {
-    return 0;
+    return 1;
   }
 
   MutableFstClass *ofst = 0;

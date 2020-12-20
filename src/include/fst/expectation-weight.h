@@ -32,7 +32,9 @@
 #define FST_LIB_EXPECTATION_WEIGHT_H_
 
 #include<string>
+
 #include <fst/pair-weight.h>
+
 
 namespace fst {
 

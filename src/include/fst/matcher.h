@@ -24,7 +24,8 @@
 #include <algorithm>
 #include <set>
 
-#include <fst/fst.h>
+#include <fst/mutable-fst.h>  // for all internal FST accessors
+
 
 namespace fst {
 
@@ -214,13 +215,20 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
       return false;
     if (aiter_->Done())
       return true;
+    aiter_->SetFlags(
+      match_type_ == MATCH_INPUT ? kArcILabelValue : kArcOLabelValue,
+      kArcValueFlags);
     Label label = match_type_ == MATCH_INPUT ?
         aiter_->Value().ilabel : aiter_->Value().olabel;
     return label != match_label_;
   }
 
   const Arc& Value() const {
-    return current_loop_ ? loop_ : aiter_->Value();
+    if (current_loop_) {
+      return loop_;
+    }
+    aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
+    return aiter_->Value();
   }
 
   void Next() {
@@ -282,11 +290,9 @@ bool SortedMatcher<F>::Find(Label match_label) {
               aiter_->Value().olabel;
           if (label != match_label_) {
             aiter_->Seek(i);
-            aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
             return true;
           }
         }
-        aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
         return true;
       }
     }
@@ -297,13 +303,11 @@ bool SortedMatcher<F>::Find(Label match_label) {
       Label label = match_type_ == MATCH_INPUT ?
           aiter_->Value().ilabel : aiter_->Value().olabel;
       if (label == match_label_) {
-        aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
         return true;
       }
       if (label > match_label_)
         break;
     }
-    aiter_->SetFlags(kArcValueFlags, kArcValueFlags);
     return current_loop_;
   }
 }

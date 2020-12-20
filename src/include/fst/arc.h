@@ -24,6 +24,7 @@
 
 #include <string>
 
+
 #include <fst/expectation-weight.h>
 #include <fst/float-weight.h>
 #include <fst/lexicographic-weight.h>
@@ -34,6 +35,7 @@
 #include <iostream>
 #include <fstream>
 #include <fst/string-weight.h>
+
 
 namespace fst {
 
@@ -63,7 +65,9 @@ class ArcTpl {
 
 typedef ArcTpl<TropicalWeight> StdArc;
 typedef ArcTpl<LogWeight> LogArc;
+typedef ArcTpl<Log64Weight> Log64Arc;
 typedef ArcTpl<SignedLogWeight> SignedLogArc;
+typedef ArcTpl<SignedLog64Weight> SignedLog64Arc;
 typedef ArcTpl<MinMaxWeight> MinMaxArc;
 
 
@@ -297,6 +301,6 @@ struct ExpectationArc {
   StateId nextstate;  // Transition destination state
 };
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_ARC_H__

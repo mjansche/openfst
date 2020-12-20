@@ -55,10 +55,13 @@ namespace fst {
 // Register VectorFst, ConstFst and EditFst for common arcs types
 REGISTER_FST(VectorFst, StdArc);
 REGISTER_FST(VectorFst, LogArc);
+REGISTER_FST(VectorFst, Log64Arc);
 REGISTER_FST(ConstFst, StdArc);
 REGISTER_FST(ConstFst, LogArc);
+REGISTER_FST(ConstFst, Log64Arc);
 REGISTER_FST(EditFst, StdArc);
 REGISTER_FST(EditFst, LogArc);
+REGISTER_FST(EditFst, Log64Arc);
 
 // Register CompactFst for common arcs with the default (uint32) size type
 static FstRegisterer<
@@ -159,4 +162,4 @@ bool FstHeader::Write(ostream &strm, const string &source) const {
   return true;
 }
 
-}
+}  // namespace fst

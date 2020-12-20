@@ -73,7 +73,7 @@ am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libfst_la_LIBADD =
 am_libfst_la_OBJECTS = compat.lo flags.lo fst.lo properties.lo \
-	symbol-table.lo util.lo
+	symbol-table.lo util.lo symbol-table-ops.lo
 libfst_la_OBJECTS = $(am_libfst_la_OBJECTS)
 libfst_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
@@ -221,7 +221,7 @@ top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
 lib_LTLIBRARIES = libfst.la
 libfst_la_SOURCES = compat.cc flags.cc fst.cc properties.cc \
-symbol-table.cc util.cc
+symbol-table.cc util.cc symbol-table-ops.cc
 
 libfst_la_LDFLAGS = -version-info 0:0:0
 all: all-am
@@ -302,6 +302,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flags.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fst.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/properties.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol-table-ops.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol-table.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@
 

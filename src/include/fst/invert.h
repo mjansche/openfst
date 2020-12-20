@@ -24,6 +24,7 @@
 #include <fst/map.h>
 #include <fst/mutable-fst.h>
 
+
 namespace fst {
 
 // Mapper to implement inversion of an arc.
@@ -57,6 +58,7 @@ void Invert(MutableFst<Arc> *fst) {
   SymbolTable *input = fst->InputSymbols() ? fst->InputSymbols()->Copy() : 0;
   fst->SetInputSymbols(fst->OutputSymbols());
   fst->SetOutputSymbols(input);
+  delete input;
 }
 
 

@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     ostrm = new fst::ofstream(argv[2]);
     if (!*ostrm) {
       LOG(ERROR) << argv[0] << ": Open failed, file = " << argv[2];
-      return 0;
+      return 1;
     }
   }
   ostrm->precision(9);
@@ -90,8 +90,8 @@ int main(int argc, char **argv) {
   if (!osyms && !FLAGS_numeric)
     osyms = fst->OutputSymbols();
 
-  s::PrintFst(*fst, isyms, osyms, ssyms, FLAGS_acceptor, FLAGS_show_weight_one,
-              ostrm, dest);
+  s::PrintFst(*fst, *ostrm, dest, isyms, osyms, ssyms,
+              FLAGS_acceptor, FLAGS_show_weight_one);
 
   if (isyms && !FLAGS_save_isymbols.empty())
     isyms->WriteText(FLAGS_save_isymbols);

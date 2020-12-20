@@ -31,6 +31,7 @@ void Union(MutableFstClass *fst1, const FstClass &fst2) {
 
 REGISTER_FST_OPERATION(Union, StdArc, UnionArgs);
 REGISTER_FST_OPERATION(Union, LogArc, UnionArgs);
+REGISTER_FST_OPERATION(Union, Log64Arc, UnionArgs);
 
 }  // namespace script
 }  // namespace fst

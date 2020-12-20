@@ -26,10 +26,12 @@ using std::tr1::unordered_map;
 using std::tr1::unordered_multimap;
 #include <fst/slist.h>
 
+
 #include <fst/factor-weight.h>
 #include <fst/invert.h>
 #include <fst/map.h>
 #include <fst/rmepsilon.h>
+
 
 namespace fst {
 

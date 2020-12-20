@@ -58,15 +58,19 @@ void Prune(MutableFstClass *fst, const WeightClass& weight_threshold,
 // 1
 REGISTER_FST_OPERATION(Prune, StdArc, PruneArgs1);
 REGISTER_FST_OPERATION(Prune, LogArc, PruneArgs1);
+REGISTER_FST_OPERATION(Prune, Log64Arc, PruneArgs1);
 // 2
 REGISTER_FST_OPERATION(Prune, StdArc, PruneArgs2);
 REGISTER_FST_OPERATION(Prune, LogArc, PruneArgs2);
+REGISTER_FST_OPERATION(Prune, Log64Arc, PruneArgs2);
 // 3
 REGISTER_FST_OPERATION(Prune, StdArc, PruneArgs3);
 REGISTER_FST_OPERATION(Prune, LogArc, PruneArgs3);
+REGISTER_FST_OPERATION(Prune, Log64Arc, PruneArgs3);
 // 4
 REGISTER_FST_OPERATION(Prune, StdArc, PruneArgs4);
 REGISTER_FST_OPERATION(Prune, LogArc, PruneArgs4);
+REGISTER_FST_OPERATION(Prune, Log64Arc, PruneArgs4);
 
 }  // namespace script
 }  // namespace fst

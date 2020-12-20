@@ -47,12 +47,15 @@ void RmEpsilon(MutableFstClass *fst, vector<WeightClass> *distance,
 
 REGISTER_FST_OPERATION(RmEpsilon, StdArc, RmEpsilonArgs1);
 REGISTER_FST_OPERATION(RmEpsilon, LogArc, RmEpsilonArgs1);
+REGISTER_FST_OPERATION(RmEpsilon, Log64Arc, RmEpsilonArgs1);
 
 REGISTER_FST_OPERATION(RmEpsilon, StdArc, RmEpsilonArgs2);
 REGISTER_FST_OPERATION(RmEpsilon, LogArc, RmEpsilonArgs2);
+REGISTER_FST_OPERATION(RmEpsilon, Log64Arc, RmEpsilonArgs2);
 
 REGISTER_FST_OPERATION(RmEpsilon, StdArc, RmEpsilonArgs3);
 REGISTER_FST_OPERATION(RmEpsilon, LogArc, RmEpsilonArgs3);
+REGISTER_FST_OPERATION(RmEpsilon, Log64Arc, RmEpsilonArgs3);
 
 }  // namespace script
 }  // namespace fst

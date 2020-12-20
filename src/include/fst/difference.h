@@ -24,9 +24,11 @@
 #include <vector>
 using std::vector;
 #include <algorithm>
+
 #include <fst/cache.h>
 #include <fst/compose.h>
 #include <fst/complement.h>
+
 
 namespace fst {
 

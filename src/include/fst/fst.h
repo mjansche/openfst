@@ -23,18 +23,22 @@
 #ifndef FST_LIB_FST_H__
 #define FST_LIB_FST_H__
 
+#include <stddef.h>
+#include <sys/types.h>
 #include <cmath>
 #include <string>
 
 #include <fst/compat.h>
+#include <fst/types.h>
+
 #include <fst/arc.h>
+#include <fst/properties.h>
 #include <fst/register.h>
+#include <iostream>
+#include <fstream>
 #include <fst/symbol-table.h>
 #include <fst/util.h>
 
-#include <fst/types.h>
-
-#include <fst/properties.h>
 
 namespace fst {
 
@@ -473,10 +477,16 @@ class ArcIterator {
   }
 
   uint32 Flags() const {
-    return kArcValueFlags;  // Or use base if !0 ?
+    if (data_.base)
+      return data_.base->Flags();
+    else
+      return kArcValueFlags;
   }
 
-  void SetFlags(uint32 flags, uint32 mask) {}  // Or use base if !0 ?
+  void SetFlags(uint32 flags, uint32 mask) {
+    if (data_.base)
+      data_.base->SetFlags(flags, mask);
+  }
 
  private:
   ArcIteratorData<Arc> data_;
@@ -513,16 +523,16 @@ ssize_t NumArcs(const F &fst, typename F::Arc::StateId s) {
 
 template <class F> inline
 ssize_t NumInputEpsilons(const F &fst, typename F::Arc::StateId s) {
-  return fst. F::NumInputEpsilons(s);
+  return fst.F::NumInputEpsilons(s);
 }
 
 template <class F> inline
 ssize_t NumOutputEpsilons(const F &fst, typename F::Arc::StateId s) {
-  return fst. F::NumOutputEpsilons(s);
+  return fst.F::NumOutputEpsilons(s);
 }
 
 
-//  <A> case - abstract methods.
+//  Fst<A> case - abstract methods.
 template <class A> inline
 typename A::Weight Final(const Fst<A> &fst, typename A::StateId s) {
   return fst.Final(s);
@@ -543,7 +553,7 @@ ssize_t NumOutputEpsilons(const Fst<A> &fst, typename A::StateId s) {
   return fst.NumOutputEpsilons(s);
 }
 
-} // namespace internal
+}  // namespace internal
 
 // A useful alias when using StdArc.
 typedef Fst<StdArc> StdFst;
@@ -825,6 +835,6 @@ Fst<A> *StringToFst(const string &s) {
   return Fst<A>::Read(istrm, FstReadOptions("StringToFst"));
 }
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_FST_H__

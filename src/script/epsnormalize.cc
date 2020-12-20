@@ -31,6 +31,7 @@ void EpsNormalize(const FstClass &ifst, MutableFstClass *ofst,
 
 REGISTER_FST_OPERATION(EpsNormalize, StdArc, EpsNormalizeArgs);
 REGISTER_FST_OPERATION(EpsNormalize, LogArc, EpsNormalizeArgs);
+REGISTER_FST_OPERATION(EpsNormalize, Log64Arc, EpsNormalizeArgs);
 
 }  // namespace script
 }  // namespace fst

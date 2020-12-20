@@ -109,6 +109,7 @@ void PrintPdtInfo(const FstClass &ifst,
 
 REGISTER_FST_PDT_OPERATIONS(StdArc);
 REGISTER_FST_PDT_OPERATIONS(LogArc);
+REGISTER_FST_PDT_OPERATIONS(Log64Arc);
 
 }  // namespace script
 }  // namespace fst

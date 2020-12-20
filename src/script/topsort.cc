@@ -31,6 +31,7 @@ bool TopSort(MutableFstClass *fst) {
 
 REGISTER_FST_OPERATION(TopSort, StdArc, TopSortArgs);
 REGISTER_FST_OPERATION(TopSort, LogArc, TopSortArgs);
+REGISTER_FST_OPERATION(TopSort, Log64Arc, TopSortArgs);
 
 }  // namespace script
 }  // namespace fst

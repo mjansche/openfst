@@ -22,11 +22,15 @@
 #include <fst/script/randgen.h>
 
 DEFINE_int32(max_length, INT_MAX, "Maximum path length");
-DEFINE_int32(npath, 1, "Number of paths to generate");
+DEFINE_int64(npath, 1, "Number of paths to generate");
 DEFINE_int32(seed, time(0), "Random seed");
 DEFINE_string(select, "uniform", "Selection type: one of: "
               " \"uniform\", \"log_prob\" (when appropriate),"
 	      " \"fast_log_prob\" (when appropriate)");
+DEFINE_bool(weighted, false,
+            "Output tree weighted by path count vs. unweighted paths");
+DEFINE_bool(remove_total_weight, false,
+            "Remove total weight when output weighted");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -43,6 +47,8 @@ int main(int argc, char **argv) {
     ShowUsage();
     return 1;
   }
+
+  VLOG(1) << argv[0] << ": Seed = " << FLAGS_seed;
 
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
@@ -68,7 +74,8 @@ int main(int argc, char **argv) {
 
   s::RandGen(*ifst, &ofst, FLAGS_seed,
              fst::RandGenOptions<s::RandArcSelection>(
-                 ras, FLAGS_max_length, FLAGS_npath));
+                 ras, FLAGS_max_length, FLAGS_npath,
+                 FLAGS_weighted, FLAGS_remove_total_weight));
 
   ofst.Write(out_name);
   return 0;

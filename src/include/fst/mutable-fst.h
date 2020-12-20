@@ -23,10 +23,14 @@
 #ifndef FST_LIB_MUTABLE_FST_H__
 #define FST_LIB_MUTABLE_FST_H__
 
+#include <stddef.h>
+#include <sys/types.h>
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/expanded-fst.h>
+
 
 namespace fst {
 
@@ -57,6 +61,9 @@ class MutableFst : public ExpandedFst<A> {
   virtual void DeleteStates() = 0;              // Delete all states
   virtual void DeleteArcs(StateId, size_t n) = 0;  // Delete some arcs at state
   virtual void DeleteArcs(StateId) = 0;         // Delete all arcs at state
+
+  virtual void ReserveStates(StateId n) { }  // Optional, best effort only.
+  virtual void ReserveArcs(StateId s, size_t n) { }  // Optional, Best effort.
 
   // Return input label symbol table; return NULL if not specified
   virtual const SymbolTable* InputSymbols() const = 0;
@@ -187,6 +194,8 @@ class MutableArcIterator {
 };
 
 
+namespace internal {
+
 //  MutableFst<A> case - abstract methods.
 template <class A> inline
 typename A::Weight Final(const MutableFst<A> &fst, typename A::StateId s) {
@@ -207,6 +216,8 @@ template <class A> inline
 ssize_t NumOutputEpsilons(const MutableFst<A> &fst, typename A::StateId s) {
   return fst.NumOutputEpsilons(s);
 }
+
+}  // namespace internal
 
 
 // A useful alias when using StdArc.
@@ -270,6 +281,16 @@ class ImplToMutableFst : public ImplToExpandedFst<I, F> {
     GetImpl()->DeleteArcs(s);
   }
 
+  virtual void ReserveStates(StateId s) {
+    MutateCheck();
+    GetImpl()->ReserveStates(s);
+  }
+
+  virtual void ReserveArcs(StateId s, size_t n) {
+    MutateCheck();
+    GetImpl()->ReserveArcs(s, n);
+  }
+
   virtual const SymbolTable* InputSymbols() const {
     return GetImpl()->InputSymbols();
   }
@@ -327,6 +348,6 @@ class ImplToMutableFst : public ImplToExpandedFst<I, F> {
 };
 
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_MUTABLE_FST_H__

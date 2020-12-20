@@ -33,6 +33,7 @@ using std::vector;
 #include <fst/cache.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 //
@@ -77,11 +78,23 @@ void Relabel(
       // only relabel if relabel pair defined
       typename unordered_map<Label, Label>::iterator it =
         input_map.find(arc.ilabel);
-      if (it != input_map.end()) {arc.ilabel = it->second; }
+      if (it != input_map.end()) {
+        if (it->second == kNoLabel) {
+          LOG(FATAL) << "Input symbol id " << arc.ilabel
+                     << " missing from target vocabulary";
+        }
+        arc.ilabel = it->second;
+      }
 
       // relabel output
       it = output_map.find(arc.olabel);
-      if (it != output_map.end()) { arc.olabel = it->second; }
+      if (it != output_map.end()) {
+        if (it->second == kNoLabel) {
+          LOG(FATAL) << "Output symbol id " << arc.olabel
+                     << " missing from target vocabulary";
+        }
+        arc.olabel = it->second;
+      }
 
       aiter.SetValue(arc);
     }
@@ -89,7 +102,6 @@ void Relabel(
 
   fst->SetProperties(RelabelProperties(props), kFstProperties);
 }
-
 
 //
 // Relabels either the input labels or output labels. The old to
@@ -128,10 +140,6 @@ void Relabel(MutableFst<A> *fst,
       string isymbol = syms_iter.Symbol();
       int isymbol_val = syms_iter.Value();
       int new_isymbol_val = new_isymbols->Find(isymbol);
-      if (new_isymbol_val == -1)
-        LOG(FATAL) << "Symbol not found in relabel_isymbols: ["
-                   << isymbol
-                   << "]";
       ipairs.push_back(make_pair(isymbol_val, new_isymbol_val));
     }
     if (attach_new_isymbols)
@@ -145,10 +153,6 @@ void Relabel(MutableFst<A> *fst,
       string osymbol = syms_iter.Symbol();
       int osymbol_val = syms_iter.Value();
       int new_osymbol_val = new_osymbols->Find(osymbol);
-      if (new_osymbol_val == -1)
-        LOG(FATAL) << "Symbol not found in relabel_osymbols: ["
-                   << osymbol
-                   << "]";
       opairs.push_back(make_pair(osymbol_val, new_osymbol_val));
     }
     if (attach_new_osymbols)
@@ -184,7 +188,7 @@ class RelabelFstImpl : public CacheImpl<A> {
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheImpl<A>::AddArc;
+  using CacheImpl<A>::PushArc;
   using CacheImpl<A>::HasArcs;
   using CacheImpl<A>::HasFinal;
   using CacheImpl<A>::HasStart;
@@ -338,7 +342,7 @@ class RelabelFstImpl : public CacheImpl<A> {
         if (it != output_map_.end()) { arc.olabel = it->second; }
       }
 
-      AddArc(s, arc);
+      PushArc(s, arc);
     }
     SetArcs(s);
   }

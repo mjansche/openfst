@@ -34,6 +34,7 @@ namespace script {
 
 REGISTER_FST_CLASSES(StdArc);
 REGISTER_FST_CLASSES(LogArc);
+REGISTER_FST_CLASSES(Log64Arc);
 
 //
 //  FST CLASS METHODS
@@ -81,7 +82,7 @@ FstClass *FstClass::Read(const string &fname) {
 // VECTOR FST CONSTRUCTORS
 //
 
-const IORegistration<VectorFstClass>::Entry &GetVFSTRegisterEntry(
+IORegistration<VectorFstClass>::Entry GetVFSTRegisterEntry(
     const string &arc_type) {
   IORegistration<VectorFstClass>::Register *reg =
       IORegistration<VectorFstClass>::Register::GetRegister();

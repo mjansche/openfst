@@ -25,10 +25,12 @@
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/expanded-fst.h>
 #include <fst/fst-decl.h>  // For optional argument declarations
 #include <fst/test-properties.h>
 #include <fst/util.h>
+
 
 namespace fst {
 
@@ -384,6 +386,6 @@ class ArcIterator< ConstFst<A, U> > {
 // A useful alias when using StdArc.
 typedef ConstFst<StdArc> StdConstFst;
 
-}  // namespace fst;
+}  // namespace fst
 
 #endif  // FST_LIB_CONST_FST_H__

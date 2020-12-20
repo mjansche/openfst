@@ -33,6 +33,7 @@ using std::vector;
 #include <fst/shortest-distance.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 template <class Arc, class Queue, class ArcFilter>
@@ -238,7 +239,7 @@ class ShortestPathCompare {
 // natural semiring order. The single path that can be read from the
 // ith of at most n transitions leaving the initial state of 'ofst' is
 // the ith shortest path. Disregarding the initial state and initial
-// transitions, The n-shortest paths, in fact, form a tree rooted at
+// transitions, the n-shortest paths, in fact, form a tree rooted at
 // the single final state.
 //
 // The weights need to be left and right distributive (kSemiring) and
@@ -359,7 +360,7 @@ void NShortestPath(const Fst<RevArc> &ifst,
 
 
 // N-Shortest-path algorithm:  this version allow fine control
-// via the otpions argument. See below for a simpler interface.
+// via the options argument. See below for a simpler interface.
 //
 // 'ofst' contains the n-shortest paths in 'ifst'. 'distance' returns
 // the shortest distances from the source state to each state in

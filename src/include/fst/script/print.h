@@ -60,11 +60,23 @@ void PrintFst(FstPrinterArgs *args) {
   fstprinter.Print(args->ostrm, args->dest);
 }
 
-void PrintFst(const FstClass &fst, const SymbolTable *isyms,
-              const SymbolTable *osyms, const SymbolTable *ssyms,
-              bool accept, bool show_weight_one, ostream *ostrm,
-              const string &dest);
+void PrintFst(const FstClass &fst, ostream &ostrm, const string &dest,
+              const SymbolTable *isyms,
+              const SymbolTable *osyms,
+              const SymbolTable *ssyms,
+              bool accept, bool show_weight_one);
 
+
+// Below are two printing methods with useful defaults for a few of
+// the fst printer arguments.
+template <class Arc>
+void PrintFst(const Fst<Arc> &fst, ostream &os, const string dest = "",
+              const SymbolTable *isyms = NULL,
+              const SymbolTable *osyms = NULL,
+              const SymbolTable *ssyms = NULL) {
+  fst::FstPrinter<Arc> fstprinter(fst, isyms, osyms, ssyms, true, true);
+  fstprinter.Print(&os, dest);
+}
 
 }  // namespace script
 }  // namespace fst

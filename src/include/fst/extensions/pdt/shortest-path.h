@@ -22,6 +22,7 @@
 #define FST_EXTENSIONS_PDT_SHORTEST_PATH_H__
 
 #include <fst/shortest-path.h>
+#include <fst/extensions/pdt/paren.h>
 #include <fst/extensions/pdt/pdt.h>
 
 #include <tr1/unordered_map>
@@ -363,7 +364,7 @@ template<class Arc> const uint8 PdtShortestPathData<Arc>::kMarked = 0x04;
 
 
 // This computes the single source shortest (balanced) path (SSSP)
-// through a weighted PDT that is strongly regular (i.e. is expandable
+// through a weighted PDT that has a bounded stack (i.e. is expandable
 // as an FST). It is a generalization of the classic SSSP graph
 // algorithm that removes a state s from a queue (defined by a
 // user-provided queue type) and relaxes the destination states of
@@ -390,6 +391,9 @@ class PdtShortestPath {
   typedef PdtShortestPathData<Arc> SpData;
   typedef typename SpData::SearchState SearchState;
   typedef typename SpData::ParenSpec ParenSpec;
+
+  typedef typename PdtParenReachable<Arc>::SetIterator StateSetIterator;
+  typedef typename PdtBalanceData<Arc>::SetIterator CloseSourceIterator;
 
   PdtShortestPath(const Fst<Arc> &ifst,
                   const vector<pair<Label, Label> > &parens,
@@ -435,37 +439,14 @@ class PdtShortestPath {
 
  private:
   static const Arc kNoArc;
-  static const size_t kPrime0;
   static const uint8 kEnqueued;
   static const uint8 kExpanded;
   const uint8 kFinal;
 
  public:
-  // Hash key specifying close paren.
-  struct ParenKey {
-    ParenKey() : paren_id(kNoLabel), state_id(kNoStateId) {}
-
-    ParenKey(Label id, StateId s) : paren_id(id), state_id(s) {}
-
-    Label paren_id;      // Id of close paren.
-    StateId state_id;    // source state of close paren
-
-    bool operator==(const ParenKey &x) const {
-      if (&x == this)
-        return true;
-      return x.paren_id == this->paren_id && x.state_id == this->state_id;
-    }
-  };
-
-  // Hash for paren multimap
-  struct ParenHash {
-    size_t operator()(const ParenKey &key) const {
-      return key.paren_id + key.state_id * kPrime0;
-    }
-  };
-
   // Hash multimap from close paren label to an paren arc.
-  typedef unordered_multimap<ParenKey, Arc, ParenHash> CloseParenMultimap;
+  typedef unordered_multimap<ParenState<Arc>, Arc,
+                        typename ParenState<Arc>::Hash> CloseParenMultimap;
 
   const CloseParenMultimap &GetCloseParenMultimap() const {
     return close_paren_multimap_;
@@ -532,8 +513,8 @@ void PdtShortestPath<Arc, Queue>::Init(MutableFst<Arc> *ofst) {
         if (arc.ilabel == parens_[paren_id].first) {  // Open paren
           balance_data_.OpenInsert(paren_id, arc.nextstate);
         } else {                                      // Close paren
-          ParenKey key(paren_id, s);
-          close_paren_multimap_.insert(make_pair(key, arc));
+          ParenState<Arc> paren_state(paren_id, s);
+          close_paren_multimap_.insert(make_pair(paren_state, arc));
         }
       }
     }
@@ -627,19 +608,19 @@ void PdtShortestPath<Arc, Queue>::ProcOpenParen(
       GetDistance(d.start);
       state_queue_ = state_queue;
     }
-    if (balance_data_.Find(paren_id, paren.dest_start)) {
-      for(; !balance_data_.Done(); balance_data_.Next()) {
-        SearchState cpstate(balance_data_.Value(), d.start);
-        ParenKey key(paren_id, cpstate.state);
-        for (typename CloseParenMultimap::const_iterator cpit =
-                 close_paren_multimap_.find(key);
-             cpit != close_paren_multimap_.end() && key == cpit->first;
-             ++cpit) {
-          const Arc &cparc = cpit->second;
-          Weight cpw = Times(w, Times(sp_data_.Distance(cpstate),
-                                      cparc.weight));
-          Relax(cpstate, s, cparc, cpw, paren_id);
-        }
+    for (CloseSourceIterator set_iter =
+             balance_data_.Find(paren_id, arc.nextstate);
+         !set_iter.Done(); set_iter.Next()) {
+      SearchState cpstate(set_iter.Element(), d.start);
+      ParenState<Arc> paren_state(paren_id, cpstate.state);
+      for (typename CloseParenMultimap::const_iterator cpit =
+               close_paren_multimap_.find(paren_state);
+           cpit != close_paren_multimap_.end() && paren_state == cpit->first;
+           ++cpit) {
+        const Arc &cparc = cpit->second;
+        Weight cpw = Times(w, Times(sp_data_.Distance(cpstate),
+                                    cparc.weight));
+        Relax(cpstate, s, cparc, cpw, paren_id);
       }
     }
   }
@@ -652,7 +633,7 @@ void PdtShortestPath<Arc, Queue>::ProcOpenParen(
 template<class Arc, class Queue> inline
 void PdtShortestPath<Arc, Queue>::ProcCloseParen(
     Label paren_id, SearchState s, const Arc &arc, Weight w) {
-  ParenKey key(paren_id, s.start);
+  ParenState<Arc> paren_state(paren_id, s.start);
   if (!(sp_data_.Flags(s) & kExpanded)) {
     balance_data_.CloseInsert(paren_id, s.start, s.state);
     sp_data_.SetFlags(s, kFinal, kFinal);
@@ -773,9 +754,6 @@ Arc PdtShortestPath<Arc, Queue>::GetPathArc(
 template<class Arc, class Queue>
 const Arc PdtShortestPath<Arc, Queue>::kNoArc
     = Arc(kNoLabel, kNoLabel, Weight::Zero(), kNoStateId);
-
-template<class Arc, class Queue>
-const size_t PdtShortestPath<Arc, Queue>::kPrime0 = 7853;
 
 template<class Arc, class Queue>
 const uint8 PdtShortestPath<Arc, Queue>::kEnqueued = 0x10;

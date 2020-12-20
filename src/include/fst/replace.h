@@ -25,15 +25,16 @@
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
 using std::tr1::unordered_multimap;
+#include <set>
 #include <string>
 #include <utility>
 using std::pair; using std::make_pair;
 #include <vector>
 using std::vector;
 
-#include <fst/fst.h>
 #include <fst/cache.h>
 #include <fst/expanded-fst.h>
+#include <fst/fst.h>
 #include <fst/matcher.h>
 #include <fst/replace-util.h>
 #include <fst/state-table.h>
@@ -159,6 +160,8 @@ const size_t ReplaceHash<S, P>::kPrime0 = 7853;
 
 template <typename S, typename P>
 const size_t ReplaceHash<S, P>::kPrime1 = 7867;
+
+template <class A, class T> class ReplaceFstMatcher;
 
 
 // \class VectorHashReplaceStateTable
@@ -303,6 +306,8 @@ struct ReplaceFstOptions : CacheOptions {
 //
 template <class A, class T>
 class ReplaceFstImpl : public CacheImpl<A> {
+  friend class ReplaceFstMatcher<A, T>;
+
  public:
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
@@ -313,7 +318,7 @@ class ReplaceFstImpl : public CacheImpl<A> {
   using FstImpl<A>::InputSymbols;
   using FstImpl<A>::OutputSymbols;
 
-  using CacheImpl<A>::AddArc;
+  using CacheImpl<A>::PushArc;
   using CacheImpl<A>::HasArcs;
   using CacheImpl<A>::HasFinal;
   using CacheImpl<A>::HasStart;
@@ -368,6 +373,7 @@ class ReplaceFstImpl : public CacheImpl<A> {
       Label label = fst_tuples[i].first;
       const Fst<A> *fst = fst_tuples[i].second;
       nonterminal_hash_[label] = fst_array_.size();
+      nonterminal_set_.insert(label);
       fst_array_.push_back(opts.take_ownership ? fst : fst->Copy());
       if (fst->Start() == kNoStateId)
         all_non_empty = false;
@@ -428,6 +434,7 @@ class ReplaceFstImpl : public CacheImpl<A> {
         epsilon_on_replace_(impl.epsilon_on_replace_),
         always_cache_(impl.always_cache_),
         state_table_(new StateTable(*(impl.state_table_))),
+        nonterminal_set_(impl.nonterminal_set_),
         nonterminal_hash_(impl.nonterminal_hash_),
         root_(impl.root_) {
     SetType("replace");
@@ -627,12 +634,12 @@ class ReplaceFstImpl : public CacheImpl<A> {
 
     // Create a final arc when needed
     if (ComputeFinalArc(tuple, &arc))
-      AddArc(s, arc);
+      PushArc(s, arc);
 
     // Expand all arcs leaving the state
     for (;!aiter.Done(); aiter.Next()) {
       if (ComputeArc(tuple, aiter.Value(), &arc))
-        AddArc(s, arc);
+        PushArc(s, arc);
     }
 
     SetArcs(s);
@@ -879,6 +886,7 @@ class ReplaceFstImpl : public CacheImpl<A> {
   StackPrefixHash prefix_hash_;
   vector<StackPrefix> stackprefix_array_;
 
+  set<Label> nonterminal_set_;
   NonTerminalHash nonterminal_hash_;
   vector<const Fst<A>*> fst_array_;
   Label root_;
@@ -933,6 +941,7 @@ class ReplaceFst : public ImplToFst< ReplaceFstImpl<A, T> > {
  public:
   friend class ArcIterator< ReplaceFst<A, T> >;
   friend class StateIterator< ReplaceFst<A, T> >;
+  friend class ReplaceFstMatcher<A, T>;
 
   typedef A Arc;
   typedef typename A::Label   Label;
@@ -969,10 +978,13 @@ class ReplaceFst : public ImplToFst< ReplaceFstImpl<A, T> > {
   virtual MatcherBase<A> *InitMatcher(MatchType match_type) const {
     if ((GetImpl()->ArcIteratorFlags() & kArcNoCache) &&
         ((match_type == MATCH_INPUT && Properties(kILabelSorted, false)) ||
-         (match_type == MATCH_OUTPUT && Properties(kOLabelSorted, false))))
-      return new SortedMatcher< ReplaceFst<A> >(*this, match_type);
-    else
+         (match_type == MATCH_OUTPUT && Properties(kOLabelSorted, false)))) {
+      return new ReplaceFstMatcher<A, T>(*this, match_type);
+    }
+    else {
+      VLOG(2) << "Not using replace matcher";
       return 0;
+    }
   }
 
   bool CyclicDependencies() const {
@@ -1199,6 +1211,186 @@ class ArcIterator< ReplaceFst<A, T> > {
 };
 
 
+template <class A, class T>
+class ReplaceFstMatcher : public MatcherBase<A> {
+ public:
+  typedef A Arc;
+  typedef typename A::StateId StateId;
+  typedef typename A::Label Label;
+  typedef MultiEpsMatcher<Matcher<Fst<A> > > LocalMatcher;
+
+  ReplaceFstMatcher(const ReplaceFst<A, T> &fst, fst::MatchType match_type)
+      : fst_(fst),
+        impl_(fst_.GetImpl()),
+        s_(fst::kNoStateId),
+        match_type_(match_type),
+        current_loop_(false),
+        final_arc_(false),
+        loop_(fst::kNoLabel, 0, A::Weight::One(), fst::kNoStateId) {
+    if (match_type_ == fst::MATCH_OUTPUT)
+      swap(loop_.ilabel, loop_.olabel);
+    InitMatchers();
+  }
+
+  ReplaceFstMatcher(const ReplaceFstMatcher<A, T> &matcher, bool safe = false)
+      : fst_(matcher.fst_),
+        impl_(fst_.GetImpl()),
+        s_(fst::kNoStateId),
+        match_type_(matcher.match_type_),
+        current_loop_(false),
+        loop_(fst::kNoLabel, 0, A::Weight::One(), fst::kNoStateId) {
+    if (match_type_ == fst::MATCH_OUTPUT)
+      swap(loop_.ilabel, loop_.olabel);
+    InitMatchers();
+  }
+
+  // Create a local matcher for each component Fst of replace.
+  // LocalMatcher is a multi epsilon wrapper matcher. MultiEpsilonMatcher
+  // is used to match each non-terminal arc, since these non-terminal
+  // turn into epsilons on recursion.
+  void InitMatchers() {
+    const vector<const Fst<A>*>& fst_array = impl_->fst_array_;
+    matcher_.resize(fst_array.size(), 0);
+    for (size_t i = 0; i < fst_array.size(); ++i) {
+      if (fst_array[i]) {
+        matcher_[i] =
+            new LocalMatcher(*fst_array[i], match_type_, kMultiEpsList);
+
+        typename set<Label>::iterator it = impl_->nonterminal_set_.begin();
+        for (; it != impl_->nonterminal_set_.end(); ++it) {
+          matcher_[i]->AddMultiEpsLabel(*it);
+        }
+      }
+    }
+  }
+
+  virtual ReplaceFstMatcher<A, T> *Copy(bool safe = false) const {
+    return new ReplaceFstMatcher<A, T>(*this, safe);
+  }
+
+  virtual ~ReplaceFstMatcher() {
+    for (size_t i = 0; i < matcher_.size(); ++i)
+      delete matcher_[i];
+  }
+
+  virtual MatchType Type(bool test) const {
+    if (match_type_ == MATCH_NONE)
+      return match_type_;
+
+    uint64 true_prop =  match_type_ == MATCH_INPUT ?
+        kILabelSorted : kOLabelSorted;
+    uint64 false_prop = match_type_ == MATCH_INPUT ?
+        kNotILabelSorted : kNotOLabelSorted;
+    uint64 props = fst_.Properties(true_prop | false_prop, test);
+
+    if (props & true_prop)
+      return match_type_;
+    else if (props & false_prop)
+      return MATCH_NONE;
+    else
+      return MATCH_UNKNOWN;
+  }
+
+  virtual const Fst<A> &GetFst() const {
+    return fst_;
+  }
+
+  virtual uint64 Properties(uint64 props) const {
+    return props;
+  }
+
+ private:
+  // Set the sate from which our matching happens.
+  virtual void SetState_(StateId s) {
+    if (s_ == s) return;
+
+    s_ = s;
+    tuple_ = impl_->GetStateTable()->Tuple(s_);
+    if (tuple_.fst_state == kNoStateId) {
+      done_ = true;
+      return;
+    }
+    // Get current matcher. Used for non epsilon matching
+    current_matcher_ = matcher_[tuple_.fst_id];
+    current_matcher_->SetState(tuple_.fst_state);
+    loop_.nextstate = s_;
+
+    final_arc_ = false;
+  }
+
+  // Search for label, from previous set state. If label == 0, first
+  // hallucinate and epsilon loop, else use the underlying matcher to
+  // search for the label or epsilons.
+  // - Note since the ReplaceFST recursion on non-terminal arcs causes
+  //   epsilon transitions to be created we use the MultiEpsilonMatcher
+  //   to search for possible matches of non terminals.
+  // - If the component Fst reaches a final state we also need to add
+  //   the exiting final arc.
+  virtual bool Find_(Label label) {
+    bool found = false;
+    label_ = label;
+    if (label_ == 0 || label_ == kNoLabel) {
+      // Compute loop directly, saving Replace::ComputeArc
+      if (label_ == 0) {
+        current_loop_ = true;
+        found = true;
+      }
+      // Search for matching multi epsilons
+      final_arc_ = impl_->ComputeFinalArc(tuple_, 0);
+      found = current_matcher_->Find(kNoLabel) || final_arc_ || found;
+    } else {
+      // Search on sub machine directly using sub machine matcher.
+      found = current_matcher_->Find(label_);
+    }
+    return found;
+  }
+
+  virtual bool Done_() const {
+    return !current_loop_ && !final_arc_ && current_matcher_->Done();
+  }
+
+  virtual const Arc& Value_() const {
+    if (current_loop_) {
+      return loop_;
+    }
+    if (final_arc_) {
+      impl_->ComputeFinalArc(tuple_, &arc_);
+      return arc_;
+    }
+    const Arc& component_arc = current_matcher_->Value();
+    impl_->ComputeArc(tuple_, component_arc, &arc_);
+    return arc_;
+  }
+
+  virtual void Next_() {
+    if (current_loop_) {
+      current_loop_ = false;
+      return;
+    }
+    if (final_arc_) {
+      final_arc_ = false;
+      return;
+    }
+    current_matcher_->Next();
+  }
+
+  const ReplaceFst<A, T>& fst_;
+  ReplaceFstImpl<A, T> *impl_;
+  LocalMatcher* current_matcher_;
+  vector<LocalMatcher*> matcher_;
+
+  StateId s_;                        // Current state
+  Label label_;                      // Current label
+
+  MatchType match_type_;             // Supplied by caller
+  mutable bool done_;
+  mutable bool current_loop_;        // Current arc is the implicit loop
+  mutable bool final_arc_;           // Current arc for exiting recursion
+  mutable typename T::StateTuple tuple_;  // Tuple corresponding to state_
+  mutable Arc arc_;
+  Arc loop_;
+};
+
 template <class A, class T> inline
 void ReplaceFst<A, T>::InitStateIterator(StateIteratorData<A> *data) const {
   data->base = new StateIterator< ReplaceFst<A, T> >(*this);
@@ -1237,6 +1429,6 @@ void Replace(const vector<pair<typename Arc::Label,
   Replace(ifst_array, ofst, root, false);
 }
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_REPLACE_H__

@@ -9,7 +9,7 @@ else
 libfst_LTLIBRARIES = libfstfar.la
 endif
 
-libfstfar_la_SOURCES = sttable.cc
+libfstfar_la_SOURCES = sttable.cc stlist.cc
 libfstfar_la_LDFLAGS = -version-info 0:0:0
 
 if HAVE_SCRIPT

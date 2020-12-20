@@ -24,6 +24,7 @@
 #include <fst/tuple-weight.h>
 #include <fst/weight.h>
 
+
 namespace fst {
 
 // Cartesian power semiring: W ^ n

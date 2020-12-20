@@ -33,6 +33,7 @@ void PrintFstInfo(const FstClass &f, bool test_properties,
 
 REGISTER_FST_OPERATION(PrintFstInfo, StdArc, InfoArgs);
 REGISTER_FST_OPERATION(PrintFstInfo, LogArc, InfoArgs);
+REGISTER_FST_OPERATION(PrintFstInfo, Log64Arc, InfoArgs);
 
 }  // namespace script
 }  // namespace fst

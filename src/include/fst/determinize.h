@@ -39,6 +39,7 @@ using std::vector;
 #include <fst/prune.h>
 #include <fst/test-properties.h>
 
+
 namespace fst {
 
 //
@@ -444,7 +445,7 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
     }
 
     arc.nextstate = FindState(dest_subset);
-    CacheImpl<A>::AddArc(s, arc);
+    CacheImpl<A>::PushArc(s, arc);
   }
 
   // Comparison object for hashing Subset(s). Subsets are not sorted in this
@@ -596,7 +597,7 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
     for (ArcIterator<FromFst> aiter(*from_fst_, s);
          !aiter.Done();
          aiter.Next())
-      CacheImpl<A>::AddArc(s, aiter.Value());
+      CacheImpl<A>::PushArc(s, aiter.Value());
     CacheImpl<A>::SetArcs(s);
   }
 

@@ -25,8 +25,10 @@
 #include <string>
 #include <vector>
 using std::vector;
+
 #include <fst/fst.h>
 #include <fst/test-properties.h>
+
 
 namespace fst {
 
