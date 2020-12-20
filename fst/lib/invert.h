@@ -47,7 +47,12 @@ template <class A> struct InvertMapper {
 // - Space: O(1)
 // where V = # of states and E = # of arcs.
 template<class Arc> inline
-void Invert(MutableFst<Arc> *fst) { Map(fst, InvertMapper<Arc>()); }
+void Invert(MutableFst<Arc> *fst) {
+  Map(fst, InvertMapper<Arc>());
+  SymbolTable *input = fst->InputSymbols();
+  fst->SetInputSymbols(fst->OutputSymbols());
+  fst->SetOutputSymbols(input);
+}
 
 
 // Inverts the transduction corresponding to an FST by exchanging the
@@ -64,8 +69,12 @@ class InvertFst : public MapFst<A, A, InvertMapper<A> > {
  public:
   typedef A Arc;
   typedef InvertMapper<A> C;
+  using  MapFst<A, A, InvertMapper<A> >::Impl;
 
-  explicit InvertFst(const Fst<A> &fst) : MapFst<A, A, C>(fst, C()) {}
+  explicit InvertFst(const Fst<A> &fst) : MapFst<A, A, C>(fst, C()) {
+    Impl()->SetOutputSymbols(fst.InputSymbols());
+    Impl()->SetInputSymbols(fst.OutputSymbols());
+  }
 
   InvertFst(const InvertFst<A> &fst) : MapFst<A, A, C>(fst) {}
 

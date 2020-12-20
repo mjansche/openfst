@@ -63,6 +63,10 @@ template <class A> class ProjectMapper {
 template<class Arc> inline
 void Project(MutableFst<Arc> *fst, ProjectType project_type) {
   Map(fst, ProjectMapper<Arc>(project_type));
+  if (project_type == PROJECT_INPUT)
+    fst->SetOutputSymbols(fst->InputSymbols());
+  if (project_type == PROJECT_OUTPUT)
+    fst->SetInputSymbols(fst->OutputSymbols());
 }
 
 
@@ -81,9 +85,15 @@ class ProjectFst : public MapFst<A, A, ProjectMapper<A> > {
  public:
   typedef A Arc;
   typedef ProjectMapper<A> C;
+  using MapFst<A, A, ProjectMapper<A> >::Impl;
 
   ProjectFst(const Fst<A> &fst, ProjectType project_type)
-      : MapFst<A, A, C>(fst, C(project_type)) {}
+      : MapFst<A, A, C>(fst, C(project_type)) {
+    if (project_type == PROJECT_INPUT)
+      Impl()->SetOutputSymbols(fst.InputSymbols());
+    if (project_type == PROJECT_OUTPUT)
+      Impl()->SetInputSymbols(fst.OutputSymbols());
+  }
 
   ProjectFst(const ProjectFst<A> &fst) : MapFst<A, A, C>(fst) {}
 

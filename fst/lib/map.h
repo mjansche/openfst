@@ -530,6 +530,9 @@ class MapFst : public Fst<B> {
     impl_->InitArcIterator(s, data);
   }
 
+ protected:
+  MapFstImpl<A, B, C> *Impl() { return impl_;}
+
  private:
   MapFstImpl<A, B, C> *impl_;
 
