@@ -176,15 +176,19 @@ class NGramFstImpl : public FstImpl<A> {
     uint64 b64;
     Weight weight;
     Label label;
-    return sizeof(num_states) + sizeof(num_futures) + sizeof(num_final) +
-        sizeof(b64) * (BitmapIndex::StorageSize(num_states * 2 + 1) +
-                       BitmapIndex::StorageSize(num_futures + num_states + 1) +
-                       BitmapIndex::StorageSize(num_states)) +
-        (num_states + 1) * sizeof(label) +
-        num_futures * sizeof(label) +
-        (num_states + 1) * sizeof(weight) +
-        num_final * sizeof(weight) +
+    size_t offset = sizeof(num_states) + sizeof(num_futures) +
+        sizeof(num_final);
+    offset += sizeof(b64) * (
+        BitmapIndex::StorageSize(num_states * 2 + 1) +
+        BitmapIndex::StorageSize(num_futures + num_states + 1) +
+        BitmapIndex::StorageSize(num_states));
+    offset += (num_states + 1) * sizeof(label) + num_futures * sizeof(label);
+    // Pad for alignemnt, see
+    // http://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
+    offset = (offset + sizeof(weight) - 1) & ~(sizeof(weight) - 1);
+    offset += (num_states + 1) * sizeof(weight) + num_final * sizeof(weight) +
         (num_futures + 1) * sizeof(weight);
+    return offset;
   }
 
   void SetInstFuture(StateId state, NGramFstInst<A> *inst) const {
@@ -404,6 +408,7 @@ NGramFstImpl<A>::NGramFstImpl(const Fst<A> &fst, vector<StateId>* order_out)
   offset += (num_states + 1) * sizeof(label);
   Label* future_words = reinterpret_cast<Label*>(data + offset);
   offset += num_futures * sizeof(label);
+  offset = (offset + sizeof(weight) - 1) & ~(sizeof(weight) - 1);
   Weight* backoff = reinterpret_cast<Weight*>(data + offset);
   offset += (num_states + 1) * sizeof(weight);
   Weight* final_probs = reinterpret_cast<Weight*>(data + offset);
@@ -507,6 +512,7 @@ inline void NGramFstImpl<A>::Init(const char* data, bool owned) {
   offset += (num_states_ + 1) * sizeof(*context_words_);
   future_words_ = reinterpret_cast<const Label*>(data_ + offset);
   offset += num_futures_ * sizeof(*future_words_);
+  offset = (offset + sizeof(*backoff_) - 1) & ~(sizeof(*backoff_) - 1);
   backoff_ = reinterpret_cast<const Weight*>(data_ + offset);
   offset += (num_states_ + 1) * sizeof(*backoff_);
   final_probs_ = reinterpret_cast<const Weight*>(data_ + offset);
@@ -819,8 +825,8 @@ class ArcIterator<NGramFst<A> > : public ArcIteratorBase<A> {
       lazy_ &= ~kArcNextStateValue;
     }
     if (flags_ & lazy_ & kArcWeightValue) {
-        arc_.weight = eps ?  impl_->backoff_[inst_.state_] :
-            arc_.weight = impl_->future_probs_[inst_.offset_ + state];
+      arc_.weight = eps ?  impl_->backoff_[inst_.state_] :
+          impl_->future_probs_[inst_.offset_ + state];
       lazy_ &= ~kArcWeightValue;
     }
     return arc_;
