@@ -3,9 +3,6 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
-/* Define to 1 if you have the ICU library. */
-#undef HAVE_ICU
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -17,10 +14,6 @@
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
-
-/* Define to 1 if the system has the type `std::tr1::hash<long long
-   unsigned>'. */
-#undef HAVE_STD__TR1__HASH_LONG_LONG_UNSIGNED_
 
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
@@ -36,9 +29,6 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
-
-/* Define to 1 if the system has the type `__gnu_cxx::slist<int>'. */
-#undef HAVE___GNU_CXX__SLIST_INT_
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */

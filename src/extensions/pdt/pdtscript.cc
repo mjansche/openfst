@@ -26,6 +26,7 @@ using std::vector;
 using std::pair; using std::make_pair;
 
 
+#include <fst/compat.h>
 #include <fst/extensions/pdt/compose.h>
 #include <fst/extensions/pdt/expand.h>
 #include <fst/extensions/pdt/pdtscript.h>
@@ -41,7 +42,7 @@ void PdtCompose(const FstClass &ifst1,
                 const FstClass &ifst2,
                 const vector<pair<int64, int64> > &parens,
                 MutableFstClass *ofst,
-                const ComposeOptions &copts,
+                const PdtComposeOptions &copts,
                 bool left_pdt) {
   if (!ArcTypesMatch(ifst1, ifst2, "PdtCompose") ||
       !ArcTypesMatch(ifst1, *ofst, "PdtCompose")) return;
