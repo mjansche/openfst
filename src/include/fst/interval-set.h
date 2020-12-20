@@ -382,7 +382,7 @@ bool IntervalSet<T, Store>::Contains(const IntervalSet<T, Store> &iset) const {
 template <typename T, class Store>
 std::ostream &operator<<(std::ostream &strm, const IntervalSet<T, Store> &s) {
   strm << "{";
-  for (auto i = 0; i < s.Size(); ++i) {
+  for (T i = 0; i < s.Size(); ++i) {
     if (i > 0) {
       strm << ",";
     }

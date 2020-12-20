@@ -20,9 +20,10 @@ DEFINE_string(relabel_osymbols, "", "Output symbol set to relabel to");
 DEFINE_string(relabel_ipairs, "", "Input relabel pairs (numeric)");
 DEFINE_string(relabel_opairs, "", "Output relabel pairs (numeric)");
 DEFINE_string(unknown_isymbol, "",
-              "Input symbol to use to relabel OOVs (def: OOVs are errors");
-DEFINE_string(unknown_osymbol, "",
-              "Output symbol to use to relabel OOVs (def: OOVs are errors");
+              "Input symbol to use to relabel OOVs (default: OOVs are errors)");
+DEFINE_string(
+    unknown_osymbol, "",
+    "Output symbol to use to relabel OOVs (default: OOVs are errors)");
 
 DEFINE_bool(allow_negative_labels, false,
             "Allow negative labels (not recommended; may cause conflicts)");
@@ -38,12 +39,12 @@ int main(int argc, char** argv) {
       "  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-  usage += " Using SymbolTables flags:\n";
-  usage += "  -relabel_isymbols isyms.txt\n";
-  usage += "  -relabel_osymbols osyms.txt\n";
-  usage += " Using numeric labels flags:\n";
-  usage += "  -relabel_ipairs   ipairs.txt\n";
-  usage += "  -relabel_opairs   opairs.txts\n";
+  usage += "\n Using SymbolTables flags:\n";
+  usage += "  --relabel_isymbols isyms.map\n";
+  usage += "  --relabel_osymbols osyms.map\n";
+  usage += "\n Using numeric labels flags:\n";
+  usage += "  --relabel_ipairs ipairs.txt\n";
+  usage += "  --relabel_opairs opairs.txt\n";
 
   std::set_new_handler(FailedNewHandler);
   SET_FLAGS(usage.c_str(), &argc, &argv, true);

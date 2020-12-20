@@ -6,7 +6,7 @@ DEFINE_string(fst_weight_separator, ",",
 
 DEFINE_string(fst_weight_parentheses, "",
               "Characters enclosing the first weight of a printed composite "
-              "weight (e.g. pair weight, tuple weight and derived classes) to "
+              "weight (e.g., pair weight, tuple weight and derived classes) to "
               "ensure proper I/O of nested composite weights; "
               "must have size 0 (none) or 2 (open and close parenthesis)");
 

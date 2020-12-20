@@ -1,4 +1,5 @@
 OpenFst: Release 1.6
+    * Finalizes most virtual overrides (1.6.2)
     * Fixes missing includes of <fst/log.h> (1.6.1)
     * Adds float format support to FST drawing (1.6.1)
     * Extensive modernization for C++11 style (1.6.0)

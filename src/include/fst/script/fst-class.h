@@ -87,7 +87,7 @@ class FstClassImpl : public FstClassImplBase {
   explicit FstClassImpl(const Fst<Arc> &impl) : impl_(impl.Copy()) {}
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool AddArc(int64 s, const ArcClass &ac) override {
+  bool AddArc(int64 s, const ArcClass &ac) final {
     if (!ValidStateId(s)) return false;
     // Note that we do not check that the destination state is valid, so users
     // can add arcs before they add the corresponding states. Verify can be
@@ -99,30 +99,30 @@ class FstClassImpl : public FstClassImplBase {
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  int64 AddState() override {
+  int64 AddState() final {
     return static_cast<MutableFst<Arc> *>(impl_.get())->AddState();
   }
 
-  const string &ArcType() const override { return Arc::Type(); }
+  const string &ArcType() const final { return Arc::Type(); }
 
-  FstClassImpl *Copy() override { return new FstClassImpl<Arc>(impl_.get()); }
+  FstClassImpl *Copy() final { return new FstClassImpl<Arc>(impl_.get()); }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool DeleteArcs(int64 s, size_t n) override {
+  bool DeleteArcs(int64 s, size_t n) final {
     if (!ValidStateId(s)) return false;
     static_cast<MutableFst<Arc> *>(impl_.get())->DeleteArcs(s, n);
     return true;
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool DeleteArcs(int64 s) override {
+  bool DeleteArcs(int64 s) final {
     if (!ValidStateId(s)) return false;
     static_cast<MutableFst<Arc> *>(impl_.get())->DeleteArcs(s);
     return true;
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool DeleteStates(const std::vector<int64> &dstates) override {
+  bool DeleteStates(const std::vector<int64> &dstates) final {
     for (const auto &state : dstates)
       if (!ValidStateId(state)) return false;
     // Warning: calling this method with any integers beyond the precision of
@@ -134,82 +134,82 @@ class FstClassImpl : public FstClassImplBase {
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  void DeleteStates() override {
+  void DeleteStates() final {
     static_cast<MutableFst<Arc> *>(impl_.get())->DeleteStates();
   }
 
-  WeightClass Final(int64 s) const override {
+  WeightClass Final(int64 s) const final {
     if (!ValidStateId(s)) return WeightClass::NoWeight(WeightType());
     WeightClass w(impl_->Final(s));
     return w;
   }
 
-  const string &FstType() const override { return impl_->Type(); }
+  const string &FstType() const final { return impl_->Type(); }
 
-  const SymbolTable *InputSymbols() const override {
+  const SymbolTable *InputSymbols() const final {
     return impl_->InputSymbols();
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  SymbolTable *MutableInputSymbols() override {
+  SymbolTable *MutableInputSymbols() final {
     return static_cast<MutableFst<Arc> *>(impl_.get())->MutableInputSymbols();
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  SymbolTable *MutableOutputSymbols() override {
+  SymbolTable *MutableOutputSymbols() final {
     return static_cast<MutableFst<Arc> *>(impl_.get())->MutableOutputSymbols();
   }
 
   // Signals failure by returning size_t max.
-  size_t NumArcs(int64 s) const override {
+  size_t NumArcs(int64 s) const final {
     return ValidStateId(s) ? impl_->NumArcs(s)
                            : std::numeric_limits<size_t>::max();
   }
 
   // Signals failure by returning size_t max.
-  size_t NumInputEpsilons(int64 s) const override {
+  size_t NumInputEpsilons(int64 s) const final {
     return ValidStateId(s) ? impl_->NumInputEpsilons(s)
                            : std::numeric_limits<size_t>::max();
   }
 
   // Signals failure by returning size_t max.
-  size_t NumOutputEpsilons(int64 s) const override {
+  size_t NumOutputEpsilons(int64 s) const final {
     return ValidStateId(s) ? impl_->NumOutputEpsilons(s)
                            : std::numeric_limits<size_t>::max();
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  int64 NumStates() const override {
+  int64 NumStates() const final {
     return static_cast<MutableFst<Arc> *>(impl_.get())->NumStates();
   }
 
-  uint64 Properties(uint64 mask, bool test) const override {
+  uint64 Properties(uint64 mask, bool test) const final {
     return impl_->Properties(mask, test);
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool ReserveArcs(int64 s, size_t n) override {
+  bool ReserveArcs(int64 s, size_t n) final {
     if (!ValidStateId(s)) return false;
     static_cast<MutableFst<Arc> *>(impl_.get())->ReserveArcs(s, n);
     return true;
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  void ReserveStates(int64 s) override {
+  void ReserveStates(int64 s) final {
     static_cast<MutableFst<Arc> *>(impl_.get())->ReserveStates(s);
   }
 
-  const SymbolTable *OutputSymbols() const override {
+  const SymbolTable *OutputSymbols() const final {
     return impl_->OutputSymbols();
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  void SetInputSymbols(SymbolTable *isyms) override {
+  void SetInputSymbols(SymbolTable *isyms) final {
     static_cast<MutableFst<Arc> *>(impl_.get())->SetInputSymbols(isyms);
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool SetFinal(int64 s, const WeightClass &weight) override {
+  bool SetFinal(int64 s, const WeightClass &weight) final {
     if (!ValidStateId(s)) return false;
     static_cast<MutableFst<Arc> *>(impl_.get())
         ->SetFinal(s, *weight.GetWeight<typename Arc::Weight>());
@@ -217,25 +217,25 @@ class FstClassImpl : public FstClassImplBase {
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  void SetOutputSymbols(SymbolTable *osyms) override {
+  void SetOutputSymbols(SymbolTable *osyms) final {
     static_cast<MutableFst<Arc> *>(impl_.get())->SetOutputSymbols(osyms);
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  void SetProperties(uint64 props, uint64 mask) override {
+  void SetProperties(uint64 props, uint64 mask) final {
     static_cast<MutableFst<Arc> *>(impl_.get())->SetProperties(props, mask);
   }
 
   // Warning: calling this method casts the FST to a mutable FST.
-  bool SetStart(int64 s) override {
+  bool SetStart(int64 s) final {
     if (!ValidStateId(s)) return false;
     static_cast<MutableFst<Arc> *>(impl_.get())->SetStart(s);
     return true;
   }
 
-  int64 Start() const override { return impl_->Start(); }
+  int64 Start() const final { return impl_->Start(); }
 
-  bool ValidStateId(int64 s) const override {
+  bool ValidStateId(int64 s) const final {
     // This cowardly refuses to count states if the FST is not yet expanded.
     if (!Properties(kExpanded, true)) {
       FSTERROR() << "Cannot get number of states for unexpanded FST";
@@ -249,11 +249,11 @@ class FstClassImpl : public FstClassImplBase {
     return true;
   }
 
-  const string &WeightType() const override { return Arc::Weight::Type(); }
+  const string &WeightType() const final { return Arc::Weight::Type(); }
 
-  bool Write(const string &fname) const override { return impl_->Write(fname); }
+  bool Write(const string &fname) const final { return impl_->Write(fname); }
 
-  bool Write(std::ostream &ostr, const FstWriteOptions &opts) const override {
+  bool Write(std::ostream &ostr, const FstWriteOptions &opts) const final {
     return impl_->Write(ostr, opts);
   }
 
@@ -284,31 +284,31 @@ class FstClass : public FstClassBase {
     return *this;
   }
 
-  WeightClass Final(int64 s) const override { return impl_->Final(s); }
+  WeightClass Final(int64 s) const final { return impl_->Final(s); }
 
-  const string &ArcType() const override { return impl_->ArcType(); }
+  const string &ArcType() const final { return impl_->ArcType(); }
 
-  const string &FstType() const override { return impl_->FstType(); }
+  const string &FstType() const final { return impl_->FstType(); }
 
-  const SymbolTable *InputSymbols() const override {
+  const SymbolTable *InputSymbols() const final {
     return impl_->InputSymbols();
   }
 
-  size_t NumArcs(int64 s) const override { return impl_->NumArcs(s); }
+  size_t NumArcs(int64 s) const final { return impl_->NumArcs(s); }
 
-  size_t NumInputEpsilons(int64 s) const override {
+  size_t NumInputEpsilons(int64 s) const final {
     return impl_->NumInputEpsilons(s);
   }
 
-  size_t NumOutputEpsilons(int64 s) const override {
+  size_t NumOutputEpsilons(int64 s) const final {
     return impl_->NumOutputEpsilons(s);
   }
 
-  const SymbolTable *OutputSymbols() const override {
+  const SymbolTable *OutputSymbols() const final {
     return impl_->OutputSymbols();
   }
 
-  uint64 Properties(uint64 mask, bool test) const override {
+  uint64 Properties(uint64 mask, bool test) const final {
     // Special handling for FSTs with a null impl.
     if (!impl_) return kError & mask;
     return impl_->Properties(mask, test);
@@ -320,20 +320,20 @@ class FstClass : public FstClassBase {
 
   static FstClass *ReadFromString(const string &fst_string);
 
-  int64 Start() const override { return impl_->Start(); }
+  int64 Start() const final { return impl_->Start(); }
 
-  bool ValidStateId(int64 s) const override { return impl_->ValidStateId(s); }
+  bool ValidStateId(int64 s) const final { return impl_->ValidStateId(s); }
 
-  const string &WeightType() const override { return impl_->WeightType(); }
+  const string &WeightType() const final { return impl_->WeightType(); }
 
   // Helper that logs an ERROR if the weight type of an FST and a WeightClass
   // don't match.
 
   bool WeightTypesMatch(const WeightClass &weight, const string &op_name) const;
 
-  bool Write(const string &fname) const override { return impl_->Write(fname); }
+  bool Write(const string &fname) const final { return impl_->Write(fname); }
 
-  bool Write(std::ostream &ostr, const FstWriteOptions &opts) const override {
+  bool Write(std::ostream &ostr, const FstWriteOptions &opts) const final {
     return impl_->Write(ostr, opts);
   }
 
@@ -457,18 +457,6 @@ class MutableFstClass : public FstClass {
   }
 
   bool SetStart(int64 s) { return GetImpl()->SetStart(s); }
-
-  bool ValidStateId(int64 s) const override {
-    return GetImpl()->ValidStateId(s);
-  }
-
-  bool Write(std::ostream &ostr, const FstWriteOptions &opts) const override {
-    return GetImpl()->Write(ostr, opts);
-  }
-
-  bool Write(const string &fname) const override {
-    return GetImpl()->Write(fname);
-  }
 
   template <class Arc>
   explicit MutableFstClass(const MutableFst<Arc> &fst) : FstClass(fst) {}

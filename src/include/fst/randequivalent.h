@@ -52,7 +52,7 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   ArcSort(&sfst1, icomp);
   ArcSort(&sfst2, icomp);
   bool result = true;
-  for (auto n = 0; n < num_paths; ++n) {
+  for (int32 n = 0; n < num_paths; ++n) {
     VectorFst<Arc> path;
     const auto &fst = rand() % 2 ? sfst1 : sfst2;  // NOLINT
     RandGen(fst, &path, opts);

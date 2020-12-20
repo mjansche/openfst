@@ -73,7 +73,7 @@ class ArcArena {
   }
 
   const Arc* GetArcs() {
-    const Arc* arcs = arcs_;
+    const auto *arcs = arcs_;
     arcs_ = next_;
     return arcs;
   }
@@ -98,8 +98,8 @@ class ArcArena {
   // Allocates a new block with capacity of at least n or block_size,
   // copying incomplete arc sequence from old block to new block.
   void NewBlock(size_t n) {
-    size_t length = next_ - arcs_;
-    size_t new_block_size = std::max(n, block_size_);
+    const auto length = next_ - arcs_;
+    const auto new_block_size = std::max(n, block_size_);
     total_size_ += new_block_size;
     blocks_.emplace_back(MakeSharedBlock(new_block_size));
     std::copy(arcs_, next_, blocks_.back().get());
@@ -154,19 +154,20 @@ class ArcArenaStateStore {
     int* MutableRefCount() const { return nullptr; }
 
    private:
-    State(Weight final, int32 niepsilons, int32 noepsilons, int32 narcs,
+    State(Weight weight, int32 niepsilons, int32 noepsilons, int32 narcs,
           const Arc *arcs)
-        : final_(std::move(final)),
+        : final_(std::move(weight)),
           niepsilons_(niepsilons),
           noepsilons_(noepsilons),
           narcs_(narcs),
           arcs_(arcs) {}
 
-    Weight final_ = Weight::Zero;
-    int32 niepsilons_ = 0;
-    int32 noepsilons_ = 0;
-    int32 narcs_ = 0;
-    const Arc* arcs_ = nullptr;
+    Weight final_;
+    size_t niepsilons_;
+    size_t noepsilons_;
+    size_t narcs_;
+    const Arc *arcs_;
+
     friend class ArcArenaStateStore<Arc>;
   };
 
@@ -178,10 +179,10 @@ class ArcArenaStateStore {
     StateBuilder builder(&arena_);
     expander.Expand(state_id, &builder);
     const auto arcs = arena_.GetArcs();
-    int32 narcs = builder.narcs_;
-    int32 niepsilons = 0;
-    int32 noepsilons = 0;
-    for (auto i = 0; i < narcs; ++i) {
+    size_t narcs = builder.narcs_;
+    size_t niepsilons = 0;
+    size_t noepsilons = 0;
+    for (size_t i = 0; i < narcs; ++i) {
       if (arcs[i].ilabel == 0) ++niepsilons;
       if (arcs[i].olabel == 0) ++noepsilons;
     }
@@ -202,23 +203,23 @@ class ArcArenaStateStore {
   class StateBuilder {
    public:
     explicit StateBuilder(ArcArena<Arc>* arena)
-       : arena_(arena) {}
+       : arena_(arena), final_(Weight::Zero()), narcs_(0) {}
 
-    void SetFinal(Weight final) { final_ = final; }
+    void SetFinal(Weight weight) { final_ = std::move(weight); }
 
     void ReserveArcs(size_t n) { arena_->ReserveArcs(n); }
 
-    void AddArc(const Arc& arc) {
+    void AddArc(const Arc &arc) {
       ++narcs_;
       arena_->PushArc(arc);
     }
 
    private:
-    ArcArena<Arc> *arena_;
-    Weight final_ = Weight::Zero();
-    int narcs_ = 0;
-
     friend class ArcArenaStateStore<Arc>;
+
+    ArcArena<Arc> *arena_;
+    Weight final_;
+    size_t narcs_;
   };
 
   std::unordered_map<StateId, State *> cache_;

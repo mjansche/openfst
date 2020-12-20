@@ -215,6 +215,69 @@ bool SignedLogConvertCheck(W1 weight) {
   return true;
 }
 
+// Specialization using the Kahan compensated summation
+template <class T>
+class Adder<SignedLogWeightTpl<T>> {
+ public:
+  using Weight = SignedLogWeightTpl<T>;
+  using X1 = TropicalWeight;
+  using X2 = LogWeightTpl<T>;
+
+  explicit Adder(Weight w = Weight::Zero())
+     : ssum_(w.Value1().Value() > 0.0),
+        sum_(w.Value2().Value()),
+        c_(0.0) { }
+
+  Weight Add(const Weight &w) {
+    const auto sw = w.Value1().Value() > 0.0;
+    const auto f = w.Value2().Value();
+    const bool equal = (ssum_ == sw);
+
+    if (!Sum().Member() || f == FloatLimits<T>::PosInfinity()) {
+      return Sum();
+    } else if (!w.Member() || sum_ == FloatLimits<T>::PosInfinity()) {
+      sum_ = f;
+      ssum_ = sw;
+      c_ = 0.0;
+    } else if (f == sum_) {
+      if (equal) {
+        sum_ = internal::KahanLogSum(sum_, f, &c_);
+      } else {
+        sum_ = FloatLimits<T>::PosInfinity();
+        ssum_ = true;
+        c_ = 0.0;
+      }
+    } else if (f > sum_) {
+      if (equal) {
+        sum_ = internal::KahanLogSum(sum_, f, &c_);
+      } else {
+        sum_ = internal::KahanLogDiff(sum_, f, &c_);
+      }
+    } else {
+      if (equal) {
+        sum_ = internal::KahanLogSum(f, sum_, &c_);
+      } else {
+        sum_ = internal::KahanLogDiff(f, sum_, &c_);
+        ssum_ = sw;
+      }
+    }
+    return Sum();
+  }
+
+  Weight Sum() { return Weight(X1(ssum_ ? 1.0 : -1.0), X2(sum_)); }
+
+  void Reset(Weight w = Weight::Zero()) {
+    ssum_ = w.Value1().Value() > 0.0;
+    sum_ = w.Value2().Value();
+    c_ = 0.0;
+  }
+
+ private:
+  bool ssum_;   // true iff sign of sum is positive
+  double sum_;  // unsigned sum
+  double c_;    // Kahan compensation
+};
+
 // Converts to tropical.
 template <>
 struct WeightConvert<SignedLogWeight, TropicalWeight> {

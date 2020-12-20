@@ -27,16 +27,18 @@ cdef string tostring(data, encoding=?) except *
 
 cdef string weighttostring(data, encoding=?) except *
 
-cdef fst.ComposeFilter _get_compose_filter(const string &cf) except *
+cdef fst.ComposeFilter _get_compose_filter(
+    const string &compose_filter) except *
 
-cdef fst.DeterminizeType _get_determinize_type(const string &dt) except *
+cdef fst.DeterminizeType _get_determinize_type(const string &det_type) except *
 
-cdef fst.QueueType _get_queue_type(const string &qt) except *
+cdef fst.QueueType _get_queue_type(const string &queue_type) except *
 
-cdef fst.RandArcSelection _get_rand_arc_selection(const string &ras) except *
+cdef fst.RandArcSelection _get_rand_arc_selection(
+    const string &replace_label_type) except *
 
-cdef fst.ReplaceLabelType _get_replace_label_type(const string &rlt,
-    bool epsilon_on_replace) except *
+cdef fst.ReplaceLabelType _get_replace_label_type(
+    const string &replace_label_type, bool epsilon_on_replace) except *
 
 
 # Weight.
@@ -261,7 +263,7 @@ cdef class _MutableFst(_Fst):
 
   cpdef int64 add_state(self) except *
 
-  cdef void _arcsort(self, st=?) except *
+  cdef void _arcsort(self, sort_type=?) except *
 
   cdef void _closure(self, bool closure_plus=?) except *
 
@@ -416,22 +418,24 @@ cdef class StateIterator(object):
 # Constructive operations on Fst.
 
 
-cdef _Fst _map(_Fst ifst, float delta=?, mt=?, weight=?)
+cdef _Fst _map(_Fst ifst, float delta=?, map_type=?, weight=?)
 
-cpdef _Fst arcmap(_Fst ifst, float delta=?, mt=?, weight=?)
+cpdef _Fst arcmap(_Fst ifst, float delta=?, map_type=?, weight=?)
 
-cpdef _MutableFst compose(_Fst ifst1, _Fst ifst2, cf=?, bool connect=?)
+cpdef _MutableFst compose(_Fst ifst1, _Fst ifst2, compose_filter=?,
+                          bool connect=?)
 
 cpdef _Fst convert(_Fst ifst, fst_type=?)
 
-cpdef _MutableFst determinize(_Fst ifst, float delta=?, dt=?,
-    int64 nstate=?, int64 subsequential_label=?,
-    weight=?, bool increment_subsequential_label=?)
+cpdef _MutableFst determinize(_Fst ifst, float delta=?, det_type=?,
+                              int64 nstate=?, int64 subsequential_label=?,
+                              weight=?, bool increment_subsequential_label=?)
 
-cpdef _MutableFst difference(_Fst ifst1, _Fst ifst2, cf=?, bool connect=?)
+cpdef _MutableFst difference(_Fst ifst1, _Fst ifst2, compose_filter=?,
+                             bool connect=?)
 
 cpdef _MutableFst disambiguate(_Fst ifst, float delta=?, int64 nstate=?,
-                            int64 subsequential_label=?, weight=?)
+                               int64 subsequential_label=?, weight=?)
 
 cpdef _MutableFst epsnormalize(_Fst ifst, bool eps_norm_output=?)
 
@@ -439,7 +443,8 @@ cpdef bool equal(_Fst ifst1, _Fst ifst2, float delta=?)
 
 cpdef bool equivalent(_Fst ifst1, _Fst ifst2, float delta=?) except *
 
-cpdef _MutableFst intersect(_Fst ifst1, _Fst ifst2, cf=?, bool connect=?)
+cpdef _MutableFst intersect(_Fst ifst1, _Fst ifst2, compose_filter=?,
+                            bool connect=?)
 
 cpdef bool isomorphic(_Fst ifst1, _Fst ifst2, float delta=?)
 
@@ -461,25 +466,24 @@ cpdef _MutableFst randgen(_Fst ifst, int32 npath=?, time_t seed=?,
 cdef fst.ReplaceLabelType _get_replace_label_type(string rlt,
     bool epsilon_on_replace) except *
 
-cpdef _MutableFst replace(pairs, call_arc_labeling=?,
-                          return_arc_labeling=?, bool epsilon_on_replace=?,
-                          int64 return_label=?)
+cpdef _MutableFst replace(pairs, call_arc_labeling=?, return_arc_labeling=?,
+                          bool epsilon_on_replace=?, int64 return_label=?)
 
 cpdef _MutableFst reverse(_Fst ifst, bool require_superinitial=?)
 
 cpdef _MutableFst rmepsilon(_Fst ifst, bool connect=?, float delta=?,
-                            int64 nstate=?, qt=?, bool reverse=?,
+                            int64 nstate=?, queue_type=?, bool reverse=?,
                             weight=?)
 
 cdef vector[fst.WeightClass] *_shortestdistance(_Fst ifst, float delta=?,
-                                                int64 nstate=?, qt=?,
+                                                int64 nstate=?, queue_type=?,
                                                 bool reverse=?) except *
 
 cpdef _MutableFst shortestpath(_Fst ifst, float delta=?, int32 nshortest=?,
-                               int64 nstate=?, qt=?, bool unique=?,
+                               int64 nstate=?, queue_type=?, bool unique=?,
                                weight=?)
 
-cpdef _Fst statemap(_Fst ifst, mt)
+cpdef _Fst statemap(_Fst ifst, map_type)
 
 cpdef _MutableFst synchronize(_Fst ifst)
 

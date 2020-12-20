@@ -314,7 +314,7 @@ inline std::ostream &operator<<(std::ostream &strm,
   } else if (iter.Value() == kStringBad) {
     return strm << "BadString";
   } else {
-    for (auto i = 0; !iter.Done(); ++i, iter.Next()) {
+    for (size_t i = 0; !iter.Done(); ++i, iter.Next()) {
       if (i > 0) strm << kStringSeparator;
       strm << iter.Value();
     }
@@ -518,10 +518,10 @@ class WeightGenerate<StringWeight<Label, S>> {
         max_string_length_(max_string_length) {}
 
   Weight operator()() const {
-    int n = rand() % (max_string_length_ + allow_zero_);  // NOLINT
+    size_t n = rand() % (max_string_length_ + allow_zero_);  // NOLINT
     if (allow_zero_ && n == max_string_length_) return Weight::Zero();
     std::vector<Label> labels(n);
-    for (auto i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
       labels.push_back(rand() % alphabet_size_ + 1);  // NOLINT
     }
     return Weight(labels.begin(), labels.end());

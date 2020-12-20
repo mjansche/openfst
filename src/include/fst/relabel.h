@@ -459,8 +459,8 @@ class ArcIterator<RelabelFst<Arc>> : public CacheArcIterator<RelabelFst<Arc>> {
   using StateId = typename Arc::StateId;
 
   ArcIterator(const RelabelFst<Arc> &fst, StateId s)
-      : CacheArcIterator<RelabelFst<Arc>>(fst.GetImpl(), s) {
-    if (!fst.GetImpl()->HasArcs(s)) fst.GetImpl()->Expand(s);
+      : CacheArcIterator<RelabelFst<Arc>>(fst.GetMutableImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s)) fst.GetMutableImpl()->Expand(s);
   }
 };
 

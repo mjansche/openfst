@@ -57,7 +57,7 @@ inline std::istream &ReadType(std::istream &strm, string *s) {  // NOLINT
   s->clear();
   int32 ns = 0;
   strm.read(reinterpret_cast<char *>(&ns), sizeof(ns));
-  for (auto i = 0; i < ns; ++i) {
+  for (int32 i = 0; i < ns; ++i) {
     char c;
     strm.read(&c, 1);
     *s += c;

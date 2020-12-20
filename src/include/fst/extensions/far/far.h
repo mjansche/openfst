@@ -160,13 +160,13 @@ class STTableFarWriter : public FarWriter<A> {
     return new STTableFarWriter(writer);
   }
 
-  void Add(const string &key, const Fst<Arc> &fst) override {
+  void Add(const string &key, const Fst<Arc> &fst) final {
     writer_->Add(key, fst);
   }
 
-  FarType Type() const override { return FAR_STTABLE; }
+  FarType Type() const final { return FAR_STTABLE; }
 
-  bool Error() const override { return writer_->Error(); }
+  bool Error() const final { return writer_->Error(); }
 
  private:
   explicit STTableFarWriter(STTableWriter<Fst<Arc>, FstWriter<Arc>> *writer)
@@ -185,13 +185,13 @@ class STListFarWriter : public FarWriter<A> {
     return new STListFarWriter(writer);
   }
 
-  void Add(const string &key, const Fst<Arc> &fst) override {
+  void Add(const string &key, const Fst<Arc> &fst) final {
     writer_->Add(key, fst);
   }
 
-  constexpr FarType Type() const override { return FAR_STLIST; }
+  constexpr FarType Type() const final { return FAR_STLIST; }
 
-  bool Error() const override { return writer_->Error(); }
+  bool Error() const final { return writer_->Error(); }
 
  private:
   explicit STListFarWriter(STListWriter<Fst<Arc>, FstWriter<Arc>> *writer)
@@ -212,7 +212,7 @@ class FstFarWriter : public FarWriter<A> {
     return new FstFarWriter(filename);
   }
 
-  void Add(const string &key, const Fst<A> &fst) override {
+  void Add(const string &key, const Fst<A> &fst) final {
     if (written_) {
       LOG(WARNING) << "FstFarWriter::Add: only one FST supported,"
                    << " subsequent entries discarded.";
@@ -222,11 +222,11 @@ class FstFarWriter : public FarWriter<A> {
     }
   }
 
-  constexpr FarType Type() const override { return FAR_FST; }
+  constexpr FarType Type() const final { return FAR_FST; }
 
-  bool Error() const override { return error_; }
+  bool Error() const final { return error_; }
 
-  ~FstFarWriter() override {}
+  ~FstFarWriter() final {}
 
  private:
   string filename_;
@@ -276,21 +276,21 @@ class STTableFarReader : public FarReader<A> {
     return new STTableFarReader(reader);
   }
 
-  void Reset() override { reader_->Reset(); }
+  void Reset() final { reader_->Reset(); }
 
-  bool Find(const string &key) override { return reader_->Find(key); }
+  bool Find(const string &key) final { return reader_->Find(key); }
 
-  bool Done() const override { return reader_->Done(); }
+  bool Done() const final { return reader_->Done(); }
 
-  void Next() override { return reader_->Next(); }
+  void Next() final { return reader_->Next(); }
 
-  const string &GetKey() const override { return reader_->GetKey(); }
+  const string &GetKey() const final { return reader_->GetKey(); }
 
-  const Fst<Arc> *GetFst() const override { return reader_->GetEntry(); }
+  const Fst<Arc> *GetFst() const final { return reader_->GetEntry(); }
 
-  constexpr FarType Type() const override { return FAR_STTABLE; }
+  constexpr FarType Type() const final { return FAR_STTABLE; }
 
-  bool Error() const override { return reader_->Error(); }
+  bool Error() const final { return reader_->Error(); }
 
  private:
   explicit STTableFarReader(STTableReader<Fst<Arc>, FstReader<Arc>> *reader)
@@ -316,21 +316,21 @@ class STListFarReader : public FarReader<A> {
     return new STListFarReader(reader);
   }
 
-  void Reset() override { reader_->Reset(); }
+  void Reset() final { reader_->Reset(); }
 
-  bool Find(const string &key) override { return reader_->Find(key); }
+  bool Find(const string &key) final { return reader_->Find(key); }
 
-  bool Done() const override { return reader_->Done(); }
+  bool Done() const final { return reader_->Done(); }
 
-  void Next() override { return reader_->Next(); }
+  void Next() final { return reader_->Next(); }
 
-  const string &GetKey() const override { return reader_->GetKey(); }
+  const string &GetKey() const final { return reader_->GetKey(); }
 
-  const Fst<Arc> *GetFst() const override { return reader_->GetEntry(); }
+  const Fst<Arc> *GetFst() const final { return reader_->GetEntry(); }
 
-  constexpr FarType Type() const override { return FAR_STLIST; }
+  constexpr FarType Type() const final { return FAR_STLIST; }
 
-  bool Error() const override { return reader_->Error(); }
+  bool Error() const final { return reader_->Error(); }
 
  private:
   explicit STListFarReader(STListReader<Fst<Arc>, FstReader<Arc>> *reader)
@@ -379,7 +379,7 @@ class FstFarReader : public FarReader<A> {
     ReadFst();
   }
 
-  void Reset() override {
+  void Reset() final {
     if (has_stdin_) {
       FSTERROR()
           << "FstFarReader::Reset: Operation not supported on standard input";
@@ -390,7 +390,7 @@ class FstFarReader : public FarReader<A> {
     ReadFst();
   }
 
-  bool Find(const string &key) override {
+  bool Find(const string &key) final {
     if (has_stdin_) {
       FSTERROR()
           << "FstFarReader::Find: Operation not supported on standard input";
@@ -402,22 +402,22 @@ class FstFarReader : public FarReader<A> {
     return true;
   }
 
-  bool Done() const override { return error_ || pos_ >= keys_.size(); }
+  bool Done() const final { return error_ || pos_ >= keys_.size(); }
 
-  void Next() override {
+  void Next() final {
     ++pos_;
     ReadFst();
   }
 
-  const string &GetKey() const override { return keys_[pos_]; }
+  const string &GetKey() const final { return keys_[pos_]; }
 
-  const Fst<Arc> *GetFst() const override { return fst_.get(); }
+  const Fst<Arc> *GetFst() const final { return fst_.get(); }
 
-  constexpr FarType Type() const override { return FAR_FST; }
+  constexpr FarType Type() const final { return FAR_FST; }
 
-  bool Error() const override { return error_; }
+  bool Error() const final { return error_; }
 
-  ~FstFarReader() override {
+  ~FstFarReader() final {
     for (size_t i = 0; i < keys_.size(); ++i) {
       if (streams_[i] != &std::cin) {
         delete streams_[i];

@@ -36,7 +36,7 @@ inline bool CompatProperties(uint64 props1, uint64 props2) {
   const auto incompat_props = (props1 & known_props) ^ (props2 & known_props);
   if (incompat_props) {
     uint64 prop = 1;
-    for (auto i = 0; i < 64; ++i, prop <<= 1) {
+    for (int i = 0; i < 64; ++i, prop <<= 1) {
       if (prop & incompat_props) {
         LOG(ERROR) << "CompatProperties: Mismatch: " << PropertyNames[i]
                    << ": props1 = " << (props1 & prop ? "true" : "false")

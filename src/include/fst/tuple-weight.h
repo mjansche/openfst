@@ -60,12 +60,12 @@ class TupleWeight {
   constexpr static size_t Length() { return n; }
 
   std::istream &Read(std::istream &istrm) {
-    for (auto i = 0; i < n; ++i) values_[i].Read(istrm);
+    for (size_t i = 0; i < n; ++i) values_[i].Read(istrm);
     return istrm;
   }
 
   std::ostream &Write(std::ostream &ostrm) const {
-    for (auto i = 0; i < n; ++i) values_[i].Write(ostrm);
+    for (size_t i = 0; i < n; ++i) values_[i].Write(ostrm);
     return ostrm;
   }
 
@@ -76,19 +76,21 @@ class TupleWeight {
 
   size_t Hash() const {
     uint64 hash = 0;
-    for (auto i = 0; i < n; ++i) hash = 5 * hash + values_[i].Hash();
+    for (size_t i = 0; i < n; ++i) hash = 5 * hash + values_[i].Hash();
     return size_t(hash);
   }
 
   TupleWeight<W, n> Quantize(float delta = kDelta) const {
     TupleWeight<W, n> weight;
-    for (auto i = 0; i < n; ++i) weight.values_[i] = values_[i].Quantize(delta);
+    for (size_t i = 0; i < n; ++i) {
+      weight.values_[i] = values_[i].Quantize(delta);
+    }
     return weight;
   }
 
   ReverseWeight Reverse() const {
     TupleWeight<W, n> w;
-    for (auto i = 0; i < n; ++i) w.values_[i] = values_[i].Reverse();
+    for (size_t i = 0; i < n; ++i) w.values_[i] = values_[i].Reverse();
     return w;
   }
 
@@ -103,7 +105,7 @@ class TupleWeight {
 template <class W, size_t n>
 inline bool operator==(const TupleWeight<W, n> &w1,
                        const TupleWeight<W, n> &w2) {
-  for (auto i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     if (w1.Value(i) != w2.Value(i)) return false;
   }
   return true;
@@ -112,7 +114,7 @@ inline bool operator==(const TupleWeight<W, n> &w1,
 template <class W, size_t n>
 inline bool operator!=(const TupleWeight<W, n> &w1,
                        const TupleWeight<W, n> &w2) {
-  for (auto i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     if (w1.Value(i) != w2.Value(i)) return true;
   }
   return false;
@@ -121,7 +123,7 @@ inline bool operator!=(const TupleWeight<W, n> &w1,
 template <class W, size_t n>
 inline bool ApproxEqual(const TupleWeight<W, n> &w1,
                         const TupleWeight<W, n> &w2, float delta = kDelta) {
-  for (auto i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     if (!ApproxEqual(w1.Value(i), w2.Value(i), delta)) return false;
   }
   return true;
@@ -132,7 +134,7 @@ inline std::ostream &operator<<(std::ostream &strm,
                                 const TupleWeight<W, n> &w) {
   CompositeWeightWriter writer(strm);
   writer.WriteBegin();
-  for (auto i = 0; i < n; ++i) writer.WriteElement(w.Value(i));
+  for (size_t i = 0; i < n; ++i) writer.WriteElement(w.Value(i));
   writer.WriteEnd();
   return strm;
 }
@@ -143,7 +145,7 @@ inline std::istream &operator>>(std::istream &strm, TupleWeight<W, n> &w) {
   reader.ReadBegin();
   W v;
   // Reads first n-1 elements.
-  for (auto i = 0; i < n - 1; ++i) {
+  for (size_t i = 0; i < n - 1; ++i) {
     reader.ReadElement(&v);
     w.SetValue(i, v);
   }

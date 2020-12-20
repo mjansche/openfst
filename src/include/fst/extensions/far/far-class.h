@@ -47,26 +47,26 @@ class FarReaderClassImpl : public FarReaderImplBase {
   explicit FarReaderClassImpl(const std::vector<string> &filenames)
       : impl_(FarReader<Arc>::Open(filenames)) {}
 
-  const string &ArcType() const override { return Arc::Type(); }
+  const string &ArcType() const final { return Arc::Type(); }
 
-  bool Done() const override { return impl_->Done(); }
+  bool Done() const final { return impl_->Done(); }
 
-  bool Error() const override { return impl_->Error(); }
+  bool Error() const final { return impl_->Error(); }
 
-  bool Find(const string &key) override { return impl_->Find(key); }
+  bool Find(const string &key) final { return impl_->Find(key); }
 
-  const FstClass *GetFstClass() const override {
+  const FstClass *GetFstClass() const final {
     fstc_.reset(new FstClass(*impl_->GetFst()));
     return fstc_.get();
   }
 
-  const string &GetKey() const override { return impl_->GetKey(); }
+  const string &GetKey() const final { return impl_->GetKey(); }
 
-  void Next() override { return impl_->Next(); }
+  void Next() final { return impl_->Next(); }
 
-  void Reset() override { impl_->Reset(); }
+  void Reset() final { impl_->Reset(); }
 
-  FarType Type() const override { return impl_->Type(); }
+  FarType Type() const final { return impl_->Type(); }
 
   const FarReader<Arc> *GetImpl() const { return impl_.get(); }
 
@@ -180,7 +180,7 @@ class FarWriterClassImpl : public FarWriterImplBase {
                               FarType type = FAR_DEFAULT)
       : impl_(FarWriter<Arc>::Create(filename, type)) {}
 
-  bool Add(const string &key, const FstClass &fst) override {
+  bool Add(const string &key, const FstClass &fst) final {
     if (ArcType() != fst.ArcType()) {
       FSTERROR() << "Cannot write FST with " << fst.ArcType() << " arcs to "
                  << "FAR with " << ArcType() << " arcs";
@@ -190,11 +190,11 @@ class FarWriterClassImpl : public FarWriterImplBase {
     return true;
   }
 
-  const string &ArcType() const override { return Arc::Type(); }
+  const string &ArcType() const final { return Arc::Type(); }
 
-  bool Error() const override { return impl_->Error(); }
+  bool Error() const final { return impl_->Error(); }
 
-  FarType Type() const override { return impl_->Type(); }
+  FarType Type() const final { return impl_->Type(); }
 
   const FarWriter<Arc> *GetImpl() const { return impl_.get(); }
 

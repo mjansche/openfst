@@ -221,7 +221,7 @@ DefaultCompactStore<Element, Unsigned>::DefaultCompactStore(
   }
   size_t pos = 0;
   size_t fpos = 0;
-  for (auto s = 0; s < nstates_; ++s) {
+  for (size_t s = 0; s < nstates_; ++s) {
     fpos = pos;
     if (compactor.Size() == -1) states_[s] = pos;
     if (fst.Final(s) != Weight::Zero()) {

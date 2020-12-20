@@ -199,7 +199,7 @@ void RmEpsilon(MutableFst<Arc> *fst,
   // transition or is the start state.
   std::vector<bool> noneps_in(fst->NumStates(), false);
   noneps_in[fst->Start()] = true;
-  for (auto i = 0; i < fst->NumStates(); ++i) {
+  for (size_t i = 0; i < fst->NumStates(); ++i) {
     for (ArcIterator<Fst<Arc>> aiter(*fst, i); !aiter.Done(); aiter.Next()) {
       const auto &arc = aiter.Value();
       if (arc.ilabel != 0 || arc.olabel != 0) {
@@ -212,7 +212,7 @@ void RmEpsilon(MutableFst<Arc> *fst,
   std::vector<StateId> states;
   states.reserve(fst->NumStates());
   if (fst->Properties(kTopSorted, false) & kTopSorted) {
-    for (auto i = 0; i < fst->NumStates(); i++) states.push_back(i);
+    for (size_t i = 0; i < fst->NumStates(); i++) states.push_back(i);
   } else if (fst->Properties(kAcyclic, false) & kAcyclic) {
     std::vector<StateId> order;
     bool acyclic;
@@ -264,7 +264,7 @@ void RmEpsilon(MutableFst<Arc> *fst,
   }
   if (opts.connect || opts.weight_threshold != Weight::Zero() ||
       opts.state_threshold != kNoStateId) {
-    for (auto s = 0; s < fst->NumStates(); ++s) {
+    for (size_t s = 0; s < fst->NumStates(); ++s) {
       if (!noneps_in[s]) fst->DeleteArcs(s);
     }
   }

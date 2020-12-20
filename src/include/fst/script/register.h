@@ -69,7 +69,7 @@ class FstClassIORegister
   }
 
  protected:
-  string ConvertKeyToSoFilename(const string &key) const override {
+  string ConvertKeyToSoFilename(const string &key) const final {
     string legal_type(key);
     ConvertToLegalCSymbol(&legal_type);
     return legal_type + "-arc.so";

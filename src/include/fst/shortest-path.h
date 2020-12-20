@@ -74,7 +74,7 @@ void SingleShortestPathBacktrace(
   ofst->SetOutputSymbols(ifst.OutputSymbols());
   StateId s_p = kNoStateId;
   StateId d_p = kNoStateId;
-  for (auto state = f_parent, d = kNoStateId; state != kNoStateId;
+  for (StateId state = f_parent, d = kNoStateId; state != kNoStateId;
        d = state, state = parent[state].first) {
     d_p = s_p;
     s_p = ofst->AddState();

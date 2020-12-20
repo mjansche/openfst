@@ -42,27 +42,27 @@ class ArcIteratorClassImpl : public ArcIteratorImplBase {
   explicit ArcIteratorClassImpl(const Fst<Arc> &fst, int64 s)
       : aiter_(fst, s) {}
 
-  bool Done() const override { return aiter_.Done(); }
+  bool Done() const final { return aiter_.Done(); }
 
-  uint32 Flags() const override { return aiter_.Flags(); }
+  uint32 Flags() const final { return aiter_.Flags(); }
 
-  void Next() override { aiter_.Next(); }
+  void Next() final { aiter_.Next(); }
 
-  size_t Position() const override { return aiter_.Position(); }
+  size_t Position() const final { return aiter_.Position(); }
 
-  void Reset() override { aiter_.Reset(); }
+  void Reset() final { aiter_.Reset(); }
 
-  void Seek(size_t a) override { aiter_.Seek(a); }
+  void Seek(size_t a) final { aiter_.Seek(a); }
 
-  void SetFlags(uint32 flags, uint32 mask) override {
+  void SetFlags(uint32 flags, uint32 mask) final {
     aiter_.SetFlags(flags, mask);
   }
 
   // This is returned by value because it has not yet been constructed, and
   // is likely to participate in return-value optimization.
-  ArcClass Value() const override { return ArcClass(aiter_.Value()); }
+  ArcClass Value() const final { return ArcClass(aiter_.Value()); }
 
-  ~ArcIteratorClassImpl() override {}
+  ~ArcIteratorClassImpl() final {}
 
  private:
   ArcIterator<Fst<Arc>> aiter_;
@@ -117,6 +117,7 @@ void InitArcIteratorClass(InitArcIteratorClassArgs *args) {
 class MutableArcIteratorImplBase : public ArcIteratorImplBase {
  public:
   virtual void SetValue(const ArcClass &) = 0;
+
   ~MutableArcIteratorImplBase() override {}
 };
 
@@ -128,31 +129,29 @@ class MutableArcIteratorClassImpl
   explicit MutableArcIteratorClassImpl(MutableFst<Arc> *fst, int64 s)
       : aiter_(fst, s) {}
 
-  bool Done() const override { return aiter_.Done(); }
+  bool Done() const final { return aiter_.Done(); }
 
-  uint32 Flags() const override { return aiter_.Flags(); }
+  uint32 Flags() const final { return aiter_.Flags(); }
 
-  void Next() override { aiter_.Next(); }
+  void Next() final { aiter_.Next(); }
 
-  size_t Position() const override { return aiter_.Position(); }
+  size_t Position() const final { return aiter_.Position(); }
 
-  void Reset() override { aiter_.Reset(); }
+  void Reset() final { aiter_.Reset(); }
 
-  void Seek(size_t a) override { aiter_.Seek(a); }
+  void Seek(size_t a) final { aiter_.Seek(a); }
 
-  void SetFlags(uint32 flags, uint32 mask) override {
+  void SetFlags(uint32 flags, uint32 mask) final {
     aiter_.SetFlags(flags, mask);
   }
 
   void SetValue(const Arc &arc) { aiter_.SetValue(arc); }
 
-  void SetValue(const ArcClass &ac) override {
-    aiter_.SetValue(ac.GetArc<Arc>());
-  }
+  void SetValue(const ArcClass &ac) final { aiter_.SetValue(ac.GetArc<Arc>()); }
 
   // This is returned by value because it has not yet been constructed, and
   // is likely to participate in return-value optimization.
-  ArcClass Value() const override { return ArcClass(aiter_.Value()); }
+  ArcClass Value() const final { return ArcClass(aiter_.Value()); }
 
   ~MutableArcIteratorClassImpl() override {}
 

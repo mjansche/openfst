@@ -109,7 +109,7 @@ SymbolTable *FstReadSymbols(const string &filename, bool input_symbols) {
 
 bool AddAuxiliarySymbols(const string &prefix, int64 start_label,
                          int64 nlabels, SymbolTable *syms) {
-  for (auto i = 0; i < nlabels; ++i) {
+  for (int64 i = 0; i < nlabels; ++i) {
     auto index = i + start_label;
     if (index != syms->AddSymbol(prefix + std::to_string(i), index)) {
       FSTERROR() << "AddAuxiliarySymbols: Symbol table clash";

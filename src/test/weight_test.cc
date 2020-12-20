@@ -23,6 +23,7 @@ DEFINE_int32(repeat, 10000, "number of test repetitions");
 
 namespace {
 
+using fst::Adder;
 using fst::ExpectationWeight;
 using fst::GALLIC;
 using fst::GallicWeight;
@@ -34,6 +35,7 @@ using fst::MinMaxWeightTpl;
 using fst::NaturalLess;
 using fst::PowerWeight;
 using fst::ProductWeight;
+using fst::SignedLogWeight;
 using fst::SignedLogWeightTpl;
 using fst::SparsePowerWeight;
 using fst::StringWeight;
@@ -71,6 +73,34 @@ void TestTemplatedWeights(int repeat) {
   signedlog_tester.Test(repeat);
 }
 
+template <class Weight>
+void TestAdder(int n) {
+  Weight sum = Weight::Zero();
+  Adder<Weight> adder;
+  for (int i = 0; i < n; ++i) {
+    sum = Plus(sum, Weight::One());
+    adder.Add(Weight::One());
+  }
+  CHECK(ApproxEqual(sum, adder.Sum()));
+}
+
+template <class Weight>
+void TestSignedAdder(int n) {
+  Weight sum = Weight::Zero();
+  Adder<Weight> adder;
+  const Weight minus_one = Minus(Weight::Zero(), Weight::One());
+  for (int i = 0; i < n; ++i) {
+    if (i < n/4 || i > 3*n/4) {
+      sum = Plus(sum, Weight::One());
+      adder.Add(Weight::One());
+    } else {
+      sum = Minus(sum, Weight::One());
+      adder.Add(minus_one);
+    }
+  }
+  CHECK(ApproxEqual(sum, adder.Sum()));
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
@@ -94,6 +124,12 @@ int main(int argc, char **argv) {
   CHECK(LogWeightTpl<double>::Type() != LogWeightTpl<float>::Type());
   TropicalWeightTpl<double> w(15.0);
   TropicalWeight tw(15.0);
+
+  TestAdder<TropicalWeight>(1000);
+  TestAdder<LogWeight>(1000);
+  TestSignedAdder<SignedLogWeight>(1000);
+
+  return 0;
 
   using LeftStringWeight = StringWeight<int>;
   using LeftStringWeightGenerate = WeightGenerate<LeftStringWeight>;

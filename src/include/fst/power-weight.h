@@ -80,8 +80,9 @@ template <class W, size_t n>
 inline PowerWeight<W, n> Plus(const PowerWeight<W, n> &w1,
                               const PowerWeight<W, n> &w2) {
   PowerWeight<W, n> result;
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i) {
     result.SetValue(i, Plus(w1.Value(i), w2.Value(i)));
+  }
   return result;
 }
 
@@ -90,8 +91,9 @@ template <class W, size_t n>
 inline PowerWeight<W, n> Times(const PowerWeight<W, n> &w1,
                                const PowerWeight<W, n> &w2) {
   PowerWeight<W, n> result;
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i) {
     result.SetValue(i, Times(w1.Value(i), w2.Value(i)));
+  }
   return result;
 }
 
@@ -101,7 +103,7 @@ inline PowerWeight<W, n> Divide(const PowerWeight<W, n> &w1,
                                 const PowerWeight<W, n> &w2,
                                 DivideType type = DIVIDE_ANY) {
   PowerWeight<W, n> result;
-  for (auto i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     result.SetValue(i, Divide(w1.Value(i), w2.Value(i), type));
   }
   return result;
@@ -112,8 +114,9 @@ template <class W, size_t n>
 inline PowerWeight<W, n> Times(const W &scalar,
                                const PowerWeight<W, n> &weight) {
   PowerWeight<W, n> result;
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i) {
     result.SetValue(i, Times(scalar, weight.Value(i)));
+  }
   return result;
 }
 
@@ -122,8 +125,9 @@ template <class W, size_t n>
 inline PowerWeight<W, n> Times(const PowerWeight<W, n> &weight,
                                const W &scalar) {
   PowerWeight<W, n> result;
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i) {
     result.SetValue(i, Times(weight.Value(i), scalar));
+  }
   return result;
 }
 
@@ -131,8 +135,9 @@ inline PowerWeight<W, n> Times(const PowerWeight<W, n> &weight,
 template <class W, size_t n>
 inline W DotProduct(const PowerWeight<W, n> &w1, const PowerWeight<W, n> &w2) {
   W result(W::Zero());
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i) {
     result = Plus(result, Times(w1.Value(i), w2.Value(i)));
+  }
   return result;
 }
 
@@ -148,7 +153,7 @@ class WeightGenerate<PowerWeight<W, n>> {
 
   Weight operator()() const {
     Weight result;
-    for (auto i = 0; i < n; ++i) result.SetValue(i, generate_());
+    for (size_t i = 0; i < n; ++i) result.SetValue(i, generate_());
     return result;
   }
 
