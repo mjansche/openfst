@@ -52,12 +52,15 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am_algo_test_OBJECTS = algo_test.$(OBJEXT)
 algo_test_OBJECTS = $(am_algo_test_OBJECTS)
+algo_test_LDADD = $(LDADD)
 algo_test_DEPENDENCIES = ../lib/libfst.la
 am_fst_test_OBJECTS = fst_test.$(OBJEXT)
 fst_test_OBJECTS = $(am_fst_test_OBJECTS)
+fst_test_LDADD = $(LDADD)
 fst_test_DEPENDENCIES = ../lib/libfst.la
 am_weight_test_OBJECTS = weight_test.$(OBJEXT)
 weight_test_OBJECTS = $(am_weight_test_OBJECTS)
+weight_test_LDADD = $(LDADD)
 weight_test_DEPENDENCIES = ../lib/libfst.la
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -213,13 +216,10 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
-AM_LDFLAGS = -lm -ldl
+LDADD = ../lib/libfst.la -lm -ldl
 fst_test_SOURCES = fst_test.cc fst_test.h
-fst_test_LDADD = ../lib/libfst.la
 weight_test_SOURCES = weight_test.cc weight-tester.h
-weight_test_LDADD = ../lib/libfst.la
 algo_test_SOURCES = algo_test.cc algo_test.h
-algo_test_LDADD = ../lib/libfst.la
 all: all-am
 
 .SUFFIXES:

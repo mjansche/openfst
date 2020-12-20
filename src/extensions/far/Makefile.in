@@ -98,23 +98,38 @@ am__farcompilestrings_SOURCES_DIST = farcompilestrings.cc
 @HAVE_BIN_TRUE@am_farcompilestrings_OBJECTS =  \
 @HAVE_BIN_TRUE@	farcompilestrings.$(OBJEXT)
 farcompilestrings_OBJECTS = $(am_farcompilestrings_OBJECTS)
-@HAVE_BIN_TRUE@farcompilestrings_DEPENDENCIES = $(farbindeps)
+farcompilestrings_LDADD = $(LDADD)
+@HAVE_BIN_TRUE@farcompilestrings_DEPENDENCIES = libfstfarscript.la \
+@HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@	../../lib/libfst.la
 am__farcreate_SOURCES_DIST = farcreate.cc
 @HAVE_BIN_TRUE@am_farcreate_OBJECTS = farcreate.$(OBJEXT)
 farcreate_OBJECTS = $(am_farcreate_OBJECTS)
-@HAVE_BIN_TRUE@farcreate_DEPENDENCIES = $(farbindeps)
+farcreate_LDADD = $(LDADD)
+@HAVE_BIN_TRUE@farcreate_DEPENDENCIES = libfstfarscript.la \
+@HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@	../../lib/libfst.la
 am__farextract_SOURCES_DIST = farextract.cc
 @HAVE_BIN_TRUE@am_farextract_OBJECTS = farextract.$(OBJEXT)
 farextract_OBJECTS = $(am_farextract_OBJECTS)
-@HAVE_BIN_TRUE@farextract_DEPENDENCIES = $(farbindeps)
+farextract_LDADD = $(LDADD)
+@HAVE_BIN_TRUE@farextract_DEPENDENCIES = libfstfarscript.la \
+@HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@	../../lib/libfst.la
 am__farinfo_SOURCES_DIST = farinfo.cc
 @HAVE_BIN_TRUE@am_farinfo_OBJECTS = farinfo.$(OBJEXT)
 farinfo_OBJECTS = $(am_farinfo_OBJECTS)
-@HAVE_BIN_TRUE@farinfo_DEPENDENCIES = $(farbindeps)
+farinfo_LDADD = $(LDADD)
+@HAVE_BIN_TRUE@farinfo_DEPENDENCIES = libfstfarscript.la libfstfar.la \
+@HAVE_BIN_TRUE@	../../script/libfstscript.la \
+@HAVE_BIN_TRUE@	../../lib/libfst.la
 am__farprintstrings_SOURCES_DIST = farprintstrings.cc
 @HAVE_BIN_TRUE@am_farprintstrings_OBJECTS = farprintstrings.$(OBJEXT)
 farprintstrings_OBJECTS = $(am_farprintstrings_OBJECTS)
-@HAVE_BIN_TRUE@farprintstrings_DEPENDENCIES = $(farbindeps)
+farprintstrings_LDADD = $(LDADD)
+@HAVE_BIN_TRUE@farprintstrings_DEPENDENCIES = libfstfarscript.la \
+@HAVE_BIN_TRUE@	libfstfar.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@	../../lib/libfst.la
 DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -264,26 +279,20 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
-AM_LDFLAGS = $(ICU_LIBS) -lm -ldl
 @HAVE_SCRIPT_FALSE@libfst_LTLIBRARIES = libfstfar.la
 @HAVE_SCRIPT_TRUE@libfst_LTLIBRARIES = libfstfarscript.la libfstfar.la
 libfstfar_la_SOURCES = sttable.cc stlist.cc
 libfstfar_la_LDFLAGS = -version-info 0:0:0
 @HAVE_SCRIPT_TRUE@libfstfarscript_la_SOURCES = farscript.cc compile-strings.cc main.cc
 @HAVE_SCRIPT_TRUE@libfstfarscript_la_LDFLAGS = -version-info 0:0:0
-@HAVE_BIN_TRUE@farbindeps = libfstfarscript.la libfstfar.la ../../script/libfstscript.la \
-@HAVE_BIN_TRUE@             ../../lib/libfst.la 
+@HAVE_BIN_TRUE@LDADD = libfstfarscript.la libfstfar.la ../../script/libfstscript.la \
+@HAVE_BIN_TRUE@        ../../lib/libfst.la -lm -ldl
 
 @HAVE_BIN_TRUE@farcompilestrings_SOURCES = farcompilestrings.cc
-@HAVE_BIN_TRUE@farcompilestrings_LDADD = $(farbindeps)
 @HAVE_BIN_TRUE@farcreate_SOURCES = farcreate.cc
-@HAVE_BIN_TRUE@farcreate_LDADD = $(farbindeps)
 @HAVE_BIN_TRUE@farextract_SOURCES = farextract.cc
-@HAVE_BIN_TRUE@farextract_LDADD = $(farbindeps)
 @HAVE_BIN_TRUE@farinfo_SOURCES = farinfo.cc
-@HAVE_BIN_TRUE@farinfo_LDADD = $(farbindeps)
 @HAVE_BIN_TRUE@farprintstrings_SOURCES = farprintstrings.cc
-@HAVE_BIN_TRUE@farprintstrings_LDADD = $(farbindeps)
 all: all-am
 
 .SUFFIXES:

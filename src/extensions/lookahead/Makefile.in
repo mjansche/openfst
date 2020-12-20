@@ -247,7 +247,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
-AM_LDFLAGS = -lm -ldl
 libfst_LTLIBRARIES = libfstlookahead.la arc_lookahead-fst.la \
 ilabel_lookahead-fst.la olabel_lookahead-fst.la
 

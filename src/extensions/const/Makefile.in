@@ -239,7 +239,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
-AM_LDFLAGS = -lm -ldl
 libfst_LTLIBRARIES = libfstconst.la const8-fst.la const16-fst.la const64-fst.la
 libfstconst_la_SOURCES = const8-fst.cc const16-fst.cc const64-fst.cc
 libfstconst_la_LDFLAGS = -version-info 0:0:0
