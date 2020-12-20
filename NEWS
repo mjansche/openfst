@@ -13,8 +13,8 @@ OpenFst - Release 1.3
         first FST in the archive for all entries"
       * Input/output to standard input/output for some FAR and arc types
   * --with-icu configuration option no longer needed (1.3.1)
-  * Improved flags usage esp. if use SHOW_FLAGS not ShowFlags/InitFst (1.3.2)
-  * Added FST as possible far writer type (1.3.2)
+  * Improved flags usage esp. if use SET_FLAGS not SetFlags/InitFst (1.3.2)
+  * Added 'fst' as possible far writer type (1.3.2)
   * phi matcher can now accept 0 as the phi label (1.3.2)
   * Added ngram-fst extension (1.3.2)
 
