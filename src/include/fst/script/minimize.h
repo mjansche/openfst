@@ -11,19 +11,19 @@
 namespace fst {
 namespace script {
 
-typedef args::Package<MutableFstClass *, MutableFstClass *, float> MinimizeArgs;
+typedef args::Package<MutableFstClass *, MutableFstClass *, float, bool>
+    MinimizeArgs;
 
 template <class Arc>
 void Minimize(MinimizeArgs *args) {
   MutableFst<Arc> *ofst1 = args->arg1->GetMutableFst<Arc>();
   MutableFst<Arc> *ofst2 = args->arg2 ?
                            args->arg2->GetMutableFst<Arc>() : nullptr;
-
-  Minimize(ofst1, ofst2, args->arg3);
+  Minimize(ofst1, ofst2, args->arg3, args->arg4);
 }
 
 void Minimize(MutableFstClass *ofst1, MutableFstClass *ofst2 = nullptr,
-              float delta = kDelta);
+              float delta = kDelta, bool allow_nondet = false);
 
 }  // namespace script
 }  // namespace fst

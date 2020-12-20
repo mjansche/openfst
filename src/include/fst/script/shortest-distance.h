@@ -89,47 +89,43 @@ void ShortestDistanceHelper(ShortestDistanceArgs1 *args) {
   std::vector<typename Arc::Weight> weights;
   switch (opts.arc_filter_type) {
     case ANY_ARC_FILTER: {
-      Queue *queue = QueueConstructor<Queue, Arc, AnyArcFilter<Arc>>::Construct(
-          fst, &weights);
+      std::unique_ptr<Queue> queue(QueueConstructor<Queue, Arc,
+          AnyArcFilter<Arc>>::Construct(fst, &weights));
       fst::ShortestDistanceOptions<Arc, Queue, AnyArcFilter<Arc>> sdopts(
-          queue, AnyArcFilter<Arc>(), opts.source, opts.delta);
+          queue.get(), AnyArcFilter<Arc>(), opts.source, opts.delta);
       ShortestDistance(fst, &weights, sdopts);
-      delete queue;
       break;
     }
     case EPSILON_ARC_FILTER: {
-      Queue *queue = QueueConstructor<Queue, Arc, AnyArcFilter<Arc>>::Construct(
-          fst, &weights);
+      std::unique_ptr<Queue> queue(QueueConstructor<Queue, Arc,
+          AnyArcFilter<Arc>>::Construct(fst, &weights));
       fst::ShortestDistanceOptions<Arc, Queue, EpsilonArcFilter<Arc>>
-          sdopts(queue, EpsilonArcFilter<Arc>(), opts.source, opts.delta);
+          sdopts(queue.get(), EpsilonArcFilter<Arc>(), opts.source, opts.delta);
       ShortestDistance(fst, &weights, sdopts);
-      delete queue;
       break;
     }
     case INPUT_EPSILON_ARC_FILTER: {
-      Queue *queue =
-          QueueConstructor<Queue, Arc, InputEpsilonArcFilter<Arc>>::Construct(
-              fst, &weights);
+      std::unique_ptr<Queue> queue(QueueConstructor<Queue, Arc,
+          InputEpsilonArcFilter<Arc>>::Construct(fst, &weights));
       fst::ShortestDistanceOptions<Arc, Queue, InputEpsilonArcFilter<Arc>>
-          sdopts(queue, InputEpsilonArcFilter<Arc>(), opts.source, opts.delta);
+          sdopts(queue.get(), InputEpsilonArcFilter<Arc>(), opts.source,
+                 opts.delta);
       ShortestDistance(fst, &weights, sdopts);
-      delete queue;
       break;
     }
     case OUTPUT_EPSILON_ARC_FILTER: {
-      Queue *queue =
-          QueueConstructor<Queue, Arc, OutputEpsilonArcFilter<Arc>>::Construct(
-              fst, &weights);
+      std::unique_ptr<Queue> queue(QueueConstructor<Queue, Arc,
+          OutputEpsilonArcFilter<Arc>>::Construct(fst, &weights));
       fst::ShortestDistanceOptions<Arc, Queue, OutputEpsilonArcFilter<Arc>>
-          sdopts(queue, OutputEpsilonArcFilter<Arc>(), opts.source, opts.delta);
+          sdopts(queue.get(), OutputEpsilonArcFilter<Arc>(), opts.source,
+                 opts.delta);
       ShortestDistance(fst, &weights, sdopts);
-      delete queue;
       break;
     }
   }
   // Copies the weights back.
   args->arg2->resize(weights.size());
-  for (unsigned i = 0; i < weights.size(); ++i) {
+  for (auto i = 0; i < weights.size(); ++i) {
     (*args->arg2)[i] = WeightClass(weights[i]);
   }
 }

@@ -3,6 +3,8 @@
 //
 // Creates the Kleene closure of an FST.
 
+#include <memory>
+
 #include <fst/script/closure.h>
 
 DEFINE_bool(closure_plus, false,
@@ -27,13 +29,13 @@ int main(int argc, char **argv) {
   string in_fname = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_fname = argc > 2 ? argv[2] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_fname, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_fname, true));
   if (!fst) return 1;
 
   fst::ClosureType closure_type =
       FLAGS_closure_plus ? fst::CLOSURE_PLUS : fst::CLOSURE_STAR;
 
-  s::Closure(fst, closure_type);
+  s::Closure(fst.get(), closure_type);
 
   fst->Write(out_fname);
 

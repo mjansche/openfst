@@ -3,6 +3,8 @@
 //
 // Generates random paths through an FST.
 
+#include <memory>
+
 #include <fst/script/randgen.h>
 
 DEFINE_int32(max_length, INT_MAX, "Maximum path length");
@@ -38,7 +40,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
   VectorFstClass ofst(ifst->ArcType());
@@ -63,5 +65,6 @@ int main(int argc, char **argv) {
                  FLAGS_remove_total_weight));
 
   ofst.Write(out_name);
+
   return 0;
 }

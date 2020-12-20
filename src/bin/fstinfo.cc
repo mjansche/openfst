@@ -4,6 +4,8 @@
 // Prints out various information about an FST such as number of states
 // and arcs and property values (see properties.h).
 
+#include <memory>
+
 #include <fst/script/info.h>
 
 DEFINE_string(arc_filter, "any",
@@ -35,7 +37,7 @@ int main(int argc, char **argv) {
 
   string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
   s::PrintFstInfo(*ifst, FLAGS_test_properties, FLAGS_arc_filter,

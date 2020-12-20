@@ -73,11 +73,12 @@ class MatcherFst : public ImplToExpandedFst<AddOnImpl<F, A>> {
 
   MatcherFst() : ImplToExpandedFst<Impl>(std::make_shared<Impl>(F(), N)) {}
 
-  explicit MatcherFst(const F &fst)
-      : ImplToExpandedFst<Impl>(CreateImpl(fst, N)) {}
+  explicit MatcherFst(const F &fst, std::shared_ptr<D> data = nullptr)
+      : ImplToExpandedFst<Impl>(data ? CreateImpl(fst, N, data)
+                                     : CreateDataAndImpl(fst, N)) {}
 
   explicit MatcherFst(const Fst<Arc> &fst)
-      : ImplToExpandedFst<Impl>(CreateImpl(fst, N)) {}
+      : ImplToExpandedFst<Impl>(CreateDataAndImpl(fst, N)) {}
 
   // See Fst<>::Copy() for doc.
   MatcherFst(const MatcherFst<F, M, N, I, A> &fst, bool safe = false)
@@ -147,21 +148,27 @@ class MatcherFst : public ImplToExpandedFst<AddOnImpl<F, A>> {
  protected:
   using ImplToFst<Impl, ExpandedFst<Arc>>::GetImpl;
 
-  static std::shared_ptr<Impl> CreateImpl(const F &fst, const string &name) {
+  static std::shared_ptr<Impl> CreateDataAndImpl(const F &fst,
+                                                 const string &name) {
     M imatcher(fst, MATCH_INPUT);
     M omatcher(fst, MATCH_OUTPUT);
-    std::shared_ptr<D> data =
-        std::make_shared<D>(imatcher.GetSharedData(), omatcher.GetSharedData());
+    return CreateImpl(fst, name, std::make_shared<D>(imatcher.GetSharedData(),
+                                                     omatcher.GetSharedData()));
+  }
+
+  static std::shared_ptr<Impl> CreateDataAndImpl(const Fst<Arc> &fst,
+                                                 const string &name) {
+    F ffst(fst);
+    return CreateDataAndImpl(ffst, name);
+  }
+
+  static std::shared_ptr<Impl> CreateImpl(const F &fst, const string &name,
+                                          std::shared_ptr<D> data) {
+    CHECK(data);
     std::shared_ptr<Impl> impl = std::make_shared<Impl>(fst, name);
     impl->SetAddOn(data);
     I init(&impl);
     return impl;
-  }
-
-  static std::shared_ptr<Impl> CreateImpl(const Fst<Arc> &fst,
-                                          const string &name) {
-    F ffst(fst);
-    return CreateImpl(ffst, name);
   }
 
   explicit MatcherFst(std::shared_ptr<Impl> impl)

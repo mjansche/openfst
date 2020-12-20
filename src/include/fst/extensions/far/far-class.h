@@ -20,7 +20,7 @@ namespace script {
 
 // FarReader API.
 
-// Virtual interface implemented by each concrete FarReaderImpl<Arc>.
+// Virtual interface implemented by each concrete FarReaderImpl<A>.
 // See the FarReader interface in far.h for the exact semantics.
 class FarReaderImplBase {
  public:
@@ -38,14 +38,16 @@ class FarReaderImplBase {
 
 
 // Templated implementation.
-template <class Arc>
+template <class A>
 class FarReaderClassImpl : public FarReaderImplBase {
  public:
+  using Arc = A;
+
   explicit FarReaderClassImpl(const string &filename) :
-      impl_(FarReader<Arc>::Open(filename)) {}
+      impl_(FarReader<A>::Open(filename)) {}
 
   explicit FarReaderClassImpl(const std::vector<string> &filenames) :
-      impl_(FarReader<Arc>::Open(filenames)) {}
+      impl_(FarReader<A>::Open(filenames)) {}
 
   const string &ArcType() const override { return Arc::Type(); }
 
@@ -56,7 +58,7 @@ class FarReaderClassImpl : public FarReaderImplBase {
   bool Find(const string &key) override { return impl_->Find(key); }
 
   const FstClass *GetFstClass() const override {
-    fstc_.reset(new FstClass(*(impl_->GetFst())));
+    fstc_.reset(new FstClass(*impl_->GetFst()));
     return fstc_.get();
   }
 
@@ -68,8 +70,12 @@ class FarReaderClassImpl : public FarReaderImplBase {
 
   FarType Type() const override { return impl_->Type(); }
 
+  const FarReader<A> *GetImpl() const { return impl_.get(); }
+
+  FarReader<A> *GetImpl() { return impl_.get(); }
+
  private:
-  std::unique_ptr<FarReader<Arc>> impl_;
+  std::unique_ptr<FarReader<A>> impl_;
   mutable std::unique_ptr<FstClass> fstc_;
 };
 
@@ -106,10 +112,26 @@ class FarReaderClass {
 
   FarType Type() const { return impl_->Type(); }
 
-  template <class Arc>
+  template <class A>
+  const FarReader<A> *GetFarReader() const {
+    if (A::Type() != ArcType()) return nullptr;
+    const FarReaderClassImpl<A> *typed_impl =
+        static_cast<FarReaderClassImpl<A> *>(impl_.get());
+    return typed_impl->GetImpl();
+  }
+
+  template <class A>
+  FarReader<A> *GetFarReader() {
+    if (A::Type() != ArcType()) return nullptr;
+    FarReaderClassImpl<A> *typed_impl =
+        static_cast<FarReaderClassImpl<A> *>(impl_.get());
+    return typed_impl->GetImpl();
+  }
+
+  template <class A>
   friend void OpenFarReaderClass(OpenFarReaderClassArgs1 *args);
 
-  template <class Arc>
+  template <class A>
   friend void OpenFarReaderClass(OpenFarReaderClassArgs2 *args);
 
   // Defined in the CC.
@@ -119,8 +141,8 @@ class FarReaderClass {
   static FarReaderClass *Open(const std::vector<string> &filenames);
 
  private:
-  template <class Arc>
-  explicit FarReaderClass(FarReaderClassImpl<Arc> *impl) : impl_(impl) {}
+  template <class A>
+  explicit FarReaderClass(FarReaderClassImpl<A> *impl) : impl_(impl) {}
 
   std::unique_ptr<FarReaderImplBase> impl_;
 
@@ -130,20 +152,20 @@ class FarReaderClass {
 // These exist solely for registration purposes; users should call the
 // static method FarReaderClass::Open instead.
 
-template <class Arc>
+template <class A>
 void OpenFarReaderClass(OpenFarReaderClassArgs1 *args) {
-  args->retval = new FarReaderClass(new FarReaderClassImpl<Arc>(args->args));
+  args->retval = new FarReaderClass(new FarReaderClassImpl<A>(args->args));
 }
 
-template <class Arc>
+template <class A>
 void OpenFarReaderClass(OpenFarReaderClassArgs2 *args) {
-  args->retval = new FarReaderClass(new FarReaderClassImpl<Arc>(args->args));
+  args->retval = new FarReaderClass(new FarReaderClassImpl<A>(args->args));
 }
 
 
 // FarWriter API.
 
-// Virtual interface implemented by each concrete FarWriterImpl<Arc>.
+// Virtual interface implemented by each concrete FarWriterImpl<A>.
 class FarWriterImplBase {
  public:
   // Unlike the library, this returns a boolean to signal failure due to
@@ -157,12 +179,14 @@ class FarWriterImplBase {
 
 
 // Templated implementation.
-template <class Arc>
+template <class A>
 class FarWriterClassImpl : public FarWriterImplBase {
  public:
+  using Arc = A;
+
   explicit FarWriterClassImpl(const string &filename,
                               FarType type = FAR_DEFAULT) :
-      impl_(FarWriter<Arc>::Create(filename, type)) {}
+      impl_(FarWriter<A>::Create(filename, type)) {}
 
   bool Add(const string &key, const FstClass &fst) override {
     if (ArcType() != fst.ArcType()) {
@@ -170,7 +194,7 @@ class FarWriterClassImpl : public FarWriterImplBase {
                  << "FAR with " << ArcType() << " arcs";
       return false;
     }
-    impl_->Add(key, *(fst.GetFst<Arc>()));
+    impl_->Add(key, *(fst.GetFst<A>()));
     return true;
   }
 
@@ -180,8 +204,12 @@ class FarWriterClassImpl : public FarWriterImplBase {
 
   FarType Type() const override { return impl_->Type(); }
 
+  const FarWriter<A> *GetImpl() const { return impl_.get(); }
+
+  FarWriter<A> *GetImpl() { return impl_.get(); }
+
  private:
-  std::unique_ptr<FarWriter<Arc>> impl_;
+  std::unique_ptr<FarWriter<A>> impl_;
 };
 
 
@@ -196,6 +224,9 @@ typedef args::WithReturnValue<FarWriterClass *, CreateFarWriterClassInnerArgs>
 // Untemplated user-facing class holding a templated pimpl.
 class FarWriterClass {
  public:
+  static FarWriterClass *Create(const string &filename, const string &arc_type,
+                                FarType type = FAR_DEFAULT);
+
   bool Add(const string &key, const FstClass &fst) {
     return impl_->Add(key, fst);
   }
@@ -208,16 +239,28 @@ class FarWriterClass {
 
   FarType Type() const { return impl_->Type(); }
 
-  template <class Arc>
+  template <class A>
+  const FarWriter<A> *GetFarWriter() const {
+    if (A::Type() != ArcType()) return nullptr;
+    const FarWriterClassImpl<A> *typed_impl =
+        static_cast<FarWriterClassImpl<A> *>(impl_.get());
+    return typed_impl->GetImpl();
+  }
+
+  template <class A>
+  FarWriter<A> *GetFarWriter() {
+    if (A::Type() != ArcType()) return nullptr;
+    FarWriterClassImpl<A> *typed_impl =
+        static_cast<FarWriterClassImpl<A> *>(impl_.get());
+    return typed_impl->GetImpl();
+  }
+
+  template <class A>
   friend void CreateFarWriterClass(CreateFarWriterClassArgs *args);
 
-  // Defined in the CC.
-  static FarWriterClass *Create(const string &filename, const string &arc_type,
-                                FarType type = FAR_DEFAULT);
-
  private:
-  template <class Arc>
-  explicit FarWriterClass(FarWriterClassImpl<Arc> *impl) : impl_(impl) {}
+  template <class A>
+  explicit FarWriterClass(FarWriterClassImpl<A> *impl) : impl_(impl) {}
 
   std::unique_ptr<FarWriterImplBase> impl_;
 
@@ -226,10 +269,10 @@ class FarWriterClass {
 
 // This exists solely for registration purposes; users should call the
 // static method FarWriterClass::Create instead.
-template <class Arc>
+template <class A>
 void CreateFarWriterClass(CreateFarWriterClassArgs *args) {
-  args->retval = new FarWriterClass(
-      new FarWriterClassImpl<Arc>(args->args.arg1, args->args.arg2));
+  args->retval = new FarWriterClass(new FarWriterClassImpl<A>(args->args.arg1,
+                                                              args->args.arg2));
 }
 
 }  // namespace script

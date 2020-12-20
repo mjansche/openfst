@@ -4,6 +4,7 @@
 #ifndef FST_SCRIPT_CONVERT_H_
 #define FST_SCRIPT_CONVERT_H_
 
+#include <memory>
 #include <string>
 
 #include <fst/script/arg-packs.h>
@@ -20,9 +21,8 @@ void Convert(ConvertArgs *args) {
   const Fst<Arc> &fst = *(args->args.arg1.GetFst<Arc>());
   const string &new_type = args->args.arg2;
 
-  Fst<Arc> *result = Convert(fst, new_type);
+  std::unique_ptr<Fst<Arc>> result(Convert(fst, new_type));
   args->retval = result ? new FstClass(*result) : nullptr;
-  delete result;
 }
 
 FstClass *Convert(const FstClass &f, const string &new_type);

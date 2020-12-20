@@ -3,6 +3,8 @@
 //
 // Creates the union of two FSTs.
 
+#include <memory>
+
 #include <fst/script/union.h>
 
 int main(int argc, char **argv) {
@@ -26,17 +28,17 @@ int main(int argc, char **argv) {
   string out_name = argc > 3 ? argv[3] : "";
 
   if (in1_name == "" && in2_name == "") {
-    LOG(ERROR) << argv[0] << ": Can't use standard i/o for both inputs.";
+    LOG(ERROR) << argv[0] << ": Can't take both inputs from standard input.";
     return 1;
   }
 
-  MutableFstClass *fst1 = MutableFstClass::Read(in1_name, true);
+  std::unique_ptr<MutableFstClass> fst1(MutableFstClass::Read(in1_name, true));
   if (!fst1) return 1;
 
-  FstClass *fst2 = FstClass::Read(in2_name);
+  std::unique_ptr<FstClass> fst2(FstClass::Read(in2_name));
   if (!fst2) return 1;
 
-  s::Union(fst1, *fst2);
+  s::Union(fst1.get(), *fst2);
 
   fst1->Write(out_name);
 

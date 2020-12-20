@@ -60,7 +60,7 @@ inline void FstCheck(bool x, const char* expr,
   }
 }
 
-#define CHECK(x) FstCheck((x), #x, __FILE__, __LINE__)
+#define CHECK(x) FstCheck(static_cast<bool>(x), #x, __FILE__, __LINE__)
 #define CHECK_EQ(x, y) CHECK((x) == (y))
 #define CHECK_LT(x, y) CHECK((x) < (y))
 #define CHECK_GT(x, y) CHECK((x) > (y))

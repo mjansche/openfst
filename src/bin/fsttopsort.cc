@@ -3,6 +3,8 @@
 //
 // Topologically sorts an FST.
 
+#include <memory>
+
 #include <fst/script/topsort.h>
 
 int main(int argc, char **argv) {
@@ -24,10 +26,10 @@ int main(int argc, char **argv) {
   string in_fname = argc > 1 && strcmp(argv[1], "-") != 0 ? argv[1] : "";
   string out_fname = argc > 2 ? argv[2] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_fname, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_fname, true));
   if (!fst) return 1;
 
-  bool acyclic = TopSort(fst);
+  bool acyclic = TopSort(fst.get());
   if (!acyclic) LOG(WARNING) << argv[0] << ": Input FST is cyclic";
 
   fst->Write(out_fname);

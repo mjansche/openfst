@@ -54,26 +54,27 @@ const int kDfsGrey = 1;   // Discovered & unfinished
 const int kDfsBlack = 2;  // Finished
 
 // An Fst state's DFS stack state
-template <class Arc>
+template <class F>
 struct DfsState {
+  typedef typename F::Arc Arc;
   typedef typename Arc::StateId StateId;
 
-  DfsState(const Fst<Arc> &fst, StateId s) : state_id(s), arc_iter(fst, s) {}
+  DfsState(const F &fst, StateId s) : state_id(s), arc_iter(fst, s) {}
 
-  void *operator new(size_t size, MemoryPool<DfsState<Arc>> *pool) {
+  void *operator new(size_t size, MemoryPool<DfsState<F>> *pool) {
     return pool->Allocate();
   }
 
-  static void Destroy(DfsState<Arc> *dfs_state,
-                      MemoryPool<DfsState<Arc>> *pool) {
+  static void Destroy(DfsState<F> *dfs_state,
+                      MemoryPool<DfsState<F>> *pool) {
     if (dfs_state) {
-      dfs_state->~DfsState<Arc>();
+      dfs_state->~DfsState<F>();
       pool->Free(dfs_state);
     }
   }
 
-  StateId state_id;                 // Fst state ...
-  ArcIterator<Fst<Arc>> arc_iter;  // and its corresponding arcs
+  StateId state_id;         // Fst state ...
+  ArcIterator<F> arc_iter;  // and its corresponding arcs
 };
 
 // Performs depth-first visitation. Visitor class argument determines
@@ -84,9 +85,10 @@ struct DfsState {
 // Note this is similar to Visit() in visit.h called with a LIFO
 // queue except this version has a Visitor class specialized and
 // augmented for a DFS.
-template <class Arc, class V, class ArcFilter>
-void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
+template <class F, class V, class ArcFilter>
+void DfsVisit(const F &fst, V *visitor, ArcFilter filter,
               bool access_only = false) {
+  typedef typename F::Arc Arc;
   typedef typename Arc::StateId StateId;
 
   visitor->InitVisit(fst);
@@ -97,9 +99,9 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
     return;
   }
 
-  std::vector<char> state_color;            // Fst state DFS status
-  std::stack<DfsState<Arc> *> state_stack;  // DFS execution stack
-  MemoryPool<DfsState<Arc>> state_pool;  // Pool for DFSStates
+  std::vector<char> state_color;          // Fst state DFS status
+  std::stack<DfsState<F> *> state_stack;  // DFS execution stack
+  MemoryPool<DfsState<F>> state_pool;     // Pool for DFSStates
 
   StateId nstates = start + 1;  // # of known states in general case
   bool expanded = false;
@@ -109,7 +111,7 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
   }
 
   state_color.resize(nstates, kDfsWhite);
-  StateIterator<Fst<Arc>> siter(fst);
+  StateIterator<F> siter(fst);
 
   // Continue DFS while true
   bool dfs = true;
@@ -117,24 +119,24 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
   // Iterate over trees in DFS forest.
   for (StateId root = start; dfs && root < nstates;) {
     state_color[root] = kDfsGrey;
-    state_stack.push(new (&state_pool) DfsState<Arc>(fst, root));
+    state_stack.push(new (&state_pool) DfsState<F>(fst, root));
     dfs = visitor->InitState(root, root);
     while (!state_stack.empty()) {
-      DfsState<Arc> *dfs_state = state_stack.top();
+      DfsState<F> *dfs_state = state_stack.top();
       StateId s = dfs_state->state_id;
       if (s >= state_color.size()) {
         nstates = s + 1;
         state_color.resize(nstates, kDfsWhite);
       }
-      ArcIterator<Fst<Arc>> &aiter = dfs_state->arc_iter;
+      ArcIterator<F> &aiter = dfs_state->arc_iter;
       if (!dfs || aiter.Done()) {
         state_color[s] = kDfsBlack;
-        DfsState<Arc>::Destroy(dfs_state, &state_pool);
+        DfsState<F>::Destroy(dfs_state, &state_pool);
         state_stack.pop();
         if (!state_stack.empty()) {
-          DfsState<Arc> *parent_state = state_stack.top();
+          DfsState<F> *parent_state = state_stack.top();
           StateId p = parent_state->state_id;
-          ArcIterator<Fst<Arc>> &piter = parent_state->arc_iter;
+          ArcIterator<F> &piter = parent_state->arc_iter;
           visitor->FinishState(s, p, &piter.Value());
           piter.Next();
         } else {
@@ -158,7 +160,7 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter,
           dfs = visitor->TreeArc(s, arc);
           if (!dfs) break;
           state_color[arc.nextstate] = kDfsGrey;
-          state_stack.push(new (&state_pool) DfsState<Arc>(fst, arc.nextstate));
+          state_stack.push(new (&state_pool) DfsState<F>(fst, arc.nextstate));
           dfs = visitor->InitState(arc.nextstate, root);
           break;
         case kDfsGrey:

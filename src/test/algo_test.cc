@@ -5,18 +5,8 @@
 
 #include "./algo_test.h"
 
-// These determine which semirings are tested. Defining at least
-// TEST_TROPICAL and TEST_LOG is recommended. More increase the
-// comprehensiveness, but also increase the compilation time.
-
-#define TEST_TROPICAL
-#define TEST_LOG
-// #define TEST_MINMAX
-// #define TEST_LEFT_STRING
-// #define TEST_RIGHT_STRING
-// #define TEST_GALLIC
-// #define TEST_LEXICOGRAPHIC
-// #define TEST_POWER
+// DEFINEs determine which semirings are tested; these are controlled by
+// the `defines` attributes of the associated build rules.
 
 DEFINE_int32(seed, -1, "random seed");
 DEFINE_int32(repeat, 25, "number of test repetitions");

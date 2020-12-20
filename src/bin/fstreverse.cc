@@ -3,13 +3,15 @@
 //
 // Reverses the paths in an FST.
 
+#include <memory>
+
 #include <fst/script/fst-class.h>
 #include <fst/script/reverse.h>
 
 DEFINE_bool(require_superinitial, true, "Always create a superinitial state");
 
 int main(int argc, char **argv) {
-  namespace s =  fst::script;
+  namespace s = fst::script;
   using fst::script::FstClass;
   using fst::script::VectorFstClass;
 
@@ -27,7 +29,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
   VectorFstClass out(ifst->ArcType());

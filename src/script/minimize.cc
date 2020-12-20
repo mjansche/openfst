@@ -8,13 +8,14 @@
 namespace fst {
 namespace script {
 
-void Minimize(MutableFstClass *ofst1, MutableFstClass *ofst2, float delta) {
+void Minimize(MutableFstClass *ofst1, MutableFstClass *ofst2, float delta,
+              bool allow_nondet) {
   if (ofst2 && !ArcTypesMatch(*ofst1, *ofst2, "Minimize")) {
     ofst1->SetProperties(kError, kError);
     ofst2->SetProperties(kError, kError);
     return;
   }
-  MinimizeArgs args(ofst1, ofst2, delta);
+  MinimizeArgs args(ofst1, ofst2, delta, allow_nondet);
   Apply<Operation<MinimizeArgs>>("Minimize", ofst1->ArcType(), &args);
 }
 

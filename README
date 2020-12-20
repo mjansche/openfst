@@ -1,4 +1,4 @@
-OpenFst - Release 1.5.2
+OpenFst - Release 1.5.3
 
 OpenFst is a library for constructing, combining, optimizing, and searching
 weighted finite-state transducers (FSTs).
@@ -6,7 +6,7 @@ weighted finite-state transducers (FSTs).
 REQUIREMENTS:
   This version is known to work under Linux using g++ (>= 4.7) and
   MacOS X using XCode (>= 5). It is expected to work wherever adequate POSIX
-  (dlopen, ssize_t, basename), c99 (snprintf, strtoll, <stdint.h>), and C++11
+  (dlopen, ssize_t, basename), C99 (snprintf, strtoll, <stdint.h>), and C++11
   (<unordered_set>, <unordered_map>, <forward_list>) support is available.
 
 INSTALLATION:
@@ -19,7 +19,7 @@ INSTALLATION:
   --enable-compact-fsts    Enable all CompactFst extensions (def: no)
   --enable-compress        Enable compression extension (def: no)
   --enable-const-fsts      Enable all ConstFst extensions (def: no)
-  --enable-far		   Enable FAR extensions (def: no)
+  --enable-far		         Enable FAR extensions (def: no)
   --enable-linear-fsts     Enable LinearTagger/ClassifierFst extensions (def: no)
   --enable-lookahead-fsts  Enable LookAheadFst extensions (def: no)
   --enable-mpdt            Enable MPDT extensions (def: no)

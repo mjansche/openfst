@@ -3,8 +3,10 @@
 //
 // Intersects two FSTs.
 
-#include <fst/script/intersect.h>
+#include <memory>
+
 #include <fst/script/connect.h>
+#include <fst/script/intersect.h>
 
 DEFINE_string(compose_filter, "auto",
               "Composition filter, one of: \"alt_sequence\", \"auto\", "
@@ -37,9 +39,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  FstClass *ifst1 = FstClass::Read(in1_name);
+  std::unique_ptr<FstClass> ifst1(FstClass::Read(in1_name));
   if (!ifst1) return 1;
-  FstClass *ifst2 = FstClass::Read(in2_name);
+  std::unique_ptr<FstClass> ifst2(FstClass::Read(in2_name));
   if (!ifst2) return 1;
 
   VectorFstClass ofst(ifst1->ArcType());

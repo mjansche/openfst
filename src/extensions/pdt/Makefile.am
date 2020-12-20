@@ -23,7 +23,7 @@ endif
 if HAVE_SCRIPT
 lib_LTLIBRARIES = libfstpdtscript.la
 libfstpdtscript_la_SOURCES = pdtscript.cc
-libfstpdtscript_la_LDFLAGS = -version-info 3:0:0
+libfstpdtscript_la_LDFLAGS = -version-info 4:0:0
 libfstpdtscript_la_LIBADD = \
     ../../script/libfstscript.la \
     ../../lib/libfst.la -lm $(DL_LIBS)

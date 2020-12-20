@@ -60,6 +60,8 @@ int main(int argc, char **argv) {
   string in_fname = argv[1];
   string out_fname = argc % 2 == 0 ? argv[argc - 1] : "";
 
+  // Replace takes ownership of the pointer of FST arrays, deleting all such
+  // pointers when the underlying ReplaceFst is destroyed.
   FstClass *ifst = FstClass::Read(in_fname);
   if (!ifst) return 1;
 
@@ -69,8 +71,8 @@ int main(int argc, char **argv) {
   int64 root = atoll(argv[2]);
   pairs.emplace_back(root, ifst);
 
-  for (size_t i = 3; i < argc - 1; i += 2) {
-    ifst = s::FstClass::Read(argv[i]);
+  for (auto i = 3; i < argc - 1; i += 2) {
+    ifst = FstClass::Read(argv[i]);
     if (!ifst) return 1;
     // Warning: if the root label is beyond the range of the underlying FST's
     // labels, truncation will occur.

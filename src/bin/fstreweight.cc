@@ -3,6 +3,8 @@
 //
 // Reweights an FST.
 
+#include <memory>
+
 #include <fst/script/reweight.h>
 #include <fst/script/text-io.h>
 
@@ -28,7 +30,7 @@ int main(int argc, char **argv) {
   string potentials_fname = argv[2];
   string out_fname = argc > 3 ? argv[3] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_fname, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_fname, true));
   if (!fst) return 1;
 
   std::vector<s::WeightClass> potential;
@@ -39,7 +41,7 @@ int main(int argc, char **argv) {
                                             ? fst::REWEIGHT_TO_FINAL
                                             : fst::REWEIGHT_TO_INITIAL;
 
-  s::Reweight(fst, potential, reweight_type);
+  s::Reweight(fst.get(), potential, reweight_type);
 
   fst->Write(out_fname);
 

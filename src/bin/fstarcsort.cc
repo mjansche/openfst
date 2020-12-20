@@ -3,6 +3,9 @@
 //
 // Sorts arcs of an FST.
 
+#include <memory>
+#include <string>
+
 #include <fst/compat.h>
 #include <fst/script/arcsort.h>
 
@@ -29,7 +32,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_name, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_name, true));
   if (!fst) return 1;
 
   s::ArcSortType sort_type;
@@ -42,7 +45,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  s::ArcSort(fst, sort_type);
+  s::ArcSort(fst.get(), sort_type);
 
   fst->Write(out_name);
 

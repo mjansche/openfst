@@ -5,14 +5,14 @@
 #include <fst/compact-fst.h>
 
 using fst::FstRegisterer;
-using fst::CompactFst;
+using fst::CompactWeightedStringFst;
 using fst::LogArc;
 using fst::StdArc;
 using fst::WeightedStringCompactor;
 
 static FstRegisterer<
-    CompactFst<StdArc, WeightedStringCompactor<StdArc>, uint8>>
-    CompactFst_StdArc_WeightedStringCompactor_uint8_registerer;
+    CompactWeightedStringFst<StdArc, uint8>>
+    CompactWeightedStringFst_StdArc_uint8_registerer;
 static FstRegisterer<
-    CompactFst<LogArc, WeightedStringCompactor<LogArc>, uint8>>
-    CompactFst_LogArc_WeightedStringCompactor_uint8_registerer;
+    CompactWeightedStringFst<LogArc, uint8>>
+    CompactWeightedStringFst_LogArc_uint8_registerer;

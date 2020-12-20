@@ -78,8 +78,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = fst_test$(EXEEXT) weight_test$(EXEEXT) \
-	algo_test$(EXEEXT)
-TESTS = fst_test$(EXEEXT) weight_test$(EXEEXT) algo_test$(EXEEXT)
+	algo_test_log$(EXEEXT) algo_test_tropical$(EXEEXT) \
+	algo_test_minmax$(EXEEXT) algo_test_lexicographic$(EXEEXT) \
+	algo_test_power$(EXEEXT)
 subdir = src/test
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/depcomp $(top_srcdir)/test-driver
@@ -95,15 +96,39 @@ CONFIG_HEADER = $(top_builddir)/config.h \
 	$(top_builddir)/src/include/fst/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am_algo_test_OBJECTS = algo_test.$(OBJEXT)
-algo_test_OBJECTS = $(am_algo_test_OBJECTS)
-algo_test_LDADD = $(LDADD)
+am__objects_1 = algo_test_lexicographic-algo_test.$(OBJEXT)
+am_algo_test_lexicographic_OBJECTS = $(am__objects_1)
+algo_test_lexicographic_OBJECTS =  \
+	$(am_algo_test_lexicographic_OBJECTS)
+algo_test_lexicographic_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-algo_test_DEPENDENCIES = ../lib/libfst.la $(am__DEPENDENCIES_1)
+algo_test_lexicographic_DEPENDENCIES = ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+am__objects_2 = algo_test_log-algo_test.$(OBJEXT)
+am_algo_test_log_OBJECTS = $(am__objects_2)
+algo_test_log_OBJECTS = $(am_algo_test_log_OBJECTS)
+algo_test_log_LDADD = $(LDADD)
+algo_test_log_DEPENDENCIES = ../lib/libfst.la $(am__DEPENDENCIES_1)
+am__objects_3 = algo_test_minmax-algo_test.$(OBJEXT)
+am_algo_test_minmax_OBJECTS = $(am__objects_3)
+algo_test_minmax_OBJECTS = $(am_algo_test_minmax_OBJECTS)
+algo_test_minmax_LDADD = $(LDADD)
+algo_test_minmax_DEPENDENCIES = ../lib/libfst.la $(am__DEPENDENCIES_1)
+am__objects_4 = algo_test_power-algo_test.$(OBJEXT)
+am_algo_test_power_OBJECTS = $(am__objects_4)
+algo_test_power_OBJECTS = $(am_algo_test_power_OBJECTS)
+algo_test_power_LDADD = $(LDADD)
+algo_test_power_DEPENDENCIES = ../lib/libfst.la $(am__DEPENDENCIES_1)
+am__objects_5 = algo_test_tropical-algo_test.$(OBJEXT)
+am_algo_test_tropical_OBJECTS = $(am__objects_5)
+algo_test_tropical_OBJECTS = $(am_algo_test_tropical_OBJECTS)
+algo_test_tropical_LDADD = $(LDADD)
+algo_test_tropical_DEPENDENCIES = ../lib/libfst.la \
+	$(am__DEPENDENCIES_1)
 am_fst_test_OBJECTS = fst_test.$(OBJEXT)
 fst_test_OBJECTS = $(am_fst_test_OBJECTS)
 fst_test_LDADD = $(LDADD)
@@ -164,10 +189,14 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(algo_test_SOURCES) $(fst_test_SOURCES) \
+SOURCES = $(algo_test_lexicographic_SOURCES) $(algo_test_log_SOURCES) \
+	$(algo_test_minmax_SOURCES) $(algo_test_power_SOURCES) \
+	$(algo_test_tropical_SOURCES) $(fst_test_SOURCES) \
 	$(weight_test_SOURCES)
-DIST_SOURCES = $(algo_test_SOURCES) $(fst_test_SOURCES) \
-	$(weight_test_SOURCES)
+DIST_SOURCES = $(algo_test_lexicographic_SOURCES) \
+	$(algo_test_log_SOURCES) $(algo_test_minmax_SOURCES) \
+	$(algo_test_power_SOURCES) $(algo_test_tropical_SOURCES) \
+	$(fst_test_SOURCES) $(weight_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -537,6 +566,17 @@ LDADD = ../lib/libfst.la -lm $(DL_LIBS)
 fst_test_SOURCES = fst_test.cc fst_test.h
 weight_test_SOURCES = weight_test.cc weight-tester.h
 algo_test_SOURCES = algo_test.cc algo_test.h rand-fst.h
+algo_test_log_SOURCES = $(algo_test_SOURCES)
+algo_test_log_CPPFLAGS = -DTEST_LOG
+algo_test_tropical_SOURCES = $(algo_test_SOURCES)
+algo_test_tropical_CPPFLAGS = -DTEST_TROPICAL
+algo_test_minmax_SOURCES = $(algo_test_SOURCES)
+algo_test_minmax_CPPFLAGS = -DTEST_MINMAX
+algo_test_lexicographic_SOURCES = $(algo_test_SOURCES)
+algo_test_lexicographic_CPPFLAGS = -DTEST_LEXICOGRAPHIC
+algo_test_power_SOURCES = $(algo_test_SOURCES)
+algo_test_power_CPPFLAGS = -DTEST_POWER
+TESTS = $(check_PROGRAMS)
 all: all-am
 
 .SUFFIXES:
@@ -581,9 +621,25 @@ clean-checkPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
-algo_test$(EXEEXT): $(algo_test_OBJECTS) $(algo_test_DEPENDENCIES) $(EXTRA_algo_test_DEPENDENCIES) 
-	@rm -f algo_test$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(algo_test_OBJECTS) $(algo_test_LDADD) $(LIBS)
+algo_test_lexicographic$(EXEEXT): $(algo_test_lexicographic_OBJECTS) $(algo_test_lexicographic_DEPENDENCIES) $(EXTRA_algo_test_lexicographic_DEPENDENCIES) 
+	@rm -f algo_test_lexicographic$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(algo_test_lexicographic_OBJECTS) $(algo_test_lexicographic_LDADD) $(LIBS)
+
+algo_test_log$(EXEEXT): $(algo_test_log_OBJECTS) $(algo_test_log_DEPENDENCIES) $(EXTRA_algo_test_log_DEPENDENCIES) 
+	@rm -f algo_test_log$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(algo_test_log_OBJECTS) $(algo_test_log_LDADD) $(LIBS)
+
+algo_test_minmax$(EXEEXT): $(algo_test_minmax_OBJECTS) $(algo_test_minmax_DEPENDENCIES) $(EXTRA_algo_test_minmax_DEPENDENCIES) 
+	@rm -f algo_test_minmax$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(algo_test_minmax_OBJECTS) $(algo_test_minmax_LDADD) $(LIBS)
+
+algo_test_power$(EXEEXT): $(algo_test_power_OBJECTS) $(algo_test_power_DEPENDENCIES) $(EXTRA_algo_test_power_DEPENDENCIES) 
+	@rm -f algo_test_power$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(algo_test_power_OBJECTS) $(algo_test_power_LDADD) $(LIBS)
+
+algo_test_tropical$(EXEEXT): $(algo_test_tropical_OBJECTS) $(algo_test_tropical_DEPENDENCIES) $(EXTRA_algo_test_tropical_DEPENDENCIES) 
+	@rm -f algo_test_tropical$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(algo_test_tropical_OBJECTS) $(algo_test_tropical_LDADD) $(LIBS)
 
 fst_test$(EXEEXT): $(fst_test_OBJECTS) $(fst_test_DEPENDENCIES) $(EXTRA_fst_test_DEPENDENCIES) 
 	@rm -f fst_test$(EXEEXT)
@@ -599,7 +655,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algo_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algo_test_lexicographic-algo_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algo_test_log-algo_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algo_test_minmax-algo_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algo_test_power-algo_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algo_test_tropical-algo_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fst_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/weight_test.Po@am__quote@
 
@@ -623,6 +683,76 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
+
+algo_test_lexicographic-algo_test.o: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_lexicographic_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_lexicographic-algo_test.o -MD -MP -MF $(DEPDIR)/algo_test_lexicographic-algo_test.Tpo -c -o algo_test_lexicographic-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_lexicographic-algo_test.Tpo $(DEPDIR)/algo_test_lexicographic-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_lexicographic-algo_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_lexicographic_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_lexicographic-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+
+algo_test_lexicographic-algo_test.obj: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_lexicographic_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_lexicographic-algo_test.obj -MD -MP -MF $(DEPDIR)/algo_test_lexicographic-algo_test.Tpo -c -o algo_test_lexicographic-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_lexicographic-algo_test.Tpo $(DEPDIR)/algo_test_lexicographic-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_lexicographic-algo_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_lexicographic_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_lexicographic-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+
+algo_test_log-algo_test.o: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_log_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_log-algo_test.o -MD -MP -MF $(DEPDIR)/algo_test_log-algo_test.Tpo -c -o algo_test_log-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_log-algo_test.Tpo $(DEPDIR)/algo_test_log-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_log-algo_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_log_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_log-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+
+algo_test_log-algo_test.obj: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_log_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_log-algo_test.obj -MD -MP -MF $(DEPDIR)/algo_test_log-algo_test.Tpo -c -o algo_test_log-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_log-algo_test.Tpo $(DEPDIR)/algo_test_log-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_log-algo_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_log_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_log-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+
+algo_test_minmax-algo_test.o: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_minmax_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_minmax-algo_test.o -MD -MP -MF $(DEPDIR)/algo_test_minmax-algo_test.Tpo -c -o algo_test_minmax-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_minmax-algo_test.Tpo $(DEPDIR)/algo_test_minmax-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_minmax-algo_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_minmax_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_minmax-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+
+algo_test_minmax-algo_test.obj: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_minmax_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_minmax-algo_test.obj -MD -MP -MF $(DEPDIR)/algo_test_minmax-algo_test.Tpo -c -o algo_test_minmax-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_minmax-algo_test.Tpo $(DEPDIR)/algo_test_minmax-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_minmax-algo_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_minmax_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_minmax-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+
+algo_test_power-algo_test.o: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_power_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_power-algo_test.o -MD -MP -MF $(DEPDIR)/algo_test_power-algo_test.Tpo -c -o algo_test_power-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_power-algo_test.Tpo $(DEPDIR)/algo_test_power-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_power-algo_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_power_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_power-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+
+algo_test_power-algo_test.obj: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_power_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_power-algo_test.obj -MD -MP -MF $(DEPDIR)/algo_test_power-algo_test.Tpo -c -o algo_test_power-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_power-algo_test.Tpo $(DEPDIR)/algo_test_power-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_power-algo_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_power_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_power-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+
+algo_test_tropical-algo_test.o: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_tropical_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_tropical-algo_test.o -MD -MP -MF $(DEPDIR)/algo_test_tropical-algo_test.Tpo -c -o algo_test_tropical-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_tropical-algo_test.Tpo $(DEPDIR)/algo_test_tropical-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_tropical-algo_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_tropical_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_tropical-algo_test.o `test -f 'algo_test.cc' || echo '$(srcdir)/'`algo_test.cc
+
+algo_test_tropical-algo_test.obj: algo_test.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_tropical_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT algo_test_tropical-algo_test.obj -MD -MP -MF $(DEPDIR)/algo_test_tropical-algo_test.Tpo -c -o algo_test_tropical-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/algo_test_tropical-algo_test.Tpo $(DEPDIR)/algo_test_tropical-algo_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='algo_test.cc' object='algo_test_tropical-algo_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(algo_test_tropical_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o algo_test_tropical-algo_test.obj `if test -f 'algo_test.cc'; then $(CYGPATH_W) 'algo_test.cc'; else $(CYGPATH_W) '$(srcdir)/algo_test.cc'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -837,9 +967,37 @@ weight_test.log: weight_test$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-algo_test.log: algo_test$(EXEEXT)
-	@p='algo_test$(EXEEXT)'; \
-	b='algo_test'; \
+algo_test_log.log: algo_test_log$(EXEEXT)
+	@p='algo_test_log$(EXEEXT)'; \
+	b='algo_test_log'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+algo_test_tropical.log: algo_test_tropical$(EXEEXT)
+	@p='algo_test_tropical$(EXEEXT)'; \
+	b='algo_test_tropical'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+algo_test_minmax.log: algo_test_minmax$(EXEEXT)
+	@p='algo_test_minmax$(EXEEXT)'; \
+	b='algo_test_minmax'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+algo_test_lexicographic.log: algo_test_lexicographic$(EXEEXT)
+	@p='algo_test_lexicographic$(EXEEXT)'; \
+	b='algo_test_lexicographic'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+algo_test_power.log: algo_test_power$(EXEEXT)
+	@p='algo_test_power$(EXEEXT)'; \
+	b='algo_test_power'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \

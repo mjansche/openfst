@@ -3,6 +3,7 @@
 //
 // Applies an operation to each arc of an FST.
 
+#include <memory>
 #include <string>
 
 #include <fst/script/map.h>
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
   s::MapType mt;
@@ -79,7 +80,7 @@ int main(int argc, char **argv) {
           : (FLAGS_map_type == "times" ? WeightClass::One(ifst->WeightType())
                                        : WeightClass::Zero(ifst->WeightType()));
 
-  FstClass *ofst = s::Map(*ifst, mt, FLAGS_delta, weight_param);
+  std::unique_ptr<FstClass> ofst(s::Map(*ifst, mt, FLAGS_delta, weight_param));
 
   ofst->Write(out_name);
 

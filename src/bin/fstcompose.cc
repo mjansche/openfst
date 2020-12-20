@@ -37,10 +37,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  FstClass *ifst1 = FstClass::Read(in1_name);
+  std::unique_ptr<FstClass> ifst1(FstClass::Read(in1_name));
   if (!ifst1) return 1;
 
-  FstClass *ifst2 = FstClass::Read(in2_name);
+  std::unique_ptr<FstClass> ifst2(FstClass::Read(in2_name));
   if (!ifst2) return 1;
 
   if (ifst1->ArcType() != ifst2->ArcType()) {

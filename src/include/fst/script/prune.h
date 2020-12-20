@@ -4,6 +4,7 @@
 #ifndef FST_SCRIPT_PRUNE_H_
 #define FST_SCRIPT_PRUNE_H_
 
+#include <memory>
 #include <vector>
 
 #include <fst/arcfilter.h>
@@ -18,7 +19,7 @@ namespace script {
 struct PruneOptions {
   const WeightClass &weight_threshold;
   int64 state_threshold;
-  const std::vector<WeightClass> *distance;
+  std::unique_ptr<const std::vector<WeightClass>> distance;
   float delta;
 
   PruneOptions(const WeightClass &w, int64 s,
@@ -40,15 +41,14 @@ fst::PruneOptions<A, AnyArcFilter<A>> ConvertPruneOptions(
   typedef typename A::StateId StateId;
   Weight weight_threshold = *(opts.weight_threshold.GetWeight<Weight>());
   StateId state_threshold = opts.state_threshold;
-  std::vector<Weight> *distance = nullptr;
+  std::unique_ptr<std::vector<Weight>> distance;
   if (opts.distance) {
-    distance = new std::vector<Weight>(opts.distance->size());
-    for (unsigned i = 0; i < opts.distance->size(); ++i)
+    distance.reset(new std::vector<Weight>(opts.distance->size()));
+    for (auto i = 0; i < opts.distance->size(); ++i)
       (*distance)[i] = *((*opts.distance)[i].GetWeight<Weight>());
   }
-  return fst::PruneOptions<A, AnyArcFilter<A>>(
-      weight_threshold, state_threshold, AnyArcFilter<A>(), distance,
-      opts.delta);
+  return fst::PruneOptions<A, AnyArcFilter<A>>(weight_threshold,
+      state_threshold, AnyArcFilter<A>(), distance.get(), opts.delta);
 }
 
 // 1
@@ -60,7 +60,6 @@ void Prune(PruneArgs1 *args) {
   fst::PruneOptions<Arc, AnyArcFilter<Arc>> opts =
       ConvertPruneOptions<Arc>(args->arg2);
   Prune(ofst, opts);
-  delete opts.distance;
 }
 
 // 2
@@ -74,7 +73,6 @@ void Prune(PruneArgs2 *args) {
   fst::PruneOptions<Arc, AnyArcFilter<Arc>> opts =
       ConvertPruneOptions<Arc>(args->arg3);
   Prune(ifst, ofst, opts);
-  delete opts.distance;
 }
 
 // 3

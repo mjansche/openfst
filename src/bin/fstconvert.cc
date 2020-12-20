@@ -3,6 +3,8 @@
 //
 // Converts an FST to another type.
 
+#include <memory>
+
 #include <fst/script/convert.h>
 
 DEFINE_string(fst_type, "vector", "Output FST type");
@@ -25,17 +27,16 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  FstClass *ifst = FstClass::Read(in_name);
+  std::unique_ptr<FstClass> ifst(FstClass::Read(in_name));
   if (!ifst) return 1;
 
-  FstClass *ofst = ifst;
-  if (!ofst) return 1;
-
-  if (ofst->FstType() != FLAGS_fst_type)
-    ofst = s::Convert(*ifst, FLAGS_fst_type);
-  if (!ofst) return 1;
-
-  ofst->Write(out_name);
+  if (ifst->FstType() != FLAGS_fst_type) {
+    std::unique_ptr<FstClass> ofst(s::Convert(*ifst, FLAGS_fst_type));
+    if (!ofst) return 1;
+    ofst->Write(out_name);
+  } else {
+    ifst->Write(out_name);
+  }
 
   return 0;
 }

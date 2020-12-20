@@ -3,6 +3,8 @@
 //
 // Prunes states and arcs of an FST w.r.t. the shortest path weight.
 
+#include <memory>
+
 #include <fst/script/prune.h>
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
@@ -29,7 +31,7 @@ int main(int argc, char **argv) {
   string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
   string out_name = argc > 2 ? argv[2] : "";
 
-  MutableFstClass *fst = MutableFstClass::Read(in_name, true);
+  std::unique_ptr<MutableFstClass> fst(MutableFstClass::Read(in_name, true));
   if (!fst) return 1;
 
   WeightClass weight_threshold =
@@ -38,7 +40,7 @@ int main(int argc, char **argv) {
 
   s::PruneOptions opts(weight_threshold, FLAGS_nstate, nullptr, FLAGS_delta);
 
-  s::Prune(fst, opts);
+  s::Prune(fst.get(), opts);
 
   fst->Write(out_name);
 

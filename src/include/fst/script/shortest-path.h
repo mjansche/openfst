@@ -4,6 +4,7 @@
 #ifndef FST_SCRIPT_SHORTEST_PATH_H_
 #define FST_SCRIPT_SHORTEST_PATH_H_
 
+#include <memory>
 #include <vector>
 
 #include <fst/shortest-path.h>
@@ -45,72 +46,72 @@ void ShortestPath(ShortestPathArgs1 *args) {
   const ShortestPathOptions &opts = args->arg4;
   typedef AnyArcFilter<Arc> ArcFilter;
   std::vector<Weight> weights;
-  Weight weight_threshold = *(opts.weight_threshold.GetWeight<Weight>());
+  const Weight &weight_threshold = *opts.weight_threshold.GetWeight<Weight>();
   switch (opts.queue_type) {
     case AUTO_QUEUE: {
       typedef AutoQueue<StateId> Queue;
-      Queue *queue =
-          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights);
+      std::unique_ptr<Queue> queue(
+          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights));
       fst::ShortestPathOptions<Arc, Queue, ArcFilter> spopts(
-          queue, ArcFilter(), opts.nshortest, opts.unique, opts.has_distance,
-          opts.delta, opts.first_path, weight_threshold, opts.state_threshold);
+          queue.get(), ArcFilter(), opts.nshortest, opts.unique,
+          opts.has_distance, opts.delta, opts.first_path, weight_threshold,
+          opts.state_threshold);
       ShortestPath(ifst, ofst, &weights, spopts);
-      delete queue;
       return;
     }
     case FIFO_QUEUE: {
       typedef FifoQueue<StateId> Queue;
-      Queue *queue =
-          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights);
+      std::unique_ptr<Queue> queue(
+          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights));
       fst::ShortestPathOptions<Arc, Queue, ArcFilter> spopts(
-          queue, ArcFilter(), opts.nshortest, opts.unique, opts.has_distance,
-          opts.delta, opts.first_path, weight_threshold, opts.state_threshold);
+          queue.get(), ArcFilter(), opts.nshortest, opts.unique,
+          opts.has_distance, opts.delta, opts.first_path, weight_threshold,
+          opts.state_threshold);
       ShortestPath(ifst, ofst, &weights, spopts);
-      delete queue;
       return;
     }
     case LIFO_QUEUE: {
       typedef LifoQueue<StateId> Queue;
-      Queue *queue =
-          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights);
+      std::unique_ptr<Queue> queue(
+          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights));
       fst::ShortestPathOptions<Arc, Queue, ArcFilter> spopts(
-          queue, ArcFilter(), opts.nshortest, opts.unique, opts.has_distance,
-          opts.delta, opts.first_path, weight_threshold, opts.state_threshold);
+          queue.get(), ArcFilter(), opts.nshortest, opts.unique,
+          opts.has_distance, opts.delta, opts.first_path, weight_threshold,
+          opts.state_threshold);
       ShortestPath(ifst, ofst, &weights, spopts);
-      delete queue;
       return;
     }
     case SHORTEST_FIRST_QUEUE: {
       typedef NaturalShortestFirstQueue<StateId, Weight> Queue;
-      Queue *queue =
-          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights);
+      std::unique_ptr<Queue> queue(
+          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights));
       fst::ShortestPathOptions<Arc, Queue, ArcFilter> spopts(
-          queue, ArcFilter(), opts.nshortest, opts.unique, opts.has_distance,
-          opts.delta, opts.first_path, weight_threshold, opts.state_threshold);
+          queue.get(), ArcFilter(), opts.nshortest, opts.unique,
+          opts.has_distance, opts.delta, opts.first_path, weight_threshold,
+          opts.state_threshold);
       ShortestPath(ifst, ofst, &weights, spopts);
-      delete queue;
       return;
     }
     case STATE_ORDER_QUEUE: {
       typedef StateOrderQueue<StateId> Queue;
-      Queue *queue =
-          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights);
+      std::unique_ptr<Queue> queue(
+          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights));
       fst::ShortestPathOptions<Arc, Queue, ArcFilter> spopts(
-          queue, ArcFilter(), opts.nshortest, opts.unique, opts.has_distance,
-          opts.delta, opts.first_path, weight_threshold, opts.state_threshold);
+          queue.get(), ArcFilter(), opts.nshortest, opts.unique,
+          opts.has_distance, opts.delta, opts.first_path, weight_threshold,
+          opts.state_threshold);
       ShortestPath(ifst, ofst, &weights, spopts);
-      delete queue;
       return;
     }
     case TOP_ORDER_QUEUE: {
       typedef TopOrderQueue<StateId> Queue;
-      Queue *queue =
-          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights);
+      std::unique_ptr<Queue> queue(
+          QueueConstructor<Queue, Arc, ArcFilter>::Construct(ifst, &weights));
       fst::ShortestPathOptions<Arc, Queue, ArcFilter> spopts(
-          queue, ArcFilter(), opts.nshortest, opts.unique, opts.has_distance,
-          opts.delta, opts.first_path, weight_threshold, opts.state_threshold);
+          queue.get(), ArcFilter(), opts.nshortest, opts.unique,
+          opts.has_distance, opts.delta, opts.first_path, weight_threshold,
+          opts.state_threshold);
       ShortestPath(ifst, ofst, &weights, spopts);
-      delete queue;
       return;
     }
     default:
@@ -120,7 +121,7 @@ void ShortestPath(ShortestPathArgs1 *args) {
 
   // Copy the weights back
   args->arg3->resize(weights.size());
-  for (unsigned i = 0; i < weights.size(); ++i) {
+  for (auto i = 0; i < weights.size(); ++i) {
     (*args->arg3)[i] = WeightClass(weights[i]);
   }
 }
@@ -133,10 +134,10 @@ template <class Arc>
 void ShortestPath(ShortestPathArgs2 *args) {
   const Fst<Arc> &ifst = *(args->arg1.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
-  typename Arc::Weight weight_threshold =
-      *(args->arg6.GetWeight<typename Arc::Weight>());
-  ShortestPath(ifst, ofst, args->arg3, args->arg4, args->arg5, weight_threshold,
-               args->arg7);
+  const typename Arc::Weight &weight_threshold =
+      *args->arg6.GetWeight<typename Arc::Weight>();
+  ShortestPath(ifst, ofst, args->arg3, args->arg4, args->arg5,
+               weight_threshold, args->arg7);
 }
 
 // 1
