@@ -311,6 +311,7 @@ top_srcdir = @top_srcdir@
 @HAVE_COMPRESS_TRUE@compressdir = compress
 @HAVE_CONST_TRUE@constdir = const
 @HAVE_FAR_TRUE@fardir = far
+@HAVE_PYTHON_TRUE@fardir = far
 @HAVE_LINEAR_TRUE@lineardir = linear
 @HAVE_LOOKAHEAD_TRUE@lookaheaddir = lookahead
 @HAVE_MPDT_TRUE@mpdtdir = mpdt

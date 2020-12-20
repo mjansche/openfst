@@ -14,6 +14,9 @@
 
 @SET_MAKE@
 
+# NB: we use the Cython-generated .cc, rather than the .pyx source file, so
+# modifications to the .pyx files will not influence the build.
+
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -122,8 +125,7 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(pythondir)"
 LTLIBRARIES = $(python_LTLIBRARIES)
-fst_exceptions_la_DEPENDENCIES = ../../script/libfstscript.la \
-	../../lib/libfst.la
+fst_exceptions_la_LIBADD =
 am_fst_exceptions_la_OBJECTS = fst_exceptions_la-fst_exceptions.lo
 fst_exceptions_la_OBJECTS = $(am_fst_exceptions_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -134,15 +136,15 @@ fst_exceptions_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(AM_CXXFLAGS) $(CXXFLAGS) $(fst_exceptions_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
-fst_properties_la_DEPENDENCIES = ../../script/libfstscript.la \
-	../../lib/libfst.la
+fst_properties_la_DEPENDENCIES = ../../lib/libfst.la
 am_fst_properties_la_OBJECTS = fst_properties_la-fst_properties.lo
 fst_properties_la_OBJECTS = $(am_fst_properties_la_OBJECTS)
 fst_properties_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(AM_CXXFLAGS) $(CXXFLAGS) $(fst_properties_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
-pywrapfst_la_DEPENDENCIES = ../../script/libfstscript.la \
+pywrapfst_la_DEPENDENCIES = ../far/libfstfarscript.la \
+	../far/libfstfar.la ../../script/libfstscript.la \
 	../../lib/libfst.la
 am_pywrapfst_la_OBJECTS = pywrapfst_la-pywrapfst.lo
 pywrapfst_la_OBJECTS = $(am_pywrapfst_la_OBJECTS)
@@ -351,19 +353,15 @@ pyexec_LTILIBRARIES = fst_exceptions.la fst_properties.la pywrapfst.la
 fst_exceptions_la_SOURCES = fst_exceptions.cc
 fst_exceptions_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
 fst_exceptions_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
-fst_exceptions_la_LIBADD = ../../script/libfstscript.la ../../lib/libfst.la \
-                           -lfstscript -lfst -lm -ldl
-
 fst_properties_la_SOURCES = fst_properties.cc
 fst_properties_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
 fst_properties_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
-fst_properties_la_LIBADD = ../../script/libfstscript.la ../../lib/libfst.la \
-                           -lfstscript -lfst -lm -ldl
-
+fst_properties_la_LIBADD = ../../lib/libfst.la -lfst
 pywrapfst_la_SOURCES = pywrapfst.cc
 pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
 pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
-pywrapfst_la_LIBADD = ../../script/libfstscript.la ../../lib/libfst.la \
+pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la    \
+											../../script/libfstscript.la ../../lib/libfst.la \
                       -lfstfarscript -lfstfar -lfstscript -lfst -lm -ldl
 
 all: all-am
@@ -710,9 +708,6 @@ uninstall-am: uninstall-pythonLTLIBRARIES
 	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
 	uninstall-pythonLTLIBRARIES
 
-
-# NB: we use the Cython-generated .cc, rather than the .pyx source file, so
-# modifications to the .pyx files will not influence the build.
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

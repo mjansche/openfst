@@ -31,6 +31,7 @@ ngramdir = ngram
 endif
 
 if HAVE_PYTHON
+fardir = far
 pywrapfstdir = python
 endif
 

@@ -16061,14 +16061,6 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 	#
 
 fi
- if test "x$enable_python" != xno; then
-  HAVE_FAR_TRUE=
-  HAVE_FAR_FALSE='#'
-else
-  HAVE_FAR_TRUE='#'
-  HAVE_FAR_FALSE=
-fi
-
 
 
 # Check whether --with-libfstdir was given.
@@ -16265,10 +16257,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_PYTHON_TRUE}" && test -z "${HAVE_PYTHON_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_PYTHON\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_FAR_TRUE}" && test -z "${HAVE_FAR_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_FAR\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

@@ -21,11 +21,13 @@ OpenFst: Release 1.5
     * Replaced internal custom reference-counting (RefCounter) with
       C++11 smart pointers where possible, and fixed associated
       reference-counting bugs (1.5.1)
-    * Prepended `Pdt` to the expand libraries and classes in the PDT
-      extension, and prepended `MPdt` to the expand libraries and classes
+    * When calling DeleteStates on a MutableFst with a shared impl, the impl
+      is set to a new empty impl rather than copying and deleting (1.5.1)
+    * Prepended `Pdt` to the Expand libraries and classes in the PDT
+      extension, and prepended `MPdt` to the Expand libraries and classes
       in the MPDT extension, so that both can be used in the same compilation
       unit (1.5.1)
-    * Added option to PDT Replace to a compile a strongly-regular RTN into a
+    * Added option to PDT Replace for compiling a strongly-regular RTN into a
       bounded-stack PDT (1.5.1)
     * Improved symbol table support for PDT Replace, including automatic
       generation of parentheses symbols (1.5.1)
@@ -37,7 +39,6 @@ OpenFst: Release 1.5
       - Improved VectorFstClass constructors
       - Added linear-time check for cyclic dependencies in Replace
       - Added EncodeMapperClass, a template-free box for an EncodeMapper
-    * Bug-fix to STTable-backed FARs (1.5.1)
     * Improvements to the binaries (1.5.1):
       - Fixed no-op --precision flag to fstdraw (1.5.1)
       - Fixed no-op --file_list_input flag to farcreate (1.5.1)
@@ -46,6 +47,7 @@ OpenFst: Release 1.5
       - Added methods for FST access via state and arc iteration
       - Added FST compilation from arclists (cf. fstcompile)
       - Added FST printing and drawing
+      - Added FarReader and FarWriter classes.
 
 OpenFst: Release 1.4
     * Port to C++11 (1.4.0)
