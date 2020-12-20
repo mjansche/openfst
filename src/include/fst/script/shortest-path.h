@@ -16,14 +16,14 @@ namespace fst {
 namespace script {
 
 struct ShortestPathOptions : public fst::script::ShortestDistanceOptions {
-  const size_t nshortest;
+  const int32 nshortest;
   const bool unique;
   const bool has_distance;
   const bool first_path;
   const WeightClass &weight_threshold;
   const int64 state_threshold;
 
-  ShortestPathOptions(QueueType qt, size_t n, bool u, bool hasdist, float d,
+  ShortestPathOptions(QueueType qt, int32 n, bool u, bool hasdist, float d,
                       bool fp, const WeightClass &w,
                       int64 s = fst::kNoStateId)
       : ShortestDistanceOptions(qt, ANY_ARC_FILTER, kNoStateId, d),
@@ -126,7 +126,7 @@ void ShortestPath(ShortestPathArgs1 *args) {
 }
 
 // 2
-typedef args::Package<const FstClass &, MutableFstClass *, size_t, bool, bool,
+typedef args::Package<const FstClass &, MutableFstClass *, int32, bool, bool,
     const WeightClass &, int64> ShortestPathArgs2;
 
 template <class Arc>
@@ -145,7 +145,7 @@ void ShortestPath(const FstClass &ifst, MutableFstClass *ofst,
                   const ShortestPathOptions &opts);
 
 // 2
-void ShortestPath(const FstClass &ifst, MutableFstClass *ofst, size_t n,
+void ShortestPath(const FstClass &ifst, MutableFstClass *ofst, int32 n,
     bool unique, bool first_path, const WeightClass &weight_threshold,
     int64 state_threshold = fst::kNoStateId);
 

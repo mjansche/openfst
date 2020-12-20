@@ -34,7 +34,8 @@ class TropicalWeightGenerator_ {
  public:
   typedef TropicalWeightTpl<T> Weight;
 
-  explicit TropicalWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit TropicalWeightGenerator_(time_t seed = time(nullptr),
+                                    bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -65,7 +66,8 @@ class LogWeightGenerator_ {
  public:
   typedef LogWeightTpl<T> Weight;
 
-  explicit LogWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit LogWeightGenerator_(time_t seed = time(nullptr),
+                               bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -97,7 +99,8 @@ class MinMaxWeightGenerator_ {
  public:
   typedef MinMaxWeightTpl<T> Weight;
 
-  explicit MinMaxWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit MinMaxWeightGenerator_(time_t seed = time(nullptr),
+                                  bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -132,7 +135,8 @@ class StringWeightGenerator {
  public:
   typedef StringWeight<L, S> Weight;
 
-  explicit StringWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit StringWeightGenerator(time_t seed = time(nullptr),
+                                 bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -169,7 +173,8 @@ class UnionWeightGenerator {
   typedef typename G::Weight W;
   typedef UnionWeight<W, O> Weight;
 
-  explicit UnionWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit UnionWeightGenerator(time_t seed = time(nullptr),
+                                bool allow_zero = true)
       : generator_(seed, false), allow_zero_(allow_zero) {}
 
   Weight operator()() const {
@@ -207,7 +212,8 @@ class ProductWeightGenerator {
   typedef typename G2::Weight W2;
   typedef W Weight;
 
-  explicit ProductWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit ProductWeightGenerator(time_t seed = time(nullptr),
+                                  bool allow_zero = true)
       : generator1_(seed, allow_zero), generator2_(seed, allow_zero) {}
 
   Weight operator()() const {
@@ -232,7 +238,7 @@ class LexicographicWeightGenerator {
   typedef typename G2::Weight W2;
   typedef LexicographicWeight<W1, W2> Weight;
 
-  explicit LexicographicWeightGenerator(int seed = time(0),
+  explicit LexicographicWeightGenerator(time_t seed = time(nullptr),
                                         bool allow_zero = true)
       : generator1_(seed, false),
         generator2_(seed, false),
@@ -272,7 +278,8 @@ class GallicWeightGenerator
   typedef typename G::Weight W;
   typedef GallicWeight<L, W, T> Weight;
 
-  explicit GallicWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit GallicWeightGenerator(time_t seed = time(nullptr),
+                                 bool allow_zero = true)
       : PG(seed, allow_zero) {}
 
   explicit GallicWeightGenerator(const PG &pg) : PG(pg) {}
@@ -290,7 +297,8 @@ class GallicWeightGenerator<L, G, GALLIC>
       UG;
   typedef typename G::Weight W;
 
-  explicit GallicWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit GallicWeightGenerator(time_t seed = time(nullptr),
+                                 bool allow_zero = true)
       : UG(seed, allow_zero) {}
 
   explicit GallicWeightGenerator(const UG &ug) : UG(ug) {}
@@ -304,7 +312,8 @@ class PowerWeightGenerator {
   typedef typename G::Weight W;
   typedef PowerWeight<W, n> Weight;
 
-  explicit PowerWeightGenerator(int seed = time(0), bool allow_zero = true)
+  explicit PowerWeightGenerator(time_t seed = time(nullptr),
+                                bool allow_zero = true)
       : generator_(seed, allow_zero) {}
 
   Weight operator()() const {
@@ -328,7 +337,8 @@ class SignedLogWeightGenerator_ {
  public:
   typedef SignedLogWeightTpl<T> Weight;
 
-  explicit SignedLogWeightGenerator_(int seed = time(0), bool allow_zero = true)
+  explicit SignedLogWeightGenerator_(time_t seed = time(nullptr),
+                                     bool allow_zero = true)
       : allow_zero_(allow_zero) {
     srand(seed);
   }
@@ -363,7 +373,7 @@ class SparsePowerWeightGenerator {
   typedef typename G::Weight W;
   typedef SparsePowerWeight<W, K> Weight;
 
-  explicit SparsePowerWeightGenerator(int seed = time(0),
+  explicit SparsePowerWeightGenerator(time_t seed = time(nullptr),
                                       bool allow_zero = true)
       : generator_(seed, allow_zero) {}
 

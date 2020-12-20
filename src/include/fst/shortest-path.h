@@ -24,7 +24,7 @@ struct ShortestPathOptions
     : public ShortestDistanceOptions<Arc, Queue, ArcFilter> {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
-  size_t nshortest;   // return n-shortest paths
+  int32 nshortest;    // return n-shortest paths
   bool unique;        // only return paths with distinct input strings
   bool has_distance;  // distance vector already contains the
                       // shortest distance from the initial state
@@ -36,7 +36,7 @@ struct ShortestPathOptions
   Weight weight_threshold;  // pruning weight threshold.
   StateId state_threshold;  // pruning state threshold.
 
-  ShortestPathOptions(Queue *q, ArcFilter filt, size_t n = 1, bool u = false,
+  ShortestPathOptions(Queue *q, ArcFilter filt, int32 n = 1, bool u = false,
                       bool hasdist = false, float d = kDelta, bool fp = false,
                       Weight w = Weight::Zero(), StateId s = kNoStateId)
       : ShortestDistanceOptions<Arc, Queue, ArcFilter>(q, filt, kNoStateId, d),
@@ -304,7 +304,7 @@ class ShortestPathCompare {
 // be defined at that time for the states that are known to exist.
 template <class Arc, class RevArc>
 void NShortestPath(const Fst<RevArc> &ifst, MutableFst<Arc> *ofst,
-                   const std::vector<typename Arc::Weight> &distance, size_t n,
+                   const std::vector<typename Arc::Weight> &distance, int32 n,
                    float delta = kDelta,
                    typename Arc::Weight weight_threshold = Arc::Weight::Zero(),
                    typename Arc::StateId state_threshold = kNoStateId) {
@@ -441,7 +441,7 @@ void ShortestPath(
   typedef typename Arc::Weight Weight;
   typedef ReverseArc<Arc> ReverseArc;
 
-  size_t n = opts.nshortest;
+  int32 n = opts.nshortest;
   if (n == 1) {
     std::vector<std::pair<StateId, size_t>> parent;
     StateId f_parent;
@@ -509,7 +509,7 @@ void ShortestPath(
 // The weights need to be right distributive and have the path
 // (kPath) property.
 template <class Arc>
-void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst, size_t n = 1,
+void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst, int32 n = 1,
                   bool unique = false, bool first_path = false,
                   typename Arc::Weight weight_threshold = Arc::Weight::Zero(),
                   typename Arc::StateId state_threshold = kNoStateId) {

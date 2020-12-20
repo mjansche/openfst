@@ -20,7 +20,6 @@
 
 namespace fst {
 
-//
 // ARC SELECTORS - these function objects are used to select a random
 // transition to take from an FST's state. They should return a number
 // N s.t. 0 <= N <= NumArcs(). If N < NumArcs(), then the N-th
@@ -28,7 +27,6 @@ namespace fst {
 // that state is selected (i.e., the 'super-final' transition is selected).
 // It can be assumed these will not be called unless either there
 // are transitions leaving the state and/or the state is final.
-//
 
 // Randomly selects a transition using the uniform distribution.
 template <class A>
@@ -36,7 +34,7 @@ struct UniformArcSelector {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  UniformArcSelector(int seed = time(0)) { srand(seed); }
+  explicit UniformArcSelector(time_t seed = time(nullptr)) { srand(seed); }
 
   size_t operator()(const Fst<A> &fst, StateId s) const {
     double r = rand() / (RAND_MAX + 1.0);
@@ -57,7 +55,7 @@ class LogProbArcSelector {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  LogProbArcSelector(int seed = time(0)) { srand(seed); }
+  explicit LogProbArcSelector(time_t seed = time(nullptr)) { srand(seed); }
 
   size_t operator()(const Fst<A> &fst, StateId s) const {
     // Find total weight leaving state
@@ -70,7 +68,7 @@ class LogProbArcSelector {
 
     double r = rand() / (RAND_MAX + 1.0);
     double p = 0.0;
-    int n = 0;
+    size_t n = 0;
     for (ArcIterator<Fst<A>> aiter(fst, s); !aiter.Done(); aiter.Next(), ++n) {
       const A &arc = aiter.Value();
       p += exp(-to_log_weight_(arc.weight).Value());
@@ -96,7 +94,7 @@ class FastLogProbArcSelector : public LogProbArcSelector<A> {
   typedef typename A::Weight Weight;
   using LogProbArcSelector<A>::operator();
 
-  FastLogProbArcSelector(int seed = time(0))
+  explicit FastLogProbArcSelector(time_t seed = time(nullptr))
       : LogProbArcSelector<A>(seed), seed_(seed) {}
 
   size_t operator()(const Fst<A> &fst, StateId s,
@@ -111,10 +109,10 @@ class FastLogProbArcSelector : public LogProbArcSelector<A> {
     return accumulator->LowerBound(r + sum, &aiter);
   }
 
-  int Seed() const { return seed_; }
+  time_t Seed() const { return seed_; }
 
  private:
-  int seed_;
+  time_t seed_;
   WeightConvert<Weight, Log64Weight> to_log_weight_;
 };
 
@@ -149,11 +147,12 @@ class ArcSampler {
 
   // The 'max_length' may be interpreted (including ignored) by a
   // sampler as it chooses. This generic version interprets this literally.
-  ArcSampler(const Fst<A> &fst, const S &arc_selector, int max_length = INT_MAX)
+  ArcSampler(const Fst<A> &fst, const S &arc_selector,
+             int32 max_length = std::numeric_limits<int32>::max())
       : fst_(fst), arc_selector_(arc_selector), max_length_(max_length) {}
 
   // Allow updating Fst argument; pass only if changed.
-  ArcSampler(const ArcSampler<A, S> &sampler, const Fst<A> *fst = 0)
+  ArcSampler(const ArcSampler<A, S> &sampler, const Fst<A> *fst = nullptr)
       : fst_(fst ? *fst : sampler.fst_),
         arc_selector_(sampler.arc_selector_),
         max_length_(sampler.max_length_) {
@@ -175,7 +174,7 @@ class ArcSampler {
       return false;
     }
 
-    for (size_t i = 0; i < rstate.nsamples; ++i)
+    for (auto i = 0; i < rstate.nsamples; ++i)
       ++sample_map_[arc_selector_(fst_, rstate.state_id)];
     Reset();
     return true;
@@ -201,7 +200,7 @@ class ArcSampler {
  private:
   const Fst<A> &fst_;
   const S &arc_selector_;
-  int max_length_;
+  int32 max_length_;
 
   // Stores (N, K) as described for Value().
   std::map<size_t, size_t> sample_map_;
@@ -220,7 +219,8 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
   typedef typename A::Weight Weight;
   typedef CacheLogAccumulator<A> C;
 
-  ArcSampler(const Fst<A> &fst, const S &arc_selector, int max_length = INT_MAX)
+  ArcSampler(const Fst<A> &fst, const S &arc_selector,
+             int32 max_length = std::numeric_limits<int32>::max())
       : fst_(fst),
         arc_selector_(arc_selector),
         max_length_(max_length),
@@ -295,7 +295,7 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
       // Left-over number of samples needed.
       size_t num_to_sample = rstate.nsamples;
 
-      for (size_t i = 0; i < p_.size(); ++i) {
+      for (auto i = 0; i < p_.size(); ++i) {
         size_t num_sampled = 0;
         if (p_[i] > 0) {
           std::binomial_distribution<> d(num_to_sample, p_[i] / norm);
@@ -306,14 +306,14 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
         num_to_sample -= num_sampled;
       }
     } else {
-      for (size_t i = 0; i < p_.size(); ++i)
+      for (auto i = 0; i < p_.size(); ++i)
         sample_map_[i] = ceil(p_[i] * rstate.nsamples);
     }
   }
 
   const Fst<A> &fst_;
   const S &arc_selector_;
-  int max_length_;
+  int32 max_length_;
 
   // Stores (N, K) as described for Value().
   std::map<size_t, size_t> sample_map_;
@@ -333,13 +333,13 @@ class ArcSampler<A, FastLogProbArcSelector<A>> {
 // the sampler is taken by RandGenFst.
 template <class S>
 struct RandGenFstOptions : public CacheOptions {
-  S *arc_sampler;            // How to sample transitions at a state
-  size_t npath;              // # of paths to generate
+  S *arc_sampler;            // How to sample transitions at a state.
+  int32 npath;               // # of paths to generate.
   bool weighted;             // Output tree weighted by path count; o.w.
-                             // output unweighted DAG
+                             // output unweighted DAG.
   bool remove_total_weight;  // Remove total weight when output is weighted.
 
-  RandGenFstOptions(const CacheOptions &copts, S *samp, size_t n = 1,
+  RandGenFstOptions(const CacheOptions &copts, S *samp, int32 n = 1,
                     bool w = true, bool rw = false)
       : CacheOptions(copts),
         arc_sampler(samp),
@@ -401,7 +401,7 @@ class RandGenFstImpl : public CacheImpl<B> {
   }
 
   ~RandGenFstImpl() override {
-    for (int i = 0; i < state_table_.size(); ++i) delete state_table_[i];
+    for (auto i = 0; i < state_table_.size(); ++i) delete state_table_[i];
     delete fst_;
     delete arc_sampler_;
   }
@@ -511,7 +511,7 @@ class RandGenFstImpl : public CacheImpl<B> {
  private:
   Fst<A> *fst_;
   S *arc_sampler_;
-  size_t npath_;
+  int32 npath_;
   std::vector<RandState<A> *> state_table_;
   bool weighted_;
   bool remove_total_weight_;
@@ -601,14 +601,15 @@ inline void RandGenFst<A, B, S>::InitStateIterator(
 template <class S>
 struct RandGenOptions {
   const S &arc_selector;     // How an arc is selected at a state
-  int max_length;            // Maximum path length
-  size_t npath;              // # of paths to generate
+  int32 max_length;          // Maximum path length
+  int32 npath;               // # of paths to generate
   bool weighted;             // Output is tree weighted by path count; o.w.
                              // output unweighted union of paths.
   bool remove_total_weight;  // Remove total weight when output is weighted.
 
-  RandGenOptions(const S &sel, int len = INT_MAX, size_t n = 1, bool w = false,
-                 bool rw = false)
+  explicit RandGenOptions(const S &sel,
+                          int32 len = std::numeric_limits<int32>::max(),
+                          int32 n = 1, bool w = false, bool rw = false)
       : arc_selector(sel),
         max_length(len),
         npath(n),
@@ -670,7 +671,7 @@ class RandGenVisitor {
     }
 
     StateId src = ofst_->Start();
-    for (size_t i = 0; i < path_.size(); ++i) {
+    for (auto i = 0; i < path_.size(); ++i) {
       StateId dest = ofst_->AddState();
       OArc arc(path_[i].ilabel, path_[i].olabel, Weight::One(), dest);
       ofst_->AddArc(src, arc);

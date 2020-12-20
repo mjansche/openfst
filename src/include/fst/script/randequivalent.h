@@ -13,8 +13,9 @@ namespace fst {
 namespace script {
 
 // 1
-typedef args::Package<const FstClass &, const FstClass &, int32, float, int,
-                      int, bool *> RandEquivalentInnerArgs1;
+typedef args::Package<const FstClass &, const FstClass &, time_t, int32,
+                      float, int32, bool *> RandEquivalentInnerArgs1;
+
 typedef args::WithReturnValue<bool, RandEquivalentInnerArgs1>
     RandEquivalentArgs1;
 
@@ -29,8 +30,8 @@ void RandEquivalent(RandEquivalentArgs1 *args) {
 }
 
 // 2
-typedef args::Package<const FstClass &, const FstClass &, int32, ssize_t, float,
-                      const RandGenOptions<RandArcSelection> &,
+typedef args::Package<const FstClass &, const FstClass &, time_t, int32,
+                      float, const RandGenOptions<RandArcSelection> &,
                       bool *> RandEquivalentInnerArgs2;
 
 typedef args::WithReturnValue<bool, RandEquivalentInnerArgs2>
@@ -41,7 +42,7 @@ void RandEquivalent(RandEquivalentArgs2 *args) {
   const Fst<Arc> &fst1 = *(args->args.arg1.GetFst<Arc>());
   const Fst<Arc> &fst2 = *(args->args.arg2.GetFst<Arc>());
   const RandGenOptions<RandArcSelection> &opts = args->args.arg6;
-  int32 seed = args->args.arg3;
+  time_t seed = args->args.arg3;
 
   if (opts.arc_selector == UNIFORM_ARC_SELECTOR) {
     UniformArcSelector<Arc> arc_selector(seed);
@@ -68,13 +69,13 @@ void RandEquivalent(RandEquivalentArgs2 *args) {
 
 // 1
 bool RandEquivalent(const FstClass &fst1, const FstClass &fst2,
-                    int32 seed = time(0), ssize_t num_paths = 1,
-                    float delta = fst::kDelta, int path_length = INT_MAX,
-                    bool *errror = nullptr);
+                    time_t seed = time(nullptr), int32 num_paths = 1,
+                    float delta = fst::kDelta, int32 path_length = INT_MAX,
+                    bool *error = nullptr);
 
 // 2
 bool RandEquivalent(
-    const FstClass &fst1, const FstClass &fst2, int32 seed, ssize_t num_paths,
+    const FstClass &fst1, const FstClass &fst2, time_t seed, int32 num_paths,
     float delta,
     const fst::RandGenOptions<fst::script::RandArcSelection> &opts,
     bool *error = nullptr);

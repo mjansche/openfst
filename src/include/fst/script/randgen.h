@@ -17,14 +17,14 @@ enum RandArcSelection {
   FAST_LOG_PROB_ARC_SELECTOR
 };
 
-typedef args::Package<const FstClass &, MutableFstClass *, int32,
+typedef args::Package<const FstClass &, MutableFstClass *, time_t,
                       const RandGenOptions<RandArcSelection> &> RandGenArgs;
 
 template <class Arc>
 void RandGen(RandGenArgs *args) {
   const Fst<Arc> &ifst = *(args->arg1.GetFst<Arc>());
   MutableFst<Arc> *ofst = args->arg2->GetMutableFst<Arc>();
-  int32 seed = args->arg3;
+  time_t seed = args->arg3;
   const RandGenOptions<RandArcSelection> &opts = args->arg4;
 
   if (opts.arc_selector == UNIFORM_ARC_SELECTOR) {
@@ -49,7 +49,8 @@ void RandGen(RandGenArgs *args) {
 }
 
 // Client-facing prototype
-void RandGen(const FstClass &ifst, MutableFstClass *ofst, int32 seed = time(0),
+void RandGen(const FstClass &ifst, MutableFstClass *ofst,
+             time_t seed = time(nullptr),
              const RandGenOptions<RandArcSelection> &opts =
                  fst::RandGenOptions<fst::script::RandArcSelection>(
                      fst::script::UNIFORM_ARC_SELECTOR));

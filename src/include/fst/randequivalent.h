@@ -27,8 +27,9 @@ namespace fst {
 // 'delta'. Returns optional error value (when FLAGS_error_fatal = false).
 template <class Arc, class ArcSelector>
 bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                    ssize_t num_paths, float delta,
-                    const RandGenOptions<ArcSelector> &opts, bool *error = 0) {
+                    int32 num_paths, float delta,
+                    const RandGenOptions<ArcSelector> &opts,
+                    bool *error = nullptr) {
   typedef typename Arc::Weight Weight;
   if (error) *error = false;
 
@@ -52,7 +53,7 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   ArcSort(&sfst2, icomp);
 
   bool ret = true;
-  for (ssize_t n = 0; n < num_paths; ++n) {
+  for (auto n = 0; n < num_paths; ++n) {
     VectorFst<Arc> path;
     const Fst<Arc> &fst = rand() % 2 ? sfst1 : sfst2;
     RandGen(fst, &path, opts);
@@ -103,8 +104,10 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 // Returns optional error value (when FLAGS_error_fatal = false).
 template <class Arc>
 bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                    ssize_t num_paths, float delta = kDelta, int seed = time(0),
-                    int path_length = INT_MAX, bool *error = 0) {
+                    int32 num_paths, float delta = kDelta,
+                    time_t seed = time(nullptr),
+                    int32 path_length = std::numeric_limits<int32>::max(),
+                    bool *error = nullptr) {
   UniformArcSelector<Arc> uniform_selector(seed);
   RandGenOptions<UniformArcSelector<Arc>> opts(uniform_selector, path_length);
   return RandEquivalent(fst1, fst2, num_paths, delta, opts, error);

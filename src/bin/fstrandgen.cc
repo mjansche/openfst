@@ -6,7 +6,7 @@
 #include <fst/script/randgen.h>
 
 DEFINE_int32(max_length, INT_MAX, "Maximum path length");
-DEFINE_int64(npath, 1, "Number of paths to generate");
+DEFINE_int32(npath, 1, "Number of paths to generate");
 DEFINE_int32(seed, time(0), "Random seed");
 DEFINE_string(select, "uniform",
               "Selection type: one of: "

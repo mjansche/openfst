@@ -21,7 +21,7 @@ void ShortestPath(const FstClass &ifst, MutableFstClass *ofst,
 }
 
 // 2
-void ShortestPath(const FstClass &ifst, MutableFstClass *ofst, size_t n,
+void ShortestPath(const FstClass &ifst, MutableFstClass *ofst, int32 n,
                   bool unique, bool first_path,
                   const WeightClass &weight_threshold, int64 state_threshold) {
   if (!ArcTypesMatch(ifst, *ofst, "ShortestPath")) {

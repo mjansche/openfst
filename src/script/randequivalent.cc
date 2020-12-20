@@ -9,8 +9,8 @@ namespace fst {
 namespace script {
 
 // 1
-bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, int32 seed,
-                    ssize_t num_paths, float delta, int path_length,
+bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, time_t seed,
+                    int32 num_paths, float delta, int32 path_length,
                     bool *error) {
   if (!ArcTypesMatch(fst1, fst2, "RandEquivalent")) return false;
   RandEquivalentInnerArgs1 iargs(fst1, fst2, seed, num_paths, delta,
@@ -22,8 +22,8 @@ bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, int32 seed,
 }
 
 // 2
-bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, int32 seed,
-                    ssize_t num_paths, float delta,
+bool RandEquivalent(const FstClass &fst1, const FstClass &fst2, time_t seed,
+                    int32 num_paths, float delta,
                     const RandGenOptions<RandArcSelection> &opts, bool *error) {
   if (!ArcTypesMatch(fst1, fst2, "RandEquivalent")) return false;
   RandEquivalentInnerArgs2 iargs(fst1, fst2, seed, num_paths, delta, opts,

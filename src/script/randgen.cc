@@ -8,7 +8,7 @@
 namespace fst {
 namespace script {
 
-void RandGen(const FstClass &ifst, MutableFstClass *ofst, int32 seed,
+void RandGen(const FstClass &ifst, MutableFstClass *ofst, time_t seed,
              const RandGenOptions<RandArcSelection> &opts) {
   if (!ArcTypesMatch(ifst, *ofst, "RandGen")) {
     ofst->SetProperties(kError, kError);
