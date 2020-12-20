@@ -147,21 +147,21 @@ void PrintPdtInfo(const PdtInfo<A> &pdtinfo) {
           pdtinfo.FstType().c_str());
     fprintf(fp, "%-50s%s\n", "arc type",
             pdtinfo.ArcType().c_str());
-  fprintf(fp, "%-50s%lld\n", "# of states",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of states",
           pdtinfo.NumStates());
-  fprintf(fp, "%-50s%lld\n", "# of arcs",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of arcs",
           pdtinfo.NumArcs());
-  fprintf(fp, "%-50s%lld\n", "# of open parentheses",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of open parentheses",
           pdtinfo.NumOpenParens());
-  fprintf(fp, "%-50s%lld\n", "# of close parentheses",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of close parentheses",
           pdtinfo.NumCloseParens());
-  fprintf(fp, "%-50s%lld\n", "# of unique open parentheses",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of unique open parentheses",
           pdtinfo.NumUniqueOpenParens());
-  fprintf(fp, "%-50s%lld\n", "# of unique close parentheses",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of unique close parentheses",
           pdtinfo.NumUniqueCloseParens());
-  fprintf(fp, "%-50s%lld\n", "# of open parenthesis dest. states",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of open parenthesis dest. states",
           pdtinfo.NumOpenParenStates());
-  fprintf(fp, "%-50s%lld\n", "# of close parenthesis source states",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of close parenthesis source states",
           pdtinfo.NumCloseParenStates());
 }
 

@@ -26,9 +26,10 @@
 
 DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
 DEFINE_string(map_type, "identity",
-              "Map operation, one of: \"identity\", \"invert\", "
-              " \"plus (--weight)\", \"quantize (--delta)\", \"rmweight\", "
-              "\"superfinal\", \"times (--weight)\"\n");
+              "Map operation, one of: \"arc_sum\", \"identity\", \"invert\", "
+              "\"plus (--weight)\", \"quantize (--delta)\", \"rmweight\", "
+              "\"superfinal\", \"times (--weight)\", \"to_log\", \"to_log64\", "
+              "\"to_standard\"");
 DEFINE_string(weight, "", "Weight parameter");
 
 int main(int argc, char **argv) {
@@ -60,18 +61,20 @@ int main(int argc, char **argv) {
        s::WeightClass::One() : s::WeightClass::Zero());
 
   s::MapType mt;
-  if (FLAGS_map_type == "identity") {
+  if (FLAGS_map_type == "arc_sum") {
+    mt = s::ARC_SUM_MAPPER;
+  } else if (FLAGS_map_type == "identity") {
     mt = s::IDENTITY_MAPPER;
   } else if (FLAGS_map_type == "invert") {
     mt = s::INVERT_MAPPER;
   } else if (FLAGS_map_type == "plus") {
-     mt = s::PLUS_MAPPER;
-   } else if (FLAGS_map_type == "quantize") {
-     mt = s::QUANTIZE_MAPPER;
-   } else if (FLAGS_map_type == "rmweight") {
+    mt = s::PLUS_MAPPER;
+  } else if (FLAGS_map_type == "quantize") {
+    mt = s::QUANTIZE_MAPPER;
+  } else if (FLAGS_map_type == "rmweight") {
     mt = s::RMWEIGHT_MAPPER;
   } else if (FLAGS_map_type == "superfinal") {
-     mt = s::SUPERFINAL_MAPPER;
+    mt = s::SUPERFINAL_MAPPER;
   } else if (FLAGS_map_type == "times") {
     mt = s::TIMES_MAPPER;
   } else if (FLAGS_map_type == "to_log") {

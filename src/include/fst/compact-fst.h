@@ -173,7 +173,7 @@ class CompactFstData {
   int DecrRefCount() { return ref_count_.Decr(); }
 
  private:
-  // Byte alignment for states and arcs in file format
+  // Byte alignment for states and arcs in file format (version 1 only)
   static const int kFileAlign = 16;
 
   Unsigned *states_;
@@ -340,9 +340,10 @@ CompactFstData<E, U> *CompactFstData<E, U>::Read(
 
   if (compactor.Size() == -1) {
     data->states_ = new Unsigned[data->nstates_ + 1];
-    char c;
-    for (int i = 0; i < kFileAlign && strm.tellg() % kFileAlign; ++i)
-      strm.read(&c, 1);
+    if (hdr.Version() == 1 && !AlignInput(strm, kFileAlign)) {
+      LOG(ERROR) << "CompactFst::Read: Alignment failed: " << opts.source;
+      return 0;
+    }
     // TODO: memory map this
     size_t b = (data->nstates_ + 1) * sizeof(Unsigned);
     strm.read(reinterpret_cast<char *>(data->states_), b);
@@ -358,10 +359,11 @@ CompactFstData<E, U> *CompactFstData<E, U>::Read(
       : data->nstates_ * compactor.Size();
   data->compacts_ = new CompactElement[data->ncompacts_];
   // TODO: memory map this
-  char c;
   size_t b = data->ncompacts_ * sizeof(CompactElement);
-  for (int i = 0; i < kFileAlign && strm.tellg() % kFileAlign; ++i)
-    strm.read(&c, 1);
+  if (hdr.Version() == 1 && !AlignInput(strm, kFileAlign)) {
+    LOG(ERROR) << "CompactFst::Read: Alignment failed: " << opts.source;
+    return 0;
+  }
   strm.read(reinterpret_cast<char *>(data->compacts_), b);
   if (!strm) {
     LOG(ERROR) << "CompactFst::Read: Read failed: " << opts.source;
@@ -374,13 +376,9 @@ template<class E, class U>
 bool CompactFstData<E, U>::Write(ostream &strm,
                                  const FstWriteOptions &opts) const {
   if (states_) {
-    for (int i = 0; i < kFileAlign && strm.tellp() % kFileAlign; ++i)
-      strm.write("", 1);
     strm.write(reinterpret_cast<char *>(states_),
                (nstates_ + 1) * sizeof(Unsigned));
   }
-  for (int i = 0; i < kFileAlign && strm.tellp() % kFileAlign; ++i)
-    strm.write("", 1);
   strm.write(reinterpret_cast<char *>(compacts_),
              ncompacts_ * sizeof(CompactElement));
 
@@ -702,7 +700,7 @@ class CompactFstImpl : public CacheImpl<A> {
   // Properties always true of this Fst class
   static const uint64 kStaticProperties = kExpanded;
   // Current file format version
-  static const int kFileVersion = 1;
+  static const int kFileVersion = 2;
   // Minimum file format version supported
   static const int kMinFileVersion = 1;
 

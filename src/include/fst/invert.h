@@ -21,7 +21,7 @@
 #ifndef FST_LIB_INVERT_H__
 #define FST_LIB_INVERT_H__
 
-#include <fst/map.h>
+#include <fst/arc-map.h>
 #include <fst/mutable-fst.h>
 
 
@@ -54,7 +54,7 @@ template <class A> struct InvertMapper {
 // where V = # of states and E = # of arcs.
 template<class Arc> inline
 void Invert(MutableFst<Arc> *fst) {
-  Map(fst, InvertMapper<Arc>());
+  ArcMap(fst, InvertMapper<Arc>());
   SymbolTable *input = fst->InputSymbols() ? fst->InputSymbols()->Copy() : 0;
   fst->SetInputSymbols(fst->OutputSymbols());
   fst->SetOutputSymbols(input);
@@ -72,21 +72,21 @@ void Invert(MutableFst<Arc> *fst) {
 // time and to visit an input state or arc is assumed and exclusive
 // of caching.
 template <class A>
-class InvertFst : public MapFst<A, A, InvertMapper<A> > {
+class InvertFst : public ArcMapFst<A, A, InvertMapper<A> > {
  public:
   typedef A Arc;
   typedef InvertMapper<A> C;
-  typedef MapFstImpl< A, A, InvertMapper<A> > Impl;
+  typedef ArcMapFstImpl< A, A, InvertMapper<A> > Impl;
   using ImplToFst<Impl>::GetImpl;
 
-  explicit InvertFst(const Fst<A> &fst) : MapFst<A, A, C>(fst, C()) {
+  explicit InvertFst(const Fst<A> &fst) : ArcMapFst<A, A, C>(fst, C()) {
     GetImpl()->SetOutputSymbols(fst.InputSymbols());
     GetImpl()->SetInputSymbols(fst.OutputSymbols());
   }
 
   // See Fst<>::Copy() for doc.
   InvertFst(const InvertFst<A> &fst, bool safe = false)
-      : MapFst<A, A, C>(fst, safe) {}
+      : ArcMapFst<A, A, C>(fst, safe) {}
 
   // Get a copy of this InvertFst. See Fst<>::Copy() for further doc.
   virtual InvertFst<A> *Copy(bool safe = false) const {
@@ -98,20 +98,20 @@ class InvertFst : public MapFst<A, A, InvertMapper<A> > {
 // Specialization for InvertFst.
 template <class A>
 class StateIterator< InvertFst<A> >
-    : public StateIterator< MapFst<A, A, InvertMapper<A> > > {
+    : public StateIterator< ArcMapFst<A, A, InvertMapper<A> > > {
  public:
   explicit StateIterator(const InvertFst<A> &fst)
-      : StateIterator< MapFst<A, A, InvertMapper<A> > >(fst) {}
+      : StateIterator< ArcMapFst<A, A, InvertMapper<A> > >(fst) {}
 };
 
 
 // Specialization for InvertFst.
 template <class A>
 class ArcIterator< InvertFst<A> >
-    : public ArcIterator< MapFst<A, A, InvertMapper<A> > > {
+    : public ArcIterator< ArcMapFst<A, A, InvertMapper<A> > > {
  public:
   ArcIterator(const InvertFst<A> &fst, typename A::StateId s)
-      : ArcIterator< MapFst<A, A, InvertMapper<A> > >(fst, s) {}
+      : ArcIterator< ArcMapFst<A, A, InvertMapper<A> > >(fst, s) {}
 };
 
 

@@ -29,6 +29,7 @@
 #include <fst/util.h>
 
 #include <algorithm>
+#include <functional>
 #include <queue>
 #include <string>
 #include <utility>

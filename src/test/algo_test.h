@@ -431,8 +431,8 @@ class WeightedTester {
       FromGallicMapper<Arc> from_mapper;
       VectorFst< GallicArc<Arc> > G;
       VectorFst<Arc> F;
-      Map(T, &G, to_mapper);
-      Map(G, &F, from_mapper);
+      ArcMap(T, &G, to_mapper);
+      ArcMap(G, &F, from_mapper);
       CHECK(Equiv(T, F));
     }
 
@@ -440,9 +440,9 @@ class WeightedTester {
       VLOG(1) << "Check gallic mappers (delayed).";
       ToGallicMapper<Arc> to_mapper;
       FromGallicMapper<Arc> from_mapper;
-      MapFst<Arc, GallicArc<Arc>, ToGallicMapper<Arc> >
+      ArcMapFst<Arc, GallicArc<Arc>, ToGallicMapper<Arc> >
         G(T, to_mapper);
-      MapFst<GallicArc<Arc>, Arc, FromGallicMapper<Arc> >
+      ArcMapFst<GallicArc<Arc>, Arc, FromGallicMapper<Arc> >
         F(G, from_mapper);
       CHECK(Equiv(T, F));
     }
@@ -610,7 +610,7 @@ class WeightedTester {
       // Maps all transitions of T to epsilon-transitions and append
       // a non-epsilon transition.
       VectorFst<Arc> U;
-      Map(T, &U, EpsMapper<Arc>());
+      ArcMap(T, &U, EpsMapper<Arc>());
       VectorFst<Arc> V;
       V.SetStart(V.AddState());
       Arc arc(1, 1, Weight::One(), V.AddState());
@@ -751,7 +751,7 @@ class WeightedTester {
         Prune(A, &P, thresold);
         DifferenceFst<Arc> C(A, DeterminizeFst<Arc>
                              (RmEpsilonFst<Arc>
-                              (MapFst<Arc, Arc,
+                              (ArcMapFst<Arc, Arc,
                                RmWeightMapper<Arc> >
                                (P, RmWeightMapper<Arc>()))));
         Weight sum1 = Times(ShortestDistance(A), thresold);
@@ -803,7 +803,7 @@ class WeightedTester {
           ShortestPath(R, &path);
           Weight dsum = ShortestDistance(path);
           CHECK(ApproxEqual(nsum, dsum, kTestDelta));
-          Map(&path, RmWeightMapper<Arc>());
+          ArcMap(&path, RmWeightMapper<Arc>());
           VectorFst<Arc> S;
           Difference(R, path, &S);
           R = S;
@@ -1191,9 +1191,9 @@ class AlgoTester {
       Project(&A1, PROJECT_OUTPUT);
       Project(&A2, PROJECT_INPUT);
       Project(&A3, PROJECT_INPUT);
-      Map(&A1, rm_weight_mapper);
-      Map(&A2, rm_weight_mapper);
-      Map(&A3, rm_weight_mapper);
+      ArcMap(&A1, rm_weight_mapper);
+      ArcMap(&A2, rm_weight_mapper);
+      ArcMap(&A3, rm_weight_mapper);
       UnweightedTester<Arc> unweighted_tester(zero_fst_, one_fst_, univ_fst_);
       unweighted_tester.Test(A1, A2, A3);
     }

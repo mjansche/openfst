@@ -37,7 +37,6 @@ using std::vector;
 #include <fst/connect.h>
 #include <fst/factor-weight.h>
 #include <fst/invert.h>
-#include <fst/map.h>
 #include <fst/prune.h>
 #include <fst/queue.h>
 #include <fst/shortest-distance.h>

@@ -639,8 +639,8 @@ uint64 SigmaMatcher<M>::Properties(uint64 props) const {
 
 
 // For any requested label that doesn't match at a state, this matcher
-// considers the *unique* transition that match the label 'phi_label'
-// (phi = 'fail'), and recursively look for a match at its
+// considers the *unique* transition that matches the label 'phi_label'
+// (phi = 'fail'), and recursively looks for a match at its
 // destination.  When 'phi_loop' is true, if no match is found but a
 // phi self-loop is found, then the phi transition found is returned
 // with the phi_label rewritten as the requested label (both sides if

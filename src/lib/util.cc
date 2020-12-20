@@ -39,7 +39,7 @@ int64 StrToInt64(const string &s, const string &src, size_t nline,
 void Int64ToStr(int64 n, string *s) {
   const int kNumLen = 128;
   char nstr[kNumLen];
-  snprintf(nstr, kNumLen, "%lld", n);
+  snprintf(nstr, kNumLen, "%"FST_LL_FORMAT"d", n);
   *s += nstr;
 }
 
@@ -47,5 +47,37 @@ void ConvertToLegalCSymbol(string *s) {
   for (string::iterator it = s->begin(); it != s->end(); ++it)
     if (!isalnum(*it)) *it = '_';
 }
+
+// Skips over input characters to align to 'align' bytes. Returns
+// false if can't align.
+bool AlignInput(istream &strm, int align) {
+  char c;
+  for (int i = 0; i < align; ++i) {
+    int64 pos = strm.tellg();
+    if (pos < 0) {
+      LOG(ERROR) << "AlignInput: can't determine stream position";
+      return false;
+    }
+    if (pos % align == 0) break;
+    strm.read(&c, 1);
+  }
+  return true;
+}
+
+// Write null output characters to align to 'align' bytes. Returns
+// false if can't align.
+bool AlignOutput(ostream &strm, int align) {
+  for (int i = 0; i < align; ++i) {
+    int64 pos = strm.tellp();
+    if (pos < 0) {
+      LOG(ERROR) << "AlignOutput: can't determine stream position";
+      return false;
+    }
+    if (pos % align == 0) break;
+    strm.write("", 1);
+  }
+  return true;
+}
+
 
 }  // namespace fst

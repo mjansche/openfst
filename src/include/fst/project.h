@@ -21,7 +21,7 @@
 #ifndef FST_LIB_PROJECT_H__
 #define FST_LIB_PROJECT_H__
 
-#include <fst/map.h>
+#include <fst/arc-map.h>
 #include <fst/mutable-fst.h>
 
 
@@ -75,7 +75,7 @@ template <class A> class ProjectMapper {
 // where V = # of states and E = # of arcs.
 template<class Arc> inline
 void Project(MutableFst<Arc> *fst, ProjectType project_type) {
-  Map(fst, ProjectMapper<Arc>(project_type));
+  ArcMap(fst, ProjectMapper<Arc>(project_type));
   if (project_type == PROJECT_INPUT)
     fst->SetOutputSymbols(fst->InputSymbols());
   if (project_type == PROJECT_OUTPUT)
@@ -94,15 +94,15 @@ void Project(MutableFst<Arc> *fst, ProjectType project_type) {
 // time and to visit an input state or arc is assumed and exclusive
 // of caching.
 template <class A>
-class ProjectFst : public MapFst<A, A, ProjectMapper<A> > {
+class ProjectFst : public ArcMapFst<A, A, ProjectMapper<A> > {
  public:
   typedef A Arc;
   typedef ProjectMapper<A> C;
-  typedef MapFstImpl< A, A, ProjectMapper<A> > Impl;
+  typedef ArcMapFstImpl< A, A, ProjectMapper<A> > Impl;
   using ImplToFst<Impl>::GetImpl;
 
   ProjectFst(const Fst<A> &fst, ProjectType project_type)
-      : MapFst<A, A, C>(fst, C(project_type)) {
+      : ArcMapFst<A, A, C>(fst, C(project_type)) {
     if (project_type == PROJECT_INPUT)
       GetImpl()->SetOutputSymbols(fst.InputSymbols());
     if (project_type == PROJECT_OUTPUT)
@@ -111,7 +111,7 @@ class ProjectFst : public MapFst<A, A, ProjectMapper<A> > {
 
   // See Fst<>::Copy() for doc.
   ProjectFst(const ProjectFst<A> &fst, bool safe = false)
-      : MapFst<A, A, C>(fst, safe) {}
+      : ArcMapFst<A, A, C>(fst, safe) {}
 
   // Get a copy of this ProjectFst. See Fst<>::Copy() for further doc.
   virtual ProjectFst<A> *Copy(bool safe = false) const {
@@ -123,20 +123,20 @@ class ProjectFst : public MapFst<A, A, ProjectMapper<A> > {
 // Specialization for ProjectFst.
 template <class A>
 class StateIterator< ProjectFst<A> >
-    : public StateIterator< MapFst<A, A, ProjectMapper<A> > > {
+    : public StateIterator< ArcMapFst<A, A, ProjectMapper<A> > > {
  public:
   explicit StateIterator(const ProjectFst<A> &fst)
-      : StateIterator< MapFst<A, A, ProjectMapper<A> > >(fst) {}
+      : StateIterator< ArcMapFst<A, A, ProjectMapper<A> > >(fst) {}
 };
 
 
 // Specialization for ProjectFst.
 template <class A>
 class ArcIterator< ProjectFst<A> >
-    : public ArcIterator< MapFst<A, A, ProjectMapper<A> > > {
+    : public ArcIterator< ArcMapFst<A, A, ProjectMapper<A> > > {
  public:
   ArcIterator(const ProjectFst<A> &fst, typename A::StateId s)
-      : ArcIterator< MapFst<A, A, ProjectMapper<A> > >(fst, s) {}
+      : ArcIterator< ArcMapFst<A, A, ProjectMapper<A> > >(fst, s) {}
 };
 
 

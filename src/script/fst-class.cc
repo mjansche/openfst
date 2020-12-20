@@ -74,7 +74,7 @@ FstClass *FstClass::Read(const string &fname) {
     ifstream in(fname.c_str(), ifstream::in | ifstream::binary);
     return ReadFst<FstClass>(in, fname);
   } else {
-    return ReadFst<FstClass>(std::cin, "stdin");
+    return ReadFst<FstClass>(std::cin, "standard input");
   }
 }
 

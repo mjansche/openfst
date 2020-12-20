@@ -35,7 +35,7 @@ using std::vector;
 
 #include <fst/cache.h>
 #include <fst/factor-weight.h>
-#include <fst/map.h>
+#include <fst/arc-map.h>
 #include <fst/prune.h>
 #include <fst/test-properties.h>
 
@@ -511,8 +511,8 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
            iter != subset->end();
            ++iter) {
         const Element &element = *iter;
-        const int lshift = 5;
-        const int rshift = CHAR_BIT * sizeof(size_t) - 5;
+        int lshift = element.state_id % (CHAR_BIT * sizeof(size_t) - 1) + 1;
+        int rshift = CHAR_BIT * sizeof(size_t) - lshift;
         size_t n = element.state_id;
         hash ^= n << lshift ^ n >> rshift ^ element.weight.Hash();
       }
@@ -563,8 +563,8 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   typedef FromGallicMapper<A, S> FromMapper;
 
   typedef typename ToMapper::ToArc ToArc;
-  typedef MapFst<A, ToArc, ToMapper> ToFst;
-  typedef MapFst<ToArc, A, FromMapper> FromFst;
+  typedef ArcMapFst<A, ToArc, ToMapper> ToFst;
+  typedef ArcMapFst<ToArc, A, FromMapper> FromFst;
 
   typedef GallicCommonDivisor<Label, Weight, S> CommonDivisor;
   typedef GallicFactor<Label, Weight, S> FactorIterator;

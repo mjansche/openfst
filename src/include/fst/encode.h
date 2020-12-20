@@ -29,7 +29,7 @@ using std::tr1::unordered_multimap;
 #include <vector>
 using std::vector;
 
-#include <fst/map.h>
+#include <fst/arc-map.h>
 #include <fst/rmfinalepsilon.h>
 
 
@@ -450,12 +450,12 @@ template<class A> inline
 void Encode(MutableFst<A> *fst, EncodeMapper<A>* mapper) {
   mapper->SetInputSymbols(fst->InputSymbols());
   mapper->SetOutputSymbols(fst->OutputSymbols());
-  Map(fst, mapper);
+  ArcMap(fst, mapper);
 }
 
 template<class A> inline
 void Decode(MutableFst<A>* fst, const EncodeMapper<A>& mapper) {
-  Map(fst, EncodeMapper<A>(mapper, DECODE));
+  ArcMap(fst, EncodeMapper<A>(mapper, DECODE));
   RmFinalEpsilon(fst);
   fst->SetInputSymbols(mapper.InputSymbols());
   fst->SetOutputSymbols(mapper.OutputSymbols());
@@ -469,23 +469,23 @@ void Decode(MutableFst<A>* fst, const EncodeMapper<A>& mapper) {
 // - Traversal: O(nstates_visited + narcs_visited), assuming constant
 //   time to visit an input state or arc.
 template <class A>
-class EncodeFst : public MapFst<A, A, EncodeMapper<A> > {
+class EncodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
  public:
   typedef A Arc;
   typedef EncodeMapper<A> C;
 
   EncodeFst(const Fst<A> &fst, EncodeMapper<A>* encoder)
-      : MapFst<A, A, C>(fst, encoder, MapFstOptions()) {
+      : ArcMapFst<A, A, C>(fst, encoder, ArcMapFstOptions()) {
     encoder->SetInputSymbols(fst.InputSymbols());
     encoder->SetOutputSymbols(fst.OutputSymbols());
   }
 
   EncodeFst(const Fst<A> &fst, const EncodeMapper<A>& encoder)
-      : MapFst<A, A, C>(fst, encoder, MapFstOptions()) {}
+      : ArcMapFst<A, A, C>(fst, encoder, ArcMapFstOptions()) {}
 
   // See Fst<>::Copy() for doc.
   EncodeFst(const EncodeFst<A> &fst, bool copy = false)
-      : MapFst<A, A, C>(fst, copy) {}
+      : ArcMapFst<A, A, C>(fst, copy) {}
 
   // Get a copy of this EncodeFst. See Fst<>::Copy() for further doc.
   virtual EncodeFst<A> *Copy(bool safe = false) const {
@@ -503,24 +503,24 @@ class EncodeFst : public MapFst<A, A, EncodeMapper<A> > {
 // - Traversal: O(nstates_visited + narcs_visited), assuming constant
 //   time to visit an input state or arc.
 template <class A>
-class DecodeFst : public MapFst<A, A, EncodeMapper<A> > {
+class DecodeFst : public ArcMapFst<A, A, EncodeMapper<A> > {
  public:
   typedef A Arc;
   typedef EncodeMapper<A> C;
-  typedef MapFstImpl< A, A, EncodeMapper<A> > Impl;
+  typedef ArcMapFstImpl< A, A, EncodeMapper<A> > Impl;
   using ImplToFst<Impl>::GetImpl;
 
   DecodeFst(const Fst<A> &fst, const EncodeMapper<A>& encoder)
-      : MapFst<A, A, C>(fst,
+      : ArcMapFst<A, A, C>(fst,
                             EncodeMapper<A>(encoder, DECODE),
-                            MapFstOptions()) {
+                            ArcMapFstOptions()) {
     GetImpl()->SetInputSymbols(encoder.InputSymbols());
     GetImpl()->SetOutputSymbols(encoder.OutputSymbols());
   }
 
   // See Fst<>::Copy() for doc.
   DecodeFst(const DecodeFst<A> &fst, bool safe = false)
-      : MapFst<A, A, C>(fst, safe) {}
+      : ArcMapFst<A, A, C>(fst, safe) {}
 
   // Get a copy of this DecodeFst. See Fst<>::Copy() for further doc.
   virtual DecodeFst<A> *Copy(bool safe = false) const {
@@ -532,40 +532,40 @@ class DecodeFst : public MapFst<A, A, EncodeMapper<A> > {
 // Specialization for EncodeFst.
 template <class A>
 class StateIterator< EncodeFst<A> >
-    : public StateIterator< MapFst<A, A, EncodeMapper<A> > > {
+    : public StateIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
  public:
   explicit StateIterator(const EncodeFst<A> &fst)
-      : StateIterator< MapFst<A, A, EncodeMapper<A> > >(fst) {}
+      : StateIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst) {}
 };
 
 
 // Specialization for EncodeFst.
 template <class A>
 class ArcIterator< EncodeFst<A> >
-    : public ArcIterator< MapFst<A, A, EncodeMapper<A> > > {
+    : public ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
  public:
   ArcIterator(const EncodeFst<A> &fst, typename A::StateId s)
-      : ArcIterator< MapFst<A, A, EncodeMapper<A> > >(fst, s) {}
+      : ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst, s) {}
 };
 
 
 // Specialization for DecodeFst.
 template <class A>
 class StateIterator< DecodeFst<A> >
-    : public StateIterator< MapFst<A, A, EncodeMapper<A> > > {
+    : public StateIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
  public:
   explicit StateIterator(const DecodeFst<A> &fst)
-      : StateIterator< MapFst<A, A, EncodeMapper<A> > >(fst) {}
+      : StateIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst) {}
 };
 
 
 // Specialization for DecodeFst.
 template <class A>
 class ArcIterator< DecodeFst<A> >
-    : public ArcIterator< MapFst<A, A, EncodeMapper<A> > > {
+    : public ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > > {
  public:
   ArcIterator(const DecodeFst<A> &fst, typename A::StateId s)
-      : ArcIterator< MapFst<A, A, EncodeMapper<A> > >(fst, s) {}
+      : ArcIterator< ArcMapFst<A, A, EncodeMapper<A> > >(fst, s) {}
 };
 
 

@@ -22,6 +22,7 @@
 #define FST_LIB_ACCUMULATOR_H__
 
 #include <algorithm>
+#include <functional>
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
 using std::tr1::unordered_multimap;

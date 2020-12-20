@@ -83,8 +83,13 @@ class GenericRegister {
     // We assume that the DSO constructs a static object in its global
     // scope that does the registration. Thus we need only load it, not
     // call any methods.
-
-    return *this->LookupEntry(key);
+    const EntryType *entry = this->LookupEntry(key);
+    if (entry == 0) {
+      LOG(ERROR) << "GenericRegister::GetEntry : "
+                 << "lookup failed in shared object: " << so_filename;
+      return EntryType();
+    }
+    return *entry;
   }
 
   // Override this to define how to turn a key into an SO filename.

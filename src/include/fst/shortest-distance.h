@@ -287,18 +287,18 @@ void ShortestDistance(const Fst<Arc> &fst,
 // Return the sum of the weight of all successful paths in an FST, i.e.,
 // the shortest-distance from the initial state to the final states.
 template <class Arc>
-typename Arc::Weight ShortestDistance(const Fst<Arc> &fst) {
+typename Arc::Weight ShortestDistance(const Fst<Arc> &fst, float delta = kDelta) {
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
   vector<Weight> distance;
   if (Weight::Properties() & kRightSemiring) {
-    ShortestDistance(fst, &distance, false);
+    ShortestDistance(fst, &distance, false, delta);
     Weight sum = Weight::Zero();
-    for(StateId s = 0; s < distance.size(); ++s)
+    for (StateId s = 0; s < distance.size(); ++s)
       sum = Plus(sum, Times(distance[s], fst.Final(s)));
     return sum;
   } else {
-    ShortestDistance(fst, &distance, true);
+    ShortestDistance(fst, &distance, true, delta);
     StateId s = fst.Start();
     return s != kNoStateId && s < distance.size() ?
         distance[s] : Weight::Zero();

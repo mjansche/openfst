@@ -236,19 +236,19 @@ void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
   if (!fstinfo.LongInfo())
     return;
 
-  fprintf(fp, "%-50s%lld\n", "# of states",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of states",
           fstinfo.NumStates());
-  fprintf(fp, "%-50s%lld\n", "# of arcs",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of arcs",
           fstinfo.NumArcs());
-  fprintf(fp, "%-50s%lld\n", "initial state",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "initial state",
           fstinfo.Start());
-  fprintf(fp, "%-50s%lld\n", "# of final states",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of final states",
           fstinfo.NumFinal());
-  fprintf(fp, "%-50s%lld\n", "# of input/output epsilons",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of input/output epsilons",
           fstinfo.NumEpsilons());
-  fprintf(fp, "%-50s%lld\n", "# of input epsilons",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of input epsilons",
           fstinfo.NumInputEpsilons());
-  fprintf(fp, "%-50s%lld\n", "# of output epsilons",
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", "# of output epsilons",
           fstinfo.NumOutputEpsilons());
 
   string arc_type = "";
@@ -260,19 +260,19 @@ void PrintFstInfo(const FstInfo<A> &fstinfo, bool pipe = false) {
     arc_type = "output-epsilon ";
 
   string accessible_label = "# of " +  arc_type + "accessible states";
-  fprintf(fp, "%-50s%lld\n", accessible_label.c_str(),
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", accessible_label.c_str(),
           fstinfo.NumAccessible());
   string coaccessible_label = "# of " +  arc_type + "coaccessible states";
-  fprintf(fp, "%-50s%lld\n", coaccessible_label.c_str(),
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", coaccessible_label.c_str(),
           fstinfo.NumCoAccessible());
   string connected_label = "# of " +  arc_type + "connected states";
-  fprintf(fp, "%-50s%lld\n", connected_label.c_str(),
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", connected_label.c_str(),
           fstinfo.NumConnected());
   string numcc_label = "# of " +  arc_type + "connected components";
-  fprintf(fp, "%-50s%lld\n", numcc_label.c_str(),
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", numcc_label.c_str(),
           fstinfo.NumCc());
   string numscc_label = "# of " +  arc_type + "strongly conn components";
-  fprintf(fp, "%-50s%lld\n", numscc_label.c_str(),
+  fprintf(fp, "%-50s%"FST_LL_FORMAT"d\n", numscc_label.c_str(),
           fstinfo.NumScc());
 
   fprintf(fp, "%-50s%c\n", "input matcher",

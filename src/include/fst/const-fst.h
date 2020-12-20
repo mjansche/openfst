@@ -120,10 +120,10 @@ class ConstFstImpl : public FstImpl<A> {
   // Properties always true of this Fst class
   static const uint64 kStaticProperties = kExpanded;
   // Current file format version
-  static const int kFileVersion = 1;
+  static const int kFileVersion = 2;
   // Minimum file format version supported
   static const int kMinFileVersion = 1;
-  // Byte alignment for states and arcs in file format
+  // Byte alignment for states and arcs in file format (version 1 only)
   static const int kFileAlign = 16;
 
   State *states_;                // States represenation
@@ -207,19 +207,20 @@ ConstFstImpl<A, U> *ConstFstImpl<A, U>::Read(istream &strm,
   impl->states_ = new State[impl->nstates_];
   impl->arcs_ = new A[impl->narcs_];
 
-  char c;
-  for (int i = 0; i < kFileAlign && strm.tellg() % kFileAlign; ++i)
-    strm.read(&c, 1);
-  // TODO: memory map this
+  if (hdr.Version() == 1 && !AlignInput(strm, kFileAlign)) {
+    LOG(ERROR) << "ConstFst::Read: Alignment failed: " << opts.source;
+    return 0;
+  }
   size_t b = impl->nstates_ * sizeof(typename ConstFstImpl<A, U>::State);
   strm.read(reinterpret_cast<char *>(impl->states_), b);
   if (!strm) {
     LOG(ERROR) << "ConstFst::Read: Read failed: " << opts.source;
     return 0;
   }
-  // TODO: memory map this
-  for (int i = 0; i < kFileAlign && strm.tellg() % kFileAlign; ++i)
-    strm.read(&c, 1);
+  if (hdr.Version() == 1 && !AlignInput(strm, kFileAlign)) {
+    LOG(ERROR) << "ConstFst::Read: Alignment failed: " << opts.source;
+    return 0;
+  }
   b = impl->narcs_ * sizeof(A);
   strm.read(reinterpret_cast<char *>(impl->arcs_), b);
   if (!strm) {
@@ -238,11 +239,7 @@ bool ConstFstImpl<A, U>::Write(ostream &strm,
   hdr.SetNumArcs(narcs_);
   WriteHeader(strm, opts, kFileVersion, &hdr);
 
-  for (int i = 0; i < kFileAlign && strm.tellp() % kFileAlign; ++i)
-    strm.write("", 1);
   strm.write(reinterpret_cast<char *>(states_), nstates_ * sizeof(State));
-  for (int i = 0; i < kFileAlign && strm.tellp() % kFileAlign; ++i)
-    strm.write("", 1);
   strm.write(reinterpret_cast<char *>(arcs_), narcs_ * sizeof(A));
 
   strm.flush();

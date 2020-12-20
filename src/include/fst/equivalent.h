@@ -151,11 +151,11 @@ bool Equivalent(const Fst<Arc> &fst1,
     VectorFst<Arc> efst2(fst2);
     Push(&efst1, REWEIGHT_TO_INITIAL, delta);
     Push(&efst2, REWEIGHT_TO_INITIAL, delta);
-    Map(&efst1, QuantizeMapper<Arc>(delta));
-    Map(&efst2, QuantizeMapper<Arc>(delta));
+    ArcMap(&efst1, QuantizeMapper<Arc>(delta));
+    ArcMap(&efst2, QuantizeMapper<Arc>(delta));
     EncodeMapper<Arc> mapper(kEncodeWeights|kEncodeLabels, ENCODE);
-    Map(&efst1, &mapper);
-    Map(&efst2, &mapper);
+    ArcMap(&efst1, &mapper);
+    ArcMap(&efst2, &mapper);
     return Equivalent(efst1, efst2);
   }
 

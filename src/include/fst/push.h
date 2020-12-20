@@ -26,7 +26,7 @@ using std::vector;
 
 #include <fst/factor-weight.h>
 #include <fst/fst.h>
-#include <fst/map.h>
+#include <fst/arc-map.h>
 #include <fst/reweight.h>
 #include <fst/shortest-distance.h>
 
@@ -135,13 +135,13 @@ void Push(const Fst<Arc> &ifst,
                              : STRING_RIGHT;
     vector<typename GallicArc<Arc, stype>::Weight> gdistance;
     VectorFst<GallicArc<Arc, stype> > gfst;
-    Map(ifst, &gfst, ToGallicMapper<Arc, stype>());
+    ArcMap(ifst, &gfst, ToGallicMapper<Arc, stype>());
     if (ptype & kPushWeights ) {
       ShortestDistance(gfst, &gdistance, rtype == REWEIGHT_TO_INITIAL, delta);
     } else {
-      MapFst<Arc, Arc, RmWeightMapper<Arc> >
+      ArcMapFst<Arc, Arc, RmWeightMapper<Arc> >
         uwfst(ifst, RmWeightMapper<Arc>());
-      MapFst<Arc, GallicArc<Arc, stype>, ToGallicMapper<Arc, stype> >
+      ArcMapFst<Arc, GallicArc<Arc, stype>, ToGallicMapper<Arc, stype> >
         guwfst(uwfst, ToGallicMapper<Arc, stype>());
       ShortestDistance(guwfst, &gdistance, rtype == REWEIGHT_TO_INITIAL, delta);
     }
@@ -161,7 +161,7 @@ void Push(const Fst<Arc> &ifst,
       internal::RemoveWeight(&gfst, total_weight, rtype == REWEIGHT_TO_FINAL);
     FactorWeightFst< GallicArc<Arc, stype>, GallicFactor<typename Arc::Label,
       typename Arc::Weight, stype> > fwfst(gfst);
-    Map(fwfst, ofst, FromGallicMapper<Arc, stype>());
+    ArcMap(fwfst, ofst, FromGallicMapper<Arc, stype>());
     ofst->SetOutputSymbols(ifst.OutputSymbols());
   } else {
     LOG(WARNING) << "Push: pushing type is set to 0: "

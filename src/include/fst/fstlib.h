@@ -58,7 +58,7 @@
 
 // FST algorithms and delayed FST classes
 #include <fst/arcsort.h>
-#include <fst/arcsum.h>
+#include <fst/arc-map.h>
 #include <fst/closure.h>
 #include <fst/compose.h>
 #include <fst/concat.h>
@@ -90,6 +90,7 @@
 #include <fst/shortest-distance.h>
 #include <fst/shortest-path.h>
 #include <fst/statesort.h>
+#include <fst/state-map.h>
 #include <fst/synchronize.h>
 #include <fst/topsort.h>
 #include <fst/union.h>
@@ -130,7 +131,6 @@
 #include <fst/add-on.h>
 #include <fst/arc.h>
 #include <fst/arcfilter.h>
-#include <fst/arcmerge.h>
 #include <fst/cache.h>
 #include <fst/complement.h>
 #include <fst/dfs-visit.h>

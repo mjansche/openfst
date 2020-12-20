@@ -29,7 +29,6 @@ using std::vector;
 #include <fst/cache.h>
 #include <fst/compose-filter.h>
 #include <fst/lookahead-filter.h>
-#include <fst/map.h>
 #include <fst/matcher.h>
 #include <fst/state-table.h>
 #include <fst/test-properties.h>

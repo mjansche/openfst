@@ -25,7 +25,7 @@ OpenFst - Release 1.2
      and "to_log64" as supported 'map_type' arguments (1.2.8).
    * Made the destructive implementation of RmEpsilon skip over states
      admitting no non-epsilon incoming transition (1.2.8). 
-   * Fixed numerous bugs (1.2 through 1.2.8) including:
+   * Fixed numerous bugs (1.2 through 1.2.9) including:
      - improper types of some approximation deltas
      - sub-optimal hashing functions
      - issues in internal reuse of shortest distance
@@ -40,6 +40,10 @@ OpenFst - Release 1.2
      - Added escaping of " and \ in labels in fstdraw, needed for dot to
        function properly (1.2.8) 
      - Fixed handling of final weight of start state in fstpush (1.2.8)
+     - Added FST_LL_FORMAT to fix 64-bit integer printf issues (1.2.9)
+     - Fixed missing <functional> includes (1.2.9)
+     - Fixed reused local variable names (1.2.9)
+     - Fixed passing string by reference in FstDraw args (1.2.9)
    * Added extensions directories including:
      - finite-state archive (FAR) utilities,
        added stlist format supporting writing/reading to/from standard out/in
@@ -47,9 +51,16 @@ OpenFst - Release 1.2
      - compact fsts
      - lookahead fsts
      - pushdown transducers (improved in 1.2.1 through 1.2.7).
+   * Added StateMap/StateMapFst; renamed Map/MapFst to ArcMap/ArcMapFst;
+     map/MapFst retained (but deprecated) (1.2.9)
+   * Deleted ArcSum() and ArcMerge; use StateMap w/ ArcSumMapper and 
+     ArcUniqueMapper (1.2.9).
+   * Incremented version of ConstFst/CompactFsts to stop memory alignment
+     that fails on pipes. Made old version raises errors when read on 
+     pipes (1.2.9).
+   * Improved determinize hash (1.2.9)
 
 OpenFst - Release 1.1
-
    * Added compat.h to src/include/fst to fix missing defines
    * Fixed bug in acyclic minimization that led to non-minimal 
      (but equiv) results

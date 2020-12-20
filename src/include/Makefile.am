@@ -37,15 +37,15 @@ fst/script/fstscript-decl.h
 
 nobase_include_HEADERS = fst/arc.h fst/determinize.h fst/intersect.h \
 fst/queue.h fst/statesort.h fst/arcfilter.h fst/dfs-visit.h \
-fst/invert.h fst/randequivalent.h fst/string-weight.h fst/arcmerge.h \
+fst/invert.h fst/randequivalent.h fst/string-weight.h \
 fst/difference.h fst/lexicographic-weight.h fst/randgen.h \
 fst/symbol-table.h fst/arcsort.h fst/encode.h fst/lock.h \
-fst/random-weight.h fst/synchronize.h fst/arcsum.h \
+fst/random-weight.h fst/synchronize.h \
 fst/epsnormalize.h fst/log.h fst/rational.h fst/test-properties.h \
-fst/cache.h fst/equal.h fst/map.h fst/register.h fst/topsort.h \
+fst/cache.h fst/equal.h fst/arc-map.h fst/map.h fst/register.h fst/topsort.h \
 fst/closure.h fst/equivalent.h fst/matcher.h fst/matcher-fst.h fst/relabel.h \
 fst/union-find.h fst/compact-fst.h fst/expanded-fst.h fst/minimize.h \
-fst/replace.h fst/union.h fst/compat.h fst/factor-weight.h \
+fst/replace.h fst/union.h fst/compat.h fst/factor-weight.h fst/state-map.h \
 fst/mutable-fst.h fst/reverse.h fst/util.h fst/complement.h \
 fst/flags.h fst/partition.h fst/reweight.h fst/vector-fst.h \
 fst/compose-filter.h fst/float-weight.h fst/product-weight.h \

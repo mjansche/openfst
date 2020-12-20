@@ -497,8 +497,7 @@ class LabelReachable {
         // Find first matching label (when non-deterministic)
         for (ssize_t i = mid; i > low; --i) {
           aiter->Seek(i - 1);
-          Label label = aiter_input ?
-              aiter->Value().ilabel : aiter->Value().olabel;
+          label = aiter_input ? aiter->Value().ilabel : aiter->Value().olabel;
           if (label != match_label) {
             aiter->Seek(i);
             aiter->SetFlags(kArcValueFlags, kArcValueFlags);

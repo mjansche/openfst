@@ -377,7 +377,7 @@ class ArcIteratorBase {
   virtual ~ArcIteratorBase() {}
 
   bool Done() const { return Done_(); }            // End of iterator?
-  const A& Value() const { return Value_(); }      // Current state (when !Done)
+  const A& Value() const { return Value_(); }      // Current arc (when !Done)
   void Next() { Next_(); }           // Advance to next arc (when !Done)
   size_t Position() const { return Position_(); }  // Return current position
   void Reset() { Reset_(); }         // Return to initial condition
@@ -748,9 +748,9 @@ class ImplToFst : public F {
 
   virtual uint64 Properties(uint64 mask, bool test) const {
     if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
+      uint64 knownprops, testprops = TestProperties(*this, mask, &knownprops);
+      impl_->SetProperties(testprops, knownprops);
+      return testprops & mask;
     } else {
       return impl_->Properties(mask);
     }

@@ -29,7 +29,7 @@ using std::tr1::unordered_multimap;
 
 #include <fst/factor-weight.h>
 #include <fst/invert.h>
-#include <fst/map.h>
+#include <fst/arc-map.h>
 #include <fst/rmepsilon.h>
 
 
@@ -54,16 +54,16 @@ void EpsNormalize(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
                       EpsNormalizeType type = EPS_NORM_INPUT) {
   VectorFst< GallicArc<Arc, STRING_RIGHT_RESTRICT> > gfst;
   if (type == EPS_NORM_INPUT)
-    Map(ifst, &gfst, ToGallicMapper<Arc, STRING_RIGHT_RESTRICT>());
+    ArcMap(ifst, &gfst, ToGallicMapper<Arc, STRING_RIGHT_RESTRICT>());
   else // type == EPS_NORM_OUTPUT
-    Map(InvertFst<Arc>(ifst), &gfst,
-            ToGallicMapper<Arc, STRING_RIGHT_RESTRICT>());
+    ArcMap(InvertFst<Arc>(ifst), &gfst,
+           ToGallicMapper<Arc, STRING_RIGHT_RESTRICT>());
   RmEpsilon(&gfst);
   FactorWeightFst< GallicArc<Arc, STRING_RIGHT_RESTRICT>,
     GallicFactor<typename Arc::Label,
       typename Arc::Weight, STRING_RIGHT_RESTRICT> >
     fwfst(gfst);
-  Map(fwfst, ofst, FromGallicMapper<Arc, STRING_RIGHT_RESTRICT>());
+  ArcMap(fwfst, ofst, FromGallicMapper<Arc, STRING_RIGHT_RESTRICT>());
   ofst->SetOutputSymbols(ifst.OutputSymbols());
   if(type == EPS_NORM_OUTPUT)
     Invert(ofst);

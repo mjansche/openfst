@@ -27,10 +27,58 @@
 using std::vector;
 
 #include <fst/cache.h>
+#include <fst/state-map.h>
 #include <fst/test-properties.h>
 
 
 namespace fst {
+
+template <class Arc, class Compare>
+class ArcSortMapper {
+ public:
+  typedef Arc FromArc;
+  typedef Arc ToArc;
+
+  typedef typename Arc::StateId StateId;
+  typedef typename Arc::Weight Weight;
+
+  ArcSortMapper(const Fst<Arc> &fst, const Compare &comp)
+      : fst_(fst), comp_(comp), i_(0) {}
+
+  // Allows updating Fst argument; pass only if changed.
+  ArcSortMapper(const ArcSortMapper<Arc, Compare> &mapper,
+                const Fst<Arc> *fst = 0)
+      : fst_(fst ? *fst : mapper.fst_), comp_(mapper.comp_), i_(0) {}
+
+  StateId Start() { return fst_.Start(); }
+  Weight Final(StateId s) const { return fst_.Final(s); }
+
+  void SetState(StateId s) {
+    i_ = 0;
+    arcs_.clear();
+    arcs_.reserve(fst_.NumArcs(s));
+    for (ArcIterator< Fst<Arc> > aiter(fst_, s); !aiter.Done(); aiter.Next())
+      arcs_.push_back(aiter.Value());
+    sort(arcs_.begin(), arcs_.end(), comp_);
+  }
+
+  bool Done() const { return i_ >= arcs_.size(); }
+  const Arc &Value() const { return arcs_[i_]; }
+  void Next() { ++i_; }
+
+  MapSymbolsAction InputSymbolsAction() const { return MAP_COPY_SYMBOLS; }
+  MapSymbolsAction OutputSymbolsAction() const { return MAP_COPY_SYMBOLS; }
+  uint64 Properties(uint64 props) const { return comp_.Properties(props); }
+
+ private:
+  const Fst<Arc> &fst_;
+  const Compare &comp_;
+  vector<Arc> arcs_;
+  ssize_t i_;               // current arc position
+
+  void operator=(const ArcSortMapper<Arc, Compare> &);  // disallow
+};
+
 
 // Sorts the arcs in an FST according to function object 'comp' of
 // type Compare. This version modifies its input.  Comparison function
@@ -47,135 +95,11 @@ namespace fst {
 // where V = # of states and D = maximum out-degree.
 template<class Arc, class Compare>
 void ArcSort(MutableFst<Arc> *fst, Compare comp) {
-  typedef typename Arc::StateId StateId;
-
-  uint64 props = fst->Properties(kFstProperties, false);
-
-  vector<Arc> arcs;
-  for (StateIterator< MutableFst<Arc> > siter(*fst);
-       !siter.Done();
-       siter.Next()) {
-    StateId s = siter.Value();
-    arcs.clear();
-    for (ArcIterator< MutableFst<Arc> > aiter(*fst, s);
-         !aiter.Done();
-         aiter.Next())
-      arcs.push_back(aiter.Value());
-    sort(arcs.begin(), arcs.end(), comp);
-    fst->DeleteArcs(s);
-    for (size_t a = 0; a < arcs.size(); ++a)
-      fst->AddArc(s, arcs[a]);
-  }
-
-  fst->SetProperties(comp.Properties(props), kFstProperties);
+  ArcSortMapper<Arc, Compare> mapper(*fst, comp);
+  StateMap(fst, mapper);
 }
 
 typedef CacheOptions ArcSortFstOptions;
-
-// Implementation of delayed ArcSortFst.
-template<class A, class C>
-class ArcSortFstImpl : public CacheImpl<A> {
- public:
-  using FstImpl<A>::SetType;
-  using FstImpl<A>::SetProperties;
-  using FstImpl<A>::Properties;
-  using FstImpl<A>::SetInputSymbols;
-  using FstImpl<A>::SetOutputSymbols;
-  using FstImpl<A>::InputSymbols;
-  using FstImpl<A>::OutputSymbols;
-
-  using VectorFstBaseImpl<typename CacheImpl<A>::State>::NumStates;
-
-  using CacheImpl<A>::PushArc;
-  using CacheImpl<A>::GetState;
-  using CacheImpl<A>::HasArcs;
-  using CacheImpl<A>::HasFinal;
-  using CacheImpl<A>::HasStart;
-  using CacheImpl<A>::SetArcs;
-  using CacheImpl<A>::SetFinal;
-  using CacheImpl<A>::SetStart;
-
-  typedef typename A::Weight Weight;
-  typedef typename A::StateId StateId;
-
-  ArcSortFstImpl(const Fst<A> &fst, const C &comp,
-                 const ArcSortFstOptions &opts)
-      : CacheImpl<A>(opts), fst_(fst.Copy()), comp_(comp) {
-    SetType("arcsort");
-    uint64 props = fst_->Properties(kCopyProperties, false);
-    SetProperties(comp_.Properties(props));
-    SetInputSymbols(fst.InputSymbols());
-    SetOutputSymbols(fst.OutputSymbols());
-  }
-
-  ArcSortFstImpl(const ArcSortFstImpl& impl)
-      : CacheImpl<A>(impl),
-        fst_(impl.fst_->Copy(true)),
-        comp_(impl.comp_) {
-    SetType("arcsort");
-    SetProperties(impl.Properties(), kCopyProperties);
-    SetInputSymbols(impl.InputSymbols());
-    SetOutputSymbols(impl.OutputSymbols());
-  }
-
-  ~ArcSortFstImpl() { delete fst_; }
-
-  StateId Start() {
-    if (!HasStart())
-      SetStart(fst_->Start());
-    return CacheImpl<A>::Start();
-  }
-
-  Weight Final(StateId s) {
-    if (!HasFinal(s))
-      SetFinal(s, fst_->Final(s));
-    return CacheImpl<A>::Final(s);
-  }
-
-  size_t NumArcs(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
-    return CacheImpl<A>::NumArcs(s);
-  }
-
-  size_t NumInputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
-    return CacheImpl<A>::NumInputEpsilons(s);
-  }
-
-  size_t NumOutputEpsilons(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
-    return CacheImpl<A>::NumOutputEpsilons(s);
-  }
-
-  void InitStateIterator(StateIteratorData<A> *data) const {
-    fst_->InitStateIterator(data);
-  }
-
-  void InitArcIterator(StateId s, ArcIteratorData<A> *data) {
-    if (!HasArcs(s))
-      Expand(s);
-    CacheImpl<A>::InitArcIterator(s, data);
-  }
-
-  void Expand(StateId s) {
-    for (ArcIterator< Fst<A> > aiter(*fst_, s); !aiter.Done(); aiter.Next())
-      PushArc(s, aiter.Value());
-    SetArcs(s);
-
-    vector<A> &carcs = GetState(s)->arcs;
-    sort(carcs.begin(), carcs.end(), comp_);
-  }
-
- private:
-  const Fst<A> *fst_;
-  C comp_;
-
-  void operator=(const ArcSortFstImpl<A, C> &impl);  // Disallow
-};
-
 
 // Sorts the arcs in an FST according to function object 'comp' of
 // type Compare. This version is a delayed Fst.  Comparsion function
@@ -192,66 +116,46 @@ class ArcSortFstImpl : public CacheImpl<A> {
 // where v = # of states visited, d = maximum out-degree of states
 // visited. Constant time and space to visit an input state is assumed
 // and exclusive of caching.
-//
-// This class attaches interface to implementation and handles
-// reference counting, delegating most methods to ImplToFst.
 template <class A, class C>
-class ArcSortFst : public ImplToFst< ArcSortFstImpl<A, C> > {
+class ArcSortFst : public StateMapFst<A, A, ArcSortMapper<A, C> > {
  public:
-  friend class ArcIterator< ArcSortFst<A, C> >;
-
   typedef A Arc;
-  typedef C Compare;
-  typedef typename A::StateId StateId;
-  typedef CacheState<A> State;
-  typedef ArcSortFstImpl<A, C> Impl;
+ typedef ArcSortMapper<A, C> M;
 
   ArcSortFst(const Fst<A> &fst, const C &comp)
-      : ImplToFst<Impl>(new Impl(fst, comp, ArcSortFstOptions())) {}
+      : StateMapFst<A, A, M>(fst, ArcSortMapper<A, C>(fst, comp)) {}
 
   ArcSortFst(const Fst<A> &fst, const C &comp, const ArcSortFstOptions &opts)
-      : ImplToFst<Impl>(new Impl(fst, comp, opts)) {}
+      : StateMapFst<A, A, M>(fst, ArcSortMapper<A, C>(fst, comp), opts) {}
 
   // See Fst<>::Copy() for doc.
   ArcSortFst(const ArcSortFst<A, C> &fst, bool safe = false)
-      : ImplToFst<Impl> (fst, safe) {}
+      : StateMapFst<A, A, M>(fst, safe) {}
 
   // Get a copy of this ArcSortFst. See Fst<>::Copy() for further doc.
   virtual ArcSortFst<A, C> *Copy(bool safe = false) const {
-    return new ArcSortFst<A, C>(*this, safe);
+    return new ArcSortFst(*this, safe);
   }
+};
 
-  virtual void InitStateIterator(StateIteratorData<A> *data) const {
-    GetImpl()->InitStateIterator(data);
-  }
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    GetImpl()->InitArcIterator(s, data);
-  }
-
- private:
-  // Makes visible to friends.
-  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
-
-  void operator=(const ArcSortFst<A, C> &fst);  // Disallow
+// Specialization for ArcSortFst.
+template <class A, class C>
+class StateIterator< ArcSortFst<A, C> >
+    : public StateIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > > {
+ public:
+  explicit StateIterator(const ArcSortFst<A, C> &fst)
+      : StateIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > >(fst) {}
 };
 
 
 // Specialization for ArcSortFst.
 template <class A, class C>
 class ArcIterator< ArcSortFst<A, C> >
-    : public CacheArcIterator< ArcSortFst<A, C> > {
+    : public ArcIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > > {
  public:
-  typedef typename A::StateId StateId;
-
-  ArcIterator(const ArcSortFst<A, C> &fst, StateId s)
-      : CacheArcIterator< ArcSortFst<A, C> >(fst.GetImpl(), s) {
-    if (!fst.GetImpl()->HasArcs(s))
-      fst.GetImpl()->Expand(s);
-  }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcIterator);
+  ArcIterator(const ArcSortFst<A, C> &fst, typename A::StateId s)
+      : ArcIterator< StateMapFst<A, A,  ArcSortMapper<A, C> > >(fst, s) {}
 };
 
 

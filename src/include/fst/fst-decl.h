@@ -60,7 +60,7 @@ template <class A> class DeterminizeFst;
 template <class A> class DifferenceFst;
 template <class A> class IntersectFst;
 template <class A> class InvertFst;
-template <class A, class B, class C> class MapFst;
+template <class A, class B, class C> class ArcMapFst;
 template <class A> class ProjectFst;
 template <class A, class B, class S> class RandGenFst;
 template <class A> class RelabelFst;

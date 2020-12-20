@@ -140,7 +140,7 @@ template <class A> class FstDrawer {
       PrintString(nsymbol);
     } else {
       char sid[kLineLen];
-      snprintf(sid, kLineLen, "%lld", id);
+      snprintf(sid, kLineLen, "%"FST_LL_FORMAT"d", id);
       PrintString(sid);
     }
   }

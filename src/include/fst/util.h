@@ -313,6 +313,18 @@ void WriteLabelPairs(const string& filename,
 void ConvertToLegalCSymbol(string *s);
 
 
+//
+// UTILITIES FOR STREAM I/O
+//
+
+bool AlignInput(istream &strm, int align);
+bool AlignOutput(ostream &strm, int align);
+
+//
+// UTILITIES FOR PROTOCOL BUFFER I/O
+//
+
+
 // An associative container for which testing membership is
 // faster than an STL set if members are restricted to an interval
 // that excludes most non-members. A 'Key' must have ==, !=, and < defined.

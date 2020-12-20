@@ -108,7 +108,7 @@ SymbolTable *FstReadSymbols(const string &filename, bool input_symbols) {
     LOG(ERROR) << "FstReadSymbols: Couldn't read header from " << filename;
     return NULL;
   }
-  if (hdr.GetFlags() && FstHeader::HAS_ISYMBOLS) {
+  if (hdr.GetFlags() & FstHeader::HAS_ISYMBOLS) {
     SymbolTable *isymbols = SymbolTable::Read(in, filename);
     if (isymbols == NULL) {
       LOG(ERROR) << "FstReadSymbols: Could not read input symbols from "
@@ -120,7 +120,7 @@ SymbolTable *FstReadSymbols(const string &filename, bool input_symbols) {
     }
     delete isymbols;
   }
-  if (hdr.GetFlags() && FstHeader::HAS_OSYMBOLS) {
+  if (hdr.GetFlags() & FstHeader::HAS_OSYMBOLS) {
     SymbolTable *osymbols = SymbolTable::Read(in, filename);
     if (osymbols == NULL) {
       LOG(ERROR) << "FstReadSymbols: Could not read output symbols from "

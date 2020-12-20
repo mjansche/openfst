@@ -30,7 +30,8 @@ DEFINE_int32(max_length, INT_MAX, "Maximum path length");
 DEFINE_int32(npath, 1, "Number of paths to generate");
 DEFINE_int32(seed, time(0), "Random seed");
 DEFINE_string(select, "uniform", "Selection type: one of: "
-              " \"uniform\", \"log_prob (when appropriate)\"");
+              " \"uniform\", \"log_prob (when appropriate),"
+              " \"fast_log_prob\" (when appropriate)");
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
