@@ -63,7 +63,7 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = compact const far lookahead ngram pdt
+DIST_SUBDIRS = compact const far linear lookahead ngram pdt
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -212,10 +212,11 @@ top_srcdir = @top_srcdir@
 @HAVE_COMPACT_TRUE@compactdir = compact
 @HAVE_CONST_TRUE@constdir = const
 @HAVE_FAR_TRUE@fardir = far
+@HAVE_LINEAR_TRUE@lineardir = linear
 @HAVE_LOOKAHEAD_TRUE@lookaheaddir = lookahead
 @HAVE_NGRAM_TRUE@ngramdir = ngram
 @HAVE_PDT_TRUE@pdtdir = pdt
-SUBDIRS = $(compactdir) $(constdir) $(fardir) $(lookaheaddir) $(ngramdir) $(pdtdir)
+SUBDIRS = $(compactdir) $(constdir) $(fardir) $(lineardir) $(lookaheaddir) $(ngramdir) $(pdtdir)
 all: all-recursive
 
 .SUFFIXES:

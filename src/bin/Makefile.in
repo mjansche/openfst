@@ -52,7 +52,7 @@ host_triplet = @host@
 @HAVE_BIN_TRUE@	fstshortestdistance$(EXEEXT) \
 @HAVE_BIN_TRUE@	fstshortestpath$(EXEEXT) fstsymbols$(EXEEXT) \
 @HAVE_BIN_TRUE@	fstsynchronize$(EXEEXT) fsttopsort$(EXEEXT) \
-@HAVE_BIN_TRUE@	fstunion$(EXEEXT)
+@HAVE_BIN_TRUE@	fstunion$(EXEEXT) fstdisambiguate$(EXEEXT)
 subdir = src/bin
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -115,6 +115,12 @@ am__fstdifference_SOURCES_DIST = fstdifference.cc
 fstdifference_OBJECTS = $(am_fstdifference_OBJECTS)
 fstdifference_LDADD = $(LDADD)
 fstdifference_DEPENDENCIES = ../script/libfstscript.la \
+	../lib/libfst.la
+am__fstdisambiguate_SOURCES_DIST = fstdisambiguate.cc
+@HAVE_BIN_TRUE@am_fstdisambiguate_OBJECTS = fstdisambiguate.$(OBJEXT)
+fstdisambiguate_OBJECTS = $(am_fstdisambiguate_OBJECTS)
+fstdisambiguate_LDADD = $(LDADD)
+fstdisambiguate_DEPENDENCIES = ../script/libfstscript.la \
 	../lib/libfst.la
 am__fstdraw_SOURCES_DIST = fstdraw.cc
 @HAVE_BIN_TRUE@am_fstdraw_OBJECTS = fstdraw.$(OBJEXT)
@@ -269,13 +275,14 @@ SOURCES = $(fstarcsort_SOURCES) $(fstclosure_SOURCES) \
 	$(fstcompile_SOURCES) $(fstcompose_SOURCES) \
 	$(fstconcat_SOURCES) $(fstconnect_SOURCES) \
 	$(fstconvert_SOURCES) $(fstdeterminize_SOURCES) \
-	$(fstdifference_SOURCES) $(fstdraw_SOURCES) \
-	$(fstencode_SOURCES) $(fstepsnormalize_SOURCES) \
-	$(fstequal_SOURCES) $(fstequivalent_SOURCES) \
-	$(fstinfo_SOURCES) $(fstintersect_SOURCES) \
-	$(fstinvert_SOURCES) $(fstmap_SOURCES) $(fstminimize_SOURCES) \
-	$(fstprint_SOURCES) $(fstproject_SOURCES) $(fstprune_SOURCES) \
-	$(fstpush_SOURCES) $(fstrandgen_SOURCES) $(fstrelabel_SOURCES) \
+	$(fstdifference_SOURCES) $(fstdisambiguate_SOURCES) \
+	$(fstdraw_SOURCES) $(fstencode_SOURCES) \
+	$(fstepsnormalize_SOURCES) $(fstequal_SOURCES) \
+	$(fstequivalent_SOURCES) $(fstinfo_SOURCES) \
+	$(fstintersect_SOURCES) $(fstinvert_SOURCES) $(fstmap_SOURCES) \
+	$(fstminimize_SOURCES) $(fstprint_SOURCES) \
+	$(fstproject_SOURCES) $(fstprune_SOURCES) $(fstpush_SOURCES) \
+	$(fstrandgen_SOURCES) $(fstrelabel_SOURCES) \
 	$(fstreplace_SOURCES) $(fstreverse_SOURCES) \
 	$(fstreweight_SOURCES) $(fstrmepsilon_SOURCES) \
 	$(fstshortestdistance_SOURCES) $(fstshortestpath_SOURCES) \
@@ -286,8 +293,9 @@ DIST_SOURCES = $(am__fstarcsort_SOURCES_DIST) \
 	$(am__fstcompose_SOURCES_DIST) $(am__fstconcat_SOURCES_DIST) \
 	$(am__fstconnect_SOURCES_DIST) $(am__fstconvert_SOURCES_DIST) \
 	$(am__fstdeterminize_SOURCES_DIST) \
-	$(am__fstdifference_SOURCES_DIST) $(am__fstdraw_SOURCES_DIST) \
-	$(am__fstencode_SOURCES_DIST) \
+	$(am__fstdifference_SOURCES_DIST) \
+	$(am__fstdisambiguate_SOURCES_DIST) \
+	$(am__fstdraw_SOURCES_DIST) $(am__fstencode_SOURCES_DIST) \
 	$(am__fstepsnormalize_SOURCES_DIST) \
 	$(am__fstequal_SOURCES_DIST) $(am__fstequivalent_SOURCES_DIST) \
 	$(am__fstinfo_SOURCES_DIST) $(am__fstintersect_SOURCES_DIST) \
@@ -436,8 +444,7 @@ LDADD = ../script/libfstscript.la ../lib/libfst.la -lm -ldl
 @HAVE_BIN_TRUE@fstconvert_SOURCES = fstconvert.cc
 @HAVE_BIN_TRUE@fstdeterminize_SOURCES = fstdeterminize.cc
 @HAVE_BIN_TRUE@fstdifference_SOURCES = fstdifference.cc
-
-# fstdisambiguate_SOURCES = fstdisambiguate.cc
+@HAVE_BIN_TRUE@fstdisambiguate_SOURCES = fstdisambiguate.cc
 @HAVE_BIN_TRUE@fstdraw_SOURCES = fstdraw.cc
 @HAVE_BIN_TRUE@fstencode_SOURCES = fstencode.cc
 @HAVE_BIN_TRUE@fstepsnormalize_SOURCES = fstepsnormalize.cc
@@ -568,6 +575,9 @@ fstdeterminize$(EXEEXT): $(fstdeterminize_OBJECTS) $(fstdeterminize_DEPENDENCIES
 fstdifference$(EXEEXT): $(fstdifference_OBJECTS) $(fstdifference_DEPENDENCIES) $(EXTRA_fstdifference_DEPENDENCIES) 
 	@rm -f fstdifference$(EXEEXT)
 	$(CXXLINK) $(fstdifference_OBJECTS) $(fstdifference_LDADD) $(LIBS)
+fstdisambiguate$(EXEEXT): $(fstdisambiguate_OBJECTS) $(fstdisambiguate_DEPENDENCIES) $(EXTRA_fstdisambiguate_DEPENDENCIES) 
+	@rm -f fstdisambiguate$(EXEEXT)
+	$(CXXLINK) $(fstdisambiguate_OBJECTS) $(fstdisambiguate_LDADD) $(LIBS)
 fstdraw$(EXEEXT): $(fstdraw_OBJECTS) $(fstdraw_DEPENDENCIES) $(EXTRA_fstdraw_DEPENDENCIES) 
 	@rm -f fstdraw$(EXEEXT)
 	$(CXXLINK) $(fstdraw_OBJECTS) $(fstdraw_LDADD) $(LIBS)
@@ -662,6 +672,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstconvert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstdeterminize.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstdifference.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstdisambiguate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstdraw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstencode.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstepsnormalize.Po@am__quote@

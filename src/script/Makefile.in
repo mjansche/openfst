@@ -80,23 +80,24 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libfstscript_la_LIBADD =
 am__libfstscript_la_SOURCES_DIST = arcsort.cc closure.cc compile.cc \
 	compose.cc concat.cc connect.cc convert.cc decode.cc \
-	determinize.cc difference.cc draw.cc encode.cc epsnormalize.cc \
-	equal.cc equivalent.cc fst-class.cc info.cc intersect.cc \
-	invert.cc map.cc minimize.cc print.cc project.cc prune.cc \
-	push.cc randequivalent.cc randgen.cc relabel.cc replace.cc \
-	reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
+	determinize.cc difference.cc disambiguate.cc draw.cc encode.cc \
+	epsnormalize.cc equal.cc equivalent.cc fst-class.cc info.cc \
+	intersect.cc invert.cc map.cc minimize.cc print.cc project.cc \
+	prune.cc push.cc randequivalent.cc randgen.cc relabel.cc \
+	replace.cc reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
 	shortest-distance.cc shortest-path.cc synchronize.cc \
 	text-io.cc topsort.cc union.cc weight-class.cc verify.cc
 @HAVE_SCRIPT_TRUE@am_libfstscript_la_OBJECTS = arcsort.lo closure.lo \
 @HAVE_SCRIPT_TRUE@	compile.lo compose.lo concat.lo connect.lo \
 @HAVE_SCRIPT_TRUE@	convert.lo decode.lo determinize.lo \
-@HAVE_SCRIPT_TRUE@	difference.lo draw.lo encode.lo \
-@HAVE_SCRIPT_TRUE@	epsnormalize.lo equal.lo equivalent.lo \
-@HAVE_SCRIPT_TRUE@	fst-class.lo info.lo intersect.lo invert.lo \
-@HAVE_SCRIPT_TRUE@	map.lo minimize.lo print.lo project.lo \
-@HAVE_SCRIPT_TRUE@	prune.lo push.lo randequivalent.lo \
-@HAVE_SCRIPT_TRUE@	randgen.lo relabel.lo replace.lo reverse.lo \
-@HAVE_SCRIPT_TRUE@	reweight.lo rmepsilon.lo script-impl.lo \
+@HAVE_SCRIPT_TRUE@	difference.lo disambiguate.lo draw.lo \
+@HAVE_SCRIPT_TRUE@	encode.lo epsnormalize.lo equal.lo \
+@HAVE_SCRIPT_TRUE@	equivalent.lo fst-class.lo info.lo \
+@HAVE_SCRIPT_TRUE@	intersect.lo invert.lo map.lo minimize.lo \
+@HAVE_SCRIPT_TRUE@	print.lo project.lo prune.lo push.lo \
+@HAVE_SCRIPT_TRUE@	randequivalent.lo randgen.lo relabel.lo \
+@HAVE_SCRIPT_TRUE@	replace.lo reverse.lo reweight.lo \
+@HAVE_SCRIPT_TRUE@	rmepsilon.lo script-impl.lo \
 @HAVE_SCRIPT_TRUE@	shortest-distance.lo shortest-path.lo \
 @HAVE_SCRIPT_TRUE@	synchronize.lo text-io.lo topsort.lo \
 @HAVE_SCRIPT_TRUE@	union.lo weight-class.lo verify.lo
@@ -246,7 +247,7 @@ AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
 @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstscript.la
 @HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arcsort.cc closure.cc compile.cc compose.cc \
 @HAVE_SCRIPT_TRUE@concat.cc connect.cc convert.cc decode.cc determinize.cc difference.cc \
-@HAVE_SCRIPT_TRUE@draw.cc encode.cc epsnormalize.cc equal.cc equivalent.cc \
+@HAVE_SCRIPT_TRUE@disambiguate.cc draw.cc encode.cc epsnormalize.cc equal.cc equivalent.cc \
 @HAVE_SCRIPT_TRUE@fst-class.cc info.cc intersect.cc invert.cc map.cc minimize.cc print.cc \
 @HAVE_SCRIPT_TRUE@project.cc prune.cc push.cc randequivalent.cc randgen.cc relabel.cc \
 @HAVE_SCRIPT_TRUE@replace.cc reverse.cc reweight.cc rmepsilon.cc script-impl.cc \
@@ -338,6 +339,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/determinize.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/difference.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/disambiguate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/draw.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encode.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/epsnormalize.Plo@am__quote@
