@@ -107,6 +107,25 @@ class PdtStack {
     return -1;                               // Non-matching close paren.
   }
 
+  // Returns the stack ID obtained by "popping" the label at the top
+  // of the current stack ID.
+  StackId Pop(StackId stack_id) const {
+    return nodes_[stack_id].parent_id;
+  }
+
+  // Returns the paren ID at the top of the stack for 'stack_id'
+  ssize_t Top(StackId stack_id) const {
+    return nodes_[stack_id].paren_id;
+  }
+
+  ssize_t ParenId(Label label) const {
+    typename unordered_map<Label, size_t>::const_iterator pit
+        = paren_map_.find(label);
+    if (pit == paren_map_.end())  // Non-paren.
+      return -1;
+    return pit->second;
+  }
+
  private:
   struct ChildHash {
     size_t operator()(const pair<StackId, Label> &p) const {
@@ -320,6 +339,29 @@ class PdtBalanceData {
     }
   }
 
+  // Print the balance data as a text file.
+  void Print(const string &filename) const {
+    ofstream strm(filename.c_str());
+    for (typename StateNodeMap::const_iterator sit = node_map_.begin();
+         sit != node_map_.end();
+         ++sit) {
+      ParenKey okey = sit->first;
+      StateId open_dest = okey.state_id;
+      Label paren_id = okey.paren_id;
+      for (StateNodeId node_id = sit->second;
+           node_id != kNoStateId;
+           node_id = node_table_.Tuple(node_id).stack_id) {
+        StateId close_source = node_table_.Tuple(node_id).state_id;
+        strm << paren_id << " " << open_dest << " " << close_source << "\n";
+      }
+    }
+  }
+
+  // Return a new balance data object representing the reversed balance
+  // information.
+  PdtBalanceData<Arc> *Reverse(StateId num_states,
+                               StateId num_split,
+                               StateId state_id_shift) const;
  private:
   static const size_t kPrime0;
   static const StateNodeId kNoStateNodeId;
@@ -345,6 +387,50 @@ const size_t PdtBalanceData<Arc>::kPrime0 = 7853;
 template<class Arc> const typename PdtBalanceData<Arc>::StateNodeId
 PdtBalanceData<Arc>::kNoStateNodeId = -1;
 
+
+// Return a new balance data object representing the reversed balance
+// information.
+template<class Arc>
+PdtBalanceData<Arc> *PdtBalanceData<Arc>::Reverse(
+    StateId num_states,
+    StateId num_split,
+    StateId state_id_shift) const {
+  PdtBalanceData<Arc> *bd = new PdtBalanceData<Arc>;
+  unordered_set<StateId> close_sources;
+  StateId split_size = num_states / num_split;
+
+  for (StateId i = 0; i < num_states; i+= split_size) {
+    close_sources.clear();
+
+    for (typename StateNodeMap::const_iterator sit = node_map_.begin();
+         sit != node_map_.end();
+         ++sit) {
+      ParenKey okey = sit->first;
+      StateId open_dest = okey.state_id;
+      Label paren_id = okey.paren_id;
+      for (StateNodeId node_id = sit->second;
+           node_id != kNoStateId;
+           node_id = node_table_.Tuple(node_id).stack_id) {
+        StateId close_source = node_table_.Tuple(node_id).state_id;
+        if ((close_source < i) || (close_source >= i + split_size))
+          continue;
+        close_sources.insert(close_source + state_id_shift);
+        bd->OpenInsert(paren_id, close_source + state_id_shift);
+        bd->CloseInsert(paren_id, close_source + state_id_shift,
+                        open_dest + state_id_shift);
+      }
+    }
+
+    for (typename unordered_set<StateId>::const_iterator it
+             = close_sources.begin();
+         it != close_sources.end();
+         ++it) {
+      bd->FinishInsert(*it);
+    }
+
+  }
+  return bd;
+}
 
 // // Find balancing parentheses in a PDT. The PDT is assumed to
 // // be 'strongly regular' (i.e. is expandable as an FST).
