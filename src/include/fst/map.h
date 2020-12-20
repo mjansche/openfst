@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -25,6 +26,7 @@
 using std::tr1::unordered_map;
 #include <string>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <fst/cache.h>
 #include <fst/mutable-fst.h>
 
@@ -287,9 +289,13 @@ class MapFstImpl : public CacheImpl<B> {
 
   using VectorFstBaseImpl<typename CacheImpl<B>::State>::NumStates;
 
+  using CacheImpl<B>::AddArc;
   using CacheImpl<B>::HasArcs;
   using CacheImpl<B>::HasFinal;
   using CacheImpl<B>::HasStart;
+  using CacheImpl<B>::SetArcs;
+  using CacheImpl<B>::SetFinal;
+  using CacheImpl<B>::SetStart;
 
   friend class StateIterator< MapFst<A, B, C> >;
 
@@ -503,95 +509,47 @@ class MapFstImpl : public CacheImpl<B> {
 // Maps an arc type A to an arc type B using Mapper function object
 // C. This version is a delayed Fst.
 template <class A, class B, class C>
-class MapFst : public Fst<B> {
+class MapFst : public ImplToFst< MapFstImpl<A, B, C> > {
  public:
   friend class ArcIterator< MapFst<A, B, C> >;
   friend class StateIterator< MapFst<A, B, C> >;
-  friend class CacheArcIterator< MapFst<A, B, C> >;
 
   typedef B Arc;
   typedef typename B::Weight Weight;
   typedef typename B::StateId StateId;
   typedef CacheState<B> State;
+  typedef MapFstImpl<A, B, C> Impl;
 
-  MapFst(const Fst<A> &fst, const C &mapper,
-             const MapFstOptions& opts)
-      : impl_(new MapFstImpl<A, B, C>(fst, mapper, opts)) {}
+  MapFst(const Fst<A> &fst, const C &mapper, const MapFstOptions& opts)
+      : ImplToFst<Impl>(new Impl(fst, mapper, opts)) {}
 
-  MapFst(const Fst<A> &fst, C* mapper,
-             const MapFstOptions& opts)
-      : impl_(new MapFstImpl<A, B, C>(fst, mapper, opts)) {}
+  MapFst(const Fst<A> &fst, C* mapper, const MapFstOptions& opts)
+      : ImplToFst<Impl>(new Impl(fst, mapper, opts)) {}
 
   MapFst(const Fst<A> &fst, const C &mapper)
-      : impl_(new MapFstImpl<A, B, C>(fst, mapper,
-                                          MapFstOptions())) {}
+      : ImplToFst<Impl>(new Impl(fst, mapper, MapFstOptions())) {}
 
   MapFst(const Fst<A> &fst, C* mapper)
-      : impl_(new MapFstImpl<A, B, C>(fst, mapper,
-                                          MapFstOptions())) {}
+      : ImplToFst<Impl>(new Impl(fst, mapper, MapFstOptions())) {}
 
-  MapFst(const MapFst<A, B, C> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = new MapFstImpl<A, B, C>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
+  // See Fst<>::Copy() for doc.
+  MapFst(const MapFst<A, B, C> &fst, bool safe = false)
+    : ImplToFst<Impl>(fst, safe) {}
+
+  // Get a copy of this MapFst. See Fst<>::Copy() for further doc.
+  virtual MapFst<A, B, C> *Copy(bool safe = false) const {
+    return new MapFst<A, B, C>(*this, safe);
   }
 
-  virtual ~MapFst() { if (!impl_->DecrRefCount()) delete impl_;  }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  StateId NumStates() const { return impl_->NumStates(); }
-
-  size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual MapFst<A, B, C> *Copy(bool reset = false) const {
-    return new MapFst<A, B, C>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
-  }
-
- virtual inline void InitStateIterator(StateIteratorData<B> *data) const;
+  virtual inline void InitStateIterator(StateIteratorData<B> *data) const;
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<B> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
   }
 
- protected:
-  MapFstImpl<A, B, C> *Impl() { return impl_;}
-
  private:
-  MapFstImpl<A, B, C> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const MapFst<A, B, C> &fst);  // disallow
 };
@@ -604,7 +562,7 @@ class StateIterator< MapFst<A, B, C> > : public StateIteratorBase<B> {
   typedef typename B::StateId StateId;
 
   explicit StateIterator(const MapFst<A, B, C> &fst)
-      : impl_(fst.impl_), siter_(*impl_->fst_), s_(0),
+      : impl_(fst.GetImpl()), siter_(*impl_->fst_), s_(0),
         superfinal_(impl_->final_action_ == MAP_REQUIRE_SUPERFINAL)
   { CheckSuperfinal(); }
 
@@ -630,6 +588,9 @@ class StateIterator< MapFst<A, B, C> > : public StateIteratorBase<B> {
   }
 
  private:
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   bool Done_() const { return Done(); }
   StateId Value_() const { return Value(); }
   void Next_() { Next(); }
@@ -654,6 +615,7 @@ class StateIterator< MapFst<A, B, C> > : public StateIteratorBase<B> {
   DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
+
 // Specialization for MapFst.
 template <class A, class B, class C>
 class ArcIterator< MapFst<A, B, C> >
@@ -662,9 +624,9 @@ class ArcIterator< MapFst<A, B, C> >
   typedef typename A::StateId StateId;
 
   ArcIterator(const MapFst<A, B, C> &fst, StateId s)
-      : CacheArcIterator< MapFst<A, B, C> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : CacheArcIterator< MapFst<A, B, C> >(fst.GetImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s))
+      fst.GetImpl()->Expand(s);
   }
 
  private:
@@ -928,7 +890,8 @@ struct GallicToNewSymbolsMapper {
   Map map_;
   Label lmax_;
   StateId state_;
-  SymbolTable *osymbols_, *isymbols_;
+  const SymbolTable *osymbols_;
+  SymbolTable *isymbols_;
 
   DISALLOW_COPY_AND_ASSIGN(GallicToNewSymbolsMapper);
 };
@@ -1100,6 +1063,34 @@ struct ReverseWeightMapper {
 
   uint64 Properties(uint64 props) const { return props; }
 };
+
+
+// Convenience function for mapping with one of several predefined map types.
+
+enum MapType { IDENTITY_MAPPER, INVERT_MAPPER, PLUS_MAPPER, QUANTIZE_MAPPER,
+               RMWEIGHT_MAPPER, SUPERFINAL_MAPPER, TIMES_MAPPER };
+
+template<class Arc>
+void Map(MutableFst<Arc> *ofst, MapType map_type, float delta = kDelta,
+         typename Arc::Weight weight_thresh = Arc::Weight::Zero()) {
+  if (map_type == IDENTITY_MAPPER) {
+    Map(ofst, IdentityMapper<Arc>());
+  } else if (map_type == INVERT_MAPPER) {
+    Map(ofst, InvertWeightMapper<Arc>());
+  } else if (map_type == PLUS_MAPPER) {
+    Map(ofst, PlusMapper<Arc>(weight_thresh));
+  } else if (map_type == QUANTIZE_MAPPER) {
+    Map(ofst, QuantizeMapper<Arc>(delta));
+  } else if (map_type == RMWEIGHT_MAPPER) {
+    Map(ofst, RmWeightMapper<Arc>());
+  } else if (map_type == SUPERFINAL_MAPPER) {
+    Map(ofst, SuperFinalMapper<Arc>());
+  } else if (map_type == TIMES_MAPPER) {
+    Map(ofst, TimesMapper<Arc>(weight_thresh));
+  } else {
+    LOG(FATAL) << "Error: unknown/unsupported type in map enum: " << map_type;
+  }
+}
 
 }  // namespace fst
 

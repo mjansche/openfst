@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \page FstLib FST - Weighted Finite State Transducers
@@ -49,8 +50,10 @@
 #include <fst/mutable-fst.h>
 
 // Concrete FST classes
-#include <fst/vector-fst.h>
+#include <fst/compact-fst.h>
 #include <fst/const-fst.h>
+#include <fst/edit-fst.h>
+#include <fst/vector-fst.h>
 
 // FST algorithms and delayed FST classes
 #include <fst/arcsort.h>

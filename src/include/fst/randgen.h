@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -24,6 +25,7 @@
 #include <cstdlib>
 #include <ctime>
 
+#include <fst/accumulator.h>
 #include <fst/mutable-fst.h>
 
 namespace fst {
@@ -57,7 +59,7 @@ struct UniformArcSelector {
 
 // Randomly selects a transition w.r.t. the weights treated as negative
 // log probabilities after normalizing for the total weight leaving
-// the state). Weight::zero transitions are disregarded.
+// the state. Weight::zero transitions are disregarded.
 // Assumes Weight::Value() accesses the floating point
 // representation of the weight.
 template <class A>
@@ -94,6 +96,50 @@ struct LogProbArcSelector {
 typedef LogProbArcSelector<StdArc> StdArcSelector;
 typedef LogProbArcSelector<LogArc> LogArcSelector;
 
+// Same as LogProbArcSelector but use CacheLogAccumulator to cache
+// the cummulative weight computations.
+template <class A>
+struct FastLogProbArcSelector {
+  typedef typename A::StateId StateId;
+  typedef typename A::Weight Weight;
+
+  FastLogProbArcSelector(int seed = time(0))
+      : fst_(0), accumulator_(0) {
+    srand(seed);
+  }
+
+  FastLogProbArcSelector(const FastLogProbArcSelector<A> & s)
+      : fst_(0), accumulator_(0) {}
+
+  ~FastLogProbArcSelector() {
+    if (accumulator_)
+      delete accumulator_;
+  }
+
+  size_t operator()(const Fst<A> &fst, StateId s) const {
+    if (fst_ != &fst) {
+      fst_ = &fst;
+      if (accumulator_)
+        delete accumulator_;
+      accumulator_ = new CacheLogAccumulator<A>;
+      accumulator_->Init(fst);
+    }
+    accumulator_->SetState(s);
+    ArcIterator< Fst<A> > aiter(fst, s);
+    // Find total weight leaving state
+    double sum = accumulator_->Sum(
+        fst.Final(s), &aiter, 0, fst.NumArcs(s)).Value();
+    double r = -log(rand()/(RAND_MAX + 1.0));
+    return accumulator_->LowerBound(r + sum, &aiter);
+  }
+
+ private:
+  mutable const Fst<A> *fst_;
+  mutable CacheLogAccumulator<A> *accumulator_;
+
+  // disallow
+  FastLogProbArcSelector<A> & operator=(const FastLogProbArcSelector<A> & s);
+};
 
 // Options for random path generation.
 template <class S>

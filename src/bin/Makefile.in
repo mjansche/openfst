@@ -14,7 +14,6 @@
 
 @SET_MAKE@
 
-
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
@@ -49,133 +48,127 @@ bin_PROGRAMS = fstarcsort$(EXEEXT) fstclosure$(EXEEXT) \
 subdir = src/bin
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_icu.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h \
 	$(top_builddir)/src/include/fst/config.h
 CONFIG_CLEAN_FILES =
-am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
-am__vpath_adj = case $$p in \
-    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
-    *) f=$$p;; \
-  esac;
-am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
-am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"
-libLTLIBRARIES_INSTALL = $(INSTALL)
-LTLIBRARIES = $(lib_LTLIBRARIES)
-libfstmain_la_LIBADD =
-am_libfstmain_la_OBJECTS = main.lo
-libfstmain_la_OBJECTS = $(am_libfstmain_la_OBJECTS)
-libfstmain_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(libfstmain_la_LDFLAGS) $(LDFLAGS) -o $@
+am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_fstarcsort_OBJECTS = fstarcsort.$(OBJEXT)
 fstarcsort_OBJECTS = $(am_fstarcsort_OBJECTS)
-fstarcsort_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstarcsort_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstclosure_OBJECTS = fstclosure.$(OBJEXT)
 fstclosure_OBJECTS = $(am_fstclosure_OBJECTS)
-fstclosure_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstclosure_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstcompile_OBJECTS = fstcompile.$(OBJEXT)
 fstcompile_OBJECTS = $(am_fstcompile_OBJECTS)
-fstcompile_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstcompile_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstcompose_OBJECTS = fstcompose.$(OBJEXT)
 fstcompose_OBJECTS = $(am_fstcompose_OBJECTS)
-fstcompose_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstcompose_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstconcat_OBJECTS = fstconcat.$(OBJEXT)
 fstconcat_OBJECTS = $(am_fstconcat_OBJECTS)
-fstconcat_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstconcat_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstconnect_OBJECTS = fstconnect.$(OBJEXT)
 fstconnect_OBJECTS = $(am_fstconnect_OBJECTS)
-fstconnect_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstconnect_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstconvert_OBJECTS = fstconvert.$(OBJEXT)
 fstconvert_OBJECTS = $(am_fstconvert_OBJECTS)
-fstconvert_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstconvert_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstdeterminize_OBJECTS = fstdeterminize.$(OBJEXT)
 fstdeterminize_OBJECTS = $(am_fstdeterminize_OBJECTS)
-fstdeterminize_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstdeterminize_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fstdifference_OBJECTS = fstdifference.$(OBJEXT)
 fstdifference_OBJECTS = $(am_fstdifference_OBJECTS)
-fstdifference_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstdifference_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fstdraw_OBJECTS = fstdraw.$(OBJEXT)
 fstdraw_OBJECTS = $(am_fstdraw_OBJECTS)
-fstdraw_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstdraw_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstencode_OBJECTS = fstencode.$(OBJEXT)
 fstencode_OBJECTS = $(am_fstencode_OBJECTS)
-fstencode_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstencode_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstepsnormalize_OBJECTS = fstepsnormalize.$(OBJEXT)
 fstepsnormalize_OBJECTS = $(am_fstepsnormalize_OBJECTS)
-fstepsnormalize_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstepsnormalize_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fstequal_OBJECTS = fstequal.$(OBJEXT)
 fstequal_OBJECTS = $(am_fstequal_OBJECTS)
-fstequal_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstequal_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstequivalent_OBJECTS = fstequivalent.$(OBJEXT)
 fstequivalent_OBJECTS = $(am_fstequivalent_OBJECTS)
-fstequivalent_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstequivalent_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fstinfo_OBJECTS = fstinfo.$(OBJEXT)
 fstinfo_OBJECTS = $(am_fstinfo_OBJECTS)
-fstinfo_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstinfo_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstintersect_OBJECTS = fstintersect.$(OBJEXT)
 fstintersect_OBJECTS = $(am_fstintersect_OBJECTS)
-fstintersect_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstintersect_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstinvert_OBJECTS = fstinvert.$(OBJEXT)
 fstinvert_OBJECTS = $(am_fstinvert_OBJECTS)
-fstinvert_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstinvert_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstmap_OBJECTS = fstmap.$(OBJEXT)
 fstmap_OBJECTS = $(am_fstmap_OBJECTS)
-fstmap_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstmap_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstminimize_OBJECTS = fstminimize.$(OBJEXT)
 fstminimize_OBJECTS = $(am_fstminimize_OBJECTS)
-fstminimize_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstminimize_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstprint_OBJECTS = fstprint.$(OBJEXT)
 fstprint_OBJECTS = $(am_fstprint_OBJECTS)
-fstprint_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstprint_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstproject_OBJECTS = fstproject.$(OBJEXT)
 fstproject_OBJECTS = $(am_fstproject_OBJECTS)
-fstproject_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstproject_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstprune_OBJECTS = fstprune.$(OBJEXT)
 fstprune_OBJECTS = $(am_fstprune_OBJECTS)
-fstprune_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstprune_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstpush_OBJECTS = fstpush.$(OBJEXT)
 fstpush_OBJECTS = $(am_fstpush_OBJECTS)
-fstpush_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstpush_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstrandgen_OBJECTS = fstrandgen.$(OBJEXT)
 fstrandgen_OBJECTS = $(am_fstrandgen_OBJECTS)
-fstrandgen_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstrandgen_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstrelabel_OBJECTS = fstrelabel.$(OBJEXT)
 fstrelabel_OBJECTS = $(am_fstrelabel_OBJECTS)
-fstrelabel_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstrelabel_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstreplace_OBJECTS = fstreplace.$(OBJEXT)
 fstreplace_OBJECTS = $(am_fstreplace_OBJECTS)
-fstreplace_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstreplace_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstreverse_OBJECTS = fstreverse.$(OBJEXT)
 fstreverse_OBJECTS = $(am_fstreverse_OBJECTS)
-fstreverse_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstreverse_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstreweight_OBJECTS = fstreweight.$(OBJEXT)
 fstreweight_OBJECTS = $(am_fstreweight_OBJECTS)
-fstreweight_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstreweight_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstrmepsilon_OBJECTS = fstrmepsilon.$(OBJEXT)
 fstrmepsilon_OBJECTS = $(am_fstrmepsilon_OBJECTS)
-fstrmepsilon_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstrmepsilon_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstshortestdistance_OBJECTS = fstshortestdistance.$(OBJEXT)
 fstshortestdistance_OBJECTS = $(am_fstshortestdistance_OBJECTS)
-fstshortestdistance_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstshortestdistance_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fstshortestpath_OBJECTS = fstshortestpath.$(OBJEXT)
 fstshortestpath_OBJECTS = $(am_fstshortestpath_OBJECTS)
-fstshortestpath_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstshortestpath_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fstsynchronize_OBJECTS = fstsynchronize.$(OBJEXT)
 fstsynchronize_OBJECTS = $(am_fstsynchronize_OBJECTS)
-fstsynchronize_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fstsynchronize_DEPENDENCIES = ../lib/libfst.la \
+	../script/libfstscript.la
 am_fsttopsort_OBJECTS = fsttopsort.$(OBJEXT)
 fsttopsort_OBJECTS = $(am_fsttopsort_OBJECTS)
-fsttopsort_DEPENDENCIES = ../lib/libfst.la libfstmain.la
+fsttopsort_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
 am_fstunion_OBJECTS = fstunion.$(OBJEXT)
 fstunion_OBJECTS = $(am_fstunion_OBJECTS)
-fstunion_DEPENDENCIES = ../lib/libfst.la libfstmain.la
-DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir) -I$(top_builddir)/src/include/fst
+fstunion_DEPENDENCIES = ../lib/libfst.la ../script/libfstscript.la
+DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -187,44 +180,33 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-CCLD = $(CC)
-LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
-SOURCES = $(libfstmain_la_SOURCES) $(fstarcsort_SOURCES) \
-	$(fstclosure_SOURCES) $(fstcompile_SOURCES) \
-	$(fstcompose_SOURCES) $(fstconcat_SOURCES) \
-	$(fstconnect_SOURCES) $(fstconvert_SOURCES) \
-	$(fstdeterminize_SOURCES) $(fstdifference_SOURCES) \
-	$(fstdraw_SOURCES) $(fstencode_SOURCES) \
-	$(fstepsnormalize_SOURCES) $(fstequal_SOURCES) \
-	$(fstequivalent_SOURCES) $(fstinfo_SOURCES) \
-	$(fstintersect_SOURCES) $(fstinvert_SOURCES) $(fstmap_SOURCES) \
-	$(fstminimize_SOURCES) $(fstprint_SOURCES) \
-	$(fstproject_SOURCES) $(fstprune_SOURCES) $(fstpush_SOURCES) \
-	$(fstrandgen_SOURCES) $(fstrelabel_SOURCES) \
+SOURCES = $(fstarcsort_SOURCES) $(fstclosure_SOURCES) \
+	$(fstcompile_SOURCES) $(fstcompose_SOURCES) \
+	$(fstconcat_SOURCES) $(fstconnect_SOURCES) \
+	$(fstconvert_SOURCES) $(fstdeterminize_SOURCES) \
+	$(fstdifference_SOURCES) $(fstdraw_SOURCES) \
+	$(fstencode_SOURCES) $(fstepsnormalize_SOURCES) \
+	$(fstequal_SOURCES) $(fstequivalent_SOURCES) \
+	$(fstinfo_SOURCES) $(fstintersect_SOURCES) \
+	$(fstinvert_SOURCES) $(fstmap_SOURCES) $(fstminimize_SOURCES) \
+	$(fstprint_SOURCES) $(fstproject_SOURCES) $(fstprune_SOURCES) \
+	$(fstpush_SOURCES) $(fstrandgen_SOURCES) $(fstrelabel_SOURCES) \
 	$(fstreplace_SOURCES) $(fstreverse_SOURCES) \
 	$(fstreweight_SOURCES) $(fstrmepsilon_SOURCES) \
 	$(fstshortestdistance_SOURCES) $(fstshortestpath_SOURCES) \
 	$(fstsynchronize_SOURCES) $(fsttopsort_SOURCES) \
 	$(fstunion_SOURCES)
-DIST_SOURCES = $(libfstmain_la_SOURCES) $(fstarcsort_SOURCES) \
-	$(fstclosure_SOURCES) $(fstcompile_SOURCES) \
-	$(fstcompose_SOURCES) $(fstconcat_SOURCES) \
-	$(fstconnect_SOURCES) $(fstconvert_SOURCES) \
-	$(fstdeterminize_SOURCES) $(fstdifference_SOURCES) \
-	$(fstdraw_SOURCES) $(fstencode_SOURCES) \
-	$(fstepsnormalize_SOURCES) $(fstequal_SOURCES) \
-	$(fstequivalent_SOURCES) $(fstinfo_SOURCES) \
-	$(fstintersect_SOURCES) $(fstinvert_SOURCES) $(fstmap_SOURCES) \
-	$(fstminimize_SOURCES) $(fstprint_SOURCES) \
-	$(fstproject_SOURCES) $(fstprune_SOURCES) $(fstpush_SOURCES) \
-	$(fstrandgen_SOURCES) $(fstrelabel_SOURCES) \
+DIST_SOURCES = $(fstarcsort_SOURCES) $(fstclosure_SOURCES) \
+	$(fstcompile_SOURCES) $(fstcompose_SOURCES) \
+	$(fstconcat_SOURCES) $(fstconnect_SOURCES) \
+	$(fstconvert_SOURCES) $(fstdeterminize_SOURCES) \
+	$(fstdifference_SOURCES) $(fstdraw_SOURCES) \
+	$(fstencode_SOURCES) $(fstepsnormalize_SOURCES) \
+	$(fstequal_SOURCES) $(fstequivalent_SOURCES) \
+	$(fstinfo_SOURCES) $(fstintersect_SOURCES) \
+	$(fstinvert_SOURCES) $(fstmap_SOURCES) $(fstminimize_SOURCES) \
+	$(fstprint_SOURCES) $(fstproject_SOURCES) $(fstprune_SOURCES) \
+	$(fstpush_SOURCES) $(fstrandgen_SOURCES) $(fstrelabel_SOURCES) \
 	$(fstreplace_SOURCES) $(fstreverse_SOURCES) \
 	$(fstreweight_SOURCES) $(fstrmepsilon_SOURCES) \
 	$(fstshortestdistance_SOURCES) $(fstshortestpath_SOURCES) \
@@ -262,6 +244,11 @@ EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
 GREP = @GREP@
+ICU_CFLAGS = @ICU_CFLAGS@
+ICU_CONFIG = @ICU_CONFIG@
+ICU_CPPFLAGS = @ICU_CPPFLAGS@
+ICU_CXXFLAGS = @ICU_CXXFLAGS@
+ICU_LIBS = @ICU_LIBS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -325,6 +312,7 @@ infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libfstdir = @libfstdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
@@ -341,79 +329,76 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS)
 AM_LDFLAGS = -lm -ldl
-lib_LTLIBRARIES = libfstmain.la
-libfstmain_la_SOURCES = main.cc
-libfstmain_la_LDFLAGS = -version-info 0:0:0
-fstarcsort_SOURCES = fstarcsort.cc arcsort-main.h
-fstarcsort_LDADD = ../lib/libfst.la libfstmain.la
-fstclosure_SOURCES = fstclosure.cc closure-main.h
-fstclosure_LDADD = ../lib/libfst.la libfstmain.la
-fstcompile_SOURCES = fstcompile.cc compile-main.h
-fstcompile_LDADD = ../lib/libfst.la libfstmain.la
-fstcompose_SOURCES = fstcompose.cc compose-main.h
-fstcompose_LDADD = ../lib/libfst.la libfstmain.la
-fstconcat_SOURCES = fstconcat.cc concat-main.h
-fstconcat_LDADD = ../lib/libfst.la libfstmain.la
-fstconnect_SOURCES = fstconnect.cc connect-main.h
-fstconnect_LDADD = ../lib/libfst.la libfstmain.la
-fstconvert_SOURCES = fstconvert.cc convert-main.h
-fstconvert_LDADD = ../lib/libfst.la libfstmain.la
-fstdeterminize_SOURCES = fstdeterminize.cc determinize-main.h
-fstdeterminize_LDADD = ../lib/libfst.la libfstmain.la
-fstdifference_SOURCES = fstdifference.cc difference-main.h
-fstdifference_LDADD = ../lib/libfst.la libfstmain.la
-fstdraw_SOURCES = fstdraw.cc draw-main.h
-fstdraw_LDADD = ../lib/libfst.la libfstmain.la
-fstencode_SOURCES = fstencode.cc encode-main.h
-fstencode_LDADD = ../lib/libfst.la libfstmain.la
-fstepsnormalize_SOURCES = fstepsnormalize.cc epsnormalize-main.h
-fstepsnormalize_LDADD = ../lib/libfst.la libfstmain.la
-fstequal_SOURCES = fstequal.cc equal-main.h
-fstequal_LDADD = ../lib/libfst.la libfstmain.la
-fstequivalent_SOURCES = fstequivalent.cc equivalent-main.h
-fstequivalent_LDADD = ../lib/libfst.la libfstmain.la
-fstinfo_SOURCES = fstinfo.cc info-main.h
-fstinfo_LDADD = ../lib/libfst.la libfstmain.la
-fstintersect_SOURCES = fstintersect.cc intersect-main.h
-fstintersect_LDADD = ../lib/libfst.la libfstmain.la
-fstinvert_SOURCES = fstinvert.cc invert-main.h
-fstinvert_LDADD = ../lib/libfst.la libfstmain.la
-fstmap_SOURCES = fstmap.cc map-main.h
-fstmap_LDADD = ../lib/libfst.la libfstmain.la
-fstminimize_SOURCES = fstminimize.cc minimize-main.h
-fstminimize_LDADD = ../lib/libfst.la libfstmain.la
-fstprint_SOURCES = fstprint.cc print-main.h
-fstprint_LDADD = ../lib/libfst.la libfstmain.la
-fstproject_SOURCES = fstproject.cc project-main.h
-fstproject_LDADD = ../lib/libfst.la libfstmain.la
-fstprune_SOURCES = fstprune.cc prune-main.h
-fstprune_LDADD = ../lib/libfst.la libfstmain.la
-fstpush_SOURCES = fstpush.cc push-main.h
-fstpush_LDADD = ../lib/libfst.la libfstmain.la
-fstrandgen_SOURCES = fstrandgen.cc randgen-main.h
-fstrandgen_LDADD = ../lib/libfst.la libfstmain.la
-fstrelabel_SOURCES = fstrelabel.cc relabel-main.h
-fstrelabel_LDADD = ../lib/libfst.la libfstmain.la
-fstreplace_SOURCES = fstreplace.cc replace-main.h
-fstreplace_LDADD = ../lib/libfst.la libfstmain.la
-fstreverse_SOURCES = fstreverse.cc reverse-main.h
-fstreverse_LDADD = ../lib/libfst.la libfstmain.la
-fstreweight_SOURCES = fstreweight.cc reweight-main.h
-fstreweight_LDADD = ../lib/libfst.la libfstmain.la
-fstrmepsilon_SOURCES = fstrmepsilon.cc rmepsilon-main.h
-fstrmepsilon_LDADD = ../lib/libfst.la libfstmain.la
-fstshortestdistance_SOURCES = fstshortestdistance.cc shortest-distance-main.h
-fstshortestdistance_LDADD = ../lib/libfst.la libfstmain.la
-fstshortestpath_SOURCES = fstshortestpath.cc shortest-path-main.h
-fstshortestpath_LDADD = ../lib/libfst.la libfstmain.la
-fstsynchronize_SOURCES = fstsynchronize.cc synchronize-main.h
-fstsynchronize_LDADD = ../lib/libfst.la libfstmain.la
-fsttopsort_SOURCES = fsttopsort.cc topsort-main.h
-fsttopsort_LDADD = ../lib/libfst.la libfstmain.la
-fstunion_SOURCES = fstunion.cc union-main.h
-fstunion_LDADD = ../lib/libfst.la libfstmain.la
+fstarcsort_SOURCES = fstarcsort.cc
+fstarcsort_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstclosure_SOURCES = fstclosure.cc
+fstclosure_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstcompile_SOURCES = fstcompile.cc
+fstcompile_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstcompose_SOURCES = fstcompose.cc
+fstcompose_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstconcat_SOURCES = fstconcat.cc
+fstconcat_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstconnect_SOURCES = fstconnect.cc
+fstconnect_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstconvert_SOURCES = fstconvert.cc
+fstconvert_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstdeterminize_SOURCES = fstdeterminize.cc
+fstdeterminize_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstdifference_SOURCES = fstdifference.cc
+fstdifference_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstdraw_SOURCES = fstdraw.cc
+fstdraw_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstencode_SOURCES = fstencode.cc
+fstencode_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstepsnormalize_SOURCES = fstepsnormalize.cc
+fstepsnormalize_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstequal_SOURCES = fstequal.cc
+fstequal_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstequivalent_SOURCES = fstequivalent.cc
+fstequivalent_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstinfo_SOURCES = fstinfo.cc
+fstinfo_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstintersect_SOURCES = fstintersect.cc
+fstintersect_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstinvert_SOURCES = fstinvert.cc
+fstinvert_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstmap_SOURCES = fstmap.cc
+fstmap_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstminimize_SOURCES = fstminimize.cc
+fstminimize_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstprint_SOURCES = fstprint.cc
+fstprint_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstproject_SOURCES = fstproject.cc
+fstproject_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstprune_SOURCES = fstprune.cc
+fstprune_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstpush_SOURCES = fstpush.cc
+fstpush_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstrandgen_SOURCES = fstrandgen.cc
+fstrandgen_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstrelabel_SOURCES = fstrelabel.cc
+fstrelabel_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstreplace_SOURCES = fstreplace.cc
+fstreplace_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstreverse_SOURCES = fstreverse.cc
+fstreverse_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstreweight_SOURCES = fstreweight.cc
+fstreweight_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstrmepsilon_SOURCES = fstrmepsilon.cc
+fstrmepsilon_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstshortestdistance_SOURCES = fstshortestdistance.cc
+fstshortestdistance_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstshortestpath_SOURCES = fstshortestpath.cc
+fstshortestpath_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstsynchronize_SOURCES = fstsynchronize.cc
+fstsynchronize_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fsttopsort_SOURCES = fsttopsort.cc
+fsttopsort_LDADD = ../lib/libfst.la ../script/libfstscript.la
+fstunion_SOURCES = fstunion.cc
+fstunion_LDADD = ../lib/libfst.la ../script/libfstscript.la
 all: all-am
 
 .SUFFIXES:
@@ -447,35 +432,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-install-libLTLIBRARIES: $(lib_LTLIBRARIES)
-	@$(NORMAL_INSTALL)
-	test -z "$(libdir)" || $(MKDIR_P) "$(DESTDIR)$(libdir)"
-	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
-	  if test -f $$p; then \
-	    f=$(am__strip_dir) \
-	    echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(libLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) '$$p' '$(DESTDIR)$(libdir)/$$f'"; \
-	    $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(libLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) "$$p" "$(DESTDIR)$(libdir)/$$f"; \
-	  else :; fi; \
-	done
-
-uninstall-libLTLIBRARIES:
-	@$(NORMAL_UNINSTALL)
-	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
-	  p=$(am__strip_dir) \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(libdir)/$$p'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(libdir)/$$p"; \
-	done
-
-clean-libLTLIBRARIES:
-	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
-	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
-	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
-	  test "$$dir" != "$$p" || dir=.; \
-	  echo "rm -f \"$${dir}/so_locations\""; \
-	  rm -f "$${dir}/so_locations"; \
-	done
-libfstmain.la: $(libfstmain_la_OBJECTS) $(libfstmain_la_DEPENDENCIES) 
-	$(libfstmain_la_LINK) -rpath $(libdir) $(libfstmain_la_OBJECTS) $(libfstmain_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -647,7 +603,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstsynchronize.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fsttopsort.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstunion.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Plo@am__quote@
 
 .cc.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -751,11 +706,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS)
-install-binPROGRAMS: install-libLTLIBRARIES
-
+all-am: Makefile $(PROGRAMS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"; do \
+	for dir in "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -784,8 +737,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
-	clean-libtool mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -807,7 +759,7 @@ install-data-am:
 
 install-dvi: install-dvi-am
 
-install-exec-am: install-binPROGRAMS install-libLTLIBRARIES
+install-exec-am: install-binPROGRAMS
 
 install-html: install-html-am
 
@@ -839,24 +791,23 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES
+uninstall-am: uninstall-binPROGRAMS
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
-	clean-generic clean-libLTLIBRARIES clean-libtool ctags \
-	distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-binPROGRAMS \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-libLTLIBRARIES \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-libLTLIBRARIES
+	clean-generic clean-libtool ctags distclean distclean-compile \
+	distclean-generic distclean-libtool distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-binPROGRAMS install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am \
+	uninstall-binPROGRAMS
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

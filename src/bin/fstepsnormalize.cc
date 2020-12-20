@@ -12,28 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Epsilon normalizes an FST.
 //
 
-#include "./epsnormalize-main.h"
+#include <fst/script/epsnormalize.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(EpsNormalizeMain, StdArc);
-REGISTER_FST_MAIN(EpsNormalizeMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_bool(eps_norm_output, false, "Normalize output epsilons");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::VectorFstClass;
+
+
   string usage = "Epsilon normalizes an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-  usage += " Flags: eps_norm_output\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -42,6 +41,18 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes EpsNormalizeMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(EpsNormalizeMain, argc, argv);
+  string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  fst::EpsNormalizeType eps_norm_type = FLAGS_eps_norm_output ?
+      fst::EPS_NORM_OUTPUT : fst::EPS_NORM_INPUT;
+
+  VectorFstClass ofst(ifst->ArcType());
+  s::EpsNormalize(*ifst, &ofst, eps_norm_type);
+  ofst.Write(out_name);
+
+  return 0;
 }

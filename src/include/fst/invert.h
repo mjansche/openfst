@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -73,18 +74,21 @@ class InvertFst : public MapFst<A, A, InvertMapper<A> > {
  public:
   typedef A Arc;
   typedef InvertMapper<A> C;
-  using MapFst<A, A, InvertMapper<A> >::Impl;
+  typedef MapFstImpl< A, A, InvertMapper<A> > Impl;
+  using ImplToFst<Impl>::GetImpl;
 
   explicit InvertFst(const Fst<A> &fst) : MapFst<A, A, C>(fst, C()) {
-    Impl()->SetOutputSymbols(fst.InputSymbols());
-    Impl()->SetInputSymbols(fst.OutputSymbols());
+    GetImpl()->SetOutputSymbols(fst.InputSymbols());
+    GetImpl()->SetInputSymbols(fst.OutputSymbols());
   }
 
-  InvertFst(const InvertFst<A> &fst, bool reset = false)
-      : MapFst<A, A, C>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  InvertFst(const InvertFst<A> &fst, bool safe = false)
+      : MapFst<A, A, C>(fst, safe) {}
 
-  virtual InvertFst<A> *Copy(bool reset = false) const {
-    return new InvertFst(*this, reset);
+  // Get a copy of this InvertFst. See Fst<>::Copy() for further doc.
+  virtual InvertFst<A> *Copy(bool safe = false) const {
+    return new InvertFst(*this, safe);
   }
 };
 

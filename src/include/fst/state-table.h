@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
 // Classes for representing the mapping between state tuples and state Ids.
 
-#include <deque>
-#include <vector>
-
-
 #ifndef FST_LIB_STATE_TABLE_H__
 #define FST_LIB_STATE_TABLE_H__
+
+#include <deque>
+#include <vector>
+using std::vector;
 
 #include <fst/expanded-fst.h>
 
@@ -40,11 +41,13 @@ namespace fst {
 //
 //   // Required constructors.
 //   StateTable();
-
+//
 //   // Lookup state ID by tuple. If it doesn't exist, then add it.
 //   StateId FindState(const StateTuple &);
 //   // Lookup state tuple by state ID.
 //   const StateTuple<StateId> &Tuple(StateId) const;
+//   // # of stored tuples.
+//   StateId Size() const;
 // };
 //
 // A state tuple has the form:
@@ -84,6 +87,8 @@ class HashStateTable {
     return id2tuple_[s];
   }
 
+  StateId Size() const { return id2tuple_.size(); }
+
  private:
   unordered_map<StateTuple, StateId, H> tuple2id_;
   vector<StateTuple> id2tuple_;
@@ -115,6 +120,14 @@ class CompactHashStateTable {
         keys_(0, hash_func_, hash_equal_) {
   }
 
+  // Reserves space for table_size elements.
+  explicit CompactHashStateTable(size_t table_size)
+      : hash_func_(*this),
+        hash_equal_(*this),
+        keys_(table_size, hash_func_, hash_equal_) {
+    id2tuple_.reserve(table_size);
+  }
+
   StateId FindState(const StateTuple &tuple) {
     current_tuple_ = &tuple;
     typename KeyHashSet::const_iterator it = keys_.find(kCurrentKey);
@@ -132,9 +145,11 @@ class CompactHashStateTable {
     return id2tuple_[s];
   }
 
+  StateId Size() const { return id2tuple_.size(); }
+
  private:
-  static const StateId kEmptyKey;
-  static const StateId kCurrentKey;
+  static const StateId kEmptyKey;    // -1
+  static const StateId kCurrentKey;  // -2
 
   class HashFunc {
    public:
@@ -221,6 +236,8 @@ class VectorStateTable {
     return id2tuple_[s];
   }
 
+  StateId Size() const { return id2tuple_.size(); }
+
   const FP &Fingerprint() const { return *fp_; }
 
  private:
@@ -233,7 +250,7 @@ class VectorStateTable {
 
 // An implementation using a hash map for the tuple to state ID
 // mapping. This version permits erasing of states.  The state tuple T
-// must have == defined and the default constructor must produce a
+// must have == defined and its default constructor must produce a
 // tuple that will never be seen. F is the hash function.
 template <class T, class F>
 class ErasableStateTable {
@@ -256,13 +273,15 @@ class ErasableStateTable {
     return id2tuple_[s - first_];
   }
 
+  StateId Size() const { return id2tuple_.size(); }
+
   void Erase(StateId s) {
     StateTuple &tuple = id2tuple_[s - first_];
     typename unordered_map<StateTuple, StateId, F>::iterator it =
         tuple2id_.find(tuple);
     tuple2id_.erase(it);
     id2tuple_[s - first_] = empty_tuple_;
-    while (id2tuple_.front() == empty_tuple_) {
+    while (!id2tuple_.empty() && id2tuple_.front() == empty_tuple_) {
       id2tuple_.pop_front();
       ++first_;
     }
@@ -271,7 +290,7 @@ class ErasableStateTable {
  private:
   unordered_map<StateTuple, StateId, F> tuple2id_;
   deque<StateTuple> id2tuple_;
-  StateTuple empty_tuple_;
+  const StateTuple empty_tuple_;
   StateId first_;        // StateId of first element in the deque;
 
   DISALLOW_COPY_AND_ASSIGN(ErasableStateTable);
@@ -341,6 +360,8 @@ class VectorHashStateTable {
   const StateTuple &Tuple(StateId s) const {
     return id2tuple_[s];
   }
+
+  StateId Size() const { return id2tuple_.size(); }
 
   const S &Selector() const { return *selector_; }
 
@@ -424,14 +445,15 @@ VectorHashStateTable<T, S, FP, H>::kCurrentKey = -2;
 //   typedef typename A::StateId StateId;
 //   typedef ComposeStateTuple<StateId> StateTuple;
 //
-//   // Required constructors. Copy constructor does not
-//   // copy state (as needed by fst->Copy(reset = true)).
+//   // Required constructors. Copy constructor does not copy state.
 //   ComposeStateTable(const Fst<Arc> &fst1, const Fst<Arc> &fst2);
 //   ComposeStateTable(const ComposeStateTable<A, F> &table);
 //   // Lookup state ID by tuple. If it doesn't exist, then add it.
 //   StateId FindState(const StateTuple &);
 //   // Lookup state tuple by state ID.
 //   const StateTuple<StateId> &Tuple(StateId) const;
+//   // # of stored tuples.
+//   StateId Size() const;
 // };
 
 // Represents the composition state.
@@ -441,14 +463,14 @@ struct ComposeStateTuple {
   typedef F FilterState;
 
   ComposeStateTuple()
-      : state_id1(kNoLabel), state_id2(kNoLabel),
+      : state_id1(kNoStateId), state_id2(kNoStateId),
         filter_state(FilterState::NoState()) {}
 
   ComposeStateTuple(StateId s1, StateId s2, const FilterState &f)
       : state_id1(s1), state_id2(s2), filter_state(f) {}
 
-  StateId state_id1;          // State Id on fst1
-  StateId state_id2;          // State Id on fst2
+  StateId state_id1;         // State Id on fst1
+  StateId state_id2;         // State Id on fst2
   FilterState filter_state;  // State of composition filter
 };
 
@@ -456,6 +478,8 @@ struct ComposeStateTuple {
 template <typename S, typename F>
 inline bool operator==(const ComposeStateTuple<S, F>& x,
                        const ComposeStateTuple<S, F>& y) {
+  if (&x == &y)
+    return true;
   return x.state_id1 == y.state_id1 &&
       x.state_id2 == y.state_id2 &&
       x.filter_state == y.filter_state;
@@ -467,20 +491,19 @@ template <typename S, typename F>
 class ComposeHash {
  public:
   size_t operator()(const ComposeStateTuple<S, F>& t) const {
-    return static_cast<size_t>(t.state_id1 +
-                               t.state_id2 * kPrime0 +
-                               t.filter_state.Hash() * kPrime1);
+    return t.state_id1 + t.state_id2 * kPrime0 +
+        t.filter_state.Hash() * kPrime1;
   }
  private:
-  static const int kPrime0;
-  static const int kPrime1;
+  static const size_t kPrime0;
+  static const size_t kPrime1;
 };
 
 template <typename S, typename F>
-const int ComposeHash<S, F>::kPrime0 = 7853;
+const size_t ComposeHash<S, F>::kPrime0 = 7853;
 
 template <typename S, typename F>
-const int ComposeHash<S, F>::kPrime1 = 7867;
+const size_t ComposeHash<S, F>::kPrime1 = 7867;
 
 
 // A HashStateTable over composition tuples.
@@ -672,8 +695,6 @@ ErasableStateTable<ComposeStateTuple<typename A::StateId, F>,
   void operator=(const ErasableComposeStateTable<A, F> &table);  // disallow
 };
 
-
 }  // namespace fst
-
 
 #endif  // FST_LIB_STATE_TABLE_H__

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: wojciech@google.com (Wojciech Skut)
 //
 // \file Functions and classes to determine the equivalence of two
@@ -25,7 +26,9 @@
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 #include <fst/encode.h>
 #include <fst/push.h>
 #include <fst/union-find.h>
@@ -48,7 +51,7 @@ template <class Arc>
 struct EquivalenceUtil {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
-  typedef int32 MappedId;  // ID for an equivalence class.
+  typedef StateId MappedId;  // ID for an equivalence class.
 
   // MappedId for an implicit dead state.
   static const MappedId kDeadState = 0;
@@ -91,6 +94,13 @@ struct EquivalenceUtil {
   }
 };
 
+template <class Arc> const
+typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kDeadState;
+
+template <class Arc> const
+typename EquivalenceUtil<Arc>::MappedId EquivalenceUtil<Arc>::kInvalidId;
+
+
 // Equivalence checking algorithm: determines if the two FSTs
 // <code>fst1</code> and <code>fst2</code> are equivalent. The input
 // FSTs must be deterministic input-side epsilon-free acceptors,
@@ -116,6 +126,11 @@ bool Equivalent(const Fst<Arc> &fst1,
                 const Fst<Arc> &fst2,
                 double delta = kDelta) {
   typedef typename Arc::Weight Weight;
+  // Check that the symbol table are compatible
+  if (!CompatSymbols(fst1.InputSymbols(), fst2.InputSymbols()) ||
+      !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols()))
+      LOG(FATAL) << "Equivalent: input/output symbol tables of 1st argument "
+                 << "do not match input/output symbol tables of 2nd argument";
   // Check properties first:
   uint64 props = kNoEpsilons | kIDeterministic | kAcceptor;
   if (fst1.Properties(props, true) != props) {

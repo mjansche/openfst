@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -22,12 +23,14 @@
 #define FST_LIB_DETERMINIZE_H__
 
 #include <algorithm>
+#include <climits>
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
 #include <map>
 #include <fst/slist.h>
 #include <string>
 #include <vector>
+using std::vector;
 
 #include <fst/cache.h>
 #include <fst/factor-weight.h>
@@ -135,6 +138,8 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
   using CacheBaseImpl< CacheState<A> >::HasStart;
   using CacheBaseImpl< CacheState<A> >::HasFinal;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
+  using CacheBaseImpl< CacheState<A> >::SetFinal;
+  using CacheBaseImpl< CacheState<A> >::SetStart;
 
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
@@ -215,7 +220,9 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
 
   virtual Weight ComputeFinal(StateId s) = 0;
 
- protected:
+  const Fst<A> &GetFst() { return *fst_; }
+
+ private:
   const Fst<A> *fst_;            // Input Fst
 
   void operator=(const DeterminizeFstImplBase<A> &);  // disallow
@@ -227,7 +234,8 @@ class DeterminizeFstImplBase : public CacheImpl<A> {
 template <class A, class D>
 class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
  public:
-  using DeterminizeFstImplBase<A>::fst_;
+  using DeterminizeFstImplBase<A>::GetFst;
+  using DeterminizeFstImplBase<A>::SetArcs;
 
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
@@ -283,7 +291,7 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
   }
 
   virtual StateId ComputeStart() {
-    StateId s = fst_->Start();
+    StateId s = GetFst().Start();
     if (s == kNoStateId)
       return kNoStateId;
     Element element(s, Weight::One());
@@ -291,8 +299,6 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
     subset->push_front(element);
     return FindState(subset);
   }
-
-
 
   virtual Weight ComputeFinal(StateId s) {
     Subset *subset = subsets_[s];
@@ -302,7 +308,7 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
          ++siter) {
       Element &element = *siter;
       final = Plus(final, Times(element.weight,
-                                fst_->Final(element.state_id)));
+                                GetFst().Final(element.state_id)));
       }
     return final;
   }
@@ -377,7 +383,7 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
          siter != src_subset->end();
          ++siter) {
       Element &src_element = *siter;
-      for (ArcIterator< Fst<A> > aiter(*fst_, src_element.state_id);
+      for (ArcIterator< Fst<A> > aiter(GetFst(), src_element.state_id);
            !aiter.Done();
            aiter.Next()) {
         const A &arc = aiter.Value();
@@ -503,17 +509,13 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
            iter != subset->end();
            ++iter) {
         const Element &element = *iter;
-        int lshift = element.state_id % kPrime;
-        int rshift = sizeof(size_t) - lshift;
-        hash ^= element.state_id << lshift ^
-                element.state_id >> rshift ^
-                element.weight.Hash();
+        const int lshift = 5;
+        const int rshift = CHAR_BIT * sizeof(size_t) - 5;
+        size_t n = element.state_id;
+        hash ^= n << lshift ^ n >> rshift ^ element.weight.Hash();
       }
       return hash;
     }
-
-   private:
-    static const int kPrime = sizeof(size_t) == 8 ? 23 : 13;
   };
 
   float delta_;                    // Quantization delta for subset weights
@@ -547,6 +549,10 @@ class DeterminizeFsaImpl : public DeterminizeFstImplBase<A> {
 template <class A, StringType S>
 class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
  public:
+  using DeterminizeFstImplBase<A>::GetFst;
+  using CacheBaseImpl< CacheState<A> >::GetCacheGc;
+  using CacheBaseImpl< CacheState<A> >::GetCacheLimit;
+
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
@@ -561,12 +567,18 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   typedef GallicCommonDivisor<Label, Weight, S> CommonDivisor;
   typedef GallicFactor<Label, Weight, S> FactorIterator;
 
-  // Defined after DeterminizeFst since it calls it.
-  DeterminizeFstImpl(const Fst<A> &fst, const DeterminizeFstOptions<A> &opts);
+  DeterminizeFstImpl(const Fst<A> &fst, const DeterminizeFstOptions<A> &opts)
+      : DeterminizeFstImplBase<A>(fst, opts),
+        delta_(opts.delta),
+        subsequential_label_(opts.subsequential_label) {
+     Init(GetFst());
+  }
 
   DeterminizeFstImpl(const DeterminizeFstImpl<A, S> &impl)
       : DeterminizeFstImplBase<A>(impl),
-        from_fst_(impl.from_fst_->Copy()) {
+        delta_(impl.delta_),
+        subsequential_label_(impl.subsequential_label_) {
+    Init(GetFst());
   }
 
   ~DeterminizeFstImpl() { delete from_fst_; }
@@ -588,6 +600,12 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
   }
 
  private:
+  // Initialization of transducer determinization implementation, which
+  // is defined after DeterminizeFst since it calls it.
+  void Init(const Fst<A> &fst);
+
+  float delta_;
+  Label subsequential_label_;
   FromFst *from_fst_;
 
   void operator=(const DeterminizeFstImpl<A, S> &);  // disallow
@@ -613,12 +631,14 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
 // References:
 // - Mehryar Mohri, "Finite-State Transducers in Language and Speech
 //   Processing". Computational Linguistics, 23:2, 1997.
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A>
-class DeterminizeFst : public Fst<A> {
+class DeterminizeFst : public ImplToFst< DeterminizeFstImplBase<A> >  {
  public:
   friend class ArcIterator< DeterminizeFst<A> >;
-  friend class CacheStateIterator< DeterminizeFst<A> >;
-  friend class CacheArcIterator< DeterminizeFst<A> >;
+  friend class StateIterator< DeterminizeFst<A> >;
   template <class B, StringType S> friend class DeterminizeFstImpl;
 
   typedef A Arc;
@@ -626,6 +646,9 @@ class DeterminizeFst : public Fst<A> {
   typedef typename A::StateId StateId;
   typedef typename A::Label Label;
   typedef CacheState<A> State;
+  typedef DeterminizeFstImplBase<A> Impl;
+
+  using ImplToFst<Impl>::SetImpl;
 
   explicit DeterminizeFst(
       const Fst<A> &fst,
@@ -633,10 +656,10 @@ class DeterminizeFst : public Fst<A> {
     if (fst.Properties(kAcceptor, true)) {
       // Calls implementation for acceptors.
       typedef DefaultCommonDivisor<Weight> D;
-      impl_ = new DeterminizeFsaImpl<A, D>(fst, D(), 0, 0, opts);
+      SetImpl(new DeterminizeFsaImpl<A, D>(fst, D(), 0, 0, opts));
     } else {
       // Calls implementation for transducers.
-      impl_ = new DeterminizeFstImpl<A, STRING_LEFT_RESTRICT>(fst, opts);
+      SetImpl(new DeterminizeFstImpl<A, STRING_LEFT_RESTRICT>(fst, opts));
     }
   }
 
@@ -651,66 +674,27 @@ class DeterminizeFst : public Fst<A> {
       LOG(FATAL) << "DeterminizeFst:"
                  << " distance to final states computed for acceptors only";
     typedef DefaultCommonDivisor<Weight> D;
-    impl_ = new DeterminizeFsaImpl<A, D>(fst, D(), &in_dist, out_dist, opts);
+    SetImpl(new DeterminizeFsaImpl<A, D>(fst, D(), &in_dist, out_dist, opts));
   }
 
-  DeterminizeFst(const DeterminizeFst<A> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = fst.impl_->Copy();
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
+  // See Fst<>::Copy() for doc.
+  DeterminizeFst(const DeterminizeFst<A> &fst, bool safe = false) {
+    if (safe)
+      SetImpl(fst.GetImpl()->Copy());
+    else
+      SetImpl(fst.GetImpl(), false);
   }
 
-  virtual ~DeterminizeFst() { if (!impl_->DecrRefCount()) delete impl_; }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual DeterminizeFst<A> *Copy(bool reset = false) const {
-    return new DeterminizeFst<A>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  // Get a copy of this DeterminizeFst. See Fst<>::Copy() for further doc.
+  virtual DeterminizeFst<A> *Copy(bool safe = false) const {
+    return new DeterminizeFst<A>(*this, safe);
   }
 
   virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
   }
-
- protected:
-  DeterminizeFstImplBase<A> *Impl() { return impl_; }
 
  private:
   // This private version is for passing the common divisor to
@@ -718,35 +702,37 @@ class DeterminizeFst : public Fst<A> {
   template <class D>
   DeterminizeFst(const Fst<A> &fst, const D &common_div,
                  const DeterminizeFstOptions<A> &opts)
-      :  impl_(new DeterminizeFsaImpl<A, D>(fst, common_div, 0, 0, opts)) {}
+      :  ImplToFst<Impl>(
+          new DeterminizeFsaImpl<A, D>(fst, common_div, 0, 0, opts)) {}
 
-  DeterminizeFstImplBase<A> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const DeterminizeFst<A> &fst);  // Disallow
 };
 
 
+// Initialization of transducer determinization implementation. which
+// is defined after DeterminizeFst since it calls it.
 template <class A, StringType S>
-DeterminizeFstImpl<A, S>::DeterminizeFstImpl(
-    const Fst<A> &fst, const DeterminizeFstOptions<A> &opts)
-    : DeterminizeFstImplBase<A>(fst, opts) {
-
+void DeterminizeFstImpl<A, S>::Init(const Fst<A> &fst) {
   // Mapper to an acceptor.
   ToFst to_fst(fst, ToMapper());
 
   // Determinize acceptor.
   // This recursive call terminates since it passes the common divisor
   // to a private constructor.
-  DeterminizeFstOptions<ToArc> dopts(opts, opts.delta);
+  CacheOptions copts(GetCacheGc(), GetCacheLimit());
+  DeterminizeFstOptions<ToArc> dopts(copts, delta_);
   DeterminizeFst<ToArc> det_fsa(to_fst, CommonDivisor(), dopts);
 
   // Mapper back to transducer.
-  FactorWeightOptions<ToArc> fopts(CacheOptions(true, 0), opts.delta,
+  FactorWeightOptions<ToArc> fopts(CacheOptions(true, 0), delta_,
                                    kFactorFinalWeights,
-                                   opts.subsequential_label,
-                                   opts.subsequential_label);
+                                   subsequential_label_,
+                                   subsequential_label_);
   FactorWeightFst<ToArc, FactorIterator> factored_fst(det_fsa, fopts);
-  from_fst_ = new FromFst(factored_fst, FromMapper(opts.subsequential_label));
+  from_fst_ = new FromFst(factored_fst, FromMapper(subsequential_label_));
 }
 
 
@@ -756,7 +742,7 @@ class StateIterator< DeterminizeFst<A> >
     : public CacheStateIterator< DeterminizeFst<A> > {
  public:
   explicit StateIterator(const DeterminizeFst<A> &fst)
-      : CacheStateIterator< DeterminizeFst<A> >(fst) {}
+      : CacheStateIterator< DeterminizeFst<A> >(fst, fst.GetImpl()) {}
 };
 
 
@@ -768,9 +754,9 @@ class ArcIterator< DeterminizeFst<A> >
   typedef typename A::StateId StateId;
 
   ArcIterator(const DeterminizeFst<A> &fst, StateId s)
-      : CacheArcIterator< DeterminizeFst<A> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : CacheArcIterator< DeterminizeFst<A> >(fst.GetImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s))
+      fst.GetImpl()->Expand(s);
   }
 
  private:

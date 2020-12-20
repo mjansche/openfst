@@ -12,27 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Generates random paths through an FST.
 
-#include "./randgen-main.h"
+#include <fst/script/randgen.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(RandGenMain, StdArc);
-REGISTER_FST_MAIN(RandGenMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_int32(max_length, INT_MAX, "Maximum path length");
+DEFINE_int32(npath, 1, "Number of paths to generate");
+DEFINE_int32(seed, time(0), "Random seed");
+DEFINE_string(select, "uniform", "Selection type: one of: "
+              " \"uniform\", \"log_prob (when appropriate)\"");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::VectorFstClass;
+
   string usage = "Generates random paths through an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-  usage += "  Flags: max_length, npath, seed, select\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -41,6 +43,30 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes RandGenMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(RandGenMain, argc, argv);
+  string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  VectorFstClass ofst(ifst->ArcType());
+
+  s::RandArcSelection ras;
+
+  if (FLAGS_select == "uniform") {
+    ras = s::UNIFORM_ARC_SELECTOR;
+  } else if (FLAGS_select == "log_prob") {
+    ras = s::LOG_PROB_ARC_SELECTOR;
+  } else {
+    LOG(ERROR) << argv[0] << ": Unknown selection type \""
+               << FLAGS_select << "\"\n";
+    return 1;
+  }
+
+  s::RandGen(*ifst, &ofst, FLAGS_seed,
+             fst::RandGenOptions<s::RandArcSelection>(
+                 ras, FLAGS_max_length, FLAGS_npath));
+
+  ofst.Write(out_name);
+  return 0;
 }

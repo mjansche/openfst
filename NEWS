@@ -1,3 +1,32 @@
+OpenFst - Release 1.2
+
+   * Added lookahead matching and filtering for faster composition
+   * Added EditFst for mutation of o.w. immutable FSTs
+   * Added script sub-namespace defining type FstClass - a non-templated Fst<Arc> 
+     to hold the arc template type internally. This and FST operations on
+     it allow easier I/O and scripting at the cost of some runtime
+     dispatching.
+   * Added per-arc-iterator control of Fst caching.
+   * Added PowerWeight and Power Arc.
+   * Added fstsymbols shell-level command
+   * Added total weight removal option to pushing
+   * Changed methods for symbol table mutation
+   * Numerous efficiency improvements esp in composition, replace, and caching
+   * Fixed numerous bugs including:
+     - improper types of some approximation deltas
+     - sub-optimal hashing functions
+     - issues in internal reuse of shortest distance
+     - hashing bug in FloatWeight       
+     - bug in shortest path queue 
+     - symbol table checksumming issues
+     - various C++ standards issues
+     - Visit() behavior when visitation aborted
+   * Added extensions directories including:
+     - finite-state archive (FAR) utilities
+     - compact fsts
+     - lookahead fsts
+     - pushdown transducers
+
 OpenFst - Release 1.1
 
    * Added compat.h to src/include/fst to fix missing defines

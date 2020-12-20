@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -44,13 +45,13 @@ template <class A> class ProjectMapper {
   MapFinalAction FinalAction() const { return MAP_NO_SUPERFINAL; }
 
   MapSymbolsAction InputSymbolsAction() const {
-    return project_type_ == PROJECT_INPUT ? MAP_CLEAR_SYMBOLS :
-        MAP_COPY_SYMBOLS;
+    return project_type_ == PROJECT_INPUT ? MAP_COPY_SYMBOLS :
+        MAP_CLEAR_SYMBOLS;
   }
 
   MapSymbolsAction OutputSymbolsAction() const {
-    return project_type_ == PROJECT_OUTPUT ? MAP_CLEAR_SYMBOLS :
-        MAP_COPY_SYMBOLS;
+    return project_type_ == PROJECT_OUTPUT ? MAP_COPY_SYMBOLS :
+        MAP_CLEAR_SYMBOLS;
   }
 
   uint64 Properties(uint64 props) {
@@ -96,21 +97,24 @@ class ProjectFst : public MapFst<A, A, ProjectMapper<A> > {
  public:
   typedef A Arc;
   typedef ProjectMapper<A> C;
-  using MapFst<A, A, ProjectMapper<A> >::Impl;
+  typedef MapFstImpl< A, A, ProjectMapper<A> > Impl;
+  using ImplToFst<Impl>::GetImpl;
 
   ProjectFst(const Fst<A> &fst, ProjectType project_type)
       : MapFst<A, A, C>(fst, C(project_type)) {
     if (project_type == PROJECT_INPUT)
-      Impl()->SetOutputSymbols(fst.InputSymbols());
+      GetImpl()->SetOutputSymbols(fst.InputSymbols());
     if (project_type == PROJECT_OUTPUT)
-      Impl()->SetInputSymbols(fst.OutputSymbols());
+      GetImpl()->SetInputSymbols(fst.OutputSymbols());
   }
 
-  ProjectFst(const ProjectFst<A> &fst, bool reset = false)
-      : MapFst<A, A, C>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  ProjectFst(const ProjectFst<A> &fst, bool safe = false)
+      : MapFst<A, A, C>(fst, safe) {}
 
-  virtual ProjectFst<A> *Copy(bool reset = false) const {
-    return new ProjectFst(*this, reset);
+  // Get a copy of this ProjectFst. See Fst<>::Copy() for further doc.
+  virtual ProjectFst<A> *Copy(bool safe = false) const {
+    return new ProjectFst(*this, safe);
   }
 };
 

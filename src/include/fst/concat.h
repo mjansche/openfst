@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_CONCAT_H__
 
 #include <vector>
+using std::vector;
 #include <algorithm>
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
@@ -132,14 +134,14 @@ void Concat(const Fst<Arc> &fst1, MutableFst<Arc> *fst2) {
 // RationalFst input (in first position).
 template<class Arc>
 void Concat(RationalFst<Arc> *fst1, const Fst<Arc> &fst2) {
-  fst1->Impl()->AddConcat(fst2, true);
+  fst1->GetImpl()->AddConcat(fst2, true);
 }
 
 // Computes the concatentation of two FSTs. This version modifies its
 // RationalFst input (in second position).
 template<class Arc>
 void Concat(const Fst<Arc> &fst1, RationalFst<Arc> *fst2) {
-  fst2->Impl()->AddConcat(fst1, false);
+  fst2->GetImpl()->AddConcat(fst1, false);
 }
 
 typedef RationalFstOptions ConcatFstOptions;
@@ -159,26 +161,28 @@ typedef RationalFstOptions ConcatFstOptions;
 template <class A>
 class ConcatFst : public RationalFst<A> {
  public:
-  using RationalFst<A>::Impl;
+  using ImplToFst< RationalFstImpl<A> >::GetImpl;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
 
   ConcatFst(const Fst<A> &fst1, const Fst<A> &fst2) {
-    Impl()->InitConcat(fst1, fst2);
+    GetImpl()->InitConcat(fst1, fst2);
   }
 
   ConcatFst(const Fst<A> &fst1, const Fst<A> &fst2,
             const ConcatFstOptions &opts) : RationalFst<A>(opts) {
-    Impl()->InitConcat(fst1, fst2);
+    GetImpl()->InitConcat(fst1, fst2);
   }
 
-  ConcatFst(const ConcatFst<A> &fst, bool reset = false)
-      : RationalFst<A>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  ConcatFst(const ConcatFst<A> &fst, bool safe = false)
+      : RationalFst<A>(fst, safe) {}
 
-  virtual ConcatFst<A> *Copy(bool reset = false) const {
-    return new ConcatFst<A>(*this, reset);
+  // Get a copy of this ConcatFst. See Fst<>::Copy() for further doc.
+  virtual ConcatFst<A> *Copy(bool safe = false) const {
+    return new ConcatFst<A>(*this, safe);
   }
 };
 

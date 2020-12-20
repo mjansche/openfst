@@ -12,29 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Removes epsilons from an FST.
 //
 
-#include "./rmepsilon-main.h"
+#include <fst/script/rmepsilon.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(RmEpsilonMain, StdArc);
-REGISTER_FST_MAIN(RmEpsilonMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_bool(connect, true, "Trim output");
+DEFINE_double(delta, fst::kDelta, "Comparison/quantization delta");
+DEFINE_int64(nstate, fst::kNoStateId, "State number parameter");
+DEFINE_bool(reverse, false, "Perform in the reverse direction");
+DEFINE_string(weight, "", "Weight parameter");
+DEFINE_string(queue_type, "auto", "Queue type: one of \"trivial\", "
+              "\"fifo\", \"lifo\", \"top\", \"auto\".");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::MutableFstClass;
+  using fst::script::VectorFstClass;
+  using fst::script::WeightClass;
+
   string usage = "Removes epsilons from an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-  usage += "  Flags: connect delta nstate reverse weight\n";
-
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -43,6 +48,39 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes RmEpsilonMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(RmEpsilonMain, argc, argv);
+  string in_fname = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_fname = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_fname);
+  if (!ifst) return 1;
+
+  WeightClass weight_threshold = FLAGS_weight.empty() ?
+      WeightClass::Zero() :
+      WeightClass(ifst->WeightType(), FLAGS_weight);
+
+  fst::QueueType qt;
+
+  if (FLAGS_queue_type == "trivial") {
+    qt = fst::TRIVIAL_QUEUE;
+  } else if (FLAGS_queue_type == "fifo") {
+    qt = fst::FIFO_QUEUE;
+  } else if (FLAGS_queue_type == "lifo") {
+    qt = fst::LIFO_QUEUE;
+  } else if (FLAGS_queue_type == "top") {
+    qt = fst::TOP_ORDER_QUEUE;
+  } else if (FLAGS_queue_type == "auto") {
+    qt = fst::AUTO_QUEUE;
+  } else {
+    LOG(FATAL) << "Unknown or unsupported queue type: " << FLAGS_queue_type;
+  }
+
+  s::RmEpsilonOptions opts(qt, FLAGS_delta, FLAGS_connect,
+                           weight_threshold, FLAGS_nstate);
+
+  MutableFstClass *ofst = new VectorFstClass(ifst->ArcType());
+  s::RmEpsilon(*ifst, ofst, FLAGS_reverse, opts);
+
+  ofst->Write(out_fname);
+
+  return 0;
 }

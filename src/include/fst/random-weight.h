@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -24,11 +25,13 @@
 #include <cstdlib>
 #include <ctime>
 #include <vector>
+using std::vector;
 
 #include <fst/float-weight.h>
 #include <fst/product-weight.h>
 #include <fst/string-weight.h>
 #include <fst/lexicographic-weight.h>
+#include <fst/power-weight.h>
 
 namespace fst {
 
@@ -62,6 +65,8 @@ class TropicalWeightGenerator_ {
   bool allow_zero_;  // permit Zero() and zero divisors
 };
 
+template <class T> const int TropicalWeightGenerator_<T>::kNumRandomWeights;
+
 typedef TropicalWeightGenerator_<float> TropicalWeightGenerator;
 
 
@@ -91,6 +96,8 @@ class LogWeightGenerator_ {
 
   bool allow_zero_;  // permit Zero() and zero divisors
 };
+
+template <class T> const int LogWeightGenerator_<T>::kNumRandomWeights;
 
 typedef LogWeightGenerator_<float> LogWeightGenerator;
 
@@ -125,6 +132,8 @@ class MinMaxWeightGenerator_ {
   bool allow_zero_;  // permit Zero() and zero divisors
 };
 
+template <class T> const int MinMaxWeightGenerator_<T>::kNumRandomWeights;
+
 typedef MinMaxWeightGenerator_<float> MinMaxWeightGenerator;
 
 
@@ -157,8 +166,13 @@ class StringWeightGenerator {
   // Number of alternative random weights.
   static const int kMaxStringLength = 5;
 
-  bool allow_zero_;  // permit Zero() and zero divisors
+  bool allow_zero_;  // permit Zero() and zero
 };
+
+template <typename L, StringType S>
+const int StringWeightGenerator<L, S>::kAlphabetSize;
+template <typename L, StringType S>
+const int StringWeightGenerator<L, S>::kMaxStringLength;
 
 
 // This function object returns a weight generator over the product of the
@@ -218,6 +232,10 @@ class LexicographicWeightGenerator {
   bool allow_zero_;
 };
 
+template <class G1, class G2>
+const int LexicographicWeightGenerator<G1, G2>::kNumRandomWeights;
+
+
 // Product generator of a string weight generator and an
 // arbitrary weight generator.
 template <class L, class G, StringType S = STRING_LEFT>
@@ -233,6 +251,30 @@ class GallicWeightGenerator
       : PG(seed, allow_zero) {}
 
   GallicWeightGenerator(const PG &pg) : PG(pg) {}
+};
+
+// This function object returms a weight generator over the catersian power
+// of rank n of the weights for the generator G.
+template <class G, unsigned int n>
+class PowerWeightGenerator {
+ public:
+  typedef typename G::Weight W;
+  typedef PowerWeight<W, n> Weight;
+
+  PowerWeightGenerator(int seed = time(0), bool allow_zero = true)
+      : generator_(seed, allow_zero) {}
+
+  Weight operator()() const {
+    Weight w;
+    for (size_t i = 0; i < n; ++i) {
+      W r = generator_();
+      w.SetValue(i, r);
+    }
+    return w;
+  }
+
+ private:
+  G generator_;
 };
 
 }  // namespace fst;

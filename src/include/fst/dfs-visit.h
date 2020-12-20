@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -23,6 +24,7 @@
 
 #include <stack>
 #include <vector>
+using std::vector;
 #include <fst/arcfilter.h>
 #include <fst/fst.h>
 
@@ -96,13 +98,18 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter) {
     return;
   }
 
-  vector<char> state_color;            // Fst state DFS status
-  stack<DfsState<Arc> *> state_stack;  // DFS execution stack
+  vector<char> state_color;                // Fst state DFS status
+  stack<DfsState<Arc> *> state_stack;      // DFS execution stack
 
-  StateId nstates = CountStates(fst);
+  StateId nstates = start + 1;             // # of known states in general case
+  bool expanded = false;
+  if (fst.Properties(kExpanded, false)) {  // tests if expanded case, then
+    nstates = CountStates(fst);            // uses ExpandedFst::NumStates().
+    expanded = true;
+  }
 
-  while (state_color.size() < nstates)
-    state_color.push_back(kDfsWhite);
+  state_color.resize(nstates, kDfsWhite);
+  StateIterator< Fst<Arc> > siter(fst);
 
   // Continue DFS while true
   bool dfs = true;
@@ -115,6 +122,10 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter) {
     while (!state_stack.empty()) {
       DfsState<Arc> *dfs_state = state_stack.top();
       StateId s = dfs_state->state_id;
+      if (s >= state_color.size()) {
+        nstates = s + 1;
+        state_color.resize(nstates, kDfsWhite);
+      }
       ArcIterator< Fst<Arc> > &aiter = dfs_state->arc_iter;
       if (!dfs || aiter.Done()) {
         state_color[s] = kDfsBlack;
@@ -132,6 +143,10 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter) {
         continue;
       }
       const Arc &arc = aiter.Value();
+      if (arc.nextstate >= state_color.size()) {
+        nstates = arc.nextstate + 1;
+        state_color.resize(nstates, kDfsWhite);
+      }
       if (!filter(arc)) {
         aiter.Next();
         continue;
@@ -156,10 +171,22 @@ void DfsVisit(const Fst<Arc> &fst, V *visitor, ArcFilter filter) {
           break;
       }
     }
+
     // Find next tree root
     for (root = root == start ? 0 : root + 1;
          root < nstates && state_color[root] != kDfsWhite;
          ++root);
+
+    // Check for a state beyond the largest known state
+    if (!expanded && root == nstates) {
+      for (; !siter.Done(); siter.Next()) {
+        if (siter.Value() == nstates) {
+          ++nstates;
+          state_color.push_back(kDfsWhite);
+          break;
+        }
+      }
+    }
   }
   visitor->FinishVisit();
 }

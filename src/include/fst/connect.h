@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -21,15 +22,82 @@
 #define FST_LIB_CONNECT_H__
 
 #include <vector>
+using std::vector;
 
+#include <fst/dfs-visit.h>
+#include <fst/union-find.h>
 #include <fst/mutable-fst.h>
 
 namespace fst {
 
+// Finds and returns connected components. Use with Visit().
+template <class A>
+class CcVisitor {
+ public:
+  typedef A Arc;
+  typedef typename Arc::Weight Weight;
+  typedef typename A::StateId StateId;
+
+  // cc[i]: connected component number for state i.
+  CcVisitor(vector<StateId> *cc)
+  : cc_(cc),
+    nstates_(0),
+    comps_(0, kNoStateId) {
+    cc_->clear();
+  }
+
+  void InitVisit(const Fst<A> &fst) {
+    CHECK(cc_->empty());
+  }
+
+  bool InitState(StateId s, StateId root) {
+    ++nstates_;
+    if (comps_.FindSet(s) == kNoStateId)
+      comps_.MakeSet(s);
+    return true;
+  }
+
+  bool WhiteArc(StateId s, const A &arc) {
+    comps_.MakeSet(arc.nextstate);
+    comps_.Union(s, arc.nextstate);
+    return true;
+  }
+
+  bool GreyArc(StateId s, const A &arc) {
+    comps_.Union(s, arc.nextstate);
+    return true;
+  }
+
+  bool BlackArc(StateId s, const A &arc) {
+    comps_.Union(s, arc.nextstate);
+    return true;
+  }
+
+  void FinishState(StateId s) { }
+
+  void FinishVisit() {
+    StateId ncomp = 0;
+    vector<StateId> rep2comp(nstates_, kNoStateId);
+    for (int i = 0; i < nstates_; ++i) {
+      StateId rep = comps_.FindSet(i);
+      StateId &comp = rep2comp[rep];
+      if (comp == kNoStateId)
+        comp = ncomp++;
+      cc_->push_back(comp);
+    }
+  }
+
+ private:
+  vector<StateId> *cc_;         // State's cc number
+  StateId nstates_;             // State count
+  UnionFind<StateId> comps_;    // Components
+};
+
+
 // Finds and returns strongly-connected components, accessible and
 // coaccessible states and related properties. Uses Tarjan's single
 // DFS SCC algorithm (see Aho, et al, "Design and Analysis of Computer
-// Algorithms", 189pp).
+// Algorithms", 189pp). Use with DfsVisit();
 template <class A>
 class SccVisitor {
  public:
@@ -192,7 +260,6 @@ class SccVisitor {
   vector<bool> *onstack_;       // is a state on the SCC stack
   vector<StateId> *scc_stack_;  // SCC stack (w/ random access)
 };
-
 
 // Trims an FST, removing states and arcs that are not on successful
 // paths. This version modifies its input.

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -22,6 +23,7 @@
 
 #include <deque>
 #include <vector>
+using std::vector;
 
 #include <fst/arcfilter.h>
 #include <fst/cache.h>
@@ -75,8 +77,8 @@ class ShortestDistanceState {
       const ShortestDistanceOptions<Arc, Queue, ArcFilter> &opts,
       bool retain)
       : fst_(fst), distance_(distance), state_queue_(opts.state_queue),
-        arc_filter_(opts.arc_filter),
-        delta_(opts.delta), first_path_(opts.first_path), retain_(retain) {
+        arc_filter_(opts.arc_filter), delta_(opts.delta),
+        first_path_(opts.first_path), retain_(retain), source_id_(0) {
     distance_->clear();
   }
 
@@ -95,8 +97,9 @@ class ShortestDistanceState {
 
   vector<Weight> rdistance_;  // Relaxation distance.
   vector<bool> enqueued_;     // Is state enqueued?
-  vector<StateId> sources_;   // Source state for ith state in 'distance_',
+  vector<StateId> sources_;   // Source ID for ith state in 'distance_',
                               //  'rdistance_', and 'enqueued_' if retained.
+  StateId source_id_;         // Unique ID characterizing each call to SD
 };
 
 // Compute the shortest distance. If 'source' is kNoStateId, use
@@ -135,7 +138,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
   if (retain_) {
     while (sources_.size() <= source)
       sources_.push_back(kNoStateId);
-    sources_[source] = source;
+    sources_[source] = source_id_;
   }
   (*distance_)[source] = Weight::One();
   rdistance_[source] = Weight::One();
@@ -170,11 +173,11 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
       if (retain_) {
         while (sources_.size() <= arc.nextstate)
           sources_.push_back(kNoStateId);
-        if (sources_[arc.nextstate] != source) {
+        if (sources_[arc.nextstate] != source_id_) {
           (*distance_)[arc.nextstate] = Weight::Zero();
           rdistance_[arc.nextstate] = Weight::Zero();
           enqueued_[arc.nextstate] = false;
-          sources_[arc.nextstate] = source;
+          sources_[arc.nextstate] = source_id_;
         }
       }
       Weight &nd = (*distance_)[arc.nextstate];
@@ -192,6 +195,7 @@ void ShortestDistanceState<Arc, Queue, ArcFilter>::ShortestDistance(
       }
     }
   }
+  ++source_id_;
 }
 
 

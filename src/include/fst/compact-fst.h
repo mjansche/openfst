@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -24,11 +25,14 @@
 
 #include <iterator>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 
 #include <fst/cache.h>
 #include <fst/expanded-fst.h>
 #include <fst/fst-decl.h>  // For optional argument declarations
+#include <fst/matcher.h>
 #include <fst/test-properties.h>
 #include <fst/util.h>
 
@@ -182,6 +186,10 @@ class CompactFstData {
   StateId start_;
   RefCounter ref_count_;
 };
+
+template <class A, class C, class U>
+const int CompactFstData<A, C, U>::kFileAlign;
+
 
 template <class A, class C, class U>
 CompactFstData<A, C, U>::CompactFstData(const Fst<A> &fst,
@@ -398,9 +406,13 @@ class CompactFstImpl : public CacheImpl<A> {
 
   using VectorFstBaseImpl<typename CacheImpl<A>::State>::NumStates;
 
+  using CacheImpl<A>::AddArc;
   using CacheImpl<A>::HasArcs;
   using CacheImpl<A>::HasFinal;
   using CacheImpl<A>::HasStart;
+  using CacheImpl<A>::SetArcs;
+  using CacheImpl<A>::SetFinal;
+  using CacheImpl<A>::SetStart;
 
   friend class StateIterator< CompactFst<A, C, U> >;
 
@@ -473,6 +485,10 @@ class CompactFstImpl : public CacheImpl<A> {
         data_(impl.data_) {
     if (data_)
       data_->IncrRefCount();
+    SetType(impl.Type());
+    SetProperties(impl.Properties());
+    SetInputSymbols(impl.InputSymbols());
+    SetOutputSymbols(impl.OutputSymbols());
   }
 
   ~CompactFstImpl(){
@@ -494,9 +510,10 @@ class CompactFstImpl : public CacheImpl<A> {
       Arc arc(kNoLabel, kNoLabel, Weight::Zero(), kNoStateId);
       if ((compactor_->Size() != -1) ||
           (data_->States(s) != data_->States(s + 1)))
-        arc = compactor_->Expand(s, data_->Compacts(compactor_->Size() == -1
-                                                    ? data_->States(s)
-                                                    : s * compactor_->Size()));
+        arc = ComputeArc(s,
+                         compactor_->Size() == -1
+                         ? data_->States(s)
+                         : s * compactor_->Size());
       SetFinal(s, arc.ilabel == kNoLabel ? arc.weight : Weight::Zero());
     }
     return CacheImpl<A>::Final(s);
@@ -505,21 +522,61 @@ class CompactFstImpl : public CacheImpl<A> {
   StateId NumStates() const { return data_->NumStates();}
 
   size_t NumArcs(StateId s) {
-    if (!HasArcs(s))
-      Expand(s);
-    return CacheImpl<A>::NumArcs(s);
+    if (HasArcs(s))
+      return CacheImpl<A>::NumArcs(s);
+    Unsigned i, num_arcs;
+    if (compactor_->Size() == -1) {
+      i = data_->States(s);
+      num_arcs = data_->States(s + 1) - i;
+    } else {
+      i =  s * compactor_->Size();
+      num_arcs = compactor_->Size();
+    }
+    if (num_arcs > 0) {
+      const A &arc = ComputeArc(s, i, kArcILabelValue);
+      if (arc.ilabel == kNoStateId) {
+        --num_arcs;
+      }
+    }
+    return num_arcs;
   }
 
   size_t NumInputEpsilons(StateId s) {
-    if (!HasArcs(s))
+    if (!HasArcs(s) && !Properties(kILabelSorted))
       Expand(s);
-    return CacheImpl<A>::NumInputEpsilons(s);
+    if (HasArcs(s))
+      return CacheImpl<A>::NumInputEpsilons(s);
+    return CountEpsilons(s, false);
   }
 
   size_t NumOutputEpsilons(StateId s) {
-    if (!HasArcs(s))
+    if (!HasArcs(s) && !Properties(kOLabelSorted))
       Expand(s);
-    return CacheImpl<A>::NumOutputEpsilons(s);
+    if (HasArcs(s))
+      return CacheImpl<A>::NumOutputEpsilons(s);
+    return CountEpsilons(s, true);
+  }
+
+  size_t CountEpsilons(StateId s, bool output_epsilons) {
+    CHECK((!output_epsilons && Properties(kILabelSorted)) ||
+          (output_epsilons && Properties(kOLabelSorted)));
+    size_t begin =  compactor_->Size() == -1 ?
+        data_->States(s) : s * compactor_->Size();
+    size_t end = compactor_->Size() == -1 ?
+        data_->States(s + 1) : (s + 1) * compactor_->Size();
+    size_t num_eps = 0;
+    for (size_t i = begin; i < end; ++i) {
+      const A &arc = ComputeArc(
+          s, i, output_epsilons ? kArcOLabelValue : kArcILabelValue);
+      const typename A::Label &label =
+          (output_epsilons ? arc.olabel : arc.ilabel);
+      if (label == kNoLabel)
+        continue;
+      else if (label > 0)
+        break;
+      ++num_eps;
+    }
+    return num_eps;
   }
 
   static CompactFstImpl<A, C, U> *Read(istream &strm,
@@ -558,18 +615,32 @@ class CompactFstImpl : public CacheImpl<A> {
     CacheImpl<A>::InitArcIterator(s, data);
   }
 
+  Arc ComputeArc(StateId s, Unsigned i, uint32 f = kArcValueFlags) const {
+    return compactor_->Expand(s, data_->Compacts(i), f);
+  }
+
   void Expand(StateId s) {
     size_t begin =  compactor_->Size() == -1 ?
         data_->States(s) : s * compactor_->Size();
     size_t end = compactor_->Size() == -1 ?
         data_->States(s + 1) : (s + 1) * compactor_->Size();
     for (size_t i = begin; i < end; ++i) {
-      const Arc &arc = compactor_->Expand(s, data_->Compacts(i));
+      const Arc &arc = ComputeArc(s, i);
       if (arc.ilabel == kNoLabel) continue;
       AddArc(s, arc);
     }
     SetArcs(s);
   }
+
+  template <class Iterator>
+  void SetCompactElements(const Iterator &b, const Iterator &e) {
+    if (data_ && !data_->DecrRefCount())
+      delete data_;
+    data_ = new CompactFstData<A, C, U>(b, e, *compactor_);
+  }
+
+  C *GetCompactor() const { return compactor_; }
+  CompactFstData<A, C, U> *Data() const { return data_; }
 
  private:
   void Init(const Fst<Arc> &fst) {
@@ -611,35 +682,41 @@ class CompactFstImpl : public CacheImpl<A> {
   CompactFstData<A, C, U> *data_;
 };
 
+template <class A, class C, class U>
+const uint64 CompactFstImpl<A, C, U>::kStaticProperties;
+template <class A, class C, class U>
+const int CompactFstImpl<A, C, U>::kFileVersion;
+template <class A, class C, class U>
+const int CompactFstImpl<A, C, U>::kMinFileVersion;
+
 
 // CompactFst.  This class attaches interface to implementation and
-// handles reference counting. The unsigned type U is used to
-// represent indices into the compact array (uint32 by default,
-// declared in fst-decl.h).
+// handles reference counting, delegating most methods to
+// ImplToExpandedFst. The unsigned type U is used to represent indices
+// into the compact arc array (uint32 by default, declared in
+// fst-decl.h).
 template <class A, class C, class U>
-class CompactFst : public ExpandedFst<A> {
+class CompactFst : public ImplToExpandedFst< CompactFstImpl<A, C, U> > {
  public:
   friend class StateIterator< CompactFst<A, C, U> >;
   friend class ArcIterator< CompactFst<A, C, U> >;
-  friend class CacheArcIterator< CompactFst<A, C, U> >;
   template <class F, class G> void friend Cast(const F &, G *);
 
   typedef A Arc;
-  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
-  typedef CacheState<A> State;
   typedef CompactFstImpl<A, C, U> Impl;
+  typedef CacheState<A> State;
   typedef U Unsigned;
 
-  CompactFst() : impl_(new CompactFstImpl<A, C, U>()) {}
+  CompactFst() : ImplToExpandedFst<Impl>(new Impl()) {}
 
   explicit CompactFst(const Fst<A> &fst, const C &compactor = C(),
                       const CompactFstOptions &opts = CompactFstOptions())
-      : impl_(new CompactFstImpl<A, C, U>(fst, compactor, opts)) {}
+      : ImplToExpandedFst<Impl>(new Impl(fst, compactor, opts)) {}
 
   CompactFst(const Fst<A> &fst, C *compactor,
              const CompactFstOptions &opts = CompactFstOptions())
-      : impl_(new CompactFstImpl<A, C, U>(fst, compactor, opts)) {}
+      : ImplToExpandedFst<Impl>(new Impl(fst, compactor, opts)) {}
 
   // The following 2 constructors take as input two iterators delimiting
   // a set of (already) compacted transitions, starting with the
@@ -664,119 +741,61 @@ class CompactFst : public ExpandedFst<A> {
   explicit CompactFst(const Iterator &begin, const Iterator &end,
                       const C &compactor = C(),
                       const CompactFstOptions &opts = CompactFstOptions())
-      : impl_(new CompactFstImpl<A, C, U>(begin, end, compactor, opts)) {}
+      : ImplToExpandedFst<Impl>(new Impl(begin, end, compactor, opts)) {}
 
   template <class Iterator>
   CompactFst(const Iterator &begin, const Iterator &end,
              C *compactor, const CompactFstOptions &opts = CompactFstOptions())
-      : impl_(new CompactFstImpl<A, C, U>(begin, end, compactor, opts)) {}
+      : ImplToExpandedFst<Impl>(new Impl(begin, end, compactor, opts)) {}
 
-  CompactFst(const CompactFst<A, C, U> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = new CompactFstImpl<A, C, U>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  CompactFst(const CompactFst<A, C, U> &fst, bool safe = false)
+      : ImplToExpandedFst<Impl>(fst, safe) {}
 
-  virtual ~CompactFst() { if (!impl_->DecrRefCount()) delete impl_;  }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  StateId NumStates() const { return impl_->NumStates(); }
-
-  size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  // Get a copy of this CompactFst
-  virtual CompactFst<A, C, U> *Copy(bool reset = false) const {
-    return new CompactFst<A, C, U>(*this, reset);
+  // Get a copy of this CompactFst. See Fst<>::Copy() for further doc.
+  virtual CompactFst<A, C, U> *Copy(bool safe = false) const {
+    return new CompactFst<A, C, U>(*this, safe);
   }
 
   // Read a CompactFst from an input stream; return NULL on error
   static CompactFst<A, C, U> *Read(istream &strm, const FstReadOptions &opts) {
-    CompactFstImpl<A, C, U>* impl = CompactFstImpl<A, C, U>::Read(strm, opts);
+    Impl* impl = Impl::Read(strm, opts);
     return impl ? new CompactFst<A, C, U>(impl) : 0;
   }
 
   // Read a CompactFst from a file; return NULL on error
   // Empty filename reads from standard input
-   static CompactFst<A, C, U> *Read(const string &filename) {
-
-    if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
-      if (!strm) {
-        LOG(ERROR) << "CompactFst::Write: Can't open file: " << filename;
-        return 0;
-      }
-      return Read(strm, FstReadOptions(filename));
-    } else {
-      return Read(std::cin, FstReadOptions("standard input"));
-    }
-  }
-
-  // Write a CompactFst to an output stream; return false on error
-  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
-    return impl_->Write(strm, opts);
-  }
-
-  // Write a CompactFst to a file; return false on error
-  // Empty filename writes to standard output
-  virtual bool Write(const string &filename) const {
-    if (!filename.empty()) {
-      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
-      if (!strm) {
-        LOG(ERROR) << "CompactFst::Write: Can't open file: " << filename;
-        return false;
-      }
-      return Write(strm, FstWriteOptions(filename));
-    } else {
-      return Write(std::cout, FstWriteOptions("standard output"));
-    }
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  static CompactFst<A, C, U> *Read(const string &filename) {
+    Impl* impl = ImplToExpandedFst<Impl>::Read(filename);
+    return impl ? new CompactFst<A, C, U>(impl) : 0;
   }
 
   virtual void InitStateIterator(StateIteratorData<A> *data) const {
-    impl_->InitStateIterator(data);
+    GetImpl()->InitStateIterator(data);
   }
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
+  }
+
+  virtual MatcherBase<A> *InitMatcher(MatchType match_type) const {
+    return new SortedMatcher<CompactFst<A, C, U> >(*this, match_type);
+  }
+
+  template <class Iterator>
+  void SetCompactElements(const Iterator &b, const Iterator &e) {
+    GetImpl()->SetCompactElements(b, e);
   }
 
  private:
-  CompactFst(CompactFstImpl<A, C, U> *impl) : impl_(impl) {}
+  CompactFst(Impl *impl) : ImplToExpandedFst<Impl>(impl) {}
 
-  CompactFstImpl<A, C, U> *impl_;  // FST's impl
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl, ExpandedFst<A> >::GetImpl(); }
+
+  void SetImpl(Impl *impl, bool own_impl = false) {
+    ImplToFst< Impl, ExpandedFst<A> >::SetImpl(impl, own_impl);
+  }
 
   void operator=(const CompactFst<A, C, U> &fst);  // disallow
 };
@@ -791,7 +810,7 @@ class StateIterator< CompactFst<A, C, U> > {
   typedef typename A::StateId StateId;
 
   explicit StateIterator(const CompactFst<A, C, U> &fst)
-    : nstates_(fst.impl_->NumStates()), s_(0) {}
+      : nstates_(fst.GetImpl()->NumStates()), s_(0) {}
 
   bool Done() const { return s_ >= nstates_; }
 
@@ -809,21 +828,160 @@ class StateIterator< CompactFst<A, C, U> > {
 };
 
 // Specialization for CompactFst.
+// Never caches, always iterates over the underlying compact elements.
 template <class A, class C, class U>
-class ArcIterator< CompactFst<A, C, U> >
-    : public CacheArcIterator< CompactFst<A, C, U> > {
+class ArcIterator< CompactFst<A, C, U> > {
  public:
   typedef typename A::StateId StateId;
+  typedef typename C::Element CompactElement;
 
   ArcIterator(const CompactFst<A, C, U> &fst, StateId s)
-      : CacheArcIterator< CompactFst<A, C, U> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : compactor_(fst.GetImpl()->GetCompactor()), state_(s), compacts_(0),
+        pos_(0), flags_(kArcValueFlags) {
+
+    const CompactFstData<A, C, U> *data = fst.GetImpl()->Data();
+    size_t offset;
+    if (compactor_->Size() == -1) {  // Variable out-degree compactor
+      offset = data->States(s);
+      num_arcs_ = data->States(s + 1) - offset;
+    } else {  // Fixed out-degree compactor
+      offset =  s * compactor_->Size();
+      num_arcs_ = compactor_->Size();
+    }
+    if (num_arcs_ > 0) {
+      compacts_ = &(data->Compacts(offset));
+      arc_ = compactor_->Expand(s, *compacts_, kArcILabelValue);
+      if (arc_.ilabel == kNoStateId) {
+        ++compacts_;
+        --num_arcs_;
+      }
+    }
+  }
+
+  ~ArcIterator() {}
+
+  bool Done() const { return pos_ >= num_arcs_; }
+
+  const A& Value() const {
+    arc_ = compactor_->Expand(state_, compacts_[pos_], flags_);
+    return arc_;
+  }
+
+  void Next() { ++pos_; }
+
+  size_t Position() const { return pos_; }
+
+  void Reset() { pos_ = 0;  }
+
+  void Seek(size_t pos) { pos_ = pos; }
+
+  uint32 Flags() const { return flags_; }
+
+  void SetFlags(uint32 f, uint32 m) {
+    flags_ &= ~m;
+    flags_ |= (f & kArcValueFlags);
   }
 
  private:
+  C *compactor_;
+  StateId state_;
+  const CompactElement *compacts_;
+  size_t pos_;
+  size_t num_arcs_;
+  mutable A arc_;
+  uint32 flags_;
+
   DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
+
+// // Specialization for CompactFst.
+// // This is an optionally caching arc iterator.
+// // TODO(allauzen): implements the kArcValueFlags, the current
+// // implementation only implements the kArcNoCache flag.
+// template <class A, class C, class U>
+// class ArcIterator< CompactFst<A, C, U> > {
+//  public:
+//   typedef typename A::StateId StateId;
+
+//   ArcIterator(const CompactFst<A, C, U> &fst, StateId s)
+//       : fst_(fst), state_(s), pos_(0), num_arcs_(0), offset_(0),
+//         flags_(kArcValueFlags) {
+//     cache_data_.ref_count = 0;
+
+//     if (fst_.GetImpl()->HasArcs(state_)) {
+//       fst_.GetImpl()->InitArcIterator(s, &cache_data_);
+//       num_arcs_ = cache_data_.narcs;
+//       return;
+//     }
+
+//     const C *compactor = fst_.GetImpl()->GetCompactor();
+//     const CompactFstData<A, C, U> *data = fst_.GetImpl()->Data();
+//     if (compactor->Size() == -1) {  // Variable out-degree compactor
+//       offset_ = data->States(s);
+//       num_arcs_ = data->States(s + 1) - offset_;
+//     } else {  // Fixed out-degree compactor
+//       offset_ =  s * compactor->Size();
+//       num_arcs_ = compactor->Size();
+//     }
+//     if (num_arcs_ > 0) {
+//       const A &arc = fst_.GetImpl()->ComputeArc(s, offset_);
+//       if (arc.ilabel == kNoStateId) {
+//         ++offset_;
+//         --num_arcs_;
+//       }
+//     }
+//   }
+
+
+//   ~ArcIterator() {
+//     if (cache_data_.ref_count)
+//       --(*cache_data_.ref_count);
+//   }
+
+//   bool Done() const { return pos_ >= num_arcs_; }
+
+//   const A& Value() const {
+//     if (cache_data_.ref_count == 0) {
+//       if (flags_ & kArcNoCache) {
+//         arc_ = fst_.GetImpl()->ComputeArc(state_, pos_ + offset_);
+//         return arc_;
+//       } else {
+//         fst_.GetImpl()->InitArcIterator(state_, &cache_data_);
+//       }
+//     }
+//     return cache_data_.arcs[pos_];
+//   }
+
+//   void Next() { ++pos_; }
+
+//   size_t Position() const { return pos_; }
+
+//   void Reset() { pos_ = 0;  }
+
+//   void Seek(size_t pos) { pos_ = pos; }
+
+//   uint32 Flags() const { return flags_; }
+
+//   void SetFlags(uint32 f, uint32 m) {
+//     flags_ &= ~m;
+//     flags_ |= f;
+
+//     if (!(flags_ & kArcNoCache) && cache_data_.ref_count == 0)
+//       fst_.GetImpl()->InitArcIterator(state_, &cache_data_);
+//   }
+
+//  private:
+//   mutable const CompactFst<A, C, U> &fst_;
+//   StateId state_;
+//   size_t pos_;
+//   size_t num_arcs_;
+//   size_t offset_;
+//   uint32 flags_;
+//   mutable A arc_;
+//   mutable ArcIteratorData<A> cache_data_;
+
+//   DISALLOW_COPY_AND_ASSIGN(ArcIterator);
+// };
 
 
 //
@@ -842,7 +1000,7 @@ class StringCompactor {
 
   Element Compact(StateId s, const A &arc) const { return arc.ilabel; }
 
-  Arc Expand(StateId s, const Element &p) const {
+  Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
     return Arc(p, p, Weight::One(), p != kNoLabel ? s + 1 : kNoStateId);
   }
 
@@ -884,7 +1042,7 @@ class WeightedStringCompactor {
     return make_pair(arc.ilabel, arc.weight);
   }
 
-  Arc Expand(StateId s, const Element &p) const {
+  Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
     return Arc(p.first, p.first, p.second,
                p.first != kNoLabel ? s + 1 : kNoStateId);
   }
@@ -927,7 +1085,7 @@ class UnweightedAcceptorCompactor {
     return make_pair(arc.ilabel, arc.nextstate);
   }
 
-  Arc Expand(StateId s, const Element &p) const {
+  Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
     return Arc(p.first, p.first, Weight::One(), p.second);
   }
 
@@ -969,7 +1127,7 @@ class AcceptorCompactor {
     return make_pair(make_pair(arc.ilabel, arc.weight), arc.nextstate);
   }
 
-  Arc Expand(StateId s, const Element &p) const {
+  Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
     return Arc(p.first.first, p.first.first, p.first.second, p.second);
   }
 
@@ -1011,7 +1169,7 @@ class UnweightedCompactor {
     return make_pair(make_pair(arc.ilabel, arc.olabel), arc.nextstate);
   }
 
-  Arc Expand(StateId s, const Element &p) const {
+  Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
     return Arc(p.first.first, p.first.second, Weight::One(), p.second);
   }
 

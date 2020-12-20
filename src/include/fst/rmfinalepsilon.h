@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
 //
 // \file
@@ -23,6 +24,7 @@
 #include <tr1/unordered_set>
 using std::tr1::unordered_set;
 #include <vector>
+using std::vector;
 
 #include <fst/connect.h>
 #include <fst/mutable-fst.h>

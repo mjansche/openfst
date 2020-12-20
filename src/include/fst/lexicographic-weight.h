@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: rws@google.com (Richard Sproat)
 //
 // \file
@@ -75,7 +76,7 @@ class LexicographicWeight : public PairWeight<W1, W2> {
   }
 
   static const string &Type() {
-    static const string type = W1::Type() + "_<_" + W2::Type();
+    static const string type = W1::Type() + "_LT_" + W2::Type();
     return type;
   }
 

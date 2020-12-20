@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: wojciech@google.com (Wojciech Skut)
 //
 // \file Union-Find algorithm for dense sets of non-negative
@@ -22,6 +23,8 @@
 
 #include <stack>
 #include <vector>
+using std::vector;
+#include <fst/types.h>
 
 namespace fst {
 
@@ -65,8 +68,9 @@ class UnionFind {
   T MakeSet(T item) {
     if (item >= parent_.size()) {
       // New value in parent_ should be initialized to fail_
-      parent_.resize(2 * item, fail_);
-      rank_.resize(2 * item);
+      size_t nitem = item > 0 ? 2 * item : 2;
+      parent_.resize(nitem, fail_);
+      rank_.resize(nitem);
     }
     parent_[item] = item;
     return item;

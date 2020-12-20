@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_ARCMERGE_H__
 
 #include <vector>
+using std::vector;
 
 #include <fst/mutable-fst.h>
 #include <fst/weight.h>
@@ -53,8 +55,8 @@ class ArcMergeEqual {
 };
 
 
-// Combines identically labeled arcs, summing weights. For each state
-// we combine arcs with the same input and output label.
+// Combines identically labeled arcs with the same weights. For each state
+// we combine arcs with the same input, output label and weight, keeping only one.
 template <class A>
 void ArcMerge(MutableFst<A>* fst) {
   typedef typename A::StateId StateId;
@@ -64,7 +66,7 @@ void ArcMerge(MutableFst<A>* fst) {
     StateId s = siter.Value();
     if (fst->NumArcs(s) == 0) continue;
 
-    // Sums arcs into arcs array.
+    // Put arcs into arcs array.
     arcs.clear();
     arcs.reserve(fst->NumArcs(s));
     for (ArcIterator<Fst<A> > aiter(*fst, s); !aiter.Done();
@@ -77,7 +79,7 @@ void ArcMerge(MutableFst<A>* fst) {
     ArcMergeCompare<A> comp;
     sort(arcs.begin(), arcs.end(), comp);
 
-    // Deletes current arcs and copy in sumed arcs.
+    // Deletes current arcs and copy in merged arcs.
     fst->DeleteArcs(s);
     A current_arc = arcs[0];
     ArcMergeEqual<A> equal;

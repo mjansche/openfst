@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -26,7 +27,9 @@ using std::tr1::unordered_map;
 #include <fst/slist.h>
 #include <string>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 
 #include <fst/cache.h>
 #include <fst/test-properties.h>
@@ -154,9 +157,13 @@ class FactorWeightFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
+  using CacheBaseImpl< CacheState<A> >::AddArc;
   using CacheBaseImpl< CacheState<A> >::HasStart;
   using CacheBaseImpl< CacheState<A> >::HasFinal;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
+  using CacheBaseImpl< CacheState<A> >::SetArcs;
+  using CacheBaseImpl< CacheState<A> >::SetFinal;
+  using CacheBaseImpl< CacheState<A> >::SetStart;
 
   typedef A Arc;
   typedef typename A::Label Label;
@@ -180,7 +187,7 @@ class FactorWeightFstImpl
         mode_(opts.mode),
         final_ilabel_(opts.final_ilabel),
         final_olabel_(opts.final_olabel) {
-    SetType("factor-weight");
+    SetType("factor_weight");
     uint64 props = fst.Properties(kFstProperties, false);
     SetProperties(FactorWeightProperties(props), kCopyProperties);
 
@@ -199,7 +206,7 @@ class FactorWeightFstImpl
         mode_(impl.mode_),
         final_ilabel_(impl.final_ilabel_),
         final_olabel_(impl.final_olabel_) {
-    SetType("factor-weight");
+    SetType("factor_weight");
     SetProperties(impl.Properties(), kCopyProperties);
     SetInputSymbols(impl.InputSymbols());
     SetOutputSymbols(impl.OutputSymbols());
@@ -329,6 +336,8 @@ class FactorWeightFstImpl
   }
 
  private:
+  static const size_t kPrime = 7853;
+
   // Equality function for Elements, assume weights have been quantized.
   class ElementEqual {
    public:
@@ -344,7 +353,6 @@ class FactorWeightFstImpl
       return static_cast<size_t>(x.state * kPrime + x.weight.Hash());
     }
    private:
-    static const int kPrime = 7853;
   };
 
   typedef unordered_map<Element, StateId, ElementKey, ElementEqual> ElementMap;
@@ -363,6 +371,8 @@ class FactorWeightFstImpl
   void operator=(const FactorWeightFstImpl<A, F> &);  // disallow
 };
 
+template <class A, class F> const size_t FactorWeightFstImpl<A, F>::kPrime;
+
 
 // FactorWeightFst takes as template parameter a FactorIterator as
 // defined above. The result of weight factoring is a transducer
@@ -373,83 +383,45 @@ class FactorWeightFstImpl
 // algorithm due to Mohri, "Generic epsilon-removal and input
 // epsilon-normalization algorithms for weighted transducers",
 // International Journal of Computer Science 13(1): 129-143 (2002).
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A, class F>
-class FactorWeightFst : public Fst<A> {
+class FactorWeightFst : public ImplToFst< FactorWeightFstImpl<A, F> > {
  public:
   friend class ArcIterator< FactorWeightFst<A, F> >;
-  friend class CacheStateIterator< FactorWeightFst<A, F> >;
-  friend class CacheArcIterator< FactorWeightFst<A, F> >;
+  friend class StateIterator< FactorWeightFst<A, F> >;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef CacheState<A> State;
+  typedef FactorWeightFstImpl<A, F> Impl;
 
   FactorWeightFst(const Fst<A> &fst)
-      : impl_(new FactorWeightFstImpl<A, F>(fst, FactorWeightOptions<A>())) {}
+      : ImplToFst<Impl>(new Impl(fst, FactorWeightOptions<A>())) {}
 
   FactorWeightFst(const Fst<A> &fst,  const FactorWeightOptions<A> &opts)
-      : impl_(new FactorWeightFstImpl<A, F>(fst, opts)) {}
+      : ImplToFst<Impl>(new Impl(fst, opts)) {}
 
-  FactorWeightFst(const FactorWeightFst<A, F> &fst, bool reset) {
-    if (reset) {
-      impl_ = new FactorWeightFstImpl<A, F>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  FactorWeightFst(const FactorWeightFst<A, F> &fst, bool copy)
+      : ImplToFst<Impl>(fst, copy) {}
 
-  virtual ~FactorWeightFst() { if (!impl_->DecrRefCount()) delete impl_;  }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual FactorWeightFst<A, F> *Copy(bool reset = false) const {
-    return new FactorWeightFst<A, F>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  // Get a copy of this FactorWeightFst. See Fst<>::Copy() for further doc.
+  virtual FactorWeightFst<A, F> *Copy(bool copy = false) const {
+    return new FactorWeightFst<A, F>(*this, copy);
   }
 
   virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
   }
 
  private:
-  FactorWeightFstImpl<A, F> *Impl() { return impl_; }
-
-  FactorWeightFstImpl<A, F> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const FactorWeightFst<A, F> &fst);  // Disallow
 };
@@ -461,7 +433,7 @@ class StateIterator< FactorWeightFst<A, F> >
     : public CacheStateIterator< FactorWeightFst<A, F> > {
  public:
   explicit StateIterator(const FactorWeightFst<A, F> &fst)
-      : CacheStateIterator< FactorWeightFst<A, F> >(fst) {}
+      : CacheStateIterator< FactorWeightFst<A, F> >(fst, fst.GetImpl()) {}
 };
 
 
@@ -473,9 +445,9 @@ class ArcIterator< FactorWeightFst<A, F> >
   typedef typename A::StateId StateId;
 
   ArcIterator(const FactorWeightFst<A, F> &fst, StateId s)
-      : CacheArcIterator< FactorWeightFst<A, F> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : CacheArcIterator< FactorWeightFst<A, F> >(fst.GetImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s))
+      fst.GetImpl()->Expand(s);
   }
 
  private:

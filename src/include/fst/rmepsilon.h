@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -26,7 +27,9 @@ using std::tr1::unordered_map;
 #include <stack>
 #include <string>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 
 #include <fst/arcfilter.h>
 #include <fst/cache.h>
@@ -86,6 +89,9 @@ class RmEpsilonState {
   const Weight &Final() const { return final_; }
 
  private:
+  static const size_t kPrime0 = 7853;
+  static const size_t kPrime1 = 7867;
+
   struct Element {
     Label ilabel;
     Label olabel;
@@ -107,8 +113,6 @@ class RmEpsilonState {
     }
 
    private:
-    static const int kPrime0 = 7853;
-    static const int kPrime1 = 7867;
   };
 
   class ElementEqual {
@@ -119,7 +123,6 @@ class RmEpsilonState {
     }
   };
 
- private:
   typedef unordered_map<Element, pair<StateId, size_t>,
                    ElementKey, ElementEqual> ElementMap;
 
@@ -139,10 +142,15 @@ class RmEpsilonState {
   slist<StateId> visited_states_; // List of visited states
   vector<Arc> arcs_;              // Arcs of state being expanded
   Weight final_;                  // Final weight of state being expanded
-  StateId expand_id_;             // Unique ID characterizing each call to Expand
+  StateId expand_id_;             // Unique ID for each call to Expand
 
   DISALLOW_COPY_AND_ASSIGN(RmEpsilonState);
 };
+
+template <class Arc, class Queue>
+const size_t RmEpsilonState<Arc, Queue>::kPrime0;
+template <class Arc, class Queue>
+const size_t RmEpsilonState<Arc, Queue>::kPrime1;
 
 
 template <class Arc, class Queue>
@@ -201,7 +209,6 @@ void RmEpsilonState<Arc,Queue>::Expand(typename Arc::StateId source) {
    }
    ++expand_id_;
 }
-
 
 // Removes epsilon-transitions (when both the input and output label
 // are an epsilon) from a transducer. The result will be an equivalent
@@ -282,6 +289,29 @@ void RmEpsilon(MutableFst<Arc> *fst,
     Connect(fst);
 }
 
+// Similar to the above, but can optionally perform the operation
+// in the reverse direction.
+template <class Arc, class Queue>
+void RmEpsilon(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
+               vector<typename Arc::Weight> *distance,
+               bool reverse,
+               const RmEpsilonOptions<Arc, Queue> &opts) {
+  if (reverse) {
+    VectorFst< ReverseArc<Arc> > rfst;
+    Reverse(ifst, &rfst);
+
+    RmEpsilonOptions<ReverseArc<Arc>, Queue> reverse_opts(
+        opts.state_queue, opts.delta, opts.connect, opts.weight_threshold,
+        opts.source);
+
+    RmEpsilon(&rfst, distance, reverse_opts);
+    Reverse(rfst, ofst);
+    RmEpsilon(ofst, distance, opts);
+  } else {
+    *ofst = ifst;
+    RmEpsilon(ofst, distance, opts);
+  }
+}
 
 // Removes epsilon-transitions (when both the input and output label
 // are an epsilon) from a transducer. The result will be an equivalent
@@ -341,9 +371,13 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::HasStart;
-  using CacheBaseImpl< CacheState<A> >::HasFinal;
+  using CacheBaseImpl< CacheState<A> >::AddArc;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
+  using CacheBaseImpl< CacheState<A> >::HasFinal;
+  using CacheBaseImpl< CacheState<A> >::HasStart;
+  using CacheBaseImpl< CacheState<A> >::SetArcs;
+  using CacheBaseImpl< CacheState<A> >::SetFinal;
+  using CacheBaseImpl< CacheState<A> >::SetStart;
 
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
@@ -415,6 +449,13 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
     return CacheImpl<A>::NumOutputEpsilons(s);
   }
 
+  /*
+  void InitStateIterator(StateIteratorData<A> *data) {
+    LOG(FATAL) << "RmEpsilonFst: InitStateIterator defined in the Fst "
+               << "interface not its implementation.";
+  }
+  */
+
   void InitArcIterator(StateId s, ArcIteratorData<A> *data) {
     if (!HasArcs(s))
       Expand(s);
@@ -460,88 +501,47 @@ class RmEpsilonFstImpl : public CacheImpl<A> {
 // - Mehryar Mohri. Generic Epsilon-Removal and Input
 //   Epsilon-Normalization Algorithms for Weighted Transducers,
 //   "International Journal of Computer Science", 13(1):129-143 (2002).
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A>
-class RmEpsilonFst : public Fst<A> {
+class RmEpsilonFst : public ImplToFst< RmEpsilonFstImpl<A> > {
  public:
   friend class ArcIterator< RmEpsilonFst<A> >;
-  friend class CacheStateIterator< RmEpsilonFst<A> >;
-  friend class CacheArcIterator< RmEpsilonFst<A> >;
+  friend class StateIterator< RmEpsilonFst<A> >;
 
   typedef A Arc;
-  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef CacheState<A> State;
+  typedef RmEpsilonFstImpl<A> Impl;
 
   RmEpsilonFst(const Fst<A> &fst)
-      : impl_(new RmEpsilonFstImpl<A>(fst, RmEpsilonFstOptions())) {}
+      : ImplToFst<Impl>(new Impl(fst, RmEpsilonFstOptions())) {}
 
   RmEpsilonFst(const Fst<A> &fst, const RmEpsilonFstOptions &opts)
-      : impl_(new RmEpsilonFstImpl<A>(fst, opts)) {}
+      : ImplToFst<Impl>(new Impl(fst, opts)) {}
 
-  RmEpsilonFst(const RmEpsilonFst<A> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = new RmEpsilonFstImpl<A>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  RmEpsilonFst(const RmEpsilonFst<A> &fst, bool safe = false)
+      : ImplToFst<Impl>(fst, safe) {}
 
-  virtual ~RmEpsilonFst() { if (!impl_->DecrRefCount()) delete impl_;  }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual RmEpsilonFst<A> *Copy(bool reset = false) const {
-    return new RmEpsilonFst<A>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  // Get a copy of this RmEpsilonFst. See Fst<>::Copy() for further doc.
+  virtual RmEpsilonFst<A> *Copy(bool safe = false) const {
+    return new RmEpsilonFst<A>(*this, safe);
   }
 
   virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+  virtual void InitArcIterator(StateId s, ArcIteratorData<Arc> *data) const {
+    GetImpl()->InitArcIterator(s, data);
   }
 
- protected:
-  RmEpsilonFstImpl<A> *Impl() { return impl_; }
-
  private:
-  RmEpsilonFstImpl<A> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const RmEpsilonFst<A> &fst);  // disallow
 };
-
 
 // Specialization for RmEpsilonFst.
 template<class A>
@@ -549,7 +549,7 @@ class StateIterator< RmEpsilonFst<A> >
     : public CacheStateIterator< RmEpsilonFst<A> > {
  public:
   explicit StateIterator(const RmEpsilonFst<A> &fst)
-      : CacheStateIterator< RmEpsilonFst<A> >(fst) {}
+      : CacheStateIterator< RmEpsilonFst<A> >(fst, fst.GetImpl()) {}
 };
 
 
@@ -561,9 +561,9 @@ class ArcIterator< RmEpsilonFst<A> >
   typedef typename A::StateId StateId;
 
   ArcIterator(const RmEpsilonFst<A> &fst, StateId s)
-      : CacheArcIterator< RmEpsilonFst<A> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : CacheArcIterator< RmEpsilonFst<A> >(fst.GetImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s))
+      fst.GetImpl()->Expand(s);
   }
 
  private:

@@ -12,29 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to work with FstClass
 //
 // \file
 // Projects a transduction onto its input or output language.
 //
 
-#include "./project-main.h"
+#include <fst/script/project.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(ProjectMain, StdArc);
-REGISTER_FST_MAIN(ProjectMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_bool(project_output, false, "Project on output (vs. input)");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::MutableFstClass;
+  using fst::script::VectorFstClass;
+
   string usage = "Projects a transduction onto its input";
   usage += " or output language.\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-  usage += "  Flags: project_output\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -43,6 +42,26 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes ProjectMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(ProjectMain, argc, argv);
+  string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  MutableFstClass *ofst = 0;
+  if (ifst->Properties(fst::kMutable, false)) {
+    ofst = static_cast<MutableFstClass *>(ifst);
+  } else {
+    ofst = new VectorFstClass(*ifst);
+    delete ifst;
+  }
+
+  fst::ProjectType project_type = FLAGS_project_output ?
+      fst::PROJECT_OUTPUT : fst::PROJECT_INPUT;
+
+  s::Project(ofst, project_type);
+
+  ofst->Write(out_name);
+
+  return 0;
 }

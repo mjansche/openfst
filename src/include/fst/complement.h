@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -23,6 +24,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+using std::vector;
 #include <fst/fst.h>
 #include <fst/test-properties.h>
 
@@ -40,7 +42,7 @@ template <class A> class ComplementFst;
 // corresponds to input state s - 1. The first arc in the output at
 // these states is the rho label, the remaining arcs correspond to the
 // input arcs.
-template<class A>
+template <class A>
 class ComplementFstImpl : public FstImpl<A> {
  public:
   using FstImpl<A>::SetType;
@@ -52,6 +54,7 @@ class ComplementFstImpl : public FstImpl<A> {
   friend class StateIterator< ComplementFst<A> >;
   friend class ArcIterator< ComplementFst<A> >;
 
+  typedef A Arc;
   typedef typename A::Label Label;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
@@ -115,72 +118,35 @@ class ComplementFstImpl : public FstImpl<A> {
 // Complements an automaton. This is a library-internal operation that
 // introduces a (negative) 'rho' label; use Difference/DifferenceFst in
 // user code, which will not see this label. This version is a delayed Fst.
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A>
-class ComplementFst : public Fst<A> {
+class ComplementFst : public ImplToFst< ComplementFstImpl<A> > {
  public:
   friend class StateIterator< ComplementFst<A> >;
   friend class ArcIterator< ComplementFst<A> >;
 
   typedef A Arc;
-  typedef typename A::Label Label;
-  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
+  typedef typename A::Label Label;
+  typedef ComplementFstImpl<A> Impl;
 
   explicit ComplementFst(const Fst<A> &fst)
-      : impl_(new ComplementFstImpl<A>(fst)) {
+      : ImplToFst<Impl>(new Impl(fst)) {
     uint64 props = kUnweighted | kNoEpsilons | kIDeterministic | kAcceptor;
     if (fst.Properties(props, true) != props)
       LOG(FATAL) << "ComplementFst: argument not an unweighted"
                  << " epsilon-free deterministic acceptor";
   }
 
-  ComplementFst(const ComplementFst<A> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = new ComplementFstImpl<A>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  ComplementFst(const ComplementFst<A> &fst, bool safe = false)
+      : ImplToFst<Impl>(fst, safe) {}
 
-  virtual ~ComplementFst() { if (!impl_->DecrRefCount()) { delete impl_;  }}
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual ComplementFst<A> *Copy(bool reset = false) const {
-    return new ComplementFst<A>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
-  }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
+  // Get a copy of this ComplementFst. See Fst<>::Copy() for further doc.
+  virtual ComplementFst<A> *Copy(bool safe = false) const {
+    return new ComplementFst<A>(*this, safe);
   }
 
   virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
@@ -193,10 +159,13 @@ class ComplementFst : public Fst<A> {
   // which will preserve FST label sort order.
   static const Label kRhoLabel = -2;
  private:
-  ComplementFstImpl<A> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const ComplementFst<A> &fst);  // disallow
 };
+
+template <class A> const typename A::Label ComplementFst<A>::kRhoLabel;
 
 
 // Specialization for ComplementFst.
@@ -207,7 +176,7 @@ class StateIterator< ComplementFst<A> > : public StateIteratorBase<A> {
   typedef typename A::Label Label;
 
   explicit StateIterator(const ComplementFst<A> &fst)
-      : siter_(*fst.impl_->fst_), s_(0) {
+      : siter_(*fst.GetImpl()->fst_), s_(0) {
   }
 
   bool Done() const { return s_ > 0 && siter_.Done(); }
@@ -226,6 +195,9 @@ class StateIterator< ComplementFst<A> > : public StateIteratorBase<A> {
   }
 
  private:
+  // This allows base class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual bool Done_() const { return Done(); }
   virtual StateId Value_() const { return Value(); }
   virtual void Next_() { Next(); }
@@ -249,7 +221,7 @@ class ArcIterator< ComplementFst<A> > : public ArcIteratorBase<A> {
   ArcIterator(const ComplementFst<A> &fst, StateId s)
       : aiter_(0), s_(s), pos_(0) {
     if (s_ != 0)
-      aiter_ = new ArcIterator< Fst<A> >(*fst.impl_->fst_, s - 1);
+      aiter_ = new ArcIterator< Fst<A> >(*fst.GetImpl()->fst_, s - 1);
   }
 
   virtual ~ArcIterator() { delete aiter_; }
@@ -301,13 +273,24 @@ class ArcIterator< ComplementFst<A> > : public ArcIteratorBase<A> {
     pos_ = a;
   }
 
+  uint32 Flags() const {
+    return kArcValueFlags;
+  }
+
+  void SetFlags(uint32 f, uint32 m) {}
+
  private:
+  // This allows base class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual bool Done_() const { return Done(); }
   virtual const A& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
   virtual size_t Position_() const { return Position(); }
   virtual void Reset_() { Reset(); }
   virtual void Seek_(size_t a) { Seek(a); }
+  uint32 Flags_() const { return Flags(); }
+  void SetFlags_(uint32 f, uint32 m) { SetFlags(f, m); }
 
   ArcIterator< Fst<A> > *aiter_;
   StateId s_;

@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Concatenates two FSTs.
 //
 
-#include "./concat-main.h"
+#include <string>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(ConcatMain, StdArc);
-REGISTER_FST_MAIN(ConcatMain, LogArc);
-
-}  // namespace fst
-
+#include <fst/script/concat.h>
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::MutableFstClass;
+  using fst::script::VectorFstClass;
+
   string usage = "Concatenates two FSTs.\n\n  Usage: ";
   usage += argv[0];
   usage += " in1.fst in2.fst [out.fst]\n";
@@ -41,6 +41,31 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes ConcatMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(ConcatMain, argc, argv);
+  string in1_name = strcmp(argv[1], "-") == 0 ? "" : argv[1];
+  string in2_name = strcmp(argv[2], "-") == 0 ? "" : argv[2];
+  string out_fname = argc > 3 ? argv[3] : "";
+
+  if (in1_name.empty() && in2_name.empty()) {
+    LOG(ERROR) << argv[0] << ": Can't take both inputs from standard input.";
+    return 1;
+  }
+
+  FstClass *ifst1 = FstClass::Read(in1_name);
+  if (!ifst1) return 1;
+
+  MutableFstClass *ofst = 0;
+  if (ifst1->Properties(fst::kMutable, false)) {
+    ofst = static_cast<MutableFstClass *>(ifst1);
+  } else {
+    ofst = new VectorFstClass(*ifst1);
+    delete ifst1;
+  }
+
+  FstClass *ifst2 = FstClass::Read(in2_name);
+  if (!ifst2) return 1;
+
+  s::Concat(ofst, *ifst2);
+  ofst->Write(out_fname);
+
+  return 0;
 }

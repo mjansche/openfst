@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // All Rights Reserved.
 //
 // Author : Johan Schalkwyk
@@ -23,6 +24,8 @@
 
 DEFINE_bool(fst_compat_symbols, true,
             "Require symbol tables to match when appropriate");
+DEFINE_string(fst_field_separator, "\t ",
+              "Set of characters used as a separator between printed fields");
 
 namespace fst {
 
@@ -32,15 +35,9 @@ const int kLineLen = 8096;
 // Identifies stream data as a symbol table (and its endianity)
 static const int32 kSymbolTableMagicNumber = 2125658996;
 
-SymbolTableImpl* SymbolTableImpl::ReadText(const string &filename,
+SymbolTableImpl* SymbolTableImpl::ReadText(istream &strm,
+                                           const string &filename,
                                            bool allow_negative) {
-  ifstream strm(filename.c_str());
-  if (!strm) {
-    LOG(ERROR) << "SymbolTable::ReadText: Can't open symbol file: "
-               << filename;
-    return 0;
-  }
-
   SymbolTableImpl* impl = new SymbolTableImpl(filename);
 
   int64 nline = 0;
@@ -48,7 +45,8 @@ SymbolTableImpl* SymbolTableImpl::ReadText(const string &filename,
   while (strm.getline(line, kLineLen)) {
     ++nline;
     vector<char *> col;
-    SplitToVector(line, "\n\t ", &col, true);
+    string separator = FLAGS_fst_field_separator + "\n";
+    SplitToVector(line, separator.c_str(), &col, true);
     if (col.size() == 0)  // empty line
       continue;
     if (col.size() != 2) {
@@ -73,11 +71,35 @@ SymbolTableImpl* SymbolTableImpl::ReadText(const string &filename,
   return impl;
 }
 
-void SymbolTableImpl::RecomputeCheckSum() const {
+void SymbolTableImpl::MaybeRecomputeCheckSum() const {
+  if (check_sum_finalized_)
+    return;
+
+  // Calculate the original label-agnostic check sum.
   check_sum_.Reset();
-  for (size_t i = 0; i < symbols_.size(); ++i) {
-    check_sum_.Update(symbols_[i], strlen(symbols_[i])+1);
+  for (int64 i = 0; i < symbols_.size(); ++i)
+    check_sum_.Update(symbols_[i], strlen(symbols_[i]) + 1);
+  check_sum_string_ = check_sum_.Digest();
+
+  // Calculate the safer, label-dependent check sum.
+  labeled_check_sum_.Reset();
+  for (int64 key = 0; key < dense_key_limit_; ++key) {
+    char line[kLineLen];
+    snprintf(line, kLineLen, "%s\t%lld", symbols_[key], key);
+    labeled_check_sum_.Update(line);
   }
+  for (map<int64, const char*>::const_iterator it =
+       key_map_.begin();
+       it != key_map_.end();
+       ++it) {
+    if (it->first >= dense_key_limit_) {
+      char line[kLineLen];
+      snprintf(line, kLineLen, "%s\t%lld", it->second, it->first);
+      labeled_check_sum_.Update(line);
+    }
+  }
+  labeled_check_sum_string_ = labeled_check_sum_.Digest();
+
   check_sum_finalized_ = true;
 }
 
@@ -97,13 +119,13 @@ int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
       available_key_ = key + 1;
     }
   } else {
-    // Error if symbol already in table with different key
+    // Log if symbol already in table with different key
     if (it->second != key) {
-      LOG(ERROR) << "SymbolTable::AddSymbol: symbol = " << symbol
-                 << " already in symbol_map_ with key = "
-                 << it->second
-                 << " but supplied new key = " << key
-                 << " (ignoring new key)";
+      VLOG(1) << "SymbolTable::AddSymbol: symbol = " << symbol
+              << " already in symbol_map_ with key = "
+              << it->second
+              << " but supplied new key = " << key
+              << " (ignoring new key)";
     }
   }
   return key;
@@ -173,8 +195,8 @@ bool SymbolTableImpl::Write(ostream &strm) const {
     WriteType(strm, i);
   }
   // next write out the remaining non densely packed keys
-  for (map<int64, const char*>::const_iterator it = key_map_.begin();
-       it != key_map_.end(); ++it) {
+  for (map<int64, const char*>::const_iterator it =
+           key_map_.begin(); it != key_map_.end(); ++it) {
     WriteType(strm, string(it->second));
     WriteType(strm, it->first);
   }
@@ -186,14 +208,22 @@ bool SymbolTableImpl::Write(ostream &strm) const {
   return true;
 }
 
-bool SymbolTableImpl::WriteText(ostream &strm) const {
-  for (size_t i = 0; i < symbols_.size(); ++i) {
-    char line[kLineLen];
-    snprintf(line, kLineLen, "%s\t%lld\n", symbols_[i], Find(symbols_[i]));
-    strm.write(line, strlen(line));
-  }
+const int64 SymbolTable::kNoSymbol;
 
-  return true;
+
+void SymbolTable::AddTable(const SymbolTable& table) {
+  for (SymbolTableIterator iter(table); !iter.Done(); iter.Next())
+    impl_->AddSymbol(iter.Symbol());
 }
 
+bool SymbolTable::WriteText(ostream &strm) const {
+  for (SymbolTableIterator iter(*this); !iter.Done(); iter.Next()) {
+    char line[kLineLen];
+    snprintf(line, kLineLen, "%s%c%lld\n",
+             iter.Symbol().c_str(), FLAGS_fst_field_separator[0],
+             iter.Value());
+    strm.write(line, strlen(line));
+  }
+  return true;
+}
 }  // namespace fst

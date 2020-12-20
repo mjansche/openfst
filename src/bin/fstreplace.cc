@@ -11,26 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 
-#include "./replace-main.h"
+#include <fst/script/replace.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(ReplaceMain, StdArc);
-REGISTER_FST_MAIN(ReplaceMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_bool(epsilon_on_replace, false, "Create an espilon arc when recursing");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::VectorFstClass;
+
   string usage = "Recursively replace Fst arcs with other Fst(s).\n";
   usage += " Usage: ";
   usage += argv[0];
   usage += " root.fst rootlabel [rule1.fst label1 ...] [out.fst]\n";
-  usage += " Flags: epsilon_on_replace\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -39,6 +37,29 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes RelabelMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(ReplaceMain, argc, argv);
+  string in_fname = argv[1];
+  string out_fname = argc % 2 == 0 ? argv[argc - 1] : "";
+
+  FstClass *ifst = FstClass::Read(in_fname);
+  if (!ifst) return 1;
+
+  typedef int64 Label;
+  typedef pair<Label, const s::FstClass* > FstTuple;
+  vector<FstTuple> fst_tuples;
+  Label root = atoi(argv[2]);
+  fst_tuples.push_back(make_pair(root, ifst));
+
+  for (size_t i = 3; i < argc - 1; i += 2) {
+    ifst = s::FstClass::Read(argv[i]);
+    if (!ifst) return 1;
+    Label lab = atoi(argv[i + 1]);
+    fst_tuples.push_back(make_pair(lab, ifst));
+  }
+
+  VectorFstClass ofst(ifst->ArcType());
+  Replace(fst_tuples, &ofst, root, FLAGS_epsilon_on_replace);
+
+  ofst.Write(out_fname);
+
+  return 0;
 }

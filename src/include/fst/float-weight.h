@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -48,11 +49,7 @@ const T FloatLimits<T>::kNegInfinity = -FloatLimits<T>::kPosInfinity;
 template <class T>
 const T FloatLimits<T>::kNumberBad = numeric_limits<T>::quiet_NaN();
 
-// These are kept here for backward compatibility
-static const float kPosInfinity = FloatLimits<float>::kPosInfinity;
-static const float kNegInfinity = FloatLimits<float>::kNegInfinity;
-
-// weight class to be templated on numeric types s.a. float or double
+// weight class to be templated on floating-points types
 template <class T = float>
 class FloatWeightTpl {
  public:
@@ -79,7 +76,9 @@ class FloatWeightTpl {
     union {
       T f;
       size_t s;
-    } u = { value_ };
+    } u;
+    u.s = 0;
+    u.f = value_;
     return u.s;
   }
 
@@ -141,7 +140,7 @@ inline bool operator!=(const FloatWeightTpl<float> &w1,
 template <class T>
 inline bool ApproxEqual(const FloatWeightTpl<T> &w1,
                         const FloatWeightTpl<T> &w2,
-                        T delta = kDelta) {
+                        float delta = kDelta) {
   return w1.Value() <= w2.Value() + delta && w2.Value() <= w1.Value() + delta;
 }
 
@@ -208,7 +207,7 @@ class TropicalWeightTpl : public FloatWeightTpl<T> {
     return Value() == Value() && Value() != FloatLimits<T>::kNegInfinity;
   }
 
-  TropicalWeightTpl<T> Quantize(T delta = kDelta) const {
+  TropicalWeightTpl<T> Quantize(float delta = kDelta) const {
     if (Value() == FloatLimits<T>::kNegInfinity ||
         Value() == FloatLimits<T>::kPosInfinity ||
         Value() != Value())
@@ -324,7 +323,7 @@ class LogWeightTpl : public FloatWeightTpl<T> {
     return Value() == Value() && Value() != FloatLimits<T>::kNegInfinity;
   }
 
-  LogWeightTpl<T> Quantize(T delta = kDelta) const {
+  LogWeightTpl<T> Quantize(float delta = kDelta) const {
     if (Value() == FloatLimits<T>::kNegInfinity ||
         Value() == FloatLimits<T>::kPosInfinity ||
         Value() != Value())
@@ -450,7 +449,7 @@ class MinMaxWeightTpl : public FloatWeightTpl<T> {
     return Value() == Value();
   }
 
-  MinMaxWeightTpl<T> Quantize(T delta = kDelta) const {
+  MinMaxWeightTpl<T> Quantize(float delta = kDelta) const {
     // If one of infinities, or a NaN
     if (Value() == FloatLimits<T>::kNegInfinity ||
         Value() == FloatLimits<T>::kPosInfinity ||

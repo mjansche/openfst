@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -35,8 +36,8 @@ class ExpandedFst : public Fst<A> {
 
   virtual StateId NumStates() const = 0;  // State count
 
-  // Get a copy of this ExpandedFst.
-  virtual ExpandedFst<A> *Copy(bool reset = false) const = 0;
+  // Get a copy of this ExpandedFst. See Fst<>::Copy() for further doc.
+  virtual ExpandedFst<A> *Copy(bool safe = false) const = 0;
 
   // Read an ExpandedFst from an input stream; return NULL on error.
   static ExpandedFst<A> *Read(istream &strm, const FstReadOptions &opts) {
@@ -64,7 +65,7 @@ class ExpandedFst : public Fst<A> {
     }
     Fst<A> *fst = reader(strm, ropts);
     if (!fst) return 0;
-    return down_cast<ExpandedFst<A> *>(fst);
+    return static_cast<ExpandedFst<A> *>(fst);
   }
 
   // Read an ExpandedFst from a file; return NULL on error.
@@ -83,15 +84,111 @@ class ExpandedFst : public Fst<A> {
   }
 };
 
+
+//  ExpandedFst<A> case - abstract methods.
+template <class A> inline
+typename A::Weight Final(const ExpandedFst<A> &fst, typename A::StateId s) {
+  return fst.Final(s);
+}
+
+template <class A> inline
+ssize_t NumArcs(const ExpandedFst<A> &fst, typename A::StateId s) {
+  return fst.NumArcs(s);
+}
+
+template <class A> inline
+ssize_t NumInputEpsilons(const ExpandedFst<A> &fst, typename A::StateId s) {
+  return fst.NumInputEpsilons(s);
+}
+
+template <class A> inline
+ssize_t NumOutputEpsilons(const ExpandedFst<A> &fst, typename A::StateId s) {
+  return fst.NumOutputEpsilons(s);
+}
+
+
 // A useful alias when using StdArc.
 typedef ExpandedFst<StdArc> StdExpandedFst;
+
+
+// This is a helper class template useful for attaching an ExpandedFst
+// interface to its implementation, handling reference counting. It
+// delegates to ImplToFst the handling of the Fst interface methods.
+// It assumes the ExpandedFst implementation has a Write() method.
+template < class I, class F = ExpandedFst<typename I::Arc> >
+class ImplToExpandedFst : public ImplToFst<I, F> {
+ public:
+  typedef typename I::Arc Arc;
+  typedef typename Arc::Weight Weight;
+  typedef typename Arc::StateId StateId;
+
+  using ImplToFst<I, F>::GetImpl;
+
+  virtual StateId NumStates() const { return GetImpl()->NumStates(); }
+
+  // Write to an output stream; return false on error.
+  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
+    return GetImpl()->Write(strm, opts);
+  }
+
+  // Write to a file; return false on error.
+  // Empty filename writes to standard output.
+  virtual bool Write(const string &filename) const {
+    if (!filename.empty()) {
+      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
+      if (!strm) {
+        LOG(ERROR) << "ExpandedFst::Write: Can't open file: " << filename;
+        return false;
+      }
+      return Write(strm, FstWriteOptions(filename));
+    } else {
+      return Write(std::cout, FstWriteOptions("standard output"));
+    }
+  }
+
+ protected:
+  ImplToExpandedFst() : ImplToFst<I, F>() {}
+
+  ImplToExpandedFst(I *impl) : ImplToFst<I, F>(impl) {}
+
+  ImplToExpandedFst(const ImplToExpandedFst<I, F> &fst)
+      : ImplToFst<I, F>(fst) {}
+
+  ImplToExpandedFst(const ImplToExpandedFst<I, F> &fst, bool safe)
+      : ImplToFst<I, F>(fst, safe) {}
+
+  // Read FST implementation from a file; return NULL on error.
+  // Empty filename reads from standard input.
+  static I *Read(const string &filename) {
+    if (!filename.empty()) {
+      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
+      if (!strm) {
+        LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
+        return 0;
+      }
+      return I::Read(strm, FstReadOptions(filename));
+    } else {
+      return I::Read(std::cin, FstReadOptions("standard input"));
+    }
+  }
+
+ private:
+  // Disallow
+  ImplToExpandedFst<I, F> &operator=(const ImplToExpandedFst<I, F> &fst);
+
+  ImplToExpandedFst<I, F> &operator=(const Fst<Arc> &fst) {
+    LOG(FATAL) << "ImplToExpandedFst: Assignment operator disallowed";
+    return *this;
+  }
+};
+
 
 // Function to return the number of states in an FST, counting them
 // if necessary.
 template <class Arc>
 typename Arc::StateId CountStates(const Fst<Arc> &fst) {
   if (fst.Properties(kExpanded, false)) {
-    const ExpandedFst<Arc> *efst = down_cast<const ExpandedFst<Arc> *>(&fst);
+    const ExpandedFst<Arc> *efst = static_cast<const ExpandedFst<Arc> *>(&fst);
     return efst->NumStates();
   } else {
     typename Arc::StateId nstates = 0;
@@ -101,6 +198,6 @@ typename Arc::StateId CountStates(const Fst<Arc> &fst) {
   }
 }
 
-}  // FST_LIB_FST_H__
+}  // namespace fst
 
 #endif  // FST_LIB_EXPANDED_FST_H__

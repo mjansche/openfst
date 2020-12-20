@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_REWEIGHT_H__
 
 #include <vector>
+using std::vector;
 #include <fst/mutable-fst.h>
 
 namespace fst {

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -23,6 +24,7 @@
 
 #include <string>
 #include <vector>
+using std::vector;
 #include <fst/mutable-fst.h>
 #include <fst/test-properties.h>
 
@@ -177,6 +179,8 @@ struct VectorState {
 template <class A>
 class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
  public:
+  using FstImpl<A>::SetInputSymbols;
+  using FstImpl<A>::SetOutputSymbols;
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
   using FstImpl<A>::Properties;
@@ -184,6 +188,8 @@ class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
 
   using VectorFstBaseImpl<VectorState<A> >::Start;
   using VectorFstBaseImpl<VectorState<A> >::NumStates;
+  using VectorFstBaseImpl<VectorState<A> >::GetState;
+  using VectorFstBaseImpl<VectorState<A> >::ReserveArcs;
 
   friend class MutableArcIterator< VectorFst<A> >;
 
@@ -207,86 +213,45 @@ class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
 
   void SetStart(StateId s) {
     BaseImpl::SetStart(s);
-    SetProperties(Properties() & kSetStartProperties);
-    if (Properties() & kAcyclic)
-      SetProperties(Properties() | kInitialAcyclic);
+    SetProperties(SetStartProperties(Properties()));
   }
 
   void SetFinal(StateId s, Weight w) {
-    Weight ow = Final(s);
-    if (ow != Weight::Zero() && ow != Weight::One())
-      SetProperties(Properties() & ~kWeighted);
+    Weight ow = BaseImpl::Final(s);
     BaseImpl::SetFinal(s, w);
-    if (w != Weight::Zero() && w != Weight::One()) {
-      SetProperties(Properties() | kWeighted);
-      SetProperties(Properties() & ~kUnweighted);
-    }
-    SetProperties(Properties() &
-                  (kSetFinalProperties | kWeighted | kUnweighted));
+    SetProperties(SetFinalProperties(Properties(), ow, w));
   }
 
   StateId AddState() {
     StateId s = BaseImpl::AddState();
-    SetProperties(Properties() & kAddStateProperties);
+    SetProperties(AddStateProperties(Properties()));
     return s;
   }
 
   void AddArc(StateId s, const A &arc) {
     VectorState<A> *state = GetState(s);
-    if (arc.ilabel != arc.olabel) {
-      SetProperties(Properties() | kNotAcceptor);
-      SetProperties(Properties() & ~kAcceptor);
-    }
     if (arc.ilabel == 0) {
       ++state->niepsilons;
-      SetProperties(Properties() | kIEpsilons);
-      SetProperties(Properties() & ~kNoIEpsilons);
-      if (arc.olabel == 0) {
-        SetProperties(Properties() | kEpsilons);
-        SetProperties(Properties() & ~kNoEpsilons);
-      }
     }
     if (arc.olabel == 0) {
       ++state->noepsilons;
-      SetProperties(Properties() | kOEpsilons);
-      SetProperties(Properties() & ~kNoOEpsilons);
     }
-    if (!state->arcs.empty()) {
-      A &parc = state->arcs.back();
-      if (parc.ilabel > arc.ilabel) {
-        SetProperties(Properties() | kNotILabelSorted);
-        SetProperties(Properties() & ~kILabelSorted);
-      }
-      if (parc.olabel > arc.olabel) {
-        SetProperties(Properties() | kNotOLabelSorted);
-        SetProperties(Properties() & ~kOLabelSorted);
-      }
-    }
-    if (arc.weight != Weight::Zero() && arc.weight != Weight::One()) {
-      SetProperties(Properties() | kWeighted);
-      SetProperties(Properties() & ~kUnweighted);
-    }
-    if (arc.nextstate <= s) {
-      SetProperties(Properties() | kNotTopSorted);
-      SetProperties(Properties() & ~kTopSorted);
-    }
-    SetProperties(Properties() &
-                  (kAddArcProperties | kAcceptor |
-                   kNoEpsilons | kNoIEpsilons | kNoOEpsilons |
-                   kILabelSorted | kOLabelSorted | kUnweighted | kTopSorted));
-    if (Properties() & kTopSorted)
-      SetProperties(Properties() | kAcyclic | kInitialAcyclic);
+
+    const A *parc = state->arcs.empty() ? 0 : &(state->arcs.back());
+    SetProperties(AddArcProperties(Properties(), s, arc, parc));
+
     BaseImpl::AddArc(s, arc);
   }
 
   void DeleteStates(const vector<StateId> &dstates) {
     BaseImpl::DeleteStates(dstates);
-    SetProperties(Properties() & kDeleteStatesProperties);
+    SetProperties(DeleteStatesProperties(Properties()));
   }
 
   void DeleteStates() {
     BaseImpl::DeleteStates();
-    SetProperties(kNullProperties | kStaticProperties);
+    SetProperties(DeleteAllStatesProperties(Properties(),
+                                            kStaticProperties));
   }
 
   void DeleteArcs(StateId s, size_t n) {
@@ -299,14 +264,14 @@ class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
         --GetState(s)->noepsilons;
     }
     BaseImpl::DeleteArcs(s, n);
-    SetProperties(Properties() & kDeleteArcsProperties);
+    SetProperties(DeleteArcsProperties(Properties()));
   }
 
   void DeleteArcs(StateId s) {
     GetState(s)->niepsilons = 0;
     GetState(s)->noepsilons = 0;
     BaseImpl::DeleteArcs(s);
-    SetProperties(Properties() & kDeleteArcsProperties);
+    SetProperties(DeleteArcsProperties(Properties()));
   }
 
  private:
@@ -319,6 +284,11 @@ class VectorFstImpl : public VectorFstBaseImpl< VectorState<A> > {
 
   DISALLOW_COPY_AND_ASSIGN(VectorFstImpl);
 };
+
+template <class A> const uint64 VectorFstImpl<A>::kStaticProperties;
+template <class A> const int VectorFstImpl<A>::kFileVersion;
+template <class A> const int VectorFstImpl<A>::kMinFileVersion;
+
 
 template <class A>
 VectorFstImpl<A>::VectorFstImpl(const Fst<A> &fst) {
@@ -448,12 +418,13 @@ bool VectorFstImpl<A>::Write(ostream &strm,
   return true;
 }
 
-// Simple concrete, mutable FST. Supports additional operations:
-// ReserveStates and ReserveArcs (cf. STL vectors). This class
-// attaches interface to implementation and handles reference
-// counting.
+
+// Simple concrete, mutable FST. This class attaches interface to
+// implementation and handles reference counting, delegating most
+// methods to ImplToMutableFst. Supports additional operations:
+// ReserveStates and ReserveArcs (cf. STL vectors).
 template <class A>
-class VectorFst : public MutableFst<A> {
+class VectorFst : public ImplToMutableFst< VectorFstImpl<A> > {
  public:
   friend class StateIterator< VectorFst<A> >;
   friend class ArcIterator< VectorFst<A> >;
@@ -461,214 +432,76 @@ class VectorFst : public MutableFst<A> {
   template <class F, class G> void friend Cast(const F &, G *);
 
   typedef A Arc;
-  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef VectorFstImpl<A> Impl;
 
-  VectorFst() : impl_(new VectorFstImpl<A>) {}
+  VectorFst() : ImplToMutableFst<Impl>(new Impl) {}
 
-  VectorFst(const VectorFst<A> &fst) : impl_(fst.impl_) {
-    impl_->IncrRefCount();
+  explicit VectorFst(const Fst<A> &fst)
+      : ImplToMutableFst<Impl>(new Impl(fst)) {}
+
+  VectorFst(const VectorFst<A> &fst) : ImplToMutableFst<Impl>(fst) {}
+
+  // Get a copy of this VectorFst. See Fst<>::Copy() for further doc.
+  virtual VectorFst<A> *Copy(bool safe = false) const {
+    return new VectorFst<A>(*this);
   }
-  explicit VectorFst(const Fst<A> &fst) : impl_(new VectorFstImpl<A>(fst)) {}
-
-  virtual ~VectorFst() { if (!impl_->DecrRefCount()) delete impl_; }
 
   VectorFst<A> &operator=(const VectorFst<A> &fst) {
-    if (this != &fst) {
-      if (!impl_->DecrRefCount()) delete impl_;
-      fst.impl_->IncrRefCount();
-      impl_ = fst.impl_;
-    }
+    SetImpl(fst.GetImpl(), false);
     return *this;
   }
 
   virtual VectorFst<A> &operator=(const Fst<A> &fst) {
-    if (this != &fst) {
-      if (!impl_->DecrRefCount()) delete impl_;
-      impl_ = new VectorFstImpl<A>(fst);
-    }
+    if (this != &fst) SetImpl(new Impl(fst));
     return *this;
-  }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual StateId NumStates() const { return impl_->NumStates(); }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  // Get a copy of this VectorFst
-  virtual VectorFst<A> *Copy(bool reset = false) const {
-    impl_->IncrRefCount();
-    return new VectorFst<A>(impl_);
   }
 
   // Read a VectorFst from an input stream; return NULL on error
   static VectorFst<A> *Read(istream &strm, const FstReadOptions &opts) {
-    VectorFstImpl<A>* impl = VectorFstImpl<A>::Read(strm, opts);
+    Impl* impl = Impl::Read(strm, opts);
     return impl ? new VectorFst<A>(impl) : 0;
   }
 
   // Read a VectorFst from a file; return NULL on error
   // Empty filename reads from standard input
   static VectorFst<A> *Read(const string &filename) {
-    if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
-      if (!strm) {
-        LOG(ERROR) << "VectorFst::Read: Can't open file: " << filename;
-        return 0;
-      }
-      return Read(strm, FstReadOptions(filename));
-    } else {
-      return Read(std::cin, FstReadOptions("standard input"));
-    }
-  }
-
-  // Write a VectorFst to an output stream; return false on error
-  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
-    return impl_->Write(strm, opts);
-  }
-
-  // Write a VectorFst to a file; return false on error
-  // Empty filename writes to standard output
-  virtual bool Write(const string &filename) const {
-    if (!filename.empty()) {
-      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
-      if (!strm) {
-        LOG(ERROR) << "VectorFst::Write: Can't open file: " << filename;
-        return false;
-      }
-      return Write(strm, FstWriteOptions(filename));
-    } else {
-      return Write(std::cout, FstWriteOptions("standard output"));
-    }
-  }
-
-  virtual SymbolTable* InputSymbols() {
-    return impl_->InputSymbols();
-  }
-
-  virtual SymbolTable* OutputSymbols() {
-    return impl_->OutputSymbols();
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
-  }
-
-  virtual void SetStart(StateId s) {
-    MutateCheck();
-    impl_->SetStart(s);
-  }
-
-  virtual void SetFinal(StateId s, Weight w) {
-    MutateCheck();
-    impl_->SetFinal(s, w);
-  }
-
-  virtual void SetProperties(uint64 props, uint64 mask) {
-    impl_->SetProperties(props, mask);
-  }
-
-  virtual StateId AddState() {
-    MutateCheck();
-    return impl_->AddState();
-  }
-
-  virtual void AddArc(StateId s, const A &arc) {
-    MutateCheck();
-    impl_->AddArc(s, arc);
-  }
-
-  virtual void DeleteStates(const vector<StateId> &dstates) {
-    MutateCheck();
-    impl_->DeleteStates(dstates);
-  }
-
-  virtual void DeleteStates() {
-    MutateCheck();
-    impl_->DeleteStates();
-  }
-
-  virtual void DeleteArcs(StateId s, size_t n) {
-    MutateCheck();
-    impl_->DeleteArcs(s, n);
-  }
-
-  virtual void DeleteArcs(StateId s) {
-    MutateCheck();
-    impl_->DeleteArcs(s);
-  }
-
-  virtual void SetInputSymbols(const SymbolTable* isyms) {
-    MutateCheck();
-    impl_->SetInputSymbols(isyms);
-  }
-
-  virtual void SetOutputSymbols(const SymbolTable* osyms) {
-    MutateCheck();
-    impl_->SetOutputSymbols(osyms);
+    Impl* impl = ImplToExpandedFst<Impl, MutableFst<A> >::Read(filename);
+    return impl ? new VectorFst<A>(impl) : 0;
   }
 
   void ReserveStates(StateId n) {
     MutateCheck();
-    impl_->ReserveStates(n);
+    GetImpl()->ReserveStates(n);
   }
 
   void ReserveArcs(StateId s, size_t n) {
     MutateCheck();
-    impl_->ReserveArcs(s, n);
+    GetImpl()->ReserveArcs(s, n);
   }
 
-  virtual void InitStateIterator(StateIteratorData<A> *data) const {
-    impl_->InitStateIterator(data);
+  virtual void InitStateIterator(StateIteratorData<Arc> *data) const {
+    GetImpl()->InitStateIterator(data);
   }
 
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+  virtual void InitArcIterator(StateId s, ArcIteratorData<Arc> *data) const {
+    GetImpl()->InitArcIterator(s, data);
   }
 
   virtual inline
   void InitMutableArcIterator(StateId s, MutableArcIteratorData<A> *);
 
  private:
-  explicit VectorFst(VectorFstImpl<A> *impl) : impl_(impl) {}
+  explicit VectorFst(Impl *impl) : ImplToMutableFst<Impl>(impl) {}
 
-  void MutateCheck() {
-    // Copy on write
-    if (impl_->RefCount() > 1) {
-      impl_->DecrRefCount();
-      impl_ = new VectorFstImpl<A>(*this);
-    }
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst< Impl, MutableFst<A> >::GetImpl(); }
+
+  void SetImpl(Impl *impl, bool own_impl = true) {
+    ImplToFst< Impl, MutableFst<A> >::SetImpl(impl, own_impl);
   }
 
-  VectorFstImpl<A> *impl_;  // FST's impl
+  void MutateCheck() { return ImplToMutableFst<Impl>::MutateCheck(); }
 };
 
 // Specialization for VectorFst; see generic version in fst.h
@@ -680,7 +513,7 @@ class StateIterator< VectorFst<A> > {
   typedef typename A::StateId StateId;
 
   explicit StateIterator(const VectorFst<A> &fst)
-    : nstates_(fst.impl_->NumStates()), s_(0) {}
+      : nstates_(fst.GetImpl()->NumStates()), s_(0) {}
 
   bool Done() const { return s_ >= nstates_; }
 
@@ -706,7 +539,7 @@ class ArcIterator< VectorFst<A> > {
   typedef typename A::StateId StateId;
 
   ArcIterator(const VectorFst<A> &fst, StateId s)
-    : arcs_(fst.impl_->GetState(s)->arcs), i_(0) {}
+      : arcs_(fst.GetImpl()->GetState(s)->arcs), i_(0) {}
 
   bool Done() const { return i_ >= arcs_.size(); }
 
@@ -719,6 +552,12 @@ class ArcIterator< VectorFst<A> > {
   void Seek(size_t a) { i_ = a; }
 
   size_t Position() const { return i_; }
+
+  uint32 Flags() const {
+    return kArcValueFlags;
+  }
+
+  void SetFlags(uint32 f, uint32 m) {}
 
  private:
   const vector<A>& arcs_;
@@ -739,8 +578,8 @@ class MutableArcIterator< VectorFst<A> >
 
   MutableArcIterator(VectorFst<A> *fst, StateId s) : i_(0) {
     fst->MutateCheck();
-    state_ = fst->impl_->GetState(s);
-    properties_ = &fst->impl_->properties_;
+    state_ = fst->GetImpl()->GetState(s);
+    properties_ = &fst->GetImpl()->properties_;
   }
 
   bool Done() const { return i_ >= state_->arcs.size(); }
@@ -772,25 +611,44 @@ class MutableArcIterator< VectorFst<A> >
     if (oarc.weight != Weight::Zero() && oarc.weight != Weight::One())
       *properties_ &= ~kWeighted;
     oarc = arc;
-    if (arc.ilabel != arc.olabel)
+    if (arc.ilabel != arc.olabel) {
       *properties_ |= kNotAcceptor;
+      *properties_ &= ~kAcceptor;
+    }
     if (arc.ilabel == 0) {
       ++state_->niepsilons;
       *properties_ |= kIEpsilons;
-      if (arc.olabel == 0)
+      *properties_ &= ~kNoIEpsilons;
+      if (arc.olabel == 0) {
         *properties_ |= kEpsilons;
+        *properties_ &= ~kNoEpsilons;
+      }
     }
     if (arc.olabel == 0) {
       ++state_->noepsilons;
       *properties_ |= kOEpsilons;
+      *properties_ &= ~kNoOEpsilons;
     }
-    if (arc.weight != Weight::Zero() && arc.weight != Weight::One())
+    if (arc.weight != Weight::Zero() && arc.weight != Weight::One()) {
       *properties_ |= kWeighted;
-    *properties_ &= kSetArcProperties | kNotAcceptor |
-                    kEpsilons | kIEpsilons | kOEpsilons | kWeighted;
+      *properties_ &= ~kUnweighted;
+    }
+    *properties_ &= kSetArcProperties | kAcceptor | kNotAcceptor |
+        kEpsilons | kNoEpsilons | kIEpsilons | kNoIEpsilons |
+        kOEpsilons | kNoOEpsilons | kWeighted | kUnweighted;
   }
 
+  uint32 Flags() const {
+    return kArcValueFlags;
+  }
+
+  void SetFlags(uint32 f, uint32 m) {}
+
+
  private:
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual bool Done_() const { return Done(); }
   virtual const A& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
@@ -798,6 +656,8 @@ class MutableArcIterator< VectorFst<A> >
   virtual void Reset_() { Reset(); }
   virtual void Seek_(size_t a) { Seek(a); }
   virtual void SetValue_(const A &a) { SetValue(a); }
+  uint32 Flags_() const { return Flags(); }
+  void SetFlags_(uint32 f, uint32 m) { SetFlags(f, m); }
 
   struct VectorState<A> *state_;
   uint64 *properties_;

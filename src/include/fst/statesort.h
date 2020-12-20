@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_STATESORT_H__
 
 #include <vector>
+using std::vector;
 #include <algorithm>
 
 #include <fst/mutable-fst.h>
@@ -30,7 +32,7 @@ namespace fst {
 // Sorts the input states of an FST, modifying it. ORDER[i] gives the
 // the state Id after sorting that corresponds to state Id i before
 // sorting.  ORDER must be a permutation of FST's states ID sequence:
-// (1, 2, ..., fst->NumStates() - 1).
+// (0, 1, 2, ..., fst->NumStates() - 1).
 template <class Arc>
 void StateSort(MutableFst<Arc> *fst,
                const vector<typename Arc::StateId> &order) {

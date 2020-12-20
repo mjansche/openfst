@@ -1,1 +1,1 @@
-SUBDIRS = include lib bin test
+SUBDIRS = include lib script bin test extensions

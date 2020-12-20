@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
 // FST utility definitions.
 
+#include <cctype>
 #include <string>
 #include <fst/util.h>
 
@@ -39,6 +41,11 @@ void Int64ToStr(int64 n, string *s) {
   char nstr[kNumLen];
   snprintf(nstr, kNumLen, "%lld", n);
   *s += nstr;
+}
+
+void ConvertToLegalCSymbol(string *s) {
+  for (string::iterator it = s->begin(); it != s->end(); ++it)
+    if (!isalnum(*it)) *it = '_';
 }
 
 }  // namespace fst

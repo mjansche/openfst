@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -20,7 +21,9 @@
 #include <fst/compact-fst.h>
 #include <fst/const-fst.h>
 #include <fst/equal.h>
+#include <fst/matcher-fst.h>
 #include <fst/vector-fst.h>
+#include <fst/edit-fst.h>
 #include <fst/verify.h>
 
 
@@ -102,7 +105,7 @@ class FstTester {
 
   void TestExpanded() const { TestExpanded(*testfst_); }
 
-  // This verifies methods specfic to a MutableFst.
+  // This verifies methods specific to a MutableFst.
   template <class G>
   void TestMutable(G *fst) const {
     for (StateIterator<G> siter(*fst);
@@ -203,7 +206,7 @@ class FstTester {
       // generic read/cast/test
       Fst<Arc> *gfst = Fst<Arc>::Read(filename);
       CHECK(gfst);
-      G *dfst = down_cast<G *>(gfst);
+      G *dfst = static_cast<G *>(gfst);
       TestBase(*dfst);
 
       // generic write/read/test
@@ -314,7 +317,7 @@ class CustomCompactor {
     return make_pair(arc.ilabel, arc.weight);
   }
 
-  Arc Expand(StateId s, const Element &p) const {
+  Arc Expand(StateId s, const Element &p, uint32 f = kArcValueFlags) const {
     return p.first == kNoLabel ?
         Arc(kNoLabel, kNoLabel, p.second, kNoStateId) :
         Arc(p.first, 0, p.second, s);
@@ -361,10 +364,14 @@ CompactFst_StdArc_CustomCompactor_uint16_registerer;
 using fst::FstTester;
 using fst::VectorFst;
 using fst::ConstFst;
+using fst::MatcherFst;
 using fst::CompactFst;
+using fst::Fst;
 using fst::StdArc;
 using fst::CustomArc;
 using fst::CustomCompactor;
+using fst::StdArcLookAheadFst;
+using fst::EditFst;
 
 int main(int argc, char **argv) {
   FLAGS_fst_verify_properties = true;
@@ -448,6 +455,24 @@ int main(int argc, char **argv) {
     std_compact_tester.TestExpanded();
     std_compact_tester.TestCopy();
     std_compact_tester.TestIO();
+  }
+
+  // FstTester<StdArcLookAheadFst>
+  {
+    FstTester<StdArcLookAheadFst> std_matcher_tester;
+    std_matcher_tester.TestBase();
+    std_matcher_tester.TestExpanded();
+    std_matcher_tester.TestCopy();
+  }
+
+  // EditFst<StdArc> tests
+  {
+    FstTester< EditFst<StdArc> > std_edit_tester;
+    std_edit_tester.TestBase();
+    std_edit_tester.TestExpanded();
+    std_edit_tester.TestAssign();
+    std_edit_tester.TestCopy();
+    std_edit_tester.TestMutable();
   }
 
   cout << "PASS" << endl;

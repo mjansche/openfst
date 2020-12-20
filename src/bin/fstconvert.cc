@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Converts an FST to another type.
 //
 
-#include "./convert-main.h"
+#include <fst/script/convert.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(ConvertMain, StdArc);
-REGISTER_FST_MAIN(ConvertMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_string(fst_type, "vector", "Output FST type");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+
   string usage = "Converts an FST to another type.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
-  usage += "  Flags: fst_type\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -42,6 +39,20 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes ConvertMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(ConvertMain, argc, argv);
+  string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  FstClass *ofst = ifst;
+  if (!ofst) return 1;
+
+  if (ofst->FstType() != FLAGS_fst_type) {
+    ofst = s::Convert(*ifst, FLAGS_fst_type);
+  }
+
+  ofst->Write(out_name);
+
+  return 0;
 }

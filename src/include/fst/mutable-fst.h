@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -24,6 +25,7 @@
 
 #include <string>
 #include <vector>
+using std::vector;
 #include <fst/expanded-fst.h>
 
 namespace fst {
@@ -62,17 +64,17 @@ class MutableFst : public ExpandedFst<A> {
   virtual const SymbolTable* OutputSymbols() const = 0;
 
   // Return input label symbol table; return NULL if not specified
-  virtual SymbolTable* InputSymbols() = 0;
+  virtual SymbolTable* MutableInputSymbols() = 0;
   // Return output label symbol table; return NULL if not specified
-  virtual SymbolTable* OutputSymbols() = 0;
+  virtual SymbolTable* MutableOutputSymbols() = 0;
 
   // Set input label symbol table; NULL signifies not unspecified
   virtual void SetInputSymbols(const SymbolTable* isyms) = 0;
   // Set output label symbol table; NULL signifies not unspecified
   virtual void SetOutputSymbols(const SymbolTable* osyms) = 0;
 
-  // Get a copy of this MutableFst.
-  virtual MutableFst<A> *Copy(bool reset = false) const = 0;
+  // Get a copy of this MutableFst. See Fst<>::Copy() for further doc.
+  virtual MutableFst<A> *Copy(bool safe = false) const = 0;
 
   // Read an MutableFst from an input stream; return NULL on error.
   static MutableFst<A> *Read(istream &strm, const FstReadOptions &opts) {
@@ -100,7 +102,7 @@ class MutableFst : public ExpandedFst<A> {
     }
     Fst<A> *fst = reader(strm, ropts);
     if (!fst) return 0;
-    return down_cast<MutableFst<A> *>(fst);
+    return static_cast<MutableFst<A> *>(fst);
   }
 
   // Read an ExpandedFst from a file; return NULL on error.
@@ -174,14 +176,156 @@ class MutableArcIterator {
   void Reset() { data_.base->Reset(); }
   void Seek(size_t a) { data_.base->Seek(a); }
   void SetValue(const Arc &a) { data_.base->SetValue(a); }
+  uint32 Flags() const { return data_.base->Flags(); }
+  void SetFlags(uint32 f, uint32 m) {
+    return data_.base->SetFlags(f, m);
+  }
 
  private:
   MutableArcIteratorData<Arc> data_;
   DISALLOW_COPY_AND_ASSIGN(MutableArcIterator);
 };
 
+
+//  MutableFst<A> case - abstract methods.
+template <class A> inline
+typename A::Weight Final(const MutableFst<A> &fst, typename A::StateId s) {
+  return fst.Final(s);
+}
+
+template <class A> inline
+ssize_t NumArcs(const MutableFst<A> &fst, typename A::StateId s) {
+  return fst.NumArcs(s);
+}
+
+template <class A> inline
+ssize_t NumInputEpsilons(const MutableFst<A> &fst, typename A::StateId s) {
+  return fst.NumInputEpsilons(s);
+}
+
+template <class A> inline
+ssize_t NumOutputEpsilons(const MutableFst<A> &fst, typename A::StateId s) {
+  return fst.NumOutputEpsilons(s);
+}
+
+
 // A useful alias when using StdArc.
 typedef MutableFst<StdArc> StdMutableFst;
+
+
+// This is a helper class template useful for attaching a MutableFst
+// interface to its implementation, handling reference counting and
+// copy-on-write.
+template <class I, class F = MutableFst<typename I::Arc> >
+class ImplToMutableFst : public ImplToExpandedFst<I, F> {
+ public:
+  typedef typename I::Arc Arc;
+  typedef typename Arc::Weight Weight;
+  typedef typename Arc::StateId StateId;
+
+  using ImplToFst<I, F>::GetImpl;
+  using ImplToFst<I, F>::SetImpl;
+
+  virtual void SetStart(StateId s) {
+    MutateCheck();
+    GetImpl()->SetStart(s);
+  }
+
+  virtual void SetFinal(StateId s, Weight w) {
+    MutateCheck();
+    GetImpl()->SetFinal(s, w);
+  }
+
+  virtual void SetProperties(uint64 props, uint64 mask) {
+    GetImpl()->SetProperties(props, mask);
+  }
+
+  virtual StateId AddState() {
+    MutateCheck();
+    return GetImpl()->AddState();
+  }
+
+  virtual void AddArc(StateId s, const Arc &arc) {
+    MutateCheck();
+    GetImpl()->AddArc(s, arc);
+  }
+
+  virtual void DeleteStates(const vector<StateId> &dstates) {
+    MutateCheck();
+    GetImpl()->DeleteStates(dstates);
+  }
+
+  virtual void DeleteStates() {
+    MutateCheck();
+    GetImpl()->DeleteStates();
+  }
+
+  virtual void DeleteArcs(StateId s, size_t n) {
+    MutateCheck();
+    GetImpl()->DeleteArcs(s, n);
+  }
+
+  virtual void DeleteArcs(StateId s) {
+    MutateCheck();
+    GetImpl()->DeleteArcs(s);
+  }
+
+  virtual const SymbolTable* InputSymbols() const {
+    return GetImpl()->InputSymbols();
+  }
+
+  virtual const SymbolTable* OutputSymbols() const {
+    return GetImpl()->OutputSymbols();
+  }
+
+  virtual SymbolTable* MutableInputSymbols() {
+    MutateCheck();
+    return GetImpl()->InputSymbols();
+  }
+
+  virtual SymbolTable* MutableOutputSymbols() {
+    MutateCheck();
+    return GetImpl()->OutputSymbols();
+  }
+
+  virtual void SetInputSymbols(const SymbolTable* isyms) {
+    MutateCheck();
+    GetImpl()->SetInputSymbols(isyms);
+  }
+
+  virtual void SetOutputSymbols(const SymbolTable* osyms) {
+    MutateCheck();
+    GetImpl()->SetOutputSymbols(osyms);
+  }
+
+ protected:
+  ImplToMutableFst() : ImplToExpandedFst<I, F>() {}
+
+  ImplToMutableFst(I *impl) : ImplToExpandedFst<I, F>(impl) {}
+
+
+  ImplToMutableFst(const ImplToMutableFst<I, F> &fst)
+      : ImplToExpandedFst<I, F>(fst) {}
+
+  ImplToMutableFst(const ImplToMutableFst<I, F> &fst, bool safe)
+      : ImplToExpandedFst<I, F>(fst, safe) {}
+
+  void MutateCheck() {
+    // Copy on write
+    if (GetImpl()->RefCount() > 1)
+      SetImpl(new I(*this));
+  }
+
+ private:
+  // Disallow
+  ImplToMutableFst<I, F>  &operator=(const ImplToMutableFst<I, F> &fst);
+
+  ImplToMutableFst<I, F> &operator=(const Fst<Arc> &fst) {
+    LOG(FATAL) << "ImplToMutableFst: Assignment operator disallowed";
+    return *this;
+  }
+};
+
 
 }  // namespace fst;
 

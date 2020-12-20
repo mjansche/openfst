@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
 //
 // \file
@@ -20,21 +21,23 @@
 #ifndef FST_LIB_ENCODE_H__
 #define FST_LIB_ENCODE_H__
 
+#include <climits>
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
 #include <string>
 #include <vector>
+using std::vector;
 #include <fst/map.h>
 #include <fst/rmfinalepsilon.h>
 
 namespace fst {
 
-static const uint32 kEncodeLabels      = 0x00001;
-static const uint32 kEncodeWeights     = 0x00002;
-static const uint32 kEncodeFlags       = 0x00003;  // All non-internal flags
+static const uint32 kEncodeLabels      = 0x0001;
+static const uint32 kEncodeWeights     = 0x0002;
+static const uint32 kEncodeFlags       = 0x0003;  // All non-internal flags
 
-static const uint32 kEncodeHasISymbols = 0x00004;  // For internal use
-static const uint32 kEncodeHasOSymbols = 0x00008;  // For internal use
+static const uint32 kEncodeHasISymbols = 0x0004;  // For internal use
+static const uint32 kEncodeHasOSymbols = 0x0008;  // For internal use
 
 enum EncodeType { ENCODE = 1, DECODE = 2 };
 
@@ -76,7 +79,7 @@ template <class A>  class EncodeTable {
   };
 
   // Hash function for EncodeTabe Tuples. Based on the encode flags
-  // we either hash the labels, weights or compbination of them.
+  // we either hash the labels, weights or combination of them.
   class TupleKey {
    public:
     TupleKey()
@@ -90,8 +93,8 @@ template <class A>  class EncodeTable {
 
     size_t operator()(const Tuple* x) const {
       size_t hash = x->ilabel;
-      int lshift = 5;
-      int rshift = sizeof(size_t) - lshift;
+      const int lshift = 5;
+      const int rshift = CHAR_BIT * sizeof(size_t) - 5;
       if (encode_flags_ & kEncodeLabels)
         hash = hash << lshift ^ hash >> rshift ^ x->olabel;
       if (encode_flags_ & kEncodeWeights)
@@ -151,7 +154,9 @@ template <class A>  class EncodeTable {
 
   // Given an encode arc Label decode back to input/output labels and costs
   const Tuple* Decode(Label key) const {
-    return key <= encode_tuples_.size() ? encode_tuples_[key - 1] : 0;
+    if (key < 1 || key > encode_tuples_.size())
+      LOG(FATAL) << "EncodeTable::Decode: unknown decode key: " << key;
+    return encode_tuples_[key - 1];
   }
 
   size_t Size() const { return encode_tuples_.size(); }
@@ -323,17 +328,26 @@ template <class A> class EncodeMapper {
                  flags_ & kEncodeWeights ? Weight::One() : arc.weight,
                  arc.nextstate);
       }
-    } else {
+    } else if (type_ == DECODE) {
       if (arc.nextstate == kNoStateId) {
         return arc;
       } else {
+        if (arc.ilabel == 0) return arc;
+        if (flags_ & kEncodeLabels && arc.ilabel != arc.olabel)
+          LOG(FATAL) << "EncodeMapper: Label-encoded arc has different "
+                     "input and output labels";
+        if (flags_ & kEncodeWeights && arc.weight != Weight::One())
+          LOG(FATAL) <<
+                     "EncodeMapper: Weight-encoded arc has non-trivial weight";
         const typename EncodeTable<A>::Tuple* tuple =
           table_->Decode(arc.ilabel);
         return A(tuple->ilabel,
                  flags_ & kEncodeLabels ? tuple->olabel : arc.olabel,
                  flags_ & kEncodeWeights ? tuple->weight : arc.weight,
-                 arc.nextstate);;
+                 arc.nextstate);
       }
+    } else {
+      LOG(FATAL) << "EncodeMapper: Unknown operation";
     }
   }
 
@@ -423,7 +437,6 @@ void Encode(MutableFst<A> *fst, EncodeMapper<A>* mapper) {
   Map(fst, mapper);
 }
 
-
 template<class A> inline
 void Decode(MutableFst<A>* fst, const EncodeMapper<A>& mapper) {
   Map(fst, EncodeMapper<A>(mapper, DECODE));
@@ -454,11 +467,13 @@ class EncodeFst : public MapFst<A, A, EncodeMapper<A> > {
   EncodeFst(const Fst<A> &fst, const EncodeMapper<A>& encoder)
       : MapFst<A, A, C>(fst, encoder, MapFstOptions()) {}
 
-  EncodeFst(const EncodeFst<A> &fst)
-      : MapFst<A, A, C>(fst) {}
+  // See Fst<>::Copy() for doc.
+  EncodeFst(const EncodeFst<A> &fst, bool copy = false)
+      : MapFst<A, A, C>(fst, copy) {}
 
-  virtual EncodeFst<A> *Copy(bool reset = false) const {
-    if (reset)
+  // Get a copy of this EncodeFst. See Fst<>::Copy() for further doc.
+  virtual EncodeFst<A> *Copy(bool safe = false) const {
+    if (safe)
       LOG(FATAL) << "EncodeFst::Copy(true): not allowed.";
     return new EncodeFst(*this);
   }
@@ -476,21 +491,24 @@ class DecodeFst : public MapFst<A, A, EncodeMapper<A> > {
  public:
   typedef A Arc;
   typedef EncodeMapper<A> C;
-  using MapFst<A, A, EncodeMapper<A> >::Impl;
+  typedef MapFstImpl< A, A, EncodeMapper<A> > Impl;
+  using ImplToFst<Impl>::GetImpl;
 
   DecodeFst(const Fst<A> &fst, const EncodeMapper<A>& encoder)
       : MapFst<A, A, C>(fst,
                             EncodeMapper<A>(encoder, DECODE),
                             MapFstOptions()) {
-    Impl()->SetInputSymbols(encoder.InputSymbols());
-    Impl()->SetOutputSymbols(encoder.OutputSymbols());
+    GetImpl()->SetInputSymbols(encoder.InputSymbols());
+    GetImpl()->SetOutputSymbols(encoder.OutputSymbols());
   }
 
-  DecodeFst(const DecodeFst<A> &fst, bool reset = false)
-      : MapFst<A, A, C>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  DecodeFst(const DecodeFst<A> &fst, bool safe = false)
+      : MapFst<A, A, C>(fst, safe) {}
 
-  virtual DecodeFst<A> *Copy(bool reset = false) const {
-    return new DecodeFst(*this, reset);
+  // Get a copy of this DecodeFst. See Fst<>::Copy() for further doc.
+  virtual DecodeFst<A> *Copy(bool safe = false) const {
+    return new DecodeFst(*this, safe);
   }
 };
 

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: Michael Riley <riley@google.com>
 // \file
 // FST property bits.
@@ -21,7 +22,9 @@
 
 #include <cmath>
 #include <vector>
-#include "fst/compat.h"
+using std::vector;
+#include <fst/compat.h>
+#include <fst/types.h>
 
 namespace fst {
 
@@ -297,15 +300,26 @@ const uint64 kFstProperties = kBinaryProperties | kTrinaryProperties;
 // PROPERTY FUNCTIONS and STRING NAMES (defined in properties.cc)
 //
 
+// Below are functions for getting property bit vectors when executing
+// mutating fst operations.
+inline uint64 SetStartProperties(uint64 inprops);
+template <typename Weight>
+uint64 SetFinalProperties(uint64 inprops, Weight old_weight, Weight new_weight);
+inline uint64 AddStateProperties(uint64 inprops);
+template <typename A>
+uint64 AddArcProperties(uint64 inprops, typename A::StateId s, const A &arc,
+                           const A *prev_arc);
+inline uint64 DeleteStatesProperties(uint64 inprops);
+inline uint64 DeleteAllStatesProperties(uint64 inprops, uint64 staticProps);
+inline uint64 DeleteArcsProperties(uint64 inprops);
+
 uint64 ClosureProperties(uint64 inprops, bool star, bool delayed = false);
 uint64 ComplementProperties(uint64 inprops);
 uint64 ComposeProperties(uint64 inprops1, uint64 inprops2);
 uint64 ConcatProperties(uint64 inprops1, uint64 inprops2,
                         bool delayed = false);
 uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label);
-uint64 DifferenceProperties(uint64 inprops1, uint64 inprops2);
 uint64 FactorWeightProperties(uint64 inprops);
-uint64 IntersectProperties(uint64 inprops1, uint64 inprops2);
 uint64 InvertProperties(uint64 inprops);
 uint64 ProjectProperties(uint64 inprops, bool project_input);
 uint64 RelabelProperties(uint64 inprops);
@@ -316,8 +330,107 @@ uint64 ReplaceProperties(const vector<uint64>& inprops,
 uint64 ReverseProperties(uint64 inprops);
 uint64 ReweightProperties(uint64 inprops);
 uint64 RmEpsilonProperties(uint64 inprops, bool delayed = false);
+uint64 ShortestPathProperties(uint64 props);
 uint64 SynchronizeProperties(uint64 inprops);
 uint64 UnionProperties(uint64 inprops1, uint64 inprops2, bool delayed = false);
+
+// Definitions of inlined functions.
+
+uint64 SetStartProperties(uint64 inprops) {
+  uint64 outprops = inprops & kSetStartProperties;
+  if (inprops & kAcyclic) {
+    outprops |= kInitialAcyclic;
+  }
+  return outprops;
+}
+
+uint64 AddStateProperties(uint64 inprops) {
+  return inprops & kAddStateProperties;
+}
+
+uint64 DeleteStatesProperties(uint64 inprops) {
+  return inprops & kDeleteStatesProperties;
+}
+
+uint64 DeleteAllStatesProperties(uint64 inprops, uint64 staticProps) {
+  return kNullProperties | staticProps;
+}
+
+uint64 DeleteArcsProperties(uint64 inprops) {
+  return inprops & kDeleteArcsProperties;
+}
+
+// Definitions of template functions.
+
+//
+template <typename Weight>
+uint64 SetFinalProperties(uint64 inprops, Weight old_weight,
+                          Weight new_weight) {
+  uint64 outprops = inprops;
+  if (old_weight != Weight::Zero() && old_weight != Weight::One()) {
+    outprops &= ~kWeighted;
+  }
+  if (new_weight != Weight::Zero() && new_weight != Weight::One()) {
+    outprops |= kWeighted;
+    outprops &= ~kUnweighted;
+  }
+  outprops &= kSetFinalProperties | kWeighted | kUnweighted;
+  return outprops;
+}
+
+/// Gets the properties for the MutableFst::AddArc method.
+///
+/// \param inprops  the current properties of the fst
+/// \param s        the id of the state to which an arc is being added
+/// \param arc      the arc being added to the state with the specified id
+/// \param prev_arc the previously-added (or "last") arc of state s, or NULL if
+///                 s currently has no arcs
+template <typename A>
+uint64 AddArcProperties(uint64 inprops, typename A::StateId s,
+                        const A &arc, const A *prev_arc) {
+  uint64 outprops = inprops;
+  if (arc.ilabel != arc.olabel) {
+    outprops |= kNotAcceptor;
+    outprops &= ~kAcceptor;
+  }
+  if (arc.ilabel == 0) {
+    outprops |= kIEpsilons;
+    outprops &= ~kNoIEpsilons;
+    if (arc.olabel == 0) {
+      outprops |= kEpsilons;
+      outprops &= ~kNoEpsilons;
+    }
+  }
+  if (arc.olabel == 0) {
+    outprops |= kOEpsilons;
+    outprops &= ~kNoOEpsilons;
+  }
+  if (prev_arc != 0) {
+    if (prev_arc->ilabel > arc.ilabel) {
+      outprops |= kNotILabelSorted;
+      outprops &= ~kILabelSorted;
+    }
+    if (prev_arc->olabel > arc.olabel) {
+      outprops |= kNotOLabelSorted;
+      outprops &= ~kOLabelSorted;
+    }
+  }
+  if (arc.weight != A::Weight::Zero() && arc.weight != A::Weight::One()) {
+    outprops |= kWeighted;
+    outprops &= ~kUnweighted;
+  }
+  if (arc.nextstate <= s) {
+    outprops |= kNotTopSorted;
+    outprops &= ~kTopSorted;
+  }
+  outprops &= kAddArcProperties | kAcceptor |
+              kNoEpsilons | kNoIEpsilons | kNoOEpsilons |
+              kILabelSorted | kOLabelSorted | kUnweighted | kTopSorted;
+  if (outprops & kTopSorted) {
+    outprops |= kAcyclic | kInitialAcyclic;
+  }
+  return outprops;
+}
 
 extern const char *PropertyNames[];
 

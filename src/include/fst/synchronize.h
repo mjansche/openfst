@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -27,7 +28,9 @@ using std::tr1::unordered_map;
 using std::tr1::unordered_set;
 #include <string>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 
 #include <fst/cache.h>
 #include <fst/test-properties.h>
@@ -48,9 +51,13 @@ class SynchronizeFstImpl
   using FstImpl<A>::SetInputSymbols;
   using FstImpl<A>::SetOutputSymbols;
 
-  using CacheBaseImpl< CacheState<A> >::HasStart;
-  using CacheBaseImpl< CacheState<A> >::HasFinal;
+  using CacheBaseImpl< CacheState<A> >::AddArc;
   using CacheBaseImpl< CacheState<A> >::HasArcs;
+  using CacheBaseImpl< CacheState<A> >::HasFinal;
+  using CacheBaseImpl< CacheState<A> >::HasStart;
+  using CacheBaseImpl< CacheState<A> >::SetArcs;
+  using CacheBaseImpl< CacheState<A> >::SetFinal;
+  using CacheBaseImpl< CacheState<A> >::SetStart;
 
   typedef A Arc;
   typedef typename A::Label Label;
@@ -329,83 +336,45 @@ class SynchronizeFstImpl
 // - Mehryar Mohri. Edit-Distance of Weighted Automata: General
 //   Definitions and Algorithms, International Journal of Computer
 //   Science, 14(6): 957-982 (2003).
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A>
-class SynchronizeFst : public Fst<A> {
+class SynchronizeFst : public ImplToFst< SynchronizeFstImpl<A> > {
  public:
   friend class ArcIterator< SynchronizeFst<A> >;
-  friend class CacheStateIterator< SynchronizeFst<A> >;
-  friend class CacheArcIterator< SynchronizeFst<A> >;
+  friend class StateIterator< SynchronizeFst<A> >;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef CacheState<A> State;
+  typedef SynchronizeFstImpl<A> Impl;
 
   SynchronizeFst(const Fst<A> &fst)
-      : impl_(new SynchronizeFstImpl<A>(fst, SynchronizeFstOptions())) {}
+      : ImplToFst<Impl>(new Impl(fst, SynchronizeFstOptions())) {}
 
   SynchronizeFst(const Fst<A> &fst,  const SynchronizeFstOptions &opts)
-      : impl_(new SynchronizeFstImpl<A>(fst, opts)) {}
+      : ImplToFst<Impl>(new Impl(fst, opts)) {}
 
-  SynchronizeFst(const SynchronizeFst<A> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = new SynchronizeFstImpl<A>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  SynchronizeFst(const SynchronizeFst<A> &fst, bool safe = false)
+      : ImplToFst<Impl>(fst, safe) {}
 
-  virtual ~SynchronizeFst() { if (!impl_->DecrRefCount()) delete impl_; }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual SynchronizeFst<A> *Copy(bool reset = false) const {
-    return new SynchronizeFst<A>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  // Get a copy of this SynchronizeFst. See Fst<>::Copy() for further doc.
+  virtual SynchronizeFst<A> *Copy(bool safe = false) const {
+    return new SynchronizeFst<A>(*this, safe);
   }
 
   virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
   }
 
  private:
-  SynchronizeFstImpl<A> *Impl() { return impl_; }
-
-  SynchronizeFstImpl<A> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const SynchronizeFst<A> &fst);  // Disallow
 };
@@ -417,7 +386,7 @@ class StateIterator< SynchronizeFst<A> >
     : public CacheStateIterator< SynchronizeFst<A> > {
  public:
   explicit StateIterator(const SynchronizeFst<A> &fst)
-      : CacheStateIterator< SynchronizeFst<A> >(fst) {}
+      : CacheStateIterator< SynchronizeFst<A> >(fst, fst.GetImpl()) {}
 };
 
 
@@ -429,9 +398,9 @@ class ArcIterator< SynchronizeFst<A> >
   typedef typename A::StateId StateId;
 
   ArcIterator(const SynchronizeFst<A> &fst, StateId s)
-      : CacheArcIterator< SynchronizeFst<A> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : CacheArcIterator< SynchronizeFst<A> >(fst.GetImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s))
+      fst.GetImpl()->Expand(s);
   }
 
  private:

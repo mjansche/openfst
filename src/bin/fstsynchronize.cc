@@ -12,24 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Synchronizes an FST.
 //
 
-#include "./synchronize-main.h"
-
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(SynchronizeMain, StdArc);
-REGISTER_FST_MAIN(SynchronizeMain, LogArc);
-
-}  // namespace fst
-
+#include <fst/script/synchronize.h>
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::VectorFstClass;
+
   string usage = "Synchronizes an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
@@ -41,6 +38,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes SynchronizeMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(SynchronizeMain, argc, argv);
+  string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  VectorFstClass ofst(ifst->ArcType());
+
+  s::Synchronize(*ifst, &ofst);
+
+  ofst.Write(out_name);
+
+  return 0;
 }

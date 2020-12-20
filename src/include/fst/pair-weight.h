@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: shumash@google.com (Masha Maria Shugrina)
 //
 // \file
@@ -21,12 +22,13 @@
 #ifndef FST_LIB_PAIR_WEIGHT_H_
 #define FST_LIB_PAIR_WEIGHT_H_
 
+#include <climits>
 #include <stack>
 #include <string>
 #include <fst/weight.h>
 
-DECLARE_string(fst_pair_parentheses);
-DECLARE_string(fst_pair_separator);
+DECLARE_string(fst_weight_parentheses);
+DECLARE_string(fst_weight_separator);
 
 namespace fst {
 
@@ -78,8 +80,8 @@ class PairWeight {
   size_t Hash() const {
     size_t h1 = value1_.Hash();
     size_t h2 = value2_.Hash();
-    int lshift = 5;
-    int rshift = sizeof(size_t) - 5;
+    const int lshift = 5;
+    const int rshift = CHAR_BIT * sizeof(size_t) - 5;
     return h1 << lshift ^ h1 >> rshift ^ h2;
   }
 
@@ -90,13 +92,6 @@ class PairWeight {
 
   ReverseWeight Reverse() const {
     return ReverseWeight(value1_.Reverse(), value2_.Reverse());
-  }
-
-  static uint64 Properties() {
-    uint64 props1 = W1::Properties();
-    uint64 props2 = W2::Properties();
-    return props1 & props2 & (kLeftSemiring | kRightSemiring |
-                              kCommutative | kIdempotent);
   }
 
   const W1& Value1() const { return value1_; }
@@ -133,7 +128,7 @@ class PairWeight {
     return strm;
   }
 
-  // Reads PairWeight when there are not parentheses around pair terms
+  // Reads PairWeight when there are parentheses around pair terms
   inline static istream &ReadWithParen(
       istream &strm, PairWeight<W1, W2>& w,
       char separator, char open_paren, char close_paren) {
@@ -142,7 +137,7 @@ class PairWeight {
       c = strm.get();
     } while (isspace(c));
     if (c != open_paren)
-      LOG(FATAL) << " is fst_pair_parentheses flag set correcty? ";
+      LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
     c = strm.get();
 
     // read first element
@@ -180,7 +175,7 @@ class PairWeight {
     }
     CHECK(s2.size() > 0);
     if (s2[s2.size() - 1] != close_paren)
-      LOG(FATAL) << " is fst_pair_parentheses flag set correcty? ";
+      LOG(FATAL) << " is fst_weight_parentheses flag set correcty? ";
     s2.erase(s2.size() - 1, 1);
     istringstream strm2(s2);
     W2 w2 = W2::Zero();
@@ -212,39 +207,39 @@ template <class W1, class W2>
 inline bool ApproxEqual(const PairWeight<W1, W2> &w1,
                         const PairWeight<W1, W2> &w2,
                         float delta = kDelta) {
-  return ApproxEqual(w1.Value1(), w2.Value1(), kDelta) &&
-      ApproxEqual(w1.Value2(), w2.Value2(), kDelta);
+  return ApproxEqual(w1.Value1(), w2.Value1(), delta) &&
+      ApproxEqual(w1.Value2(), w2.Value2(), delta);
 }
 
 template <class W1, class W2>
 inline ostream &operator<<(ostream &strm, const PairWeight<W1, W2> &w) {
-  CHECK(FLAGS_fst_pair_separator.size() == 1);
-  char separator = FLAGS_fst_pair_separator[0];
-  if (FLAGS_fst_pair_parentheses.empty())
+  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  char separator = FLAGS_fst_weight_separator[0];
+  if (FLAGS_fst_weight_parentheses.empty())
     return strm << w.Value1() << separator << w.Value2();
 
-  CHECK(FLAGS_fst_pair_parentheses.size() == 2);
-  char open_paren = FLAGS_fst_pair_parentheses[0];
-  char close_paren = FLAGS_fst_pair_parentheses[1];
+  CHECK(FLAGS_fst_weight_parentheses.size() == 2);
+  char open_paren = FLAGS_fst_weight_parentheses[0];
+  char close_paren = FLAGS_fst_weight_parentheses[1];
   return strm << open_paren << w.Value1() << separator
               << w.Value2() << close_paren ;
 }
 
 template <class W1, class W2>
 inline istream &operator>>(istream &strm, PairWeight<W1, W2> &w) {
-  CHECK(FLAGS_fst_pair_separator.size() == 1);
-  char separator = FLAGS_fst_pair_separator[0];
-  bool read_parens = !FLAGS_fst_pair_parentheses.empty();
+  CHECK(FLAGS_fst_weight_separator.size() == 1);
+  char separator = FLAGS_fst_weight_separator[0];
+  bool read_parens = !FLAGS_fst_weight_parentheses.empty();
   if (read_parens) {
-    CHECK(FLAGS_fst_pair_parentheses.size() == 2);
+    CHECK(FLAGS_fst_weight_parentheses.size() == 2);
     return PairWeight<W1, W2>::ReadWithParen(
-        strm, w, separator, FLAGS_fst_pair_parentheses[0],
-        FLAGS_fst_pair_parentheses[1]);
+        strm, w, separator, FLAGS_fst_weight_parentheses[0],
+        FLAGS_fst_weight_parentheses[1]);
   } else {
     return PairWeight<W1, W2>::ReadNoParen(strm, w, separator);
   }
 }
 
-}
+}  // namespace fst
 
 #endif  // FST_LIB_PAIR_WEIGHT_H_

@@ -1,7 +1,9 @@
-AC_INIT([OpenFst], [1.1], [help@www.openfst.org])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_INIT([OpenFst], [1.2], [help@www.openfst.org])
+AM_INIT_AUTOMAKE([foreign nostdinc -Wall -Werror])
+
 AC_PROG_CXX
 AC_PROG_LIBTOOL
+
 AC_CONFIG_HEADERS([config.h src/include/fst/config.h])
 AC_CONFIG_SRCDIR([src/lib/fst.cc])
 AC_CONFIG_FILES([
@@ -11,10 +13,70 @@ AC_CONFIG_FILES([
   src/lib/Makefile
   src/bin/Makefile
   src/test/Makefile
+  src/extensions/Makefile
+  src/extensions/compact/Makefile
+  src/extensions/const/Makefile
+  src/extensions/far/Makefile
+  src/extensions/lookahead/Makefile
+  src/extensions/pdt/Makefile
+  src/script/Makefile
 ])
+AC_CONFIG_MACRO_DIR([m4])
 AC_LANG([C++])
-AC_CHECK_TYPES([std::tr1::hash<long long unsigned>], [], [], 
+
+AC_CHECK_TYPES([std::tr1::hash<long long unsigned>], [], [],
                [[#include <tr1/unordered_map>]])
-AC_CHECK_TYPES([__gnu_cxx::slist<int>], [], [], 
+AC_CHECK_TYPES([__gnu_cxx::slist<int>], [], [],
                [[#include <ext/slist>]])
+
+AC_ARG_ENABLE(
+	[compact-fsts],
+	[AS_HELP_STRING(
+		[--enable-compact-fsts],
+		[enable all CompactFst extensions])],
+	[],
+	[enable_compact_fsts=no])
+AM_CONDITIONAL([HAVE_COMPACT], [test "x$enable_compact_fsts" != xno])
+				
+AC_ARG_ENABLE(
+	[const-fsts],
+	[AS_HELP_STRING(
+		[--enable-const-fsts],
+		[enable all ConstFst extensions])],
+	[],
+	[enable_const_fsts=no])
+AM_CONDITIONAL([HAVE_CONST], [test "x$enable_const_fsts" != xno])
+				
+AC_ARG_ENABLE([far], [AS_HELP_STRING([--enable-far], [enable FAR extensions])],
+              [], [enable_far=no])
+AM_CONDITIONAL([HAVE_FAR], [test "x$enable_far" != xno])
+
+AC_ARG_ENABLE(
+	[lookahead-fsts],
+	[AS_HELP_STRING(
+		[--enable-lookahead-fsts],
+		[enable LookAheadFst extensions])],
+	[],
+	[enable_lookahead_fsts=no])
+AM_CONDITIONAL([HAVE_LOOKAHEAD], [test "x$enable_lookahead_fsts" != xno])
+				
+AC_ARG_ENABLE([pdt], [AS_HELP_STRING([--enable-pdt], [enable PDT extensions])],
+              [], [enable_pdt=no])
+AM_CONDITIONAL([HAVE_PDT], [test "x$enable_pdt" != xno])
+
+AC_ARG_WITH([icu],
+  [AS_HELP_STRING([--with-icu],
+    [enable UTF8 support using the ICU Library])],
+  [],
+  [with_icu=no])
+AS_IF([test "x$with_icu" != xno],
+  [AC_CHECK_ICU(
+    [4.2],
+    [AC_DEFINE([HAVE_ICU],
+      [1],
+      [Define to 1 if you have the ICU library.])],
+    [AC_MSG_FAILURE([--with-icu was given, but ICU Library not found])])])
+
+AC_SUBST([libfstdir], [${libdir}/fst])
+
 AC_OUTPUT

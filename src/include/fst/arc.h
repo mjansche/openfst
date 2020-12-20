@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -28,6 +29,7 @@
 #include <fstream>
 #include <fst/string-weight.h>
 #include <fst/lexicographic-weight.h>
+#include <fst/power-weight.h>
 
 namespace fst {
 
@@ -171,6 +173,7 @@ struct LexicographicArc {
   StateId nextstate;  // Transition destination state
 };
 
+
 // Arc with integer labels and state Ids and product weights.
 template<class W1, class W2>
 struct ProductArc {
@@ -185,6 +188,38 @@ struct ProductArc {
 
   static const string &Type() {  // Arc type name
     static const string type = Weight::Type();
+    return type;
+  }
+
+  Label ilabel;       // Transition input label
+  Label olabel;       // Transition output label
+  Weight weight;      // Transition weight
+  StateId nextstate;  // Transition destination state
+};
+
+
+// Arc with label and state Id type the same as template arg and with
+// weights over the n-th cartesian power of the weight type of the
+// template arg.
+template <class A, unsigned int n>
+struct PowerArc {
+  typedef A Arc;
+  typedef typename A::Label Label;
+  typedef typename A::StateId StateId;
+  typedef PowerWeight<typename A::Weight, n> Weight;
+
+  PowerArc() {}
+
+  PowerArc(Label i, Label o, Weight w, StateId s)
+      : ilabel(i), olabel(o), weight(w), nextstate(s) {}
+
+  static const string &Type() {  // Arc type name
+    static string type;
+    if (type.empty()) {
+      string power;
+      Int64ToStr(n, &power);
+      type = A::Type() + "_^" + power;
+    }
     return type;
   }
 

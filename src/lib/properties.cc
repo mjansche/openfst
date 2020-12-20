@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -19,6 +20,7 @@
 // string names of the properties.
 
 #include <vector>
+using std::vector;
 
 #include <fst/properties.h>
 #include <fst/encode.h>
@@ -58,11 +60,19 @@ uint64 ComplementProperties(uint64 inprops) {
 
 // Properties for a composed FST.
 uint64 ComposeProperties(uint64 inprops1, uint64 inprops2) {
-  uint64 outprops = kAccessible;
-  outprops |= (kAcceptor | kNoIEpsilons | kAcyclic | kInitialAcyclic) &
-              inprops1 & inprops2;
-  if ((kNoIEpsilons & inprops1 & inprops2)) {
-    outprops |= kIDeterministic & inprops1 & inprops2;
+  uint64 outprops;
+  if (inprops1 & kAcceptor && inprops2 & kAcceptor) {
+    outprops = kAcceptor | kAccessible;
+    outprops |= (kNoEpsilons | kNoIEpsilons | kNoOEpsilons | kAcyclic |
+                 kInitialAcyclic) & inprops1 & inprops2;
+    if (kNoIEpsilons & inprops1 & inprops2)
+      outprops |= (kIDeterministic | kODeterministic) & inprops1 & inprops2;
+  } else {
+    outprops = kAccessible;
+    outprops |= (kAcceptor | kNoIEpsilons | kAcyclic | kInitialAcyclic) &
+        inprops1 & inprops2;
+    if (kNoIEpsilons & inprops1 & inprops2)
+      outprops |= kIDeterministic & inprops1 & inprops2;
   }
   return outprops;
 }
@@ -117,11 +127,6 @@ uint64 DeterminizeProperties(uint64 inprops, bool has_subsequential_label) {
   return outprops;
 }
 
-// Properties for a differenced FST.
-uint64 DifferenceProperties(uint64 inprops1, uint64 inprops2) {
-  return IntersectProperties(inprops1, ComplementProperties(inprops2));
-}
-
 // Properties for factored weight FST.
 uint64 FactorWeightProperties(uint64 inprops) {
   uint64 outprops = (kExpanded | kMutable | kAcceptor |
@@ -131,18 +136,6 @@ uint64 FactorWeightProperties(uint64 inprops) {
                  kEpsilons | kIEpsilons | kOEpsilons | kCyclic |
                  kNotILabelSorted | kNotOLabelSorted)
         & inprops;
-  return outprops;
-}
-
-// Properties for an intersected FST.
-uint64 IntersectProperties(uint64 inprops1, uint64 inprops2) {
-  uint64 outprops = kAcceptor | kAccessible;
-
-  outprops |= (kNoEpsilons | kNoIEpsilons | kNoOEpsilons | kAcyclic |
-               kInitialAcyclic) & inprops1 & inprops2;
-
-  if ((kNoIEpsilons & inprops1 & inprops2))
-    outprops |= (kIDeterministic | kODeterministic) & inprops1 & inprops2;
   return outprops;
 }
 
@@ -340,6 +333,13 @@ uint64 RmEpsilonProperties(uint64 inprops, bool delayed) {
   return outprops;
 }
 
+// Properties for shortest path. This function computes how the properties
+// of the output of shortest path need to be updated, given that 'props' is
+// already known.
+uint64 ShortestPathProperties(uint64 props) {
+  return props | kAcyclic | kInitialAcyclic | kAccessible | kCoAccessible;
+}
+
 // Properties for a synchronized FST.
 uint64 SynchronizeProperties(uint64 inprops) {
   uint64 outprops = (kAcceptor | kAcyclic | kAccessible | kCoAccessible |
@@ -376,6 +376,7 @@ uint64 UnionProperties(uint64 inprops1, uint64 inprops2, bool delayed) {
                  kNotAccessible | kNotCoAccessible) & inprops2;
   return outprops;
 }
+
 
 // Property string names (indexed by bit position).
 const char *PropertyNames[] = {

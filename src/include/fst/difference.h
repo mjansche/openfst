@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_DIFFERENCE_H__
 
 #include <vector>
+using std::vector;
 #include <algorithm>
 #include <fst/cache.h>
 #include <fst/compose.h>
@@ -30,7 +32,7 @@ namespace fst {
 
 template <class A,
           class M = Matcher<Fst<A> >,
-          class F = SequenceComposeFilter<A>,
+          class F = SequenceComposeFilter<M>,
           class T = GenericComposeStateTable<A, typename F::FilterState> >
 struct DifferenceFstOptions : public ComposeFstOptions<A, M, F, T> {
   explicit DifferenceFstOptions(const CacheOptions &opts,
@@ -55,14 +57,17 @@ struct DifferenceFstOptions : public ComposeFstOptions<A, M, F, T> {
 template <class A>
 class DifferenceFst : public ComposeFst<A> {
  public:
-  using ComposeFst<A>::Impl;
+  using ImplToFst< ComposeFstImplBase<A> >::SetImpl;
+
+  using ComposeFst<A>::CreateBase1;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
 
   // A - B = A ^ B'.
-  DifferenceFst(const Fst<A> &fst1, const Fst<A> &fst2) {
+  DifferenceFst(const Fst<A> &fst1, const Fst<A> &fst2,
+                const CacheOptions &opts = CacheOptions()) {
     if (!fst1.Properties(kAcceptor, true))
       LOG(FATAL) << "DifferenceFst: 1st argument not an acceptor";
 
@@ -73,13 +78,8 @@ class DifferenceFst : public ComposeFst<A> {
                                   new R(fst1, MATCH_NONE),
                                   new R(cfst, MATCH_INPUT,
                                         ComplementFst<A>::kRhoLabel));
-    SetImpl(Init(fst1, cfst, copts));
-
-    uint64 props1 = fst1.Properties(kFstProperties, false);
-    uint64 props2 = fst2.Properties(kFstProperties, false);
-    Impl()->SetProperties(DifferenceProperties(props1, props2),
-                          kCopyProperties);
-  }
+    SetImpl(CreateBase1(fst1, cfst, copts));
+ }
 
   template <class M, class F, class T>
   DifferenceFst(const Fst<A> &fst1, const Fst<A> &fst2,
@@ -91,23 +91,21 @@ class DifferenceFst : public ComposeFst<A> {
 
     ComplementFst<A> cfst(fst2);
     ComposeFstOptions<A, R> copts(opts);
-    copts.matcher1 = new R(fst1, MATCH_NONE, kNoLabel, opts.matcher1);
+    copts.matcher1 = new R(fst1, MATCH_NONE, kNoLabel, MATCHER_REWRITE_ALWAYS,
+                           opts.matcher1);
     copts.matcher2 = new R(cfst, MATCH_INPUT, ComplementFst<A>::kRhoLabel,
-                           opts.matcher2);
+                           MATCHER_REWRITE_ALWAYS, opts.matcher2);
 
-    SetImpl(Init(fst1, cfst, copts));
-
-    uint64 props1 = fst1.Properties(kFstProperties, false);
-    uint64 props2 = fst2.Properties(kFstProperties, false);
-    Impl()->SetProperties(DifferenceProperties(props1, props2),
-                          kCopyProperties);
+    SetImpl(CreateBase1(fst1, cfst, copts));
   }
 
-  DifferenceFst(const DifferenceFst<A> &fst, bool reset = false)
-      : ComposeFst<A>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  DifferenceFst(const DifferenceFst<A> &fst, bool safe = false)
+      : ComposeFst<A>(fst, safe) {}
 
-  virtual DifferenceFst<A> *Copy(bool reset = false) const {
-    return new DifferenceFst<A>(*this, reset);
+  // Get a copy of this DifferenceFst. See Fst<>::Copy() for further doc.
+  virtual DifferenceFst<A> *Copy(bool safe = false) const {
+    return new DifferenceFst<A>(*this, safe);
   }
 };
 
@@ -155,9 +153,26 @@ template<class Arc>
 void Difference(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
              MutableFst<Arc> *ofst,
              const DifferenceOptions &opts = DifferenceOptions()) {
-  DifferenceFstOptions<Arc> nopts;
-  nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
-  *ofst = DifferenceFst<Arc>(ifst1, ifst2, nopts);
+  typedef Matcher< Fst<Arc> > M;
+
+  if (opts.filter_type == AUTO_FILTER) {
+    CacheOptions nopts;
+    nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = DifferenceFst<Arc>(ifst1, ifst2, nopts);
+  } else if (opts.filter_type == SEQUENCE_FILTER) {
+    DifferenceFstOptions<Arc> dopts;
+    dopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = DifferenceFst<Arc>(ifst1, ifst2, dopts);
+  } else if (opts.filter_type == ALT_SEQUENCE_FILTER) {
+    DifferenceFstOptions<Arc, M, AltSequenceComposeFilter<M> > dopts;
+    dopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = DifferenceFst<Arc>(ifst1, ifst2, dopts);
+  } else if (opts.filter_type == MATCH_FILTER) {
+    DifferenceFstOptions<Arc, M, MatchComposeFilter<M> > dopts;
+    dopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = DifferenceFst<Arc>(ifst1, ifst2, dopts);
+  }
+
   if (opts.connect)
     Connect(ofst);
 }

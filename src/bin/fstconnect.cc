@@ -12,25 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Removes useless (inaccessible or non-coaccessible) states and arcs
 // from an FST.
 //
 
-#include "./connect-main.h"
-
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(ConnectMain, StdArc);
-REGISTER_FST_MAIN(ConnectMain, LogArc);
-
-}  // namespace fst
-
+#include <fst/script/connect.h>
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+  using fst::script::MutableFstClass;
+  using fst::script::VectorFstClass;
+
   string usage = "Removes useless states and arcs from an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
@@ -42,6 +40,22 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes ConnectMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(ConnectMain, argc, argv);
+  string in_name = (argc > 1 && strcmp(argv[1], "-") != 0) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  MutableFstClass *ofst = 0;
+  if (ifst->Properties(fst::kMutable, false)) {
+    ofst = static_cast<MutableFstClass *>(ifst);
+  } else {
+    ofst = new VectorFstClass(ifst->ArcType());
+    delete ifst;
+  }
+
+  s::Connect(ofst);
+  ofst->Write(out_name);
+
+  return 0;
 }

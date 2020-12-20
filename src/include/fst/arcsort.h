@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -23,6 +24,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+using std::vector;
 #include <fst/cache.h>
 #include <fst/test-properties.h>
 
@@ -82,9 +84,14 @@ class ArcSortFstImpl : public CacheImpl<A> {
 
   using VectorFstBaseImpl<typename CacheImpl<A>::State>::NumStates;
 
+  using CacheImpl<A>::AddArc;
+  using CacheImpl<A>::GetState;
   using CacheImpl<A>::HasArcs;
   using CacheImpl<A>::HasFinal;
   using CacheImpl<A>::HasStart;
+  using CacheImpl<A>::SetArcs;
+  using CacheImpl<A>::SetFinal;
+  using CacheImpl<A>::SetStart;
 
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
@@ -156,10 +163,8 @@ class ArcSortFstImpl : public CacheImpl<A> {
       AddArc(s, aiter.Value());
     SetArcs(s);
 
-    if (s < NumStates()) {  // ensure state exists
-      vector<A> &carcs = GetState(s)->arcs;
-      sort(carcs.begin(), carcs.end(), comp_);
-    }
+    vector<A> &carcs = GetState(s)->arcs;
+    sort(carcs.begin(), carcs.end(), comp_);
   }
 
  private:
@@ -185,83 +190,46 @@ class ArcSortFstImpl : public CacheImpl<A> {
 // where v = # of states visited, d = maximum out-degree of states
 // visited. Constant time and space to visit an input state is assumed
 // and exclusive of caching.
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A, class C>
-class ArcSortFst : public Fst<A> {
+class ArcSortFst : public ImplToFst< ArcSortFstImpl<A, C> > {
  public:
-  friend class CacheArcIterator< ArcSortFst<A, C> >;
   friend class ArcIterator< ArcSortFst<A, C> >;
 
   typedef A Arc;
   typedef C Compare;
-  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef CacheState<A> State;
+  typedef ArcSortFstImpl<A, C> Impl;
 
   ArcSortFst(const Fst<A> &fst, const C &comp)
-      : impl_(new ArcSortFstImpl<A, C>(fst, comp, ArcSortFstOptions())) {}
+      : ImplToFst<Impl>(new Impl(fst, comp, ArcSortFstOptions())) {}
 
   ArcSortFst(const Fst<A> &fst, const C &comp, const ArcSortFstOptions &opts)
-      : impl_(new ArcSortFstImpl<A, C>(fst, comp, opts)) {}
+      : ImplToFst<Impl>(new Impl(fst, comp, opts)) {}
 
-  ArcSortFst(const ArcSortFst<A, C> &fst, bool reset = false) {
-    if (reset) {
-      impl_ = new ArcSortFstImpl<A, C>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  ArcSortFst(const ArcSortFst<A, C> &fst, bool safe = false)
+      : ImplToFst<Impl> (fst, safe) {}
 
-  virtual ~ArcSortFst() { if (!impl_->DecrRefCount()) delete impl_; }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  virtual ArcSortFst<A, C> *Copy(bool reset = false) const {
-    return new ArcSortFst<A, C>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  // Get a copy of this ArcSortFst. See Fst<>::Copy() for further doc.
+  virtual ArcSortFst<A, C> *Copy(bool safe = false) const {
+    return new ArcSortFst<A, C>(*this, safe);
   }
 
   virtual void InitStateIterator(StateIteratorData<A> *data) const {
-    impl_->InitStateIterator(data);
+    GetImpl()->InitStateIterator(data);
   }
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
   }
 
  private:
-  ArcSortFstImpl<A, C> *impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
 
   void operator=(const ArcSortFst<A, C> &fst);  // Disallow
 };
@@ -275,9 +243,9 @@ class ArcIterator< ArcSortFst<A, C> >
   typedef typename A::StateId StateId;
 
   ArcIterator(const ArcSortFst<A, C> &fst, StateId s)
-      : CacheArcIterator< ArcSortFst<A, C> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : CacheArcIterator< ArcSortFst<A, C> >(fst.GetImpl(), s) {
+    if (!fst.GetImpl()->HasArcs(s))
+      fst.GetImpl()->Expand(s);
   }
 
  private:
@@ -293,7 +261,8 @@ template<class A> class ILabelCompare {
   }
 
   uint64 Properties(uint64 props) const {
-    return (props & kArcSortProperties) | kILabelSorted;
+    return (props & kArcSortProperties) | kILabelSorted |
+        (props & kAcceptor ? kOLabelSorted : 0);
   }
 };
 
@@ -306,7 +275,8 @@ template<class A> class OLabelCompare {
   }
 
   uint64 Properties(uint64 props) const {
-    return (props & kArcSortProperties) | kOLabelSorted;
+    return (props & kArcSortProperties) | kOLabelSorted |
+        (props & kAcceptor ? kILabelSorted : 0);
   }
 };
 

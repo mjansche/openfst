@@ -24,6 +24,7 @@
 #include <iostream>
 #include <string>
 
+#include <fst/types.h>
 #include <fst/flags.h>
 
 using std::string;
@@ -52,6 +53,10 @@ class LogMessage {
 // Checks
 #define CHECK(x) assert(x)
 #define CHECK_EQ(x, y) assert((x) == (y))
+#define CHECK_LT(x, y) assert((x) <= (y))
+#define CHECK_GE(x, y) assert((x) >= (y))
 
+// Ports
+#define ATTRIBUTE_DEPRECATED __attribute__((deprecated))
 
 #endif  // FST_LIB_LOG_H__

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -23,6 +24,7 @@
 
 #include <string>
 #include <vector>
+using std::vector;
 #include <fst/expanded-fst.h>
 #include <fst/fst-decl.h>  // For optional argument declarations
 #include <fst/test-properties.h>
@@ -39,11 +41,14 @@ template <class F, class G> void Cast(const F &, G *);
 template <class A, class U>
 class ConstFstImpl : public FstImpl<A> {
  public:
+  using FstImpl<A>::SetInputSymbols;
+  using FstImpl<A>::SetOutputSymbols;
   using FstImpl<A>::SetType;
   using FstImpl<A>::SetProperties;
   using FstImpl<A>::Properties;
   using FstImpl<A>::WriteHeader;
 
+  typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef U Unsigned;
@@ -127,6 +132,16 @@ class ConstFstImpl : public FstImpl<A> {
 
   DISALLOW_COPY_AND_ASSIGN(ConstFstImpl);
 };
+
+template <class A, class U>
+const uint64 ConstFstImpl<A, U>::kStaticProperties;
+template <class A, class U>
+const int ConstFstImpl<A, U>::kFileVersion;
+template <class A, class U>
+const int ConstFstImpl<A, U>::kMinFileVersion;
+template <class A, class U>
+const int ConstFstImpl<A, U>::kFileAlign;
+
 
 template<class A, class U>
 ConstFstImpl<A, U>::ConstFstImpl(const Fst<A> &fst) : nstates_(0), narcs_(0) {
@@ -236,131 +251,70 @@ bool ConstFstImpl<A, U>::Write(ostream &strm,
   return true;
 }
 
+
 // Simple concrete immutable FST.  This class attaches interface to
-// implementation and handles reference counting.  The unsigned type U
-// is used to represent indices into the arc array (uint32 by default,
-// declared in fst-decl.h).
+// implementation and handles reference counting, delegating most
+// methods to ImplToExpandedFst. The unsigned type U is used to
+// represent indices into the arc array (uint32 by default, declared
+// in fst-decl.h).
 template <class A, class U>
-class ConstFst : public ExpandedFst<A> {
+class ConstFst : public ImplToExpandedFst< ConstFstImpl<A, U> > {
  public:
   friend class StateIterator< ConstFst<A, U> >;
   friend class ArcIterator< ConstFst<A, U> >;
   template <class F, class G> void friend Cast(const F &, G *);
 
   typedef A Arc;
-  typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
   typedef ConstFstImpl<A, U> Impl;
   typedef U Unsigned;
 
-  ConstFst() : impl_(new ConstFstImpl<A, U>()) {}
+  ConstFst() : ImplToExpandedFst<Impl>(new Impl()) {}
 
-  ConstFst(const ConstFst<A, U> &fst) : impl_(fst.impl_) {
-    impl_->IncrRefCount();
-  }
+  explicit ConstFst(const Fst<A> &fst)
+      : ImplToExpandedFst<Impl>(new Impl(fst)) {}
 
-  explicit ConstFst(const Fst<A> &fst) : impl_(new ConstFstImpl<A, U>(fst)) {}
+  ConstFst(const ConstFst<A, U> &fst) : ImplToExpandedFst<Impl>(fst) {}
 
-  virtual ~ConstFst() { if (!impl_->DecrRefCount()) delete impl_;  }
-
-  virtual StateId Start() const { return impl_->Start(); }
-
-  virtual Weight Final(StateId s) const { return impl_->Final(s); }
-
-  StateId NumStates() const { return impl_->NumStates(); }
-
-  size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
-
-  size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const { return impl_->Type(); }
-
-  // Get a copy of this ConstFst
-  virtual ConstFst<A, U> *Copy(bool reset = false) const {
-    impl_->IncrRefCount();
-    return new ConstFst<A, U>(impl_);
+  // Get a copy of this ConstFst. See Fst<>::Copy() for further doc.
+  virtual ConstFst<A, U> *Copy(bool safe = false) const {
+    return new ConstFst<A, U>(*this);
   }
 
   // Read a ConstFst from an input stream; return NULL on error
   static ConstFst<A, U> *Read(istream &strm, const FstReadOptions &opts) {
-    ConstFstImpl<A, U>* impl = ConstFstImpl<A, U>::Read(strm, opts);
+    Impl* impl = Impl::Read(strm, opts);
     return impl ? new ConstFst<A, U>(impl) : 0;
   }
 
   // Read a ConstFst from a file; return NULL on error
   // Empty filename reads from standard input
   static ConstFst<A, U> *Read(const string &filename) {
-    if (!filename.empty()) {
-      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
-      if (!strm) {
-        LOG(ERROR) << "ConstFst::Read: Can't open file: " << filename;
-        return 0;
-      }
-      return Read(strm, FstReadOptions(filename));
-    } else {
-      return Read(std::cin, FstReadOptions("standard input"));
-    }
+    Impl* impl = ImplToExpandedFst<Impl>::Read(filename);
+    return impl ? new ConstFst<A, U>(impl) : 0;
   }
 
-  // Write a ConstFst to an output stream; return false on error
-  virtual bool Write(ostream &strm, const FstWriteOptions &opts) const {
-    return impl_->Write(strm, opts);
+  virtual void InitStateIterator(StateIteratorData<Arc> *data) const {
+    GetImpl()->InitStateIterator(data);
   }
 
-  // Write a ConstFst to a file; return false on error
-  // Empty filename writes to standard output
-  virtual bool Write(const string &filename) const {
-    if (!filename.empty()) {
-      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
-      if (!strm) {
-        LOG(ERROR) << "ConstFst::Write: Can't open file: " << filename;
-        return false;
-      }
-      return Write(strm, FstWriteOptions(filename));
-    } else {
-      return Write(std::cout, FstWriteOptions("standard output"));
-    }
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
-  }
-
-  virtual void InitStateIterator(StateIteratorData<A> *data) const {
-    impl_->InitStateIterator(data);
-  }
-
-  virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+  virtual void InitArcIterator(StateId s, ArcIteratorData<Arc> *data) const {
+    GetImpl()->InitArcIterator(s, data);
   }
 
  private:
-  ConstFst(ConstFstImpl<A, U> *impl) : impl_(impl) {}
+  explicit ConstFst(Impl *impl) : ImplToExpandedFst<Impl>(impl) {}
 
-  ConstFstImpl<A, U> *impl_;  // FST's impl
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl, ExpandedFst<A> >::GetImpl(); }
+
+  void SetImpl(Impl *impl, bool own_impl = true) {
+    ImplToFst< Impl, ExpandedFst<A> >::SetImpl(impl, own_impl);
+  }
 
   void operator=(const ConstFst<A, U> &fst);  // disallow
 };
+
 
 // Specialization for ConstFst; see generic version in fst.h
 // for sample usage (but use the ConstFst type!). This version
@@ -371,7 +325,7 @@ class StateIterator< ConstFst<A, U> > {
   typedef typename A::StateId StateId;
 
   explicit StateIterator(const ConstFst<A, U> &fst)
-    : nstates_(fst.impl_->NumStates()), s_(0) {}
+      : nstates_(fst.GetImpl()->NumStates()), s_(0) {}
 
   bool Done() const { return s_ >= nstates_; }
 
@@ -388,6 +342,7 @@ class StateIterator< ConstFst<A, U> > {
   DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
+
 // Specialization for ConstFst; see generic version in fst.h
 // for sample usage (but use the ConstFst type!). This version
 // should inline.
@@ -397,7 +352,8 @@ class ArcIterator< ConstFst<A, U> > {
   typedef typename A::StateId StateId;
 
   ArcIterator(const ConstFst<A, U> &fst, StateId s)
-    : arcs_(fst.impl_->Arcs(s)), narcs_(fst.impl_->NumArcs(s)), i_(0) {}
+      : arcs_(fst.GetImpl()->Arcs(s)),
+        narcs_(fst.GetImpl()->NumArcs(s)), i_(0) {}
 
   bool Done() const { return i_ >= narcs_; }
 
@@ -410,6 +366,12 @@ class ArcIterator< ConstFst<A, U> > {
   void Reset() { i_ = 0; }
 
   void Seek(size_t a) { i_ = a; }
+
+  uint32 Flags() const {
+    return kArcValueFlags;
+  }
+
+  void SetFlags(uint32 f, uint32 m) {}
 
  private:
   const A *arcs_;

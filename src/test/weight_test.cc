@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -54,6 +55,9 @@ using fst::LexicographicWeightGenerator;
 using fst::ProductWeight;
 using fst::ProductWeightGenerator;
 
+using fst::PowerWeight;
+using fst::PowerWeightGenerator;
+
 using fst::STRING_LEFT;
 using fst::STRING_RIGHT;
 
@@ -84,10 +88,8 @@ int main(int argc, char **argv) {
   int seed = FLAGS_seed >= 0 ? FLAGS_seed : time(0);
   LOG(INFO) << "Seed = " << seed;
 
-  // Test at full repetitions for float weights
   TestTemplatedWeights<float>(FLAGS_repeat, seed);
-  // Test at reduced repetitions for double weights
-  TestTemplatedWeights<double>(10, seed);
+  TestTemplatedWeights<double>(FLAGS_repeat, seed);
   // Make sure type names for templated weights are consistent
   CHECK(TropicalWeight::Type() == "tropical");
   CHECK(TropicalWeightTpl<double>::Type() != TropicalWeightTpl<float>::Type());
@@ -125,6 +127,15 @@ int main(int argc, char **argv) {
       tropical_product_weight_tester(tropical_product_generator);
   tropical_product_weight_tester.Test(FLAGS_repeat);
 
+  typedef PowerWeight<TropicalWeight, 3> TropicalCubeWeight;
+  typedef PowerWeightGenerator<TropicalWeightGenerator, 3>
+      TropicalCubeWeightGenerator;
+
+  TropicalCubeWeightGenerator tropical_cube_generator(seed);
+  WeightTester<TropicalCubeWeight, TropicalCubeWeightGenerator>
+      tropical_cube_weight_tester(tropical_cube_generator);
+  tropical_cube_weight_tester.Test(FLAGS_repeat);
+
   typedef ProductWeight<TropicalWeight, TropicalProductWeight>
       SecondNestedProductWeight;
   typedef ProductWeightGenerator<TropicalWeightGenerator,
@@ -135,7 +146,7 @@ int main(int argc, char **argv) {
       second_nested_product_weight_tester(second_nested_product_generator);
   second_nested_product_weight_tester.Test(FLAGS_repeat);
 
-  // This only works with fst_product_parentheses = "()"
+  // This only works with fst_weight_parentheses = "()"
   typedef ProductWeight<TropicalProductWeight, TropicalWeight>
       FirstNestedProductWeight;
   typedef ProductWeightGenerator<TropicalProductWeightGenerator,
@@ -145,13 +156,23 @@ int main(int argc, char **argv) {
   WeightTester<FirstNestedProductWeight, FirstNestedProductWeightGenerator>
       first_nested_product_weight_tester(first_nested_product_generator);
 
+  typedef PowerWeight<FirstNestedProductWeight, 3> NestedProductCubeWeight;
+  typedef PowerWeightGenerator<FirstNestedProductWeightGenerator, 3>
+      NestedProductCubeWeightGenerator;
+
+  NestedProductCubeWeightGenerator nested_product_cube_generator(seed);
+  WeightTester<NestedProductCubeWeight, NestedProductCubeWeightGenerator>
+      nested_product_cube_weight_tester(nested_product_cube_generator);
+
   // Test all product weight I/O with parentheses
-  FLAGS_fst_pair_parentheses = "()";
+  FLAGS_fst_weight_parentheses = "()";
   first_nested_product_weight_tester.Test(FLAGS_repeat);
+  nested_product_cube_weight_tester.Test(FLAGS_repeat);
   tropical_product_weight_tester.Test(5);
   second_nested_product_weight_tester.Test(5);
   tropical_gallic_tester.Test(5);
-  FLAGS_fst_pair_parentheses = "";
+  tropical_cube_weight_tester.Test(5);
+  FLAGS_fst_weight_parentheses = "";
 
   typedef LexicographicWeight<TropicalWeight, TropicalWeight>
       TropicalLexicographicWeight;

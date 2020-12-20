@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -22,7 +23,9 @@
 
 #include <functional>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 
 #include <fst/cache.h>
 #include <fst/determinize.h>
@@ -178,6 +181,9 @@ void SingleShortestPath(const Fst<Arc> &ifst,
     }
   }
   ofst->SetStart(s_p);
+  ofst->SetProperties(
+      ShortestPathProperties(ofst->Properties(kFstProperties, false)),
+      kFstProperties);
 }
 
 
@@ -349,6 +355,9 @@ void NShortestPath(const Fst<RevArc> &ifst,
     }
   }
   Connect(ofst);
+  ofst->SetProperties(
+      ShortestPathProperties(ofst->Properties(kFstProperties, false)),
+      kFstProperties);
 }
 
 

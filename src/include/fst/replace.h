@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
 //
 // \file
@@ -25,11 +26,15 @@
 using std::tr1::unordered_map;
 #include <string>
 #include <utility>
+using std::pair; using std::make_pair;
 #include <vector>
+using std::vector;
 
 #include <fst/fst.h>
 #include <fst/cache.h>
 #include <fst/expanded-fst.h>
+#include <fst/matcher.h>
+#include <fst/replace-util.h>
 #include <fst/state-table.h>
 #include <fst/test-properties.h>
 
@@ -54,7 +59,6 @@ namespace fst {
 //                     Label root);
 //
 //   // Required copy constructor that does not copy state
-//   // (as needed by fst->Copy(reset = true)).
 //   ReplaceStateTable(const ReplaceStateTable<A,P> &table);
 //
 //   // Lookup state ID by tuple. If it doesn't exist, then add it.
@@ -136,10 +140,32 @@ class ReplaceFstStateFingerprint {
 };
 
 
-// \class DefaultReplaceStateTable
-// Default replace state table
+// \class ReplaceHash
+// A generic hash function for replace state tuples.
+template <typename S, typename P>
+class ReplaceHash {
+ public:
+  size_t operator()(const ReplaceStateTuple<S, P>& t) const {
+    return t.prefix_id + t.fst_id * kPrime0 + t.fst_state * kPrime1;
+  }
+ private:
+  static const size_t kPrime0;
+  static const size_t kPrime1;
+};
+
+template <typename S, typename P>
+const size_t ReplaceHash<S, P>::kPrime0 = 7853;
+
+template <typename S, typename P>
+const size_t ReplaceHash<S, P>::kPrime1 = 7867;
+
+
+// \class VectorHashReplaceStateTable
+// A two-level state table for replace.
+// Warning: calls CountStates to compute the number of states of each
+// component Fst.
 template <class A, class P = ssize_t>
-class DefaultReplaceStateTable {
+class VectorHashReplaceStateTable {
  public:
   typedef A Arc;
   typedef typename A::StateId StateId;
@@ -151,7 +177,7 @@ class DefaultReplaceStateTable {
                                ReplaceFstStateFingerprint<StateId, P>,
                                ReplaceFingerprint<StateId, P> > StateTable;
 
-  DefaultReplaceStateTable(
+  VectorHashReplaceStateTable(
       const vector<pair<Label, const Fst<A>*> > &fst_tuples,
       Label root) : root_size_(0) {
     cumulative_size_array_.push_back(0);
@@ -172,7 +198,7 @@ class DefaultReplaceStateTable {
         root_size_ + cumulative_size_array_.back());
   }
 
-  DefaultReplaceStateTable(const DefaultReplaceStateTable<A,P> &table)
+  VectorHashReplaceStateTable(const VectorHashReplaceStateTable<A, P> &table)
       : root_size_(table.root_size_),
         cumulative_size_array_(table.cumulative_size_array_) {
     state_table_ = new StateTable(
@@ -183,7 +209,7 @@ class DefaultReplaceStateTable {
         root_size_ + cumulative_size_array_.back());
   }
 
-  ~DefaultReplaceStateTable() {
+  ~VectorHashReplaceStateTable() {
     delete state_table_;
   }
 
@@ -202,6 +228,32 @@ class DefaultReplaceStateTable {
 };
 
 
+// \class DefaultReplaceStateTable
+// Default replace state table
+template <class A, class P = ssize_t>
+class DefaultReplaceStateTable : public CompactHashStateTable<
+  ReplaceStateTuple<typename A::StateId, P>,
+  ReplaceHash<typename A::StateId, P> > {
+ public:
+  typedef A Arc;
+  typedef typename A::StateId StateId;
+  typedef typename A::Label Label;
+  typedef P PrefixId;
+  typedef ReplaceStateTuple<StateId, P> StateTuple;
+  typedef CompactHashStateTable<StateTuple,
+                                ReplaceHash<StateId, PrefixId> > StateTable;
+
+  using StateTable::FindState;
+  using StateTable::Tuple;
+
+  DefaultReplaceStateTable(
+      const vector<pair<Label, const Fst<A>*> > &fst_tuples,
+      Label root) {}
+
+  DefaultReplaceStateTable(const DefaultReplaceStateTable<A, P> &table)
+      : StateTable() {}
+};
+
 //
 // REPLACE FST CLASS
 //
@@ -209,22 +261,35 @@ class DefaultReplaceStateTable {
 // By default ReplaceFst will copy the input label of the 'replace arc'.
 // For acceptors we do not want this behaviour. Instead we need to
 // create an epsilon arc when recursing into the appropriate Fst.
-// The epsilon_on_replace option can be used to toggle this behaviour.
+// The 'epsilon_on_replace' option can be used to toggle this behaviour.
 template <class A, class T = DefaultReplaceStateTable<A> >
 struct ReplaceFstOptions : CacheOptions {
   int64 root;    // root rule for expansion
   bool  epsilon_on_replace;
-  T *state_table;
+  bool  take_ownership;  // take ownership of input Fst(s)
+  T*    state_table;
 
   ReplaceFstOptions(const CacheOptions &opts, int64 r)
-      : CacheOptions(opts), root(r), epsilon_on_replace(false),
+      : CacheOptions(opts),
+        root(r),
+        epsilon_on_replace(false),
+        take_ownership(false),
         state_table(0) {}
   explicit ReplaceFstOptions(int64 r)
-      : root(r), epsilon_on_replace(false), state_table(0) {}
+      : root(r),
+        epsilon_on_replace(false),
+        take_ownership(false),
+        state_table(0) {}
   ReplaceFstOptions(int64 r, bool epsilon_replace_arc)
-      : root(r), epsilon_on_replace(epsilon_replace_arc), state_table(0) {}
+      : root(r),
+        epsilon_on_replace(epsilon_replace_arc),
+        take_ownership(false),
+        state_table(0) {}
   ReplaceFstOptions()
-      : root(kNoLabel), epsilon_on_replace(false), state_table(0) {}
+      : root(kNoLabel),
+        epsilon_on_replace(false),
+        take_ownership(false),
+        state_table(0) {}
 };
 
 
@@ -247,8 +312,12 @@ class ReplaceFstImpl : public CacheImpl<A> {
   using FstImpl<A>::InputSymbols;
   using FstImpl<A>::OutputSymbols;
 
-  using CacheImpl<A>::HasStart;
+  using CacheImpl<A>::AddArc;
   using CacheImpl<A>::HasArcs;
+  using CacheImpl<A>::HasFinal;
+  using CacheImpl<A>::HasStart;
+  using CacheImpl<A>::SetArcs;
+  using CacheImpl<A>::SetFinal;
   using CacheImpl<A>::SetStart;
 
   typedef typename A::Label   Label;
@@ -298,7 +367,7 @@ class ReplaceFstImpl : public CacheImpl<A> {
       Label label = fst_tuples[i].first;
       const Fst<A> *fst = fst_tuples[i].second;
       nonterminal_hash_[label] = fst_array_.size();
-      fst_array_.push_back(fst->Copy());
+      fst_array_.push_back(opts.take_ownership ? fst : fst->Copy());
       if (fst->Start() == kNoStateId)
         all_non_empty = false;
       if(!fst->Properties(kILabelSorted, false))
@@ -308,20 +377,24 @@ class ReplaceFstImpl : public CacheImpl<A> {
       inprops.push_back(fst->Properties(kCopyProperties, false));
       if (i) {
         if (!CompatSymbols(InputSymbols(), fst->InputSymbols())) {
-          LOG(FATAL) << "ReplaceFst::AddFst input symbols of Fst " << i
+          LOG(FATAL) << "ReplaceFstImpl: input symbols of Fst " << i
                      << " does not match input symbols of base Fst (0'th fst)";
         }
         if (!CompatSymbols(OutputSymbols(), fst->OutputSymbols())) {
-          LOG(FATAL) << "ReplaceFst::AddFst output symbols of Fst " << i
+          LOG(FATAL) << "ReplaceFstImpl: output symbols of Fst " << i
                      << " does not match output symbols of base Fst "
                      << "(0'th fst)";
         }
       }
     }
     Label nonterminal = nonterminal_hash_[opts.root];
+    if ((nonterminal == 0) && (fst_array_.size() > 1)) {
+      LOG(FATAL) << "ReplaceFstImpl: no Fst corresponding to root label '"
+                 << opts.root << "' in the input tuple vector";
+    }
     root_ = (nonterminal > 0) ? nonterminal : 1;
 
-    SetProperties(ReplaceProperties(inprops, root_, epsilon_on_replace_,
+    SetProperties(ReplaceProperties(inprops, root_ - 1, epsilon_on_replace_,
                                     all_non_empty));
     // We assume that all terminals are positive.  The resulting
     // ReplaceFst is known to be kILabelSorted when all sub-FSTs are
@@ -339,11 +412,20 @@ class ReplaceFstImpl : public CacheImpl<A> {
     //  2. all non-terninals are positive and form a dense range containing 1.
     if (all_olabel_sorted && (all_negative || dense_range))
       SetProperties(kOLabelSorted, kOLabelSorted);
+
+    // Enable optional caching as long as sorted and all non empty.
+    if (Properties(kILabelSorted | kOLabelSorted) && all_non_empty)
+      always_cache_ = false;
+    else
+      always_cache_ = true;
+    VLOG(2) << "ReplaceFstImpl::ReplaceFstImpl: always_cache = "
+            << (always_cache_ ? "true" : "false");
   }
 
   ReplaceFstImpl(const ReplaceFstImpl& impl)
       : CacheImpl<A>(impl),
         epsilon_on_replace_(impl.epsilon_on_replace_),
+        always_cache_(impl.always_cache_),
         state_table_(new StateTable(*(impl.state_table_))),
         nonterminal_hash_(impl.nonterminal_hash_),
         root_(impl.root_) {
@@ -359,6 +441,11 @@ class ReplaceFstImpl : public CacheImpl<A> {
   }
 
   ~ReplaceFstImpl() {
+    VLOG(2) << "~ReplaceFstImpl: gc = "
+            << (CacheImpl<A>::GetCacheGc() ? "true" : "false")
+            << ", gc_size = " << CacheImpl<A>::GetCacheSize()
+            << ", gc_limit = " << CacheImpl<A>::GetCacheLimit();
+
     delete state_table_;
     for (size_t i = 1; i < fst_array_.size(); ++i) {
       delete fst_array_[i];
@@ -369,34 +456,8 @@ class ReplaceFstImpl : public CacheImpl<A> {
   // true if the dependencies are cyclic. Cyclic dependencies will result
   // in an un-expandable replace fst.
   bool CyclicDependencies() const {
-    StdVectorFst depfst;
-
-    // one state for each fst
-    for (size_t i = 1; i < fst_array_.size(); ++i)
-      depfst.AddState();
-
-    // an arc from each state (representing the fst) to the
-    // state representing the fst being replaced
-    for (size_t i = 1; i < fst_array_.size(); ++i) {
-      for (StateIterator<Fst<A> > siter(*(fst_array_[i]));
-           !siter.Done(); siter.Next()) {
-        for (ArcIterator<Fst<A> > aiter(*(fst_array_[i]), siter.Value());
-             !aiter.Done(); aiter.Next()) {
-          const A& arc = aiter.Value();
-
-          typename NonTerminalHash::const_iterator it =
-              nonterminal_hash_.find(arc.olabel);
-          if (it != nonterminal_hash_.end()) {
-            Label j = it->second - 1;
-            depfst.AddArc(i - 1, A(arc.olabel, arc.olabel, Weight::One(), j));
-          }
-        }
-      }
-    }
-
-    depfst.SetStart(root_ - 1);
-    depfst.SetFinal(root_ - 1, Weight::One());
-    return depfst.Properties(kCyclic, true);
+    ReplaceUtil<A> replace_util(fst_array_, nonterminal_hash_, root_);
+    return replace_util.CyclicDependencies();
   }
 
   // Return or compute start state of replace fst
@@ -439,21 +500,102 @@ class ReplaceFstImpl : public CacheImpl<A> {
   }
 
   size_t NumArcs(StateId s) {
-    if (!HasArcs(s))
+    if (HasArcs(s)) {  // If state cached, use the cached value.
+      return CacheImpl<A>::NumArcs(s);
+    } else if (always_cache_) {  // If always caching, expand and cache state.
       Expand(s);
-    return CacheImpl<A>::NumArcs(s);
+      return CacheImpl<A>::NumArcs(s);
+    } else {  // Otherwise compute the number of arcs without expanding.
+      StateTuple tuple  = state_table_->Tuple(s);
+      if (tuple.fst_state == kNoStateId)
+        return 0;
+
+      const Fst<A>* fst = fst_array_[tuple.fst_id];
+      size_t num_arcs = fst->NumArcs(tuple.fst_state);
+      if (ComputeFinalArc(tuple, 0))
+        num_arcs++;
+
+      return num_arcs;
+    }
+  }
+
+  // Returns whether a given label is a non terminal
+  bool IsNonTerminal(Label l) const {
+    // TODO(allauzen): be smarter and take advantage of
+    // all_dense or all_negative.
+    // Use also in ComputeArc, this would require changes to replace
+    // so that recursing into an empty fst lead to a non co-accessible
+    // state instead of deleting the arc as done currently.
+    // Current use correct, since i/olabel sorted iff all_non_empty.
+    typename NonTerminalHash::const_iterator it =
+        nonterminal_hash_.find(l);
+    return it != nonterminal_hash_.end();
   }
 
   size_t NumInputEpsilons(StateId s) {
-    if (!HasArcs(s))
+    if (HasArcs(s)) {
+      // If state cached, use the cached value.
+      return CacheImpl<A>::NumInputEpsilons(s);
+    } else if (always_cache_ || !Properties(kILabelSorted)) {
+      // If always caching or if the number of input epsilons is too expensive
+      // to compute without caching (i.e. not ilabel sorted),
+      // then expand and cache state.
       Expand(s);
-    return CacheImpl<A>::NumInputEpsilons(s);
+      return CacheImpl<A>::NumInputEpsilons(s);
+    } else {
+      // Otherwise, compute the number of input epsilons without caching.
+      StateTuple tuple  = state_table_->Tuple(s);
+      if (tuple.fst_state == kNoStateId)
+        return 0;
+      const Fst<A>* fst = fst_array_[tuple.fst_id];
+      size_t num  = 0;
+      if (!epsilon_on_replace_) {
+        // If epsilon_on_replace is false, all input epsilon arcs
+        // are also input epsilons arcs in the underlying machine.
+        fst->NumInputEpsilons(tuple.fst_state);
+      } else {
+        // Otherwise, one need to consider that all non-terminal arcs
+        // in the underlying machine also become input epsilon arc.
+        ArcIterator<Fst<A> > aiter(*fst, tuple.fst_state);
+        for (; !aiter.Done() &&
+                 ((aiter.Value().ilabel == 0) ||
+                  IsNonTerminal(aiter.Value().olabel));
+             aiter.Next())
+          ++num;
+      }
+      if (ComputeFinalArc(tuple, 0))
+        num++;
+      return num;
+    }
   }
 
   size_t NumOutputEpsilons(StateId s) {
-    if (!HasArcs(s))
+    if (HasArcs(s)) {
+      // If state cached, use the cached value.
+      return CacheImpl<A>::NumOutputEpsilons(s);
+    } else if(always_cache_ || !Properties(kOLabelSorted)) {
+      // If always caching or if the number of output epsilons is too expensive
+      // to compute without caching (i.e. not olabel sorted),
+      // then expand and cache state.
       Expand(s);
-    return CacheImpl<A>::NumOutputEpsilons(s);
+      return CacheImpl<A>::NumOutputEpsilons(s);
+    } else {
+      // Otherwise, compute the number of output epsilons without caching.
+      StateTuple tuple  = state_table_->Tuple(s);
+      if (tuple.fst_state == kNoStateId)
+        return 0;
+      const Fst<A>* fst = fst_array_[tuple.fst_id];
+      size_t num  = 0;
+      ArcIterator<Fst<A> > aiter(*fst, tuple.fst_state);
+      for (; !aiter.Done() &&
+               ((aiter.Value().olabel == 0) ||
+                IsNonTerminal(aiter.Value().olabel));
+           aiter.Next())
+        ++num;
+      if (ComputeFinalArc(tuple, 0))
+        num++;
+      return num;
+    }
   }
 
   // return the base arc iterator, if arcs have not been computed yet,
@@ -462,72 +604,165 @@ class ReplaceFstImpl : public CacheImpl<A> {
     if (!HasArcs(s))
       Expand(s);
     CacheImpl<A>::InitArcIterator(s, data);
+    // TODO(allauzen): Set behaviour of generic iterator
+    // Warning: ArcIterator<ReplaceFst<A> >::InitCache()
+    // relies on current behaviour.
   }
 
-  // extend current state (walk arcs one level deep)
-  void Expand(StateId s) {
 
-    StateTuple tuple  = state_table_->Tuple(s);
-    const Fst<A>* fst = fst_array_[tuple.fst_id];
-    StateId fst_state = tuple.fst_state;
-    if (fst_state == kNoStateId) {
+  // Extend current state (walk arcs one level deep)
+  void Expand(StateId s) {
+    StateTuple tuple = state_table_->Tuple(s);
+
+    // If local fst is empty
+    if (tuple.fst_state == kNoStateId) {
       SetArcs(s);
       return;
     }
 
-    // if state is final, pop up stack
-    const StackPrefix& stack = stackprefix_array_[tuple.prefix_id];
-    if (fst->Final(fst_state) != Weight::Zero() && stack.Depth()) {
-      PrefixId prefix_id = PopPrefix(stack);
-      const PrefixTuple& top = stack.Top();
+    ArcIterator< Fst<A> > aiter(
+        *(fst_array_[tuple.fst_id]), tuple.fst_state);
+    Arc arc;
 
-      StateId nextstate = state_table_->FindState(
-          StateTuple(prefix_id, top.fst_id, top.nextstate));
-      AddArc(s, A(0, 0, fst->Final(fst_state), nextstate));
-    }
+    // Create a final arc when needed
+    if (ComputeFinalArc(tuple, &arc))
+      AddArc(s, arc);
 
-    // extend arcs leaving the state
-    for (ArcIterator< Fst<A> > aiter(*fst, fst_state);
-         !aiter.Done(); aiter.Next()) {
-      const Arc& arc = aiter.Value();
-      if (arc.olabel == 0) {  // expand local fst
-        StateId nextstate = state_table_->FindState(
-            StateTuple(tuple.prefix_id, tuple.fst_id, arc.nextstate));
-        AddArc(s, A(arc.ilabel, arc.olabel, arc.weight, nextstate));
-      } else {
-        // check for non terminal
-        typename NonTerminalHash::const_iterator it =
-            nonterminal_hash_.find(arc.olabel);
-        if (it != nonterminal_hash_.end()) {  // recurse into non terminal
-          Label nonterminal = it->second;
-          const Fst<A>* nt_fst = fst_array_[nonterminal];
-          PrefixId nt_prefix = PushPrefix(stackprefix_array_[tuple.prefix_id],
-                                          tuple.fst_id, arc.nextstate);
-
-          // if start state is valid replace, else arc is implicitly
-          // deleted
-          StateId nt_start = nt_fst->Start();
-          if (nt_start != kNoStateId) {
-            StateId nt_nextstate = state_table_->FindState(
-                StateTuple(nt_prefix, nonterminal, nt_start));
-            Label ilabel = (epsilon_on_replace_) ? 0 : arc.ilabel;
-            AddArc(s, A(ilabel, 0, arc.weight, nt_nextstate));
-          }
-        } else {
-          StateId nextstate =  state_table_->FindState(
-                StateTuple(tuple.prefix_id, tuple.fst_id, arc.nextstate));
-          AddArc(s, A(arc.ilabel, arc.olabel, arc.weight, nextstate));
-        }
-      }
+    // Expand all arcs leaving the state
+    for (;!aiter.Done(); aiter.Next()) {
+      if (ComputeArc(tuple, aiter.Value(), &arc))
+        AddArc(s, arc);
     }
 
     SetArcs(s);
   }
 
+  void Expand(StateId s, const StateTuple &tuple,
+              const ArcIteratorData<A> &data) {
+     // If local fst is empty
+    if (tuple.fst_state == kNoStateId) {
+      SetArcs(s);
+      return;
+    }
+
+    ArcIterator< Fst<A> > aiter(data);
+    Arc arc;
+
+    // Create a final arc when needed
+    if (ComputeFinalArc(tuple, &arc))
+      AddArc(s, arc);
+
+    // Expand all arcs leaving the state
+    for (; !aiter.Done(); aiter.Next()) {
+      if (ComputeArc(tuple, aiter.Value(), &arc))
+        AddArc(s, arc);
+    }
+
+    SetArcs(s);
+  }
+
+  // If arcp == 0, only returns if a final arc is required, does not
+  // actually compute it.
+  bool ComputeFinalArc(const StateTuple &tuple, A* arcp,
+                       uint32 flags = kArcValueFlags) {
+    const Fst<A>* fst = fst_array_[tuple.fst_id];
+    StateId fst_state = tuple.fst_state;
+    if (fst_state == kNoStateId)
+      return false;
+
+   // if state is final, pop up stack
+    const StackPrefix& stack = stackprefix_array_[tuple.prefix_id];
+    if (fst->Final(fst_state) != Weight::Zero() && stack.Depth()) {
+      if (arcp) {
+        arcp->ilabel = 0;
+        arcp->olabel = 0;
+        if (flags & kArcNextStateValue) {
+          PrefixId prefix_id = PopPrefix(stack);
+          const PrefixTuple& top = stack.Top();
+          arcp->nextstate = state_table_->FindState(
+              StateTuple(prefix_id, top.fst_id, top.nextstate));
+        }
+        if (flags & kArcWeightValue)
+          arcp->weight = fst->Final(fst_state);
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  // Compute the arc in the replace fst corresponding to a given
+  // in the underlying machine. Returns false if the underlying arc
+  // corresponds to no arc in the replace.
+  bool ComputeArc(const StateTuple &tuple, const A &arc, A* arcp,
+                  uint32 flags = kArcValueFlags) {
+    if (!epsilon_on_replace_ &&
+        (flags == (flags & (kArcILabelValue | kArcWeightValue)))) {
+      *arcp = arc;
+      return true;
+    }
+
+    if (arc.olabel == 0) {  // expand local fst
+      StateId nextstate = flags & kArcNextStateValue
+          ? state_table_->FindState(
+              StateTuple(tuple.prefix_id, tuple.fst_id, arc.nextstate))
+          : kNoStateId;
+      *arcp = A(arc.ilabel, arc.olabel, arc.weight, nextstate);
+    } else {
+      // check for non terminal
+      typename NonTerminalHash::const_iterator it =
+          nonterminal_hash_.find(arc.olabel);
+      if (it != nonterminal_hash_.end()) {  // recurse into non terminal
+        Label nonterminal = it->second;
+        const Fst<A>* nt_fst = fst_array_[nonterminal];
+        PrefixId nt_prefix = PushPrefix(stackprefix_array_[tuple.prefix_id],
+                                        tuple.fst_id, arc.nextstate);
+
+        // if start state is valid replace, else arc is implicitly
+        // deleted
+        StateId nt_start = nt_fst->Start();
+        if (nt_start != kNoStateId) {
+          StateId nt_nextstate =  flags & kArcNextStateValue
+              ? state_table_->FindState(
+                  StateTuple(nt_prefix, nonterminal, nt_start))
+              : kNoStateId;
+          Label ilabel = (epsilon_on_replace_) ? 0 : arc.ilabel;
+          *arcp = A(ilabel, 0, arc.weight, nt_nextstate);
+        } else {
+          return false;
+        }
+      } else {
+        StateId nextstate = flags & kArcNextStateValue
+            ? state_table_->FindState(
+                StateTuple(tuple.prefix_id, tuple.fst_id, arc.nextstate))
+            : kNoStateId;
+        *arcp = A(arc.ilabel, arc.olabel, arc.weight, nextstate);
+      }
+    }
+    return true;
+  }
+
+  // Returns the arc iterator flags supported by this Fst.
+  uint32 ArcIteratorFlags() const {
+    uint32 flags = kArcValueFlags;
+    if (!always_cache_)
+      flags |= kArcNoCache;
+    return flags;
+  }
+
+  T* GetStateTable() const {
+    return state_table_;
+  }
+
+  const Fst<A>* GetFst(Label fst_id) const {
+    return fst_array_[fst_id];
+  }
+
+  bool EpsilonOnReplace() const { return epsilon_on_replace_; }
 
   // private helper classes
  private:
-  static const int kPrime0 = 7853;
+  static const size_t kPrime0;
 
   // \class PrefixTuple
   // \brief Tuple of fst_id and destination state (entry in stack prefix)
@@ -633,6 +868,7 @@ class ReplaceFstImpl : public CacheImpl<A> {
  private:
   // runtime options
   bool epsilon_on_replace_;
+  bool always_cache_;  // Optionally caching arc iterator disabled when true
 
   // state table
   StateTable *state_table_;
@@ -649,6 +885,9 @@ class ReplaceFstImpl : public CacheImpl<A> {
   void operator=(const ReplaceFstImpl<A, T> &);  // disallow
 };
 
+
+template <class A, class T>
+const size_t ReplaceFstImpl<A, T>::kPrime0 = 7853;
 
 //
 // \class ReplaceFst
@@ -673,99 +912,77 @@ class ReplaceFstImpl : public CacheImpl<A> {
 // Fst is a single Arc on the start State that self loops, it references
 // the particular machine for which we are performing the closure operation.
 //
+// The ReplaceFst class supports an optionally caching arc iterator:
+//    ArcIterator< ReplaceFst<A> >
+// The ReplaceFst need to be built such that it is known to be ilabel
+// or olabel sorted (see usage below).
+//
+// Observe that Matcher<Fst<A> > will use the optionally caching arc
+// iterator when available (Fst is ilabel sorted and matching on the
+// input, or Fst is olabel sorted and matching on the output).
+// In order to obtain the most efficient behaviour, it is recommended
+// to set 'epsilon_on_replace' to false (this means constructing acceptors
+// as transducers with epsilons on the input side of nonterminal arcs)
+// and matching on the input side.
+//
+// This class attaches interface to implementation and handles
+// reference counting, delegating most methods to ImplToFst.
 template <class A, class T = DefaultReplaceStateTable<A> >
-class ReplaceFst : public Fst<A> {
+class ReplaceFst : public ImplToFst< ReplaceFstImpl<A, T> > {
  public:
   friend class ArcIterator< ReplaceFst<A, T> >;
-  friend class CacheStateIterator< ReplaceFst<A, T> >;
-  friend class CacheArcIterator< ReplaceFst<A, T> >;
+  friend class StateIterator< ReplaceFst<A, T> >;
 
   typedef A Arc;
   typedef typename A::Label   Label;
   typedef typename A::Weight  Weight;
   typedef typename A::StateId StateId;
   typedef CacheState<A> State;
+  typedef ReplaceFstImpl<A, T> Impl;
+
+  using ImplToFst<Impl>::Properties;
 
   ReplaceFst(const vector<pair<Label, const Fst<A>* > >& fst_array,
              Label root)
-      : impl_(new ReplaceFstImpl<A, T>(fst_array,
-                                       ReplaceFstOptions<A, T>(root))) {}
+      : ImplToFst<Impl>(new Impl(fst_array, ReplaceFstOptions<A, T>(root))) {}
 
   ReplaceFst(const vector<pair<Label, const Fst<A>* > >& fst_array,
              const ReplaceFstOptions<A, T> &opts)
-      : impl_(new ReplaceFstImpl<A, T>(fst_array, opts)) {}
+      : ImplToFst<Impl>(new Impl(fst_array, opts)) {}
 
-  ReplaceFst(const ReplaceFst<A, T>& fst, bool reset = false) {
-    if (reset) {
-      impl_ = new ReplaceFstImpl<A, T>(*(fst.impl_));
-    } else {
-      impl_ = fst.impl_;
-      impl_->IncrRefCount();
-    }
-  }
+  // See Fst<>::Copy() for doc.
+  ReplaceFst(const ReplaceFst<A, T>& fst, bool safe = false)
+      : ImplToFst<Impl>(fst, safe) {}
 
-  virtual ~ReplaceFst() {
-    if (!impl_->DecrRefCount()) delete impl_;
-  }
-
-  virtual StateId Start() const {
-    return impl_->Start();
-  }
-
-  virtual Weight Final(StateId s) const {
-    return impl_->Final(s);
-  }
-
-  virtual size_t NumArcs(StateId s) const {
-    return impl_->NumArcs(s);
-  }
-
-  virtual size_t NumInputEpsilons(StateId s) const {
-    return impl_->NumInputEpsilons(s);
-  }
-
-  virtual size_t NumOutputEpsilons(StateId s) const {
-    return impl_->NumOutputEpsilons(s);
-  }
-
-  virtual uint64 Properties(uint64 mask, bool test) const {
-    if (test) {
-      uint64 known, test = TestProperties(*this, mask, &known);
-      impl_->SetProperties(test, known);
-      return test & mask;
-    } else {
-      return impl_->Properties(mask);
-    }
-  }
-
-  virtual const string& Type() const {
-    return impl_->Type();
-  }
-
-  virtual ReplaceFst<A, T> *Copy(bool reset = false) const {
-    return new ReplaceFst<A, T>(*this, reset);
-  }
-
-  virtual const SymbolTable* InputSymbols() const {
-    return impl_->InputSymbols();
-  }
-
-  virtual const SymbolTable* OutputSymbols() const {
-    return impl_->OutputSymbols();
+  // Get a copy of this ReplaceFst. See Fst<>::Copy() for further doc.
+  virtual ReplaceFst<A, T> *Copy(bool safe = false) const {
+    return new ReplaceFst<A, T>(*this, safe);
   }
 
   virtual inline void InitStateIterator(StateIteratorData<A> *data) const;
 
   virtual void InitArcIterator(StateId s, ArcIteratorData<A> *data) const {
-    impl_->InitArcIterator(s, data);
+    GetImpl()->InitArcIterator(s, data);
+  }
+
+  virtual MatcherBase<A> *InitMatcher(MatchType match_type) const {
+    if ((GetImpl()->ArcIteratorFlags() & kArcNoCache) &&
+        ((match_type == MATCH_INPUT && Properties(kILabelSorted, false)) ||
+         (match_type == MATCH_OUTPUT && Properties(kOLabelSorted, false))))
+      return new SortedMatcher< ReplaceFst<A> >(*this, match_type);
+    else
+      return 0;
   }
 
   bool CyclicDependencies() const {
-    return impl_->CyclicDependencies();
+    return GetImpl()->CyclicDependencies();
   }
 
  private:
-  ReplaceFstImpl<A, T>* impl_;
+  // Makes visible to friends.
+  Impl *GetImpl() const { return ImplToFst<Impl>::GetImpl(); }
+
+  void operator=(const ReplaceFst<A> &fst);  // disallow
 };
 
 
@@ -775,28 +992,211 @@ class StateIterator< ReplaceFst<A, T> >
     : public CacheStateIterator< ReplaceFst<A, T> > {
  public:
   explicit StateIterator(const ReplaceFst<A, T> &fst)
-      : CacheStateIterator< ReplaceFst<A, T> >(fst) {}
+      : CacheStateIterator< ReplaceFst<A, T> >(fst, fst.GetImpl()) {}
 
  private:
   DISALLOW_COPY_AND_ASSIGN(StateIterator);
 };
 
+
 // Specialization for ReplaceFst.
+// Implements optional caching. It can be used as follows:
+//
+//   ReplaceFst<A> replace;
+//   ArcIterator< ReplaceFst<A> > aiter(replace, s);
+//   // Note: ArcIterator< Fst<A> > is always a caching arc iterator.
+//   aiter.SetFlags(kArcNoCache, kArcNoCache);
+//   // Use the arc iterator, no arc will be cached, no state will be expanded.
+//   // The varied 'kArcValueFlags' can be used to decide which part
+//   // of arc values needs to be computed.
+//   aiter.SetFlags(kArcILabelValue, kArcValueFlags);
+//   // Only want the ilabel for this arc
+//   aiter.Value();  // Does not compute the destination state.
+//   aiter.Next();
+//   aiter.SetFlags(kArcNextStateValue, kArcNextStateValue);
+//   // Want both ilabel and nextstate for that arc
+//   aiter.Value();  // Does compute the destination state and inserts it
+//                   // in the replace state table.
+//   // No Arc has been cached at that point.
+//
 template <class A, class T>
-class ArcIterator< ReplaceFst<A, T> >
-    : public CacheArcIterator< ReplaceFst<A, T> > {
+class ArcIterator< ReplaceFst<A, T> > {
  public:
+  typedef A Arc;
   typedef typename A::StateId StateId;
 
   ArcIterator(const ReplaceFst<A, T> &fst, StateId s)
-      : CacheArcIterator< ReplaceFst<A, T> >(fst, s) {
-    if (!fst.impl_->HasArcs(s))
-      fst.impl_->Expand(s);
+      : fst_(fst), state_(s), pos_(0), offset_(0), flags_(0), arcs_(0),
+        data_flags_(0), final_flags_(0) {
+    cache_data_.ref_count = 0;
+    local_data_.ref_count = 0;
+
+    // If FST does not support optional caching, force caching.
+    if(!(fst_.GetImpl()->ArcIteratorFlags() & kArcNoCache) &&
+       !(fst_.GetImpl()->HasArcs(state_)))
+       fst_.GetImpl()->Expand(state_);
+
+    // If state is already cached, use cached arcs array.
+    if (fst_.GetImpl()->HasArcs(state_)) {
+      (fst_.GetImpl())->template CacheImpl<A>::InitArcIterator(state_,
+                                                               &cache_data_);
+      num_arcs_ = cache_data_.narcs;
+      arcs_ = cache_data_.arcs;      // 'arcs_' is a ptr to the cached arcs.
+      data_flags_ = kArcValueFlags;  // All the arc member values are valid.
+    } else {  // Otherwise delay decision until Value() is called.
+      tuple_ = fst_.GetImpl()->GetStateTable()->Tuple(state_);
+      if (tuple_.fst_state == kNoStateId) {
+        num_arcs_ = 0;
+      } else {
+        // The decision to cache or not to cache has been defered
+        // until Value() or SetFlags() is called. However, the arc
+        // iterator is set up now to be ready for non-caching in order
+        // to keep the Value() method simple and efficient.
+        const Fst<A>* fst = fst_.GetImpl()->GetFst(tuple_.fst_id);
+        fst->InitArcIterator(tuple_.fst_state, &local_data_);
+        // 'arcs_' is a pointer to the arcs in the underlying machine.
+        arcs_ = local_data_.arcs;
+        // Compute the final arc (but not its destination state)
+        // if a final arc is required.
+        bool has_final_arc = fst_.GetImpl()->ComputeFinalArc(
+            tuple_,
+            &final_arc_,
+            kArcValueFlags & ~kArcNextStateValue);
+        // Set the arc value flags that hold for 'final_arc_'.
+        final_flags_ = kArcValueFlags & ~kArcNextStateValue;
+        // Compute the number of arcs.
+        num_arcs_ = local_data_.narcs;
+        if (has_final_arc)
+          ++num_arcs_;
+        // Set the offset between the underlying arc positions and
+        // the positions in the arc iterator.
+        offset_ = num_arcs_ - local_data_.narcs;
+        // Defers the decision to cache or not until Value() or
+        // SetFlags() is called.
+        data_flags_ = 0;
+      }
+    }
+  }
+
+  ~ArcIterator() {
+    if (cache_data_.ref_count)
+      --(*cache_data_.ref_count);
+    if (local_data_.ref_count)
+      --(*local_data_.ref_count);
+  }
+
+  void ExpandAndCache() const  __attribute__((noinline)) {
+    // TODO(allauzen): revisit this
+    // fst_.GetImpl()->Expand(state_, tuple_, local_data_);
+    // (fst_.GetImpl())->CacheImpl<A>*>::InitArcIterator(state_,
+    //                                               &cache_data_);
+    //
+    fst_.InitArcIterator(state_, &cache_data_);  // Expand and cache state.
+    arcs_ = cache_data_.arcs;  // 'arcs_' is a pointer to the cached arcs.
+    data_flags_ = kArcValueFlags;  // All the arc member values are valid.
+    offset_ = 0;  // No offset
+
+  }
+
+  void Init() {
+    if (flags_ & kArcNoCache) {  // If caching is disabled
+      // 'arcs_' is a pointer to the arcs in the underlying machine.
+      arcs_ = local_data_.arcs;
+      // Set the arcs value flags that hold for 'arcs_'.
+      data_flags_ = kArcWeightValue;
+      if (!fst_.GetImpl()->EpsilonOnReplace())
+          data_flags_ |= kArcILabelValue;
+      // Set the offset between the underlying arc positions and
+      // the positions in the arc iterator.
+      offset_ = num_arcs_ - local_data_.narcs;
+    } else {  // Otherwise, expand and cache
+      ExpandAndCache();
+    }
+  }
+
+  bool Done() const { return pos_ >= num_arcs_; }
+
+  const A& Value() const {
+    // If 'data_flags_' was set to 0, non-caching was not requested
+    if (!data_flags_) {
+      CHECK(!(flags_ & kArcNoCache));  // Do not remove, more efficient!!
+      ExpandAndCache();  // Expand and cache.
+    }
+
+    if (pos_ - offset_ >= 0) {  // The requested arc is not the 'final' arc.
+      const A& arc = arcs_[pos_ - offset_];
+      if ((data_flags_ & flags_) == (flags_ & kArcValueFlags)) {
+        // If the value flags for 'arc' match the recquired value flags
+        // then return 'arc'.
+        return arc;
+      } else {
+        // Otherwise, compute the corresponding arc on-the-fly.
+        fst_.GetImpl()->ComputeArc(tuple_, arc, &arc_, flags_ & kArcValueFlags);
+        return arc_;
+      }
+    } else {  // The requested arc is the 'final' arc.
+      if ((final_flags_ & flags_) != (flags_ & kArcValueFlags)) {
+        // If the arc value flags that hold for the final arc
+        // do not match the requested value flags, then
+        // 'final_arc_' needs to be updated.
+        fst_.GetImpl()->ComputeFinalArc(tuple_, &final_arc_,
+                                    flags_ & kArcValueFlags);
+        final_flags_ = flags_ & kArcValueFlags;
+      }
+      return final_arc_;
+    }
+  }
+
+  void Next() { ++pos_; }
+
+  size_t Position() const { return pos_; }
+
+  void Reset() { pos_ = 0;  }
+
+  void Seek(size_t pos) { pos_ = pos; }
+
+  uint32 Flags() const { return flags_; }
+
+  void SetFlags(uint32 f, uint32 mask) {
+    // Update the flags taking into account what flags are supported
+    // by the Fst.
+    flags_ &= ~mask;
+    flags_ |= (f & fst_.GetImpl()->ArcIteratorFlags());
+    // If non-caching is not requested (and caching has not already
+    // been performed), then flush 'data_flags_' to request caching
+    // during the next call to Value().
+    if (!(flags_ & kArcNoCache) && data_flags_ != kArcValueFlags) {
+      if (!fst_.GetImpl()->HasArcs(state_))
+         data_flags_ = 0;
+    }
+    // If 'data_flags_' has been flushed but non-caching is requested
+    // before calling Value(), then set up the iterator for non-caching.
+    if ((f & kArcNoCache) && (!data_flags_))
+      Init();
   }
 
  private:
+  const ReplaceFst<A, T> &fst_;           // Reference to the FST
+  StateId state_;                         // State in the FST
+  mutable typename T::StateTuple tuple_;  // Tuple corresponding to state_
+
+  ssize_t pos_;             // Current position
+  mutable ssize_t offset_;  // Offset between position in iterator and in arcs_
+  ssize_t num_arcs_;        // Number of arcs at state_
+  uint32 flags_;            // Behavorial flags for the arc iterator
+  mutable Arc arc_;         // Memory to temporarily store computed arcs
+
+  mutable ArcIteratorData<Arc> cache_data_;  // Arc iterator data in cache
+  mutable ArcIteratorData<Arc> local_data_;  // Arc iterator data in local fst
+
+  mutable const A* arcs_;       // Array of arcs
+  mutable uint32 data_flags_;   // Arc value flags valid for data in arcs_
+  mutable Arc final_arc_;       // Final arc (when required)
+  mutable uint32 final_flags_;  // Arc value flags valid for final_arc_
+
   DISALLOW_COPY_AND_ASSIGN(ArcIterator);
 };
+
 
 template <class A, class T> inline
 void ReplaceFst<A, T>::InitStateIterator(StateIteratorData<A> *data) const {

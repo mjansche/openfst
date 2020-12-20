@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -20,6 +21,8 @@
 
 #ifndef FST_LIB_FST_DECL_H__
 #define FST_LIB_FST_DECL_H__
+
+#include <fst/types.h>
 
 namespace fst {
 
@@ -42,6 +45,7 @@ typedef ArcTpl<LogWeight> LogArc;
 
 template <class A, class C, class U = uint32> class CompactFst;
 template <class A, class U = uint32> class ConstFst;
+template <class A> class EditFst;
 template <class A> class ExpandedFst;
 template <class A> class Fst;
 template <class A> class MutableFst;
@@ -63,7 +67,7 @@ template <class A, class T> class ReplaceFst;
 template <class A> class RmEpsilonFst;
 template <class A> class UnionFst;
 
-template <class T, class Compare> class Heap;
+template <class T, class Compare, bool max> class Heap;
 
 template <class A> class AcceptorCompactor;
 template <class A> class StringCompactor;
@@ -89,6 +93,7 @@ typedef Fst<StdArc> StdFst;
 typedef MutableFst<StdArc> StdMutableFst;
 typedef VectorFst<StdArc> StdVectorFst;
 
+
 template <class C> class StdArcSortFst;
 typedef ClosureFst<StdArc> StdClosureFst;
 typedef ComposeFst<StdArc> StdComposeFst;
@@ -103,6 +108,16 @@ typedef ReplaceFst<StdArc, DefaultReplaceStateTable<StdArc, ssize_t> >
 StdReplaceFst;
 typedef RmEpsilonFst<StdArc> StdRmEpsilonFst;
 typedef UnionFst<StdArc> StdUnionFst;
+
+template <typename T> class IntegerFilterState;
+typedef IntegerFilterState<signed char> CharFilterState;
+typedef IntegerFilterState<short> ShortFilterState;
+typedef IntegerFilterState<int> IntFilterState;
+
+template <class F> class Matcher;
+template <class M1, class M2 = M1> class SequenceComposeFilter;
+template <class M1, class M2 = M1> class AltSequenceComposeFilter;
+template <class M1, class M2 = M1> class MatchComposeFilter;
 
 }
 

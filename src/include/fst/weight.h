@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -74,7 +75,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "fst/compat.h"
+#include <fst/compat.h>
 #include <fst/util.h>
 
 namespace fst {

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -20,29 +21,33 @@
 #include <fst/fst.h>
 
 // Include these so they are registered
-#include <fst/const-fst.h>
-#include <fst/vector-fst.h>
 #include <fst/compact-fst.h>
+#include <fst/const-fst.h>
+#include <fst/matcher-fst.h>
+#include <fst/vector-fst.h>
 
 // FST flag definitions
 
 DEFINE_bool(fst_verify_properties, false,
             "Verify fst properties queried by TestProperties");
 
-DEFINE_string(fst_pair_separator, ",",
-              "Character separator between printed pair weights; "
+DEFINE_string(fst_weight_separator, ",",
+              "Character separator between printed composite weights; "
               "must be a single character");
 
-DEFINE_string(fst_pair_parentheses, "",
-              "Characters enclosing the first weight of a printed pair "
-              "weight (and derived classes) to ensure proper I/O of nested "
-              "pair weights; "
+DEFINE_string(fst_weight_parentheses, "",
+              "Characters enclosing the first weight of a printed composite "
+              "weight (e.g. pair weight, tuple weight and derived classes) to "
+              "ensure proper I/O of nested composite weights; "
               "must have size 0 (none) or 2 (open and close parenthesis)");
 
 DEFINE_bool(fst_default_cache_gc, true, "Enable garbage collection of cache");
 
 DEFINE_int64(fst_default_cache_gc_limit, 1<<20LL,
              "Cache byte size that triggers garbage collection");
+
+DEFINE_string(save_relabel_ipairs, "",  "Save input relabel pairs to file");
+DEFINE_string(save_relabel_opairs, "",  "Save output relabel pairs to file");
 
 namespace fst {
 
@@ -52,148 +57,42 @@ REGISTER_FST(VectorFst, LogArc);
 REGISTER_FST(ConstFst, StdArc);
 REGISTER_FST(ConstFst, LogArc);
 
-// Register ConstFst for common arcs types with uint8, uint16 and
-// uint64 size types
-static fst::FstRegisterer< ConstFst<StdArc, uint8> >
-        ConstFst_StdArc_uint8_registerer;
-static fst::FstRegisterer< ConstFst<LogArc, uint8> >
-        ConstFst_LogArc_uint8_registerer;
-static fst::FstRegisterer< ConstFst<StdArc, uint16> >
-        ConstFst_StdArc_uint16_registerer;
-static fst::FstRegisterer< ConstFst<LogArc, uint16> >
-        ConstFst_LogArc_uint16_registerer;
-static fst::FstRegisterer< ConstFst<StdArc, uint64> >
-        ConstFst_StdArc_uint64_registerer;
-static fst::FstRegisterer< ConstFst<LogArc, uint64> >
-        ConstFst_LogArc_uint64_registerer;
-
 // Register CompactFst for common arcs with the default (uint32) size type
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<StdArc, StringCompactor<StdArc> > >
 CompactFst_StdArc_StringCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<LogArc, StringCompactor<LogArc> > >
 CompactFst_LogArc_StringCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<StdArc, WeightedStringCompactor<StdArc> > >
 CompactFst_StdArc_WeightedStringCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<LogArc, WeightedStringCompactor<LogArc> > >
 CompactFst_LogArc_WeightedStringCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<StdArc, AcceptorCompactor<StdArc> > >
 CompactFst_StdArc_AcceptorCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<LogArc, AcceptorCompactor<LogArc> > >
 CompactFst_LogArc_AcceptorCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<StdArc, UnweightedCompactor<StdArc> > >
 CompactFst_StdArc_UnweightedCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<LogArc, UnweightedCompactor<LogArc> > >
 CompactFst_LogArc_UnweightedCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<StdArc, UnweightedAcceptorCompactor<StdArc> > >
 CompactFst_StdArc_UnweightedAcceptorCompactor_registerer;
-static fst::FstRegisterer<
+static FstRegisterer<
   CompactFst<LogArc, UnweightedAcceptorCompactor<LogArc> > >
 CompactFst_LogArc_UnweightedAcceptorCompactor_registerer;
 
-// Register CompactFst for common arcs with uint8 size type
-static fst::FstRegisterer<
-  CompactFst<StdArc, StringCompactor<StdArc>, uint8> >
-CompactFst_StdArc_StringCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, StringCompactor<LogArc>, uint8> >
-CompactFst_LogArc_StringCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, WeightedStringCompactor<StdArc>, uint8> >
-CompactFst_StdArc_WeightedStringCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, WeightedStringCompactor<LogArc>, uint8> >
-CompactFst_LogArc_WeightedStringCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, AcceptorCompactor<StdArc>, uint8> >
-CompactFst_StdArc_AcceptorCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, AcceptorCompactor<LogArc>, uint8> >
-CompactFst_LogArc_AcceptorCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, UnweightedCompactor<StdArc>, uint8> >
-CompactFst_StdArc_UnweightedCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, UnweightedCompactor<LogArc>, uint8> >
-CompactFst_LogArc_UnweightedCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, UnweightedAcceptorCompactor<StdArc>, uint8> >
-CompactFst_StdArc_UnweightedAcceptorCompactor_uint8_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, UnweightedAcceptorCompactor<LogArc>, uint8> >
-CompactFst_LogArc_UnweightedAcceptorCompactor_uint8_registerer;
-
-// Register CompactFst for common arcs with uint16 size type
-static fst::FstRegisterer<
-  CompactFst<StdArc, StringCompactor<StdArc>, uint16> >
-CompactFst_StdArc_StringCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, StringCompactor<LogArc>, uint16> >
-CompactFst_LogArc_StringCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, WeightedStringCompactor<StdArc>, uint16> >
-CompactFst_StdArc_WeightedStringCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, WeightedStringCompactor<LogArc>, uint16> >
-CompactFst_LogArc_WeightedStringCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, AcceptorCompactor<StdArc>, uint16> >
-CompactFst_StdArc_AcceptorCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, AcceptorCompactor<LogArc>, uint16> >
-CompactFst_LogArc_AcceptorCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, UnweightedCompactor<StdArc>, uint16> >
-CompactFst_StdArc_UnweightedCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, UnweightedCompactor<LogArc>, uint16> >
-CompactFst_LogArc_UnweightedCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, UnweightedAcceptorCompactor<StdArc>, uint16> >
-CompactFst_StdArc_UnweightedAcceptorCompactor_uint16_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, UnweightedAcceptorCompactor<LogArc>, uint16> >
-CompactFst_LogArc_UnweightedAcceptorCompactor_uint16_registerer;
-
-// Register CompactFst for common arcs with uint64 size type
-static fst::FstRegisterer<
-  CompactFst<StdArc, StringCompactor<StdArc>, uint64> >
-CompactFst_StdArc_StringCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, StringCompactor<LogArc>, uint64> >
-CompactFst_LogArc_StringCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, WeightedStringCompactor<StdArc>, uint64> >
-CompactFst_StdArc_WeightedStringCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, WeightedStringCompactor<LogArc>, uint64> >
-CompactFst_LogArc_WeightedStringCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, AcceptorCompactor<StdArc>, uint64> >
-CompactFst_StdArc_AcceptorCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, AcceptorCompactor<LogArc>, uint64> >
-CompactFst_LogArc_AcceptorCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, UnweightedCompactor<StdArc>, uint64> >
-CompactFst_StdArc_UnweightedCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, UnweightedCompactor<LogArc>, uint64> >
-CompactFst_LogArc_UnweightedCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<StdArc, UnweightedAcceptorCompactor<StdArc>, uint64> >
-CompactFst_StdArc_UnweightedAcceptorCompactor_uint64_registerer;
-static fst::FstRegisterer<
-  CompactFst<LogArc, UnweightedAcceptorCompactor<LogArc>, uint64> >
-CompactFst_LogArc_UnweightedAcceptorCompactor_uint64_registerer;
+// Fst type definitions for lookahead Fsts.
+extern const char arc_lookahead_fst_type[] = "arc_lookahead";
+extern const char ilabel_lookahead_fst_type[] = "ilabel_lookahead";
+extern const char olabel_lookahead_fst_type[] = "olabel_lookahead";
 
 // Identifies stream data as an FST (and its endianity)
 static const int32 kFstMagicNumber = 2125659606;

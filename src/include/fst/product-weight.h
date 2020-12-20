@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -60,8 +61,15 @@ class ProductWeight : public PairWeight<W1, W2> {
     return type;
   }
 
+  static uint64 Properties() {
+    uint64 props1 = W1::Properties();
+    uint64 props2 = W2::Properties();
+    return props1 & props2 & (kLeftSemiring | kRightSemiring |
+                              kCommutative | kIdempotent);
+  }
+
   ProductWeight<W1, W2> Quantize(float delta = kDelta) const {
-    return PairWeight<W1, W2>::Quantize();
+    return PairWeight<W1, W2>::Quantize(delta);
   }
 
   ReverseWeight Reverse() const {
@@ -96,4 +104,3 @@ inline ProductWeight<W1, W2> Divide(const ProductWeight<W1, W2> &w,
 }  // namespace fst;
 
 #endif  // FST_LIB_PRODUCT_WEIGHT_H__
-

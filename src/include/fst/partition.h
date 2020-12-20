@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
 //
 // \file Functions and classes to create a partition of states
@@ -21,6 +22,7 @@
 #define FST_LIB_PARTITION_H__
 
 #include <vector>
+using std::vector;
 #include <algorithm>
 
 #include <fst/queue.h>

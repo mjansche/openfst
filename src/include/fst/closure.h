@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_CLOSURE_H__
 
 #include <vector>
+using std::vector;
 #include <algorithm>
 
 #include <fst/mutable-fst.h>
@@ -70,7 +72,7 @@ void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
 // RationalFst input.
 template<class Arc>
 void Closure(RationalFst<Arc> *fst, ClosureType closure_type) {
-  fst->Impl()->AddClosure(closure_type);
+  fst->GetImpl()->AddClosure(closure_type);
 }
 
 
@@ -99,24 +101,26 @@ struct ClosureFstOptions : RationalFstOptions {
 template <class A>
 class ClosureFst : public RationalFst<A> {
  public:
-  using RationalFst<A>::Impl;
+  using ImplToFst< RationalFstImpl<A> >::GetImpl;
 
   typedef A Arc;
 
   ClosureFst(const Fst<A> &fst, ClosureType closure_type) {
-    Impl()->InitClosure(fst, closure_type);
+    GetImpl()->InitClosure(fst, closure_type);
   }
 
   ClosureFst(const Fst<A> &fst, const ClosureFstOptions &opts)
       : RationalFst<A>(opts) {
-    Impl()->InitClosure(fst, opts.type);
+    GetImpl()->InitClosure(fst, opts.type);
   }
 
-  ClosureFst(const ClosureFst<A> &fst, bool reset = false)
-      : RationalFst<A>(fst, false) {}
+  // See Fst<>::Copy() for doc.
+  ClosureFst(const ClosureFst<A> &fst, bool safe = false)
+      : RationalFst<A>(fst, safe) {}
 
-  virtual ClosureFst<A> *Copy(bool reset = false) const {
-    return new ClosureFst<A>(*this, reset);
+  // Get a copy of this ClosureFst. See Fst<>::Copy() for further doc.
+  virtual ClosureFst<A> *Copy(bool safe = false) const {
+    return new ClosureFst<A>(*this, safe);
   }
 };
 

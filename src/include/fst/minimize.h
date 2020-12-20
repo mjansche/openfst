@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: johans@google.com (Johan Schalkwyk)
 //
 // \file Functions and classes to minimize a finite state acceptor
@@ -27,6 +28,7 @@
 #include <map>
 #include <queue>
 #include <vector>
+using std::vector;
 
 #include <fst/arcsort.h>
 #include <fst/arcmerge.h>
@@ -54,16 +56,14 @@ class StateComparator {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  static const int32 kCompareFinal     = 0x0000001;
-  static const int32 kCompareOutDegree = 0x0000002;
-  static const int32 kCompareArcs      = 0x0000004;
-  static const int32 kCompareAll       = (kCompareFinal |
-                                          kCompareOutDegree |
-                                          kCompareArcs);
+  static const uint32 kCompareFinal     = 0x00000001;
+  static const uint32 kCompareOutDegree = 0x00000002;
+  static const uint32 kCompareArcs      = 0x00000004;
+  static const uint32 kCompareAll       = 0x00000007;
 
   StateComparator(const Fst<A>& fst,
                   const Partition<typename A::StateId>& partition,
-                  int32 flags = kCompareAll)
+                  uint32 flags = kCompareAll)
       : fst_(fst), partition_(partition), flags_(flags) {}
 
   // compare state x with state y based on sort criteria
@@ -104,8 +104,14 @@ class StateComparator {
  private:
   const Fst<A>& fst_;
   const Partition<typename A::StateId>& partition_;
-  const int32 flags_;
+  const uint32 flags_;
 };
+
+template <class A> const uint32 StateComparator<A>::kCompareFinal;
+template <class A> const uint32 StateComparator<A>::kCompareOutDegree;
+template <class A> const uint32 StateComparator<A>::kCompareArcs;
+template <class A> const uint32 StateComparator<A>::kCompareAll;
+
 
 // Computes equivalence classes for cyclic Fsts. For cyclic minimization
 // we use the classic HopCroft minimization algorithm, which is of
@@ -498,11 +504,11 @@ void AcceptorMinimize(MutableFst<A>* fst) {
     VLOG(2) << "Cyclic Minimization";
     CyclicMinimizer<A, LifoQueue<StateId> > minimizer(*fst);
     MergeStates(minimizer.partition(), fst);
-    // sort arcs before summing
+    // Sort arcs before merging
     ArcSort(fst, ILabelCompare<A>());
   }
 
-  // sum in appropriate semiring
+  // Merge in appropriate semiring
   ArcMerge(fst);
 }
 

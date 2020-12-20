@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -23,6 +24,7 @@
 
 #include <deque>
 #include <vector>
+using std::vector;
 
 #include <fst/arcfilter.h>
 #include <fst/connect.h>
@@ -84,6 +86,9 @@ class QueueBase {
   QueueType Type() { return queue_type_; }
 
  private:
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const = 0;
   virtual void Enqueue_(StateId s) = 0;
   virtual void Dequeue_() = 0;
@@ -113,6 +118,9 @@ public:
 
 
 private:
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -145,6 +153,9 @@ class FifoQueue : public QueueBase<S>, public deque<S> {
   void Clear() { clear(); }
 
  private:
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -175,6 +186,9 @@ class LifoQueue : public QueueBase<S>, public deque<S> {
   void Clear() { clear(); }
 
  private:
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -235,9 +249,12 @@ class ShortestFirstQueue : public QueueBase<S> {
   }
 
  private:
-  Heap<S, C> heap_;
+  Heap<S, C, false> heap_;
   vector<ssize_t> key_;
 
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -345,6 +362,9 @@ class TopOrderQueue : public QueueBase<S> {
   vector<StateId> order_;
   vector<StateId> state_;
 
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -395,6 +415,9 @@ private:
   StateId back_;
   vector<bool> enqueued_;
 
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -492,6 +515,9 @@ private:
   StateId back_;
   vector<StateId> trivial_queue_;
 
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
   virtual void Enqueue_(StateId s) { Enqueue(s); }
   virtual void Dequeue_() { Dequeue(); }
@@ -530,9 +556,9 @@ public:
       queue_ = new LifoQueue<StateId>();
       VLOG(2) << "AutoQueue: using LIFO discipline";
     } else {
-      uint64 props;
+      uint64 properties;
       // Decompose into strongly-connected components.
-      SccVisitor<Arc> scc_visitor(&scc_, 0, 0, &props);
+      SccVisitor<Arc> scc_visitor(&scc_, 0, 0, &properties);
       DfsVisit(fst, &scc_visitor, filter);
       StateId nscc = *max_element(scc_.begin(), scc_.end()) + 1;
       vector<QueueType> queue_types(nscc);
@@ -629,6 +655,9 @@ public:
                            ArcFilter filter, Less *less,
                            bool *all_trivial, bool *unweighted);
 
+  // This allows base-class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual StateId Head_() const { return Head(); }
 
   virtual void Enqueue_(StateId s) { Enqueue(s); }

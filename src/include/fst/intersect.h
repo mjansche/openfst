@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -22,6 +23,7 @@
 
 #include <algorithm>
 #include <vector>
+using std::vector;
 
 #include <fst/cache.h>
 #include <fst/compose.h>
@@ -30,7 +32,7 @@ namespace fst {
 
 template <class A,
           class M = Matcher<Fst<A> >,
-          class F = SequenceComposeFilter<A>,
+          class F = SequenceComposeFilter<M>,
           class T = GenericComposeStateTable<A, typename F::FilterState> >
 struct IntersectFstOptions : public ComposeFstOptions<A, M, F, T> {
   explicit IntersectFstOptions(const CacheOptions &opts,
@@ -54,39 +56,41 @@ struct IntersectFstOptions : public ComposeFstOptions<A, M, F, T> {
 template <class A>
 class IntersectFst : public ComposeFst<A> {
  public:
-  using ComposeFst<A>::Impl;
+  using ComposeFst<A>::CreateBase;
+  using ComposeFst<A>::CreateBase1;
+  using ComposeFst<A>::Properties;
+  using ImplToFst< ComposeFstImplBase<A> >::SetImpl;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
 
-  IntersectFst(const Fst<A> &fst1, const Fst<A> &fst2)
-      : ComposeFst<A>(fst1, fst2) {
-    if (!fst1.Properties(kAcceptor, true) || !fst2.Properties(kAcceptor, true))
-      LOG(FATAL) << "IntersectFst: arguments not both acceptors";
-    uint64 props1 = fst1.Properties(kFstProperties, false);
-    uint64 props2 = fst2.Properties(kFstProperties, false);
-    Impl()->SetProperties(IntersectProperties(props1, props2),
-                          kCopyProperties);
+  IntersectFst(const Fst<A> &fst1, const Fst<A> &fst2,
+               const CacheOptions opts = CacheOptions()) {
+    AcceptorCheck(fst1, fst2);
+    SetImpl(CreateBase(fst1, fst2, opts));
   }
 
   template <class M, class F, class T>
   IntersectFst(const Fst<A> &fst1, const Fst<A> &fst2,
-               const IntersectFstOptions<A, M, F, T> &opts)
-      : ComposeFst<A>(fst1, fst2, opts) {
-    if (!fst1.Properties(kAcceptor, true) || !fst2.Properties(kAcceptor, true))
-      LOG(FATAL) << "IntersectFst: arguments not both acceptors";
-    uint64 props1 = fst1.Properties(kFstProperties, false);
-    uint64 props2 = fst2.Properties(kFstProperties, false);
-    Impl()->SetProperties(IntersectProperties(props1, props2),
-                          kCopyProperties);
+               const IntersectFstOptions<A, M, F, T> &opts) {
+    AcceptorCheck(fst1, fst2);
+    SetImpl(CreateBase1(fst1, fst2, opts));
   }
 
-  IntersectFst(const IntersectFst<A> &fst, bool reset = false) :
-      ComposeFst<A>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  IntersectFst(const IntersectFst<A> &fst, bool safe = false) :
+      ComposeFst<A>(fst, safe) {}
 
-  virtual IntersectFst<A> *Copy(bool reset = false) const {
-    return new IntersectFst<A>(*this, reset);
+  // Get a copy of this IntersectFst. See Fst<>::Copy() for further doc.
+  virtual IntersectFst<A> *Copy(bool safe = false) const {
+    return new IntersectFst<A>(*this, safe);
+  }
+
+ private:
+  void AcceptorCheck(const Fst<Arc> &fst1, const Fst<Arc> &fst2) {
+    if (!fst1.Properties(kAcceptor, true) || !fst2.Properties(kAcceptor, true))
+      LOG(FATAL) << "IntersectFst: input FSTs are not acceptors";
   }
 };
 
@@ -133,9 +137,26 @@ template<class Arc>
 void Intersect(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
              MutableFst<Arc> *ofst,
              const IntersectOptions &opts = IntersectOptions()) {
-  IntersectFstOptions<Arc> nopts;
-  nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
-  *ofst = IntersectFst<Arc>(ifst1, ifst2, nopts);
+  typedef Matcher< Fst<Arc> > M;
+
+  if (opts.filter_type == AUTO_FILTER) {
+    CacheOptions nopts;
+    nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = IntersectFst<Arc>(ifst1, ifst2, nopts);
+  } else if (opts.filter_type == SEQUENCE_FILTER) {
+    IntersectFstOptions<Arc> iopts;
+    iopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = IntersectFst<Arc>(ifst1, ifst2, iopts);
+  } else if (opts.filter_type == ALT_SEQUENCE_FILTER) {
+    IntersectFstOptions<Arc, M, AltSequenceComposeFilter<M> > iopts;
+    iopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = IntersectFst<Arc>(ifst1, ifst2, iopts);
+  } else if (opts.filter_type == MATCH_FILTER) {
+    IntersectFstOptions<Arc, M, MatchComposeFilter<M> > iopts;
+    iopts.gc_limit = 0;  // Cache only the last state for fastest copy.
+    *ofst = IntersectFst<Arc>(ifst1, ifst2, iopts);
+  }
+
   if (opts.connect)
     Connect(ofst);
 }

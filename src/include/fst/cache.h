@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -22,6 +23,7 @@
 #define FST_LIB_CACHE_H__
 
 #include <vector>
+using std::vector;
 #include <list>
 
 #include <fst/vector-fst.h>
@@ -63,6 +65,7 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   using FstImpl<typename S::Arc>::Type;
   using VectorFstBaseImpl<S>::NumStates;
   using VectorFstBaseImpl<S>::AddState;
+  using VectorFstBaseImpl<S>::SetState;
 
   typedef S State;
   typedef typename S::Arc Arc;
@@ -147,8 +150,8 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
             cache_states_.push_back(cache_first_state_id_);
             cache_size_ += sizeof(S) +
                            cache_first_state_->arcs.capacity() * sizeof(Arc);
-            cache_limit_ = kMinCacheLimit;
           }
+          cache_limit_ = kMinCacheLimit;
           cache_first_state_id_ = kNoStateId;
           cache_first_state_ = 0;
         }
@@ -186,7 +189,7 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
     S *state = ExtendState(s);
     vector<Arc> &arcs = state->arcs;
     state->niepsilons = state->noepsilons = 0;
-    for (int a = 0; a < arcs.size(); ++a) {
+    for (size_t a = 0; a < arcs.size(); ++a) {
       const Arc &arc = arcs[a];
       if (arc.nextstate >= nknown_states_)
         nknown_states_ = arc.nextstate + 1;
@@ -266,6 +269,13 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
 
   // Number of known states.
   StateId NumKnownStates() const { return nknown_states_; }
+
+  // Update number of known states taking in account the existence of state s.
+  void UpdateNumKnownStates(StateId s) {
+    if (s >= nknown_states_)
+      nknown_states_ = s + 1;
+  }
+
   // Find the mininum never-expanded state Id
   StateId MinUnexpandedState() const {
     while (min_unexpanded_state_id_ < expanded_states_.size() &&
@@ -317,13 +327,6 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
             << ", cache limit = " << cache_limit_ << "\n";
   }
 
- private:
-  static const uint32 kCacheFinal =  0x0001;  // Final weight has been cached
-  static const uint32 kCacheArcs =   0x0002;  // Arcs have been cached
-  static const uint32 kCacheRecent = 0x0004;  // Mark as visited since GC
-
-  static const size_t kMinCacheLimit;         // Minimum (non-zero) cache limit
-
   void ExpandedState(StateId s) {
     if (s < min_unexpanded_state_id_)
       return;
@@ -331,6 +334,18 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
       expanded_states_.push_back(false);
     expanded_states_[s] = true;
   }
+
+  // Caching on/off switch, limit and size accessors.
+  bool GetCacheGc() const { return cache_gc_; }
+  size_t GetCacheLimit() const { return cache_limit_; }
+  size_t GetCacheSize() const { return cache_size_; }
+
+ private:
+  static const uint32 kCacheFinal =  0x0001;  // Final weight has been cached
+  static const uint32 kCacheArcs =   0x0002;  // Arcs have been cached
+  static const uint32 kCacheRecent = 0x0004;  // Mark as visited since GC
+
+  static const size_t kMinCacheLimit = 8096;  // Minimum (non-zero) cache limit
 
   bool cache_start_;                         // Is the start state cached?
   StateId nknown_states_;                    // # of known states
@@ -347,9 +362,10 @@ class CacheBaseImpl : public VectorFstBaseImpl<S> {
   void operator=(const CacheBaseImpl<Arc> &impl);    // disallow
 };
 
-template <class S>
-const size_t CacheBaseImpl<S>::kMinCacheLimit = 8096;
-
+template <class S> const uint32 CacheBaseImpl<S>::kCacheFinal;
+template <class S> const uint32 CacheBaseImpl<S>::kCacheArcs;
+template <class S> const uint32 CacheBaseImpl<S>::kCacheRecent;
+template <class S> const size_t CacheBaseImpl<S>::kMinCacheLimit;
 
 // Arcs implemented by an STL vector per state. Similar to VectorState
 // but adds flags and ref count to keep track of what has been cached.
@@ -393,29 +409,43 @@ class CacheImpl : public CacheBaseImpl< CacheState<A> > {
 };
 
 
-// Use this to make a state iterator for a CacheBaseImpl-derived Fst.
-// You'll need to make this class a friend of your derived Fst.
-// Note this iterator only returns those states reachable from
-// the initial state, so consider implementing a class-specific one.
+// Use this to make a state iterator for a CacheBaseImpl-derived Fst,
+// which must have type 'State' defined.  Note this iterator only
+// returns those states reachable from the initial state, so consider
+// implementing a class-specific one.
 template <class F>
 class CacheStateIterator : public StateIteratorBase<typename F::Arc> {
  public:
   typedef typename F::Arc Arc;
   typedef typename Arc::StateId StateId;
+  typedef typename F::State State;
+  typedef CacheBaseImpl<State> Impl;
 
-  explicit CacheStateIterator(const F &fst) : fst_(fst), s_(0) {}
+  CacheStateIterator(const F &fst, Impl *impl)
+      : fst_(fst), impl_(impl), s_(0) {}
+
+
+  // You'll need to make this class a friend of your derived Fst for
+  // this constructor and 'fst.impl_' must be defined.
+  explicit CacheStateIterator(const F &fst)
+  : fst_(fst), impl_(fst.impl_), s_(0) {}
 
   bool Done() const {
-    if (s_ < fst_.impl_->NumKnownStates())
+    if (s_ < impl_->NumKnownStates())
       return false;
     fst_.Start();  // force start state
-    if (s_ < fst_.impl_->NumKnownStates())
+    if (s_ < impl_->NumKnownStates())
       return false;
-    for (int u = fst_.impl_->MinUnexpandedState();
-         u < fst_.impl_->NumKnownStates();
-         u = fst_.impl_->MinUnexpandedState()) {
-      ArcIterator<F>(fst_, u);  // force state expansion
-      if (s_ < fst_.impl_->NumKnownStates())
+    for (StateId u = impl_->MinUnexpandedState();
+         u < impl_->NumKnownStates();
+         u = impl_->MinUnexpandedState()) {
+      // force state expansion
+      ArcIterator<F> aiter(fst_, u);
+      aiter.SetFlags(kArcValueFlags, kArcValueFlags | kArcNoCache);
+      for (; !aiter.Done(); aiter.Next())
+        impl_->UpdateNumKnownStates(aiter.Value().nextstate);
+      impl_->ExpandedState(u);
+      if (s_ < impl_->NumKnownStates())
         return false;
     }
     return true;
@@ -428,26 +458,37 @@ class CacheStateIterator : public StateIteratorBase<typename F::Arc> {
   void Reset() { s_ = 0; }
 
  private:
+  // This allows base class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual bool Done_() const { return Done(); }
   virtual StateId Value_() const { return Value(); }
   virtual void Next_() { Next(); }
   virtual void Reset_() { Reset(); }
 
   const F &fst_;
+  Impl *impl_;
   StateId s_;
 };
 
 
-// Use this to make an arc iterator for a CacheBaseImpl-derived Fst.
-// You'll need to make this class a friend of your derived Fst and
-// define types Arc and State.
+// Use this to make an arc iterator for a CacheBaseImpl-derived Fst,
+// which must have types 'Arc' and 'State' defined.
 template <class F>
 class CacheArcIterator {
  public:
   typedef typename F::Arc Arc;
   typedef typename F::State State;
   typedef typename Arc::StateId StateId;
+  typedef CacheBaseImpl<State> Impl;
 
+  CacheArcIterator(Impl *impl, StateId s) : i_(0) {
+    state_ = impl->ExtendState(s);
+    ++state_->ref_count;
+  }
+
+  // You'll need to make this class a friend of your derived Fst for
+  // this constructor and 'fst.impl_' must be defined.
   CacheArcIterator(const F &fst, StateId s) : i_(0) {
     state_ = fst.impl_->ExtendState(s);
     ++state_->ref_count;
@@ -466,6 +507,12 @@ class CacheArcIterator {
   void Reset() { i_ = 0; }
 
   void Seek(size_t a) { i_ = a; }
+
+  uint32 Flags() const {
+    return kArcValueFlags;
+  }
+
+  void SetFlags(uint32 flags, uint32 mask) {}
 
  private:
   const State *state_;

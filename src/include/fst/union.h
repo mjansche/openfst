@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_UNION_H__
 
 #include <vector>
+using std::vector;
 #include <algorithm>
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
@@ -88,7 +90,7 @@ void Union(MutableFst<Arc> *fst1, const Fst<Arc> &fst2) {
 // RationalFst argument.
 template<class Arc>
 void Union(RationalFst<Arc> *fst1, const Fst<Arc> &fst2) {
-  fst1->Impl()->AddUnion(fst2);
+  fst1->GetImpl()->AddUnion(fst2);
 }
 
 
@@ -109,26 +111,28 @@ typedef RationalFstOptions UnionFstOptions;
 template <class A>
 class UnionFst : public RationalFst<A> {
  public:
-  using RationalFst<A>::Impl;
+  using ImplToFst< RationalFstImpl<A> >::GetImpl;
 
   typedef A Arc;
   typedef typename A::Weight Weight;
   typedef typename A::StateId StateId;
 
   UnionFst(const Fst<A> &fst1, const Fst<A> &fst2) {
-    Impl()->InitUnion(fst1, fst2);
+    GetImpl()->InitUnion(fst1, fst2);
   }
 
   UnionFst(const Fst<A> &fst1, const Fst<A> &fst2, const UnionFstOptions &opts)
       : RationalFst<A>(opts) {
-    Impl()->InitUnion(fst1, fst2);
+    GetImpl()->InitUnion(fst1, fst2);
   }
 
-  UnionFst(const UnionFst<A> &fst, bool reset = false)
-      : RationalFst<A>(fst, reset) {}
+  // See Fst<>::Copy() for doc.
+  UnionFst(const UnionFst<A> &fst, bool safe = false)
+      : RationalFst<A>(fst, safe) {}
 
-  virtual UnionFst<A> *Copy(bool reset = false) const {
-    return new UnionFst<A>(*this, reset);
+  // Get a copy of this UnionFst. See Fst<>::Copy() for further doc.
+  virtual UnionFst<A> *Copy(bool safe = false) const {
+    return new UnionFst<A>(*this, safe);
   }
 };
 

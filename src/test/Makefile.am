@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(srcdir)/../include
+AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
 AM_LDFLAGS = -lm -ldl
 
 check_PROGRAMS = fst_test weight_test algo_test

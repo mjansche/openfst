@@ -12,29 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) to use FstClass
 //
 // \file
 // Prints out various information about an FST such as number of states
 // and arcs and property values (see properties.h).
 //
 
-#include "./info-main.h"
+#include <fst/script/info.h>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(InfoMain, StdArc);
-REGISTER_FST_MAIN(InfoMain, LogArc);
-
-}  // namespace fst
-
+DEFINE_string(arc_filter, "any", "Arc filter: one of :"
+              " \"any\", \"epsilon\", \"iepsilon\", \"oepsilon\"");
+DEFINE_string(info_type, "auto",
+              "Info format: one of: \"auto\", \"long\", \"short\"");
+DEFINE_bool(pipe, false, "Send info to stderr, input to stdout");
+DEFINE_bool(test_properties, true,
+            "Compute property values (if unknown to FST)");
 
 int main(int argc, char **argv) {
+  namespace s = fst::script;
+  using fst::script::FstClass;
+
   string usage = "Prints out information about an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst]\n";
-  usage += "  Flags: arc_filter pipe test_properties\n";
 
   std::set_new_handler(FailedNewHandler);
   SetFlags(usage.c_str(), &argc, &argv, true);
@@ -43,6 +46,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes InfoMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(InfoMain, argc, argv);
+  string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  if (!ifst) return 1;
+
+  s::PrintFstInfo(*ifst, FLAGS_test_properties, FLAGS_arc_filter,
+                  FLAGS_info_type, FLAGS_pipe);
+
+  return 0;
 }

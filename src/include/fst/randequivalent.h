@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -43,6 +44,14 @@ bool RandEquivalent(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
                     ssize_t num_paths, float delta,
                     const RandGenOptions<ArcSelector> &opts) {
   typedef typename Arc::Weight Weight;
+
+  // Check that the symbol table are compatible
+  if (!CompatSymbols(fst1.InputSymbols(), fst2.InputSymbols()) ||
+      !CompatSymbols(fst1.OutputSymbols(), fst2.OutputSymbols()))
+      LOG(FATAL) << "RandEquivalent: input/output symbol tables of 1st "
+                 << "argument do not match input/output symbol tables of 2nd "
+                 << "argument";
+
   ILabelCompare<Arc> icomp;
   OLabelCompare<Arc> ocomp;
   VectorFst<Arc> sfst1(fst1);

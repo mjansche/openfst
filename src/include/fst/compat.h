@@ -35,9 +35,14 @@
   void operator=(const type&)
 
 #include <fst/config.h>
+#include <fst/types.h>
 #include <fst/lock.h>
 #include <fst/flags.h>
 #include <fst/log.h>
+
+#ifdef HAVE_ICU
+#include <fst/icu.h>
+#endif
 
 using std::cin;
 using std::cout;
@@ -87,9 +92,13 @@ class CheckSummer {
 
   void Update(void const *data, int size) {
     const char *p = reinterpret_cast<const char *>(data);
-    //    const char *p = reinterpret_cast<const char *>(data);
     for (int i = 0; i < size; ++i)
       check_sum_[(count_++) % kCheckSumLength] ^= p[i];
+  }
+
+  void Update(string const &data) {
+    for (int i = 0; i < data.size(); ++i)
+      check_sum_[(count_++) % kCheckSumLength] ^= data[i];
   }
 
   string Digest() {
@@ -103,6 +112,24 @@ class CheckSummer {
 
   DISALLOW_COPY_AND_ASSIGN(CheckSummer);
 };
+
+// Define the UTF8 string conversion function to throw an error
+// when the ICU Library is missing or disabled.
+#ifndef HAVE_ICU
+
+template <class Label>
+bool UTF8StringToLabels(const string&, vector<Label>*) {
+  LOG(ERROR) << "UTF8StringToLabels: ICU Library required for UTF8 handling";
+  return false;
+}
+
+template <class Label>
+bool LabelsToUTF8String(const vector<Label>&, string*) {
+  LOG(ERROR) << "LabelsToUTF8String: ICU Library required for UTF8 handling";
+  return false;
+}
+
+#endif  // HAVE_ICU
 
 }  // namespace fst
 

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: allauzen@google.com (Cyril Allauzen)
 //
 // \file
@@ -21,6 +22,7 @@
 #define FST_LIB_PRUNE_H__
 
 #include <vector>
+using std::vector;
 
 #include <fst/arcfilter.h>
 #include <fst/heap.h>
@@ -121,7 +123,7 @@ void Prune(MutableFst<Arc> *fst,
     return;
   }
   PruneCompare<StateId, Weight> compare(idistance, *fdistance);
-  Heap< StateId, PruneCompare<StateId, Weight> > heap(compare);
+  Heap< StateId, PruneCompare<StateId, Weight>, false> heap(compare);
   vector<bool> visited(ns, false);
   vector<size_t> enqueued(ns, kNoKey);
   vector<StateId> dead;
@@ -239,7 +241,7 @@ void Prune(const Fst<Arc> &ifst,
     return;
   }
   PruneCompare<StateId, Weight> compare(idistance, *fdistance);
-  Heap< StateId, PruneCompare<StateId, Weight> > heap(compare);
+  Heap< StateId, PruneCompare<StateId, Weight>, false> heap(compare);
   vector<StateId> copy;
   vector<size_t> enqueued;
   vector<bool> visited;

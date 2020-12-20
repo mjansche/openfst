@@ -12,24 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
+// Modified: jpr@google.com (Jake Ratkiewicz) Changed to use FstClass
 //
 // \file
 // Reverses the paths in an FST.
 //
 
-#include "./reverse-main.h"
+#include <string>
 
-namespace fst {
-
-// Register templated main for common arcs types.
-REGISTER_FST_MAIN(ReverseMain, StdArc);
-REGISTER_FST_MAIN(ReverseMain, LogArc);
-
-}  // namespace fst
-
+#include <fst/script/reverse.h>
+#include <fst/script/fst-class.h>
+#include <iostream>
+#include <fstream>
 
 int main(int argc, char **argv) {
+  using fst::script::FstClass;
+  using fst::script::VectorFstClass;
+  using fst::script::Reverse;
+
   string usage = "Reverse the paths in an FST.\n\n  Usage: ";
   usage += argv[0];
   usage += " [in.fst [out.fst]]\n";
@@ -41,6 +43,15 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Invokes ReverseMain<Arc> where arc type is determined from argv[1].
-  return CALL_FST_MAIN(ReverseMain, argc, argv);
+  string in_name = (argc > 1 && (strcmp(argv[1], "-") != 0)) ? argv[1] : "";
+  string out_name = argc > 2 ? argv[2] : "";
+
+  FstClass *ifst = FstClass::Read(in_name);
+  VectorFstClass *out = new VectorFstClass(ifst->ArcType());
+
+  Reverse(*ifst, out);
+
+  out->Write(out_name);
+
+  return 0;
 }

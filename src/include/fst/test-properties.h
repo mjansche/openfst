@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -22,7 +23,6 @@
 
 #include <tr1/unordered_set>
 using std::tr1::unordered_set;
-#include <fst/mutable-fst.h>
 #include <fst/dfs-visit.h>
 #include <fst/connect.h>
 

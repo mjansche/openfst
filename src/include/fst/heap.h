@@ -11,30 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // All Rights Reserved.
 // Author: Johan Schalkwyk (johans@google.com)
 //
 // \file
 // Implementation of a heap as in STL, but allows tracking positions
-// in heap using a key. The key can be used to do an in place update of
+// in heap using a key. The key can be used to do an in-place update of
 // values in the heap.
 
 #ifndef FST_LIB_HEAP_H__
 #define FST_LIB_HEAP_H__
 
 #include <vector>
+using std::vector;
 #include <functional>
 
-#include "fst/compat.h"
+#include <fst/compat.h>
 namespace fst {
 
 //
 // \class Heap
-// \brief A templated heap implementation that support in place update
+// \brief A templated heap implementation that support in-place update
 //        of values.
 //
 // The templated heap implementation is a little different from the
-// STL priority_queue and the *_heap operations in STL. The heap
+// STL priority_queue and the *_heap operations in STL. This heap
 // supports indexing of values in the heap via an associated key.
 //
 // Each value is internally associated with a key which is returned
@@ -42,22 +44,24 @@ namespace fst {
 // to later update the specific value in the heap.
 //
 // \param T the element type of the hash, can be POD, Data or Ptr to Data
-// \param Compare Comparison class for determing min-heapness of max-heapness
+// \param Compare Comparison class for determiningg min-heapness.
+// \param  whether heap top should be max or min element w.r.t. Compare
 //
+
 static const int kNoKey = -1;
-template <class T, class Compare>
+template <class T, class Compare, bool max>
 class Heap {
  public:
 
-  // initialize with a specific comparator
+  // Initialize with a specific comparator
   Heap(Compare comp) : comp_(comp), size_(0) { }
 
-  // Create a heap with initial size of internal arrays of 1024
+  // Create a heap with initial size of internal arrays of 0
   Heap() : size_(0) { }
 
   ~Heap() { }
 
-  // insert a value into the heap
+  // Insert a value into the heap
   int Insert(const T& val) {
     if (size_ < A_.size()) {
       A_[size_] = val;
@@ -72,13 +76,13 @@ class Heap {
     return Insert(val, size_ - 1);
   }
 
-  // update a value at position given by the key. The pos array is first
+  // Update a value at position given by the key. The pos array is first
   // indexed by the key. The position gives the position in the heap array.
   // Once we have the position we can then use the standard heap operations
   // to calculate the parent and child positions.
   void Update(int key, const T& val) {
     int i = pos_[key];
-    if (comp_(val, A_[Parent(i)])) {
+    if (Better(val, A_[Parent(i)])) {
       Insert(val, i);
     } else {
       A_[i] = val;
@@ -86,24 +90,26 @@ class Heap {
     }
   }
 
-  // pop the (best/worst) from the heap
+  // Return the greatest (max=true) / least (max=false) value w.r.t.
+  // from the heap.
   T Pop() {
-    T max = A_[0];
+    T top = A_[0];
 
     Swap(0, size_-1);
     size_--;
     Heapify(0);
-    return(max);
+    return top;
   }
 
-  // return value of best in heap
+  // Return the greatest (max=true) / least (max=false) value w.r.t.
+  // comp object from the heap.
   T Top() const {
     return A_[0];
   }
 
-  // check if the heap is empty
+  // Check if the heap is empty
   bool Empty() const {
-    return(size_ == 0);
+    return size_ == 0;
   }
 
   void Clear() {
@@ -112,27 +118,27 @@ class Heap {
 
 
   //
-  // The following protected routines is used in a supportive role
+  // The following protected routines are used in a supportive role
   // for managing the heap and keeping the heap properties.
   //
  private:
-  // compute left child of parent
+  // Compute left child of parent
   int Left(int i) {
     return 2*(i+1)-1;   // 0 -> 1, 1 -> 3
   }
 
-  // compute right child of parent
+  // Compute right child of parent
   int Right(int i) {
     return 2*(i+1);     // 0 -> 2, 1 -> 4
   }
 
-  // given a child compute parent
+  // Given a child compute parent
   int Parent(int i) {
     return (i-1)/2;     // 1 -> 0, 2 -> 0,  3 -> 1,  4-> 1
   }
 
-  // swap a child, parent. Use to move element up/down tree
-  // note a little tricky here. When we swap we need to swap
+  // Swap a child, parent. Use to move element up/down tree.
+  // Note a little tricky here. When we swap we need to swap:
   //   the value
   //   the associated keys
   //   the position of the value in the heap
@@ -146,19 +152,24 @@ class Heap {
     A_[k]  = val;
   }
 
+  // Returns the greater (max=true) / least (max=false) of two
+  // elements.
+  bool Better(const T& x, const T& y) {
+    return max ? comp_(y, x) : comp_(x, y);
+  }
 
-  // heapify subtree rooted at index i.
+  // Heapify subtree rooted at index i.
   void Heapify(int i) {
     int l = Left(i);
     int r = Right(i);
     int largest;
 
-    if (l < size_ && comp_(A_[l], A_[i]) )
+    if (l < size_ && Better(A_[l], A_[i]) )
       largest = l;
     else
       largest = i;
 
-    if (r < size_ && comp_(A_[r], A_[largest]) )
+    if (r < size_ && Better(A_[r], A_[largest]) )
       largest = r;
 
     if (largest != i) {
@@ -168,17 +179,16 @@ class Heap {
   }
 
 
-  // insert(update) element at subtree rooted at index i
+  // Insert (update) element at subtree rooted at index i
   int Insert(const T& val, int i) {
     int p;
-    while (i > 0 && !comp_(A_[p = Parent(i)], val)) {
+    while (i > 0 && !Better(A_[p = Parent(i)], val)) {
       Swap(i, p);
       i = p;
     }
 
     return key_[i];
   }
-
 
  private:
   Compare comp_;

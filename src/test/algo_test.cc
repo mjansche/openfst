@@ -1,4 +1,4 @@
-// weight_test.h
+// algo_test.h
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -31,6 +32,7 @@
 // #define TEST_RIGHT_STRING
 // #define TEST_GALLIC
 // #define TEST_LEXICOGRAPHIC
+// #define TEST_POWER
 
 DEFINE_int32(seed, -1, "random seed");
 DEFINE_int32(repeat, 25, "number of test repetitions");
@@ -90,21 +92,21 @@ class WeightedTester {
   }
 
  private:
-
   // Tests rational operations with identities
   void TestRational(const Fst<Arc> &T1, const Fst<Arc> &T2,
                     const Fst<Arc> &T3) {
 
-    // Checks destructive and delayed union are equivalent.
     {
+      VLOG(1) << "Check destructive and delayed union are equivalent.";
       VectorFst<Arc> U1(T1);
       Union(&U1,  T2);
       UnionFst<Arc> U2(T1, T2);
       CHECK(Equiv(U1, U2));
     }
 
-    // Checks destructive and delayed concatenation are equivalent.
+
     {
+      VLOG(1) << "Check destructive and delayed concatenation are equivalent.";
       VectorFst<Arc> C1(T1);
       Concat(&C1,  T2);
       ConcatFst<Arc> C2(T1, T2);
@@ -114,24 +116,24 @@ class WeightedTester {
       CHECK(Equiv(C3, C2));
     }
 
-    // Checks destructive and delayed closure* are equivalent.
     {
+      VLOG(1) << "Check destructive and delayed closure* are equivalent.";
       VectorFst<Arc> C1(T1);
       Closure(&C1, CLOSURE_STAR);
       ClosureFst<Arc> C2(T1, CLOSURE_STAR);
       CHECK(Equiv(C1, C2));
     }
 
-    // Checks destructive and delayed closure+ are equivalent.
     {
+      VLOG(1) << "Check destructive and delayed closure+ are equivalent.";
       VectorFst<Arc> C1(T1);
       Closure(&C1, CLOSURE_PLUS);
       ClosureFst<Arc> C2(T1, CLOSURE_PLUS);
       CHECK(Equiv(C1, C2));
     }
 
-    // Checks union is associative (destructive).
     {
+      VLOG(1)  << "Check union is associative (destructive).";
       VectorFst<Arc> U1(T1);
       Union(&U1, T2);
       Union(&U1, T3);
@@ -144,8 +146,8 @@ class WeightedTester {
       CHECK(Equiv(U1, U4));
     }
 
-    // Checks union is associative (delayed).
     {
+      VLOG(1) << "Check union is associative (delayed).";
       UnionFst<Arc> U1(T1, T2);
       UnionFst<Arc> U2(U1, T3);
 
@@ -155,8 +157,9 @@ class WeightedTester {
       CHECK(Equiv(U2, U4));
     }
 
-    // Checks union is associative (destructive delayed).
+
     {
+      VLOG(1) << "Check union is associative (destructive delayed).";
       UnionFst<Arc> U1(T1, T2);
       Union(&U1, T3);
 
@@ -166,8 +169,8 @@ class WeightedTester {
       CHECK(Equiv(U1, U4));
     }
 
-    // Checks concatenation is associative (destructive).
     {
+      VLOG(1) << "Check concatenation is associative (destructive).";
       VectorFst<Arc> C1(T1);
       Concat(&C1, T2);
       Concat(&C1, T3);
@@ -180,8 +183,8 @@ class WeightedTester {
       CHECK(Equiv(C1, C4));
     }
 
-    // Checks concatenation is associative (delayed).
     {
+      VLOG(1) << "Check concatenation is associative (delayed).";
       ConcatFst<Arc> C1(T1, T2);
       ConcatFst<Arc> C2(C1, T3);
 
@@ -191,8 +194,8 @@ class WeightedTester {
       CHECK(Equiv(C2, C4));
     }
 
-    // Checks concatenation is associative (destructive delayed).
     {
+      VLOG(1) << "Check concatenation is associative (destructive delayed).";
       ConcatFst<Arc> C1(T1, T2);
       Concat(&C1, T3);
 
@@ -202,8 +205,10 @@ class WeightedTester {
       CHECK(Equiv(C1, C4));
     }
 
-    // Checks concatenation left distributes over union (destructive).
     if (Weight::Properties() & kLeftSemiring) {
+      VLOG(1) << "Check concatenation left distributes"
+              << " over union (destructive).";
+
       VectorFst<Arc> U1(T1);
       Union(&U1, T2);
       VectorFst<Arc> C1(T3);
@@ -219,8 +224,9 @@ class WeightedTester {
       CHECK(Equiv(C1, U2));
     }
 
-    // Checks concatenation right distributes over union (destructive).
     if (Weight::Properties() & kRightSemiring) {
+      VLOG(1) << "Check concatenation right distributes"
+              <<  " over union (destructive).";
       VectorFst<Arc> U1(T1);
       Union(&U1, T2);
       VectorFst<Arc> C1(U1);
@@ -236,8 +242,8 @@ class WeightedTester {
       CHECK(Equiv(C1, U2));
     }
 
-    // Checks concatenation left distributes over union (delayed).
     if (Weight::Properties() & kLeftSemiring) {
+      VLOG(1) << "Check concatenation left distributes over union (delayed).";
       UnionFst<Arc> U1(T1, T2);
       ConcatFst<Arc> C1(T3, U1);
 
@@ -248,8 +254,8 @@ class WeightedTester {
       CHECK(Equiv(C1, U2));
     }
 
-    // Checks concatenation right distributes over union (delayed).
     if (Weight::Properties() & kRightSemiring) {
+      VLOG(1) << "Check concatenation right distributes over union (delayed).";
       UnionFst<Arc> U1(T1, T2);
       ConcatFst<Arc> C1(U1, T3);
 
@@ -260,8 +266,9 @@ class WeightedTester {
       CHECK(Equiv(C1, U2));
     }
 
-    // Checks T T* == T+ (destructive).
+
     if (Weight::Properties() & kLeftSemiring) {
+      VLOG(1) << "Check T T* == T+ (destructive).";
       VectorFst<Arc> S(T1);
       Closure(&S, CLOSURE_STAR);
       VectorFst<Arc> C(T1);
@@ -273,8 +280,9 @@ class WeightedTester {
       CHECK(Equiv(C, P));
     }
 
-    // Checks T* T == T+ (destructive).
+
     if (Weight::Properties() & kRightSemiring) {
+      VLOG(1) << "Check T* T == T+ (destructive).";
       VectorFst<Arc> S(T1);
       Closure(&S, CLOSURE_STAR);
       VectorFst<Arc> C(S);
@@ -286,8 +294,8 @@ class WeightedTester {
       CHECK(Equiv(C, P));
    }
 
-    // Checks T T* == T+ (delayed).
     if (Weight::Properties() & kLeftSemiring) {
+      VLOG(1) << "Check T T* == T+ (delayed).";
       ClosureFst<Arc> S(T1, CLOSURE_STAR);
       ConcatFst<Arc> C(T1, S);
 
@@ -296,8 +304,8 @@ class WeightedTester {
       CHECK(Equiv(C, P));
     }
 
-    // Checks T* T == T+ (delayed).
     if (Weight::Properties() & kRightSemiring) {
+      VLOG(1) << "Check T* T == T+ (delayed).";
       ClosureFst<Arc> S(T1, CLOSURE_STAR);
       ConcatFst<Arc> C(S, T1);
 
@@ -310,24 +318,25 @@ class WeightedTester {
   // Tests map-based operations.
   void TestMap(const Fst<Arc> &T) {
 
-    // Checks destructive and delayed projection are equivalent.
     {
+      VLOG(1) << "Check destructive and delayed projection are equivalent.";
       VectorFst<Arc> P1(T);
       Project(&P1, PROJECT_INPUT);
       ProjectFst<Arc> P2(T, PROJECT_INPUT);
       CHECK(Equiv(P1, P2));
     }
 
-    // Checks destructive and delayed inversion are equivalent.
+
     {
+      VLOG(1) << "Check destructive and delayed inversion are equivalent.";
       VectorFst<Arc> I1(T);
       Invert(&I1);
       InvertFst<Arc> I2(T);
       CHECK(Equiv(I1, I2));
     }
 
-    // Checks Pi_1(T) = Pi_2(T^-1) (destructive).
     {
+      VLOG(1) << "Check Pi_1(T) = Pi_2(T^-1) (destructive).";
       VectorFst<Arc> P1(T);
       VectorFst<Arc> I1(T);
       Project(&P1, PROJECT_INPUT);
@@ -336,8 +345,8 @@ class WeightedTester {
       CHECK(Equiv(P1, I1));
     }
 
-    // Checks Pi_2(T) = Pi_1(T^-1) (destructive).
     {
+      VLOG(1) << "Check Pi_2(T) = Pi_1(T^-1) (destructive).";
       VectorFst<Arc> P1(T);
       VectorFst<Arc> I1(T);
       Project(&P1, PROJECT_OUTPUT);
@@ -346,24 +355,26 @@ class WeightedTester {
       CHECK(Equiv(P1, I1));
     }
 
-    // Checks Pi_1(T) = Pi_2(T^-1) (delayed).
     {
+      VLOG(1) << "Check Pi_1(T) = Pi_2(T^-1) (delayed).";
       ProjectFst<Arc> P1(T, PROJECT_INPUT);
       InvertFst<Arc> I1(T);
       ProjectFst<Arc> P2(I1, PROJECT_OUTPUT);
       CHECK(Equiv(P1, P2));
     }
 
-    // Checks Pi_2(T) = Pi_1(T^-1) (delayed).
+
     {
+      VLOG(1) << "Check Pi_2(T) = Pi_1(T^-1) (delayed).";
       ProjectFst<Arc> P1(T, PROJECT_OUTPUT);
       InvertFst<Arc> I1(T);
       ProjectFst<Arc> P2(I1, PROJECT_INPUT);
       CHECK(Equiv(P1, P2));
     }
 
-    // Checks destructive relabeling
+
     {
+      VLOG(1) << "Check destructive relabeling";
       static const int kNumLabels = 10;
       // set up relabeling pairs
       vector<Label> labelset(kNumLabels);
@@ -390,15 +401,15 @@ class WeightedTester {
       Relabel(&R, ipairs2, opairs2);
       CHECK(Equiv(R, T));
 
-      // Checks on-the-fly relabeling
+      VLOG(1) << "Check on-the-fly relabeling";
       RelabelFst<Arc> Rdelay(T, ipairs1, opairs1);
 
       RelabelFst<Arc> RRdelay(Rdelay, ipairs2, opairs2);
       CHECK(Equiv(RRdelay, T));
     }
 
-    // Checks encoding/decoding (destructive).
     {
+      VLOG(1) << "Check encoding/decoding (destructive).";
       VectorFst<Arc> D(T);
       uint32 encode_props = 0;
       if (rand() % 2)
@@ -411,8 +422,8 @@ class WeightedTester {
       CHECK(Equiv(D, T));
     }
 
-    // Checks encoding/decoding (delayed).
     {
+      VLOG(1) << "Check encoding/decoding (delayed).";
       uint32 encode_props = 0;
       if (rand() % 2)
         encode_props |= kEncodeLabels;
@@ -425,8 +436,8 @@ class WeightedTester {
       CHECK(Equiv(D, T));
     }
 
-    // Checks gallic mappers (constructive).
     {
+      VLOG(1) << "Check gallic mappers (constructive).";
       ToGallicMapper<Arc> to_mapper;
       FromGallicMapper<Arc> from_mapper;
       VectorFst< GallicArc<Arc> > G;
@@ -436,8 +447,8 @@ class WeightedTester {
       CHECK(Equiv(T, F));
     }
 
-    // Checks gallic mappers (delayed).
     {
+      VLOG(1) << "Check gallic mappers (delayed).";
       ToGallicMapper<Arc> to_mapper;
       FromGallicMapper<Arc> from_mapper;
       MapFst<Arc, GallicArc<Arc>, ToGallicMapper<Arc> >
@@ -465,20 +476,19 @@ class WeightedTester {
     ArcSort(&S2, ocomp);
     ArcSort(&S3, icomp);
 
-
-    // Checks composition is associative.
     {
+      VLOG(1) << "Check composition is associative.";
       ComposeFst<Arc> C1(S1, S2);
-      ComposeFst<Arc> C2(C1, S3);
 
+      ComposeFst<Arc> C2(C1, S3);
       ComposeFst<Arc> C3(S2, S3);
       ComposeFst<Arc> C4(S1, C3);
 
       CHECK(Equiv(C2, C4));
     }
 
-    // Checks composition left distributes over union.
     {
+      VLOG(1) << "Check composition left distributes over union.";
       UnionFst<Arc> U1(S2, S3);
       ComposeFst<Arc> C1(S1, U1);
 
@@ -489,8 +499,8 @@ class WeightedTester {
       CHECK(Equiv(C1, U2));
     }
 
-    // Checks composition right distributes over union.
     {
+      VLOG(1) << "Check composition right distributes over union.";
       UnionFst<Arc> U1(S1, S2);
       ComposeFst<Arc> C1(U1, S3);
 
@@ -508,24 +518,23 @@ class WeightedTester {
     Project(&A2, PROJECT_INPUT);
     Project(&A3, PROJECT_INPUT);
 
-    // Checks intersection is commutative.
     {
+      VLOG(1) << "Check intersection is commutative.";
       IntersectFst<Arc> I1(A1, A2);
       IntersectFst<Arc> I2(A2, A1);
       CHECK(Equiv(I1, I2));
     }
 
-    // Checks all filters leads to equivalent results.
     {
+      VLOG(1) << "Check all epsilon filters leads to equivalent results.";
+      typedef Matcher< Fst<Arc> > M;
       ComposeFst<Arc> C1(S1, S2);
       ComposeFst<Arc> C2(
           S1, S2,
-          ComposeFstOptions<Arc, Matcher<Fst<Arc> >,
-          AltSequenceComposeFilter<Arc> >());
+          ComposeFstOptions<Arc, M, AltSequenceComposeFilter<M> >());
       ComposeFst<Arc> C3(
           S1, S2,
-          ComposeFstOptions<Arc, Matcher<Fst<Arc> >,
-          MatchComposeFilter<Arc> >());
+          ComposeFstOptions<Arc, M, MatchComposeFilter<M> >());
 
       CHECK(Equiv(C1, C2));
       CHECK(Equiv(C1, C3));
@@ -537,23 +546,23 @@ class WeightedTester {
     ILabelCompare<Arc> icomp;
     OLabelCompare<Arc> ocomp;
 
-    // Checks arc sorted Fst is equivalent to its input.
     {
+      VLOG(1) << "Check arc sorted Fst is equivalent to its input.";
       VectorFst<Arc> S1(T);
       ArcSort(&S1, icomp);
       CHECK(Equiv(T, S1));
     }
 
-    // Checks destructive and delayed arcsort are equivalent.
     {
+      VLOG(1) << "Check destructive and delayed arcsort are equivalent.";
       VectorFst<Arc> S1(T);
       ArcSort(&S1, icomp);
       ArcSortFst< Arc, ILabelCompare<Arc> > S2(T, icomp);
       CHECK(Equiv(S1, S2));
     }
 
-    // Checks ilabel sorting vs. olabel sorting with inversions.
     {
+      VLOG(1) << "Check ilabel sorting vs. olabel sorting with inversions.";
       VectorFst<Arc> S1(T);
       VectorFst<Arc> S2(T);
       ArcSort(&S1, icomp);
@@ -563,15 +572,15 @@ class WeightedTester {
       CHECK(Equiv(S1, S2));
     }
 
-    // Checks topologically sorted Fst is equivalent to its input.
     {
+      VLOG(1) << "Check topologically sorted Fst is equivalent to its input.";
       VectorFst<Arc> S1(T);
       TopSort(&S1);
       CHECK(Equiv(T, S1));
     }
 
-    // Checks reverse(reverse(T)) = T
     {
+      VLOG(1) << "Check reverse(reverse(T)) = T";
       VectorFst< ReverseArc<Arc> > R1;
       VectorFst<Arc> R2;
       Reverse(T, &R1);
@@ -588,8 +597,8 @@ class WeightedTester {
     VectorFst<Arc> A(T);
     Project(&A, PROJECT_INPUT);
 
-    // Checks connected FST is equivalent to its input.
     {
+      VLOG(1) << "Check connected FST is equivalent to its input.";
       VectorFst<Arc> C1(T);
       Connect(&C1);
       CHECK(Equiv(T, C1));
@@ -597,16 +606,18 @@ class WeightedTester {
 
     if ((wprops & kSemiring) == kSemiring &&
         (tprops & kAcyclic || wprops & kIdempotent)) {
-      // Checks epsilon-removed FST is equivalent to its input.
+      VLOG(1) << "Check epsilon-removed FST is equivalent to its input.";
       VectorFst<Arc> R1(T);
       RmEpsilon(&R1);
       CHECK(Equiv(T, R1));
 
-      // Checks destructive and delayed epsilon removal are equivalent.
+      VLOG(1) << "Check destructive and delayed epsilon removal"
+              << "are equivalent.";
       RmEpsilonFst<Arc> R2(T);
       CHECK(Equiv(R1, R2));
 
-      // Checks an FST with a large proportion of epsilon transitions:
+      VLOG(1) << "Check an FST with a large proportion"
+              << " of epsilon transitions:";
       // Maps all transitions of T to epsilon-transitions and append
       // a non-epsilon transition.
       VectorFst<Arc> U;
@@ -633,15 +644,16 @@ class WeightedTester {
       CHECK(ApproxEqual(w, w2, kTestDelta));
     }
 
-    // Checks determinized FSA is equivalent to its input.
     if ((wprops & kSemiring) == kSemiring && tprops & kAcyclic) {
+      VLOG(1) << "Check determinized FSA is equivalent to its input.";
       DeterminizeFst<Arc> D(A);
       CHECK(Equiv(A, D));
 
-      // Checks size(min(det(A))) <= size(det(A))
-      // and  min(det(A)) equiv det(A)
+
       int n;
       {
+        VLOG(1) << "Check size(min(det(A))) <= size(det(A))"
+                << " and  min(det(A)) equiv det(A)";
         VectorFst<Arc> M(D);
         n = M.NumStates();
         Minimize(&M);
@@ -650,10 +662,11 @@ class WeightedTester {
         n = M.NumStates();
       }
 
-      // Checks that Revuz's algorithm leads to the
-      // same number of states as Brozozowski's algorithm
       if (n && (wprops & kIdempotent) == kIdempotent &&
           A.Properties(kNoEpsilons, true)) {
+        VLOG(1) << "Check that Revuz's algorithm leads to the"
+                << " same number of states as Brozozowski's algorithm";
+
         // Skip test if A is the empty machine or contains epsilons or
         // if the semiring is not idempotent (to avoid floating point
         // errors)
@@ -670,8 +683,8 @@ class WeightedTester {
       }
     }
 
-    // Checks reweight(T) equiv T
     if (Arc::Type() == LogArc::Type() || Arc::Type() == StdArc::Type()) {
+      VLOG(1) << "Check reweight(T) equiv T";
       vector<Weight> potential;
       VectorFst<Arc> RI(T);
       VectorFst<Arc> RF(T);
@@ -685,8 +698,8 @@ class WeightedTester {
       CHECK(Equiv(T, RF));
     }
 
-    // Checks pushed FST is equivalent to input FST.
     if ((wprops & kIdempotent) || (tprops & kAcyclic)) {
+      VLOG(1) << "Check pushed FST is equivalent to input FST.";
       // Pushing towards the final state.
       if (wprops & kRightSemiring) {
 	VectorFst<Arc> P1;
@@ -717,10 +730,10 @@ class WeightedTester {
       }
     }
 
-    // Checks pruning algorithm
     if ((wprops & (kPath | kCommutative)) == (kPath | kCommutative)) {
-      // Checks equiv. of constructive and destructive algorithms
+      VLOG(1) << "Check pruning algorithm";
       {
+        VLOG(1) << "Check equiv. of constructive and destructive algorithms";
         Weight thresold = (*weight_generator_)();
         VectorFst<Arc> P1(T);
         Prune(&P1, thresold);
@@ -728,8 +741,9 @@ class WeightedTester {
         Prune(T, &P2, thresold);
         CHECK(Equiv(P1,P2));
       }
-      // Checks prune(reverse) equiv reverse(prune)
+
       {
+        VLOG(1) << "Check prune(reverse) equiv reverse(prune)";
         Weight thresold = (*weight_generator_)();
         VectorFst< ReverseArc<Arc> > R;
         VectorFst<Arc> P1(T);
@@ -740,9 +754,9 @@ class WeightedTester {
         Reverse(R, &P2);
         CHECK(Equiv(P1, P2));
       }
-      // Checks:
-      //   ShortestDistance(T- prune(T)) > ShortestDistance(T) times Thresold
       {
+        VLOG(1) << "Check: ShortestDistance(T- prune(T))"
+                << " > ShortestDistance(T) times Thresold";
         Weight thresold = (*weight_generator_)();
         VectorFst<Arc> P;
         Prune(A, &P, thresold);
@@ -756,8 +770,8 @@ class WeightedTester {
         CHECK(Plus(sum1, sum2) == sum1);
       }
     }
-    // Checks synchronize(T) equiv T
     if (tprops & kAcyclic) {
+      VLOG(1) << "Check synchronize(T) equiv T";
       SynchronizeFst<Arc> S(T);
       CHECK(Equiv(T, S));
     }
@@ -770,8 +784,8 @@ class WeightedTester {
     VectorFst<Arc> A(T);
     Project(&A, PROJECT_INPUT);
 
-    // Checks 1-best weight.
     if ((wprops & (kPath | kRightSemiring)) == (kPath | kRightSemiring)) {
+      VLOG(1) << "Check 1-best weight.";
       VectorFst<Arc> path;
       ShortestPath(T, &path);
       Weight tsum = ShortestDistance(T);
@@ -779,8 +793,8 @@ class WeightedTester {
       CHECK(ApproxEqual(tsum, psum, kTestDelta));
     }
 
-    // Checks n-best weights
     if ((wprops & (kPath | kSemiring)) == (kPath | kSemiring)) {
+      VLOG(1) << "Check n-best weights";
       VectorFst<Arc> R(A);
       RmEpsilon(&R);
       int nshortest = rand() % kNumRandomShortestPaths + 2;
@@ -812,7 +826,7 @@ class WeightedTester {
   // Tests if two FSTS are equivalent by checking if random
   // strings from one FST are transduced the same by both FSTs.
   bool Equiv(const Fst<Arc> &fst1, const Fst<Arc> &fst2) {
-    // Checks FSTs for sanity (including property bits).
+    VLOG(1) << "Check FSTs for sanity (including property bits).";
     CHECK(Verify(fst1));
     CHECK(Verify(fst2));
 
@@ -838,16 +852,16 @@ class WeightedTester {
   WeightGenerator *weight_generator_;
 
   // Maximum random path length.
-  static const int kRandomPathLength = 25;
+  static const int kRandomPathLength;
 
   // Number of random paths to explore.
-  static const int kNumRandomPaths = 100;
+  static const int kNumRandomPaths;
 
   // Maximum number of nshortest paths.
-  static const int kNumRandomShortestPaths = 10;
+  static const int kNumRandomShortestPaths;
 
   // Maximum number of nshortest states.
-  static const int kNumShortestStates = 10000;
+  static const int kNumShortestStates;
 
   // Delta for equivalence tests.
   static const float kTestDelta;
@@ -855,9 +869,21 @@ class WeightedTester {
   DISALLOW_COPY_AND_ASSIGN(WeightedTester);
 };
 
+
+template <class A, class WG>
+const int WeightedTester<A, WG>::kRandomPathLength = 25;
+
+template <class A, class WG>
+const int WeightedTester<A, WG>::kNumRandomPaths = 100;
+
+template <class A, class WG>
+const int WeightedTester<A, WG>::kNumRandomShortestPaths = 100;
+
+template <class A, class WG>
+const int WeightedTester<A, WG>::kNumShortestStates = 10000;
+
 template <class A, class WG>
 const float WeightedTester<A, WG>::kTestDelta = .05;
-
 
 // This class tests a variety of identities and properties that must
 // hold for various algorithms on unweighted FSAs and that are not tested
@@ -898,8 +924,8 @@ class UnweightedTester<StdArc> {
   void TestRational(const Fst<Arc> &A1, const Fst<Arc> &A2,
                     const Fst<Arc> &A3) {
 
-    // Checks the union contains its arguments (destructive).
     {
+      VLOG(1) << "Check the union contains its arguments (destructive).";
       VectorFst<Arc> U(A1);
       Union(&U, A2);
 
@@ -907,16 +933,16 @@ class UnweightedTester<StdArc> {
       CHECK(Subset(A2, U));
     }
 
-    // Checks the union contains its arguments (delayed).
     {
+      VLOG(1) << "Check the union contains its arguments (delayed).";
       UnionFst<Arc> U(A1, A2);
 
       CHECK(Subset(A1, U));
       CHECK(Subset(A2, U));
     }
 
-    // Checks if A^n c A* (destructive).
     {
+      VLOG(1) << "Check if A^n c A* (destructive).";
       VectorFst<Arc> C(one_fsa_);
       int n = rand() % 5;
       for (int i = 0; i < n; ++i)
@@ -927,8 +953,8 @@ class UnweightedTester<StdArc> {
       CHECK(Subset(C, S));
     }
 
-    // Checks if A^n c A* (delayed).
     {
+      VLOG(1) << "Check if A^n c A* (delayed).";
       int n = rand() % 5;
       Fst<Arc> *C = new VectorFst<Arc>(one_fsa_);
       for (int i = 0; i < n; ++i) {
@@ -955,15 +981,15 @@ class UnweightedTester<StdArc> {
     ArcSort(&S2, comp);
     ArcSort(&S3, comp);
 
-    // Checks the intersection is contained in its arguments.
     {
+      VLOG(1) << "Check the intersection is contained in its arguments.";
       IntersectFst<Arc> I1(S1, S2);
       CHECK(Subset(I1, S1));
       CHECK(Subset(I1, S2));
     }
 
-    // Checks union distributes over intersection.
     {
+      VLOG(1) << "Check union distributes over intersection.";
       IntersectFst<Arc> I1(S1, S2);
       UnionFst<Arc> U1(I1, S3);
 
@@ -983,20 +1009,20 @@ class UnweightedTester<StdArc> {
     ArcSort(&C2, comp);
 
 
-    // Checks S U S' = Sigma*
     {
+      VLOG(1) << "Check S U S' = Sigma*";
       UnionFst<Arc> U(S1, C1);
       CHECK(Equiv(U, univ_fsa_));
     }
 
-    // Checks S n S' = {}
     {
+      VLOG(1) << "Check S n S' = {}";
       IntersectFst<Arc> I(S1, C1);
       CHECK(Equiv(I, zero_fsa_));
     }
 
-    // Checks (S1' U S2') == (S1 n S2)'
     {
+      VLOG(1) << "Check (S1' U S2') == (S1 n S2)'";
       UnionFst<Arc> U(C1, C2);
 
       IntersectFst<Arc> I(S1, S2);
@@ -1005,8 +1031,8 @@ class UnweightedTester<StdArc> {
       CHECK(Equiv(U, C3));
     }
 
-    // Checks (S1' n S2') == (S1 U S2)'
     {
+      VLOG(1) << "Check (S1' n S2') == (S1 U S2)'";
       IntersectFst<Arc> I(C1, C2);
 
       UnionFst<Arc> U(S1, S2);
@@ -1018,14 +1044,14 @@ class UnweightedTester<StdArc> {
 
   // Tests optimization operations
   void TestOptimize(const Fst<Arc> &A) {
-    // Checks determinized FSA is equivalent to its input.
     {
+      VLOG(1) << "Check determinized FSA is equivalent to its input.";
       DeterminizeFst<Arc> D(A);
       CHECK(Equiv(A, D));
     }
 
-    // Checks minimized FSA is equivalent to its input.
     {
+      VLOG(1) << "Check minimized FSA is equivalent to its input.";
       int n;
       {
         RmEpsilonFst<Arc> R(A);
@@ -1036,9 +1062,9 @@ class UnweightedTester<StdArc> {
         n = M.NumStates();
       }
 
-      // Checks that Hopcroft's and Revuz's algorithms lead to the
-      // same number of states as Brozozowski's algorithm
       if (n) {  // Skip test if A is the empty machine
+        VLOG(1) << "Check that Hopcroft's and Revuz's algorithms lead to the"
+                << " same number of states as Brozozowski's algorithm";
         VectorFst<Arc> R;
         Reverse(A, &R);
         RmEpsilon(&R);
@@ -1055,7 +1081,7 @@ class UnweightedTester<StdArc> {
 
   // Tests if two FSAS are equivalent.
   bool Equiv(const Fst<Arc> &fsa1, const Fst<Arc> &fsa2) {
-    // Checks FSAs for sanity (including property bits).
+    VLOG(1) << "Check FSAs for sanity (including property bits).";
     CHECK(Verify(fsa1));
     CHECK(Verify(fsa2));
 
@@ -1092,7 +1118,7 @@ class UnweightedTester<StdArc> {
 
   // Tests if FSA1 is a subset of FSA2 (disregarding weights).
   bool Subset(const Fst<Arc> &fsa1, const Fst<Arc> &fsa2) {
-    // Checks FSAs (incl. property bits) for sanity
+    VLOG(1) << "Check FSAs (incl. property bits) for sanity";
     CHECK(Verify(fsa1));
     CHECK(Verify(fsa2));
 
@@ -1228,7 +1254,7 @@ class AlgoTester {
       Weight final = weight_generator_();
       fst->SetFinal(s, final);
     }
-    // Checks FST for sanity (including property bits).
+    VLOG(1) << "Check FST for sanity (including property bits).";
     CHECK(Verify(*fst));
 
     // Get/compute all properties.
@@ -1263,27 +1289,37 @@ class AlgoTester {
   RmWeightMapper<Arc> rm_weight_mapper;
 
   // Maximum number of states in random test Fst.
-  static const int kNumRandomStates = 10;
+  static const int kNumRandomStates;
 
   // Maximum number of arcs in random test Fst.
-  static const int kNumRandomArcs = 25;
+  static const int kNumRandomArcs;
 
   // Number of alternative random labels.
-  static const int kNumRandomLabels = 5;
+  static const int kNumRandomLabels;
 
   // Probability to force an acyclic Fst
   static const float kAcyclicProb;
 
   // Maximum random path length.
-  static const int kRandomPathLength = 25;
+  static const int kRandomPathLength;
 
   // Number of random paths to explore.
-  static const int kNumRandomPaths = 100;
+  static const int kNumRandomPaths;
 
   DISALLOW_COPY_AND_ASSIGN(AlgoTester);
 };
 
+template <class A, class G> const int AlgoTester<A, G>::kNumRandomStates = 10;
+
+template <class A, class G> const int AlgoTester<A, G>::kNumRandomArcs = 25;
+
+template <class A, class G> const int AlgoTester<A, G>::kNumRandomLabels = 5;
+
 template <class A, class G> const float AlgoTester<A, G>::kAcyclicProb = .25;
+
+template <class A, class G> const int AlgoTester<A, G>::kRandomPathLength = 25;
+
+template <class A, class G> const int AlgoTester<A, G>::kNumRandomPaths = 100;
 
 }  // namespace fst
 
@@ -1309,6 +1345,10 @@ using fst::LexicographicArc;
 using fst::TropicalWeight;
 using fst::LexicographicWeightGenerator;
 
+using fst::ArcTpl;
+using fst::PowerWeight;
+using fst::PowerWeightGenerator;
+
 using fst::AlgoTester;
 
 int main(int argc, char **argv) {
@@ -1316,9 +1356,16 @@ int main(int argc, char **argv) {
   std::set_new_handler(FailedNewHandler);
   SetFlags(argv[0], &argc, &argv, true);
 
+  static const int kCacheGcLimit = 20;
+
   int seed = FLAGS_seed >= 0 ? FLAGS_seed : time(0);
   srand(seed);
   LOG(INFO) << "Seed = " << seed;
+
+  FLAGS_fst_default_cache_gc = rand() % 2;
+  FLAGS_fst_default_cache_gc_limit = rand() % kCacheGcLimit;
+  VLOG(1) << "default_cache_gc:" << FLAGS_fst_default_cache_gc;
+  VLOG(1) << "default_cache_gc_limit:" << FLAGS_fst_default_cache_gc_limit;
 
 #ifdef TEST_TROPICAL
   TropicalWeightGenerator tropical_generator(seed, false);
@@ -1362,7 +1409,7 @@ int main(int argc, char **argv) {
     TropicalGallicWeightGenerator;
 
   TropicalGallicWeightGenerator tropical_gallic_generator(seed, false);
-  AlgoTester<StdGallicArc, TropicalGallicWeightGenerator>nlp_
+  AlgoTester<StdGallicArc, TropicalGallicWeightGenerator>
     gallic_tester(tropical_gallic_generator, seed);
   gallic_tester.Test();
 #endif  // TEST_GALLIC
@@ -1377,6 +1424,18 @@ int main(int argc, char **argv) {
       lexicographic_tester(lexicographic_generator, seed);
   lexicographic_tester.Test();
 #endif  // TEST_LEXICOGRAPHIC
+
+#ifdef TEST_POWER
+  typedef PowerWeight<TropicalWeight, 3> TropicalCubeWeight;
+  typedef ArcTpl<TropicalCubeWeight> TropicalCubeArc;
+  typedef PowerWeightGenerator<TropicalWeightGenerator, 3>
+    TropicalCubeWeightGenerator;
+
+  TropicalCubeWeightGenerator tropical_cube_generator(seed, false);
+  AlgoTester<TropicalCubeArc, TropicalCubeWeightGenerator>
+    tropical_cube_tester(tropical_cube_generator, seed);
+  tropical_cube_tester.Test();
+#endif  // TEST_POWER
 
   cout << "PASS" << endl;
 

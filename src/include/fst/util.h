@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -20,10 +21,20 @@
 #ifndef FST_LIB_UTIL_H__
 #define FST_LIB_UTIL_H__
 
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
+#include <tr1/unordered_set>
+using std::tr1::unordered_set;
+#include <map>
+#include <set>
 #include <sstream>
 #include <string>
+#include <vector>
+using std::vector;
 
-#include "fst/compat.h"
+
+#include <fst/compat.h>
+#include <fst/types.h>
 #include <iostream>
 #include <fstream>
 
@@ -33,15 +44,34 @@ namespace fst {
 // UTILITIES FOR TYPE I/O
 //
 
-// Read some types from an input stream. Returns # of bytes read;
-// -1 on error.
-
+// Read some types from an input stream.
 
 // Generic case.
 template <typename T>
 inline istream &ReadType(istream &strm, T *t) {
-  return strm.read(reinterpret_cast<char *>(t), sizeof(T));
+  return t->Read(strm);
 }
+
+// Fixed size, contiguous memory read.
+#define READ_POD_TYPE(T)                                    \
+inline istream &ReadType(istream &strm, T *t) {             \
+  return strm.read(reinterpret_cast<char *>(t), sizeof(T)); \
+}
+
+READ_POD_TYPE(bool);
+READ_POD_TYPE(char);
+READ_POD_TYPE(signed char);
+READ_POD_TYPE(unsigned char);
+READ_POD_TYPE(short);
+READ_POD_TYPE(unsigned short);
+READ_POD_TYPE(int);
+READ_POD_TYPE(unsigned int);
+READ_POD_TYPE(long);
+READ_POD_TYPE(unsigned long);
+READ_POD_TYPE(long long);
+READ_POD_TYPE(unsigned long long);
+READ_POD_TYPE(float);
+READ_POD_TYPE(double);
 
 // String case.
 inline istream &ReadType(istream &strm, string *s) {
@@ -56,21 +86,144 @@ inline istream &ReadType(istream &strm, string *s) {
   return strm;
 }
 
+// Pair case.
+template <typename S, typename T>
+inline istream &ReadType(istream &strm, pair<S, T> *p) {
+  ReadType(strm, &p->first);
+  ReadType(strm, &p->second);
+  return strm;
+}
+
+template <typename S, typename T>
+inline istream &ReadType(istream &strm, pair<const S, T> *p) {
+  ReadType(strm, const_cast<S *>(&p->first));
+  ReadType(strm, &p->second);
+  return strm;
+}
+
+// General case - no-op.
+template <typename C>
+void StlReserve(C *c, int64 n) {}
+
+// Specialization for vectors.
+template <typename S, typename T>
+void StlReserve(vector<S, T> *c, int64 n) {
+  c->reserve(n);
+}
+
+// STL sequence container.
+#define READ_STL_SEQ_TYPE(C)                             \
+template <typename S, typename T>                        \
+inline istream &ReadType(istream &strm, C<S, T> *c) {    \
+  c->clear();                                            \
+  int64 n = 0;                                           \
+  strm.read(reinterpret_cast<char *>(&n), sizeof(n));    \
+  StlReserve(c, n);                                      \
+  for (ssize_t i = 0; i < n; ++i) {                      \
+    typename C<S, T>::value_type value;                  \
+    ReadType(strm, &value);                              \
+    c->insert(c->end(), value);                          \
+  }                                                      \
+  return strm;                                           \
+}
+
+READ_STL_SEQ_TYPE(vector);
+
+// STL associative container.
+#define READ_STL_ASSOC_TYPE(C)                           \
+template <typename S, typename T, typename U>            \
+inline istream &ReadType(istream &strm, C<S, T, U> *c) { \
+  c->clear();                                            \
+  int64 n = 0;                                           \
+  strm.read(reinterpret_cast<char *>(&n), sizeof(n));    \
+  for (ssize_t i = 0; i < n; ++i) {                      \
+    typename C<S, T, U>::value_type value;               \
+    ReadType(strm, &value);                              \
+    c->insert(value);                                    \
+  }                                                      \
+  return strm;                                           \
+}
+
+READ_STL_ASSOC_TYPE(set);
+READ_STL_ASSOC_TYPE(unordered_set);
+READ_STL_ASSOC_TYPE(map);
+READ_STL_ASSOC_TYPE(unordered_map);
+
 // Write some types to an output stream.
 
 // Generic case.
 template <typename T>
 inline ostream &WriteType(ostream &strm, const T t) {
-  return strm.write(reinterpret_cast<const char *>(&t), sizeof(T));
+  t.Write(strm);
+  return strm;
 }
 
+// Fixed size, contiguous memory write.
+#define WRITE_POD_TYPE(T)                                           \
+inline ostream &WriteType(ostream &strm, const T t) {               \
+  return strm.write(reinterpret_cast<const char *>(&t), sizeof(T)); \
+}
+
+WRITE_POD_TYPE(bool);
+WRITE_POD_TYPE(char);
+WRITE_POD_TYPE(signed char);
+WRITE_POD_TYPE(unsigned char);
+WRITE_POD_TYPE(short);
+WRITE_POD_TYPE(unsigned short);
+WRITE_POD_TYPE(int);
+WRITE_POD_TYPE(unsigned int);
+WRITE_POD_TYPE(long);
+WRITE_POD_TYPE(unsigned long);
+WRITE_POD_TYPE(long long);
+WRITE_POD_TYPE(unsigned long long);
+WRITE_POD_TYPE(float);
+WRITE_POD_TYPE(double);
+
 // String case.
-inline ostream &WriteType(ostream &strm, const string s) {
+inline ostream &WriteType(ostream &strm, const string &s) {
   int32 ns = s.size();
   strm.write(reinterpret_cast<const char *>(&ns), sizeof(ns));
   return strm.write(s.data(), ns);
 }
 
+// Pair case.
+template <typename S, typename T>
+inline ostream &WriteType(ostream &strm, const pair<S, T> &p) {
+  WriteType(strm, p.first);
+  WriteType(strm, p.second);
+  return strm;
+}
+
+// STL sequence container.
+#define WRITE_STL_SEQ_TYPE(C)                                                \
+template <typename S, typename T>                                            \
+inline ostream &WriteType(ostream &strm, const C<S, T> &c) {                 \
+  int64 n = c.size();                                                        \
+  strm.write(reinterpret_cast<char *>(&n), sizeof(n));                       \
+  for (typename C<S, T>::const_iterator it = c.begin();                      \
+       it != c.end(); ++it)                                                  \
+     WriteType(strm, *it);                                                   \
+  return strm;                                                               \
+}
+
+WRITE_STL_SEQ_TYPE(vector);
+
+// STL associative container.
+#define WRITE_STL_ASSOC_TYPE(C)                                              \
+template <typename S, typename T, typename U>                                \
+inline ostream &WriteType(ostream &strm, const C<S, T, U> &c) {              \
+  int64 n = c.size();                                                        \
+  strm.write(reinterpret_cast<char *>(&n), sizeof(n));                       \
+  for (typename C<S, T, U>::const_iterator it = c.begin();                   \
+       it != c.end(); ++it)                                                  \
+     WriteType(strm, *it);                                                   \
+  return strm;                                                               \
+}
+
+WRITE_STL_ASSOC_TYPE(set);
+WRITE_STL_ASSOC_TYPE(unordered_set);
+WRITE_STL_ASSOC_TYPE(map);
+WRITE_STL_ASSOC_TYPE(unordered_map);
 
 // Utilities for converting between int64 or Weight and string.
 
@@ -97,6 +250,61 @@ void WeightToStr(Weight w, string *s) {
   strm << w;
   *s += strm.str();
 }
+
+// Utilities for reading/writing label pairs
+
+template <typename Label>
+void ReadLabelPairs(const string& filename,
+                    vector<pair<Label, Label> >* pairs,
+                    bool allow_negative = false) {
+  ifstream strm(filename.c_str());
+  if (!strm)
+    LOG(FATAL) << "ReadLabelPairs: Can't open file: " << filename;
+
+  const int kLineLen = 8096;
+  char line[kLineLen];
+  size_t nline = 0;
+
+  pairs->clear();
+  while (strm.getline(line, kLineLen)) {
+    ++nline;
+    vector<char *> col;
+    SplitToVector(line, "\n\t ", &col, true);
+    if (col.size() == 0 || col[0][0] == '\0')  // empty line
+      continue;
+    if (col.size() != 2)
+      LOG(FATAL) << "ReadLabelPairs: Bad number of columns, "
+                 << "file = " << filename << ", line = " << nline;
+
+    Label fromlabel = StrToInt64(col[0], filename, nline, allow_negative);
+    Label tolabel   = StrToInt64(col[1], filename, nline, allow_negative);
+    pairs->push_back(make_pair(fromlabel, tolabel));
+  }
+}
+
+template <typename Label>
+void WriteLabelPairs(const string& filename,
+                     const vector<pair<Label, Label> >& pairs) {
+  ostream *strm = &std::cout;
+  if (!filename.empty()) {
+    strm = new ofstream(filename.c_str());
+    if (!*strm)
+      LOG(FATAL) << "WriteLabelPairs: Can't open file: " << filename;
+  }
+
+  for (ssize_t n = 0; n < pairs.size(); ++n)
+    *strm << pairs[n].first << "\t" << pairs[n].second << "\n";
+
+  if (!*strm)
+    LOG(FATAL) << "WriteLabelPairs: Write failed: "
+               << (filename.empty() ? "standard output" : filename);
+  if (strm != &std::cout)
+    delete strm;
+}
+
+// Utilities for converting a type name to a legal C symbol.
+
+void ConvertToLegalCSymbol(string *s);
 
 
 }  // namespace fst;

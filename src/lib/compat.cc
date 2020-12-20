@@ -41,5 +41,4 @@ void SplitToVector(char* full, const char* delim, vector<char*>* vec,
       full = p + 1;
   }
 }
-
 }  // namespace fst

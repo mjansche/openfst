@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -25,11 +26,13 @@
 #include <cmath>
 #include <string>
 
-#include "fst/compat.h"
+#include <fst/compat.h>
 #include <fst/arc.h>
 #include <fst/register.h>
 #include <fst/symbol-table.h>
 #include <fst/util.h>
+
+#include <fst/types.h>
 
 #include <fst/properties.h>
 
@@ -40,7 +43,7 @@ bool IsFstHeader(istream &, const string &);
 class FstHeader;
 template <class A> class StateIteratorData;
 template <class A> class ArcIteratorData;
-template <class A> class MatcherData;
+template <class A> class MatcherBase;
 
 struct FstReadOptions {
   string source;                // Where you're reading from
@@ -167,14 +170,21 @@ class Fst {
 
   virtual const string& Type() const = 0;    // Fst type name
 
-  // Get a copy of this Fst. If this a MutableFst and the copy is
-  // mutated, then the original is unmodified and vice versa. The
-  // copying of other computational state, e.g., the state numbering
-  // or caching in delayed FSTs, is controlled by the 'reset'
-  // argument. If reset = true, then the copy will have this state
-  // reset to that of the original at construction. If reset = false,
-  // then this state will be shared between the copy and the original.
-  virtual Fst<A> *Copy(bool reset = false) const = 0;
+  // Get a copy of this Fst. The copying behaves as follows:
+  //
+  // (1) The copying is constant time if safe = false or if safe = true
+  // and is on an otherwise unaccessed Fst.
+  //
+  // (2) If safe = true, the copy is thread-safe in that the original
+  // and copy can be safely accessed (but not necessarily mutated) by
+  // separate threads. For some Fst types, 'Copy(true)' should only be
+  // called on an Fst that has not otherwise been accessed. Its behavior
+  // is undefined otherwise.
+  //
+  // (3) If a MutableFst is copied and then mutated, then the original is
+  // unmodified and vice versa (often by a copy-on-write on the initial
+  // mutation, which may not be constant time).
+  virtual Fst<A> *Copy(bool safe = false) const = 0;
 
   // Read an Fst from an input stream; returns NULL on error
   static Fst<A> *Read(istream &strm, const FstReadOptions &opts) {
@@ -244,8 +254,7 @@ class Fst {
 
   // For generic matcher construction; not normally called
   // directly by users.
-  virtual void InitMatcher(MatchType match_type,
-                           MatcherData<A> *matcher_data) const;
+  virtual MatcherBase<A> *InitMatcher(MatchType match_type) const;
 };
 
 
@@ -270,6 +279,9 @@ class StateIteratorBase {
   void Reset() { Reset_(); }    // Return to initial condition
 
  private:
+  // This allows base class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual bool Done_() const = 0;
   virtual StateId Value_() const = 0;
   virtual void Next_() = 0;
@@ -278,6 +290,7 @@ class StateIteratorBase {
 
 
 // StateIterator initialization data
+
 template <class A> struct StateIteratorData {
   StateIteratorBase<A> *base;   // Specialized iterator if non-zero
   typename A::StateId nstates;  // O.w. total # of states
@@ -334,6 +347,20 @@ class StateIterator {
 };
 
 
+// Flags to control the behavior on an arc iterator:
+static const uint32 kArcILabelValue    = 0x0001;  // Value() gives valid ilabel
+static const uint32 kArcOLabelValue    = 0x0002;  //  "       "     "    olabel
+static const uint32 kArcWeightValue    = 0x0004;  //  "       "     "    weight
+static const uint32 kArcNextStateValue = 0x0008;  //  "       "     " nextstate
+static const uint32 kArcNoCache   = 0x0010;       // No need to cache arcs
+
+static const uint32 kArcValueFlags =
+                  kArcILabelValue | kArcOLabelValue |
+                  kArcWeightValue | kArcNextStateValue;
+
+static const uint32 kArcFlags = kArcValueFlags | kArcNoCache;
+
+
 // Arc iterator interface, templated on the Arc definition; used
 // for Arc iterator specializations that are returned by the InitArcIterator
 // Fst method.
@@ -345,20 +372,29 @@ class ArcIteratorBase {
 
   virtual ~ArcIteratorBase() {}
 
-  bool Done() const { return Done_(); }        // End of iterator?
-  const A& Value() const { return Value_(); }  // Current state (when !Done)
+  bool Done() const { return Done_(); }            // End of iterator?
+  const A& Value() const { return Value_(); }      // Current state (when !Done)
   void Next() { Next_(); }           // Advance to next arc (when !Done)
   size_t Position() const { return Position_(); }  // Return current position
   void Reset() { Reset_(); }         // Return to initial condition
   void Seek(size_t a) { Seek_(a); }  // Random arc access by position
+  uint32 Flags() const { return Flags_(); }  // Return current behavorial flags
+  void SetFlags(uint32 flags, uint32 mask) {  // Set behavorial flags
+    SetFlags_(flags, mask);
+  }
 
  private:
+  // This allows base class virtual access to non-virtual derived-
+  // class members of the same name. It makes the derived class more
+  // efficient to use but unsafe to further derive.
   virtual bool Done_() const = 0;
   virtual const A& Value_() const = 0;
   virtual void Next_() = 0;
   virtual size_t Position_() const = 0;
   virtual void Reset_() = 0;
   virtual void Seek_(size_t a) = 0;
+  virtual uint32 Flags_() const = 0;
+  virtual void SetFlags_(uint32 flags, uint32 mask) = 0;
 };
 
 
@@ -389,6 +425,11 @@ class ArcIterator {
 
   ArcIterator(const F &fst, StateId s) : i_(0) {
     fst.InitArcIterator(s, &data_);
+  }
+
+  explicit ArcIterator(const ArcIteratorData<Arc> &data) : data_(data), i_(0) {
+    if (data_.ref_count)
+      ++(*data_.ref_count);
   }
 
   ~ArcIterator() {
@@ -431,6 +472,12 @@ class ArcIterator {
     return data_.base ? data_.base->Position() : i_;
   }
 
+  uint32 Flags() const {
+    return kArcValueFlags;  // Or use base if !0 ?
+  }
+
+  void SetFlags(uint32 flags, uint32 mask) {}  // Or use base if !0 ?
+
  private:
   ArcIteratorData<Arc> data_;
   size_t i_;
@@ -441,18 +488,57 @@ class ArcIterator {
 // MATCHER DEFINITIONS
 //
 
-template <class A> class MatcherBase;
-
-// Matcher initialization data
-template <class A> struct MatcherData {
-  MatcherBase<A> *base;  // Specialized matcher
-};
-
-
 template <class A>
-void Fst<A>::InitMatcher(MatchType match_type,
-                         MatcherData<A> *data) const {
-  data->base = 0;  // Use default matcher
+MatcherBase<A> *Fst<A>::InitMatcher(MatchType match_type) const {
+  return 0;  // Use the default matcher
+}
+
+
+//
+// FST ACCESSORS - Useful functions in high-performance cases.
+//
+
+// General case - requires non-abstract, 'final' methods. Use for inlining.
+template <class F> inline
+typename F::Arc::Weight Final(const F &fst, typename F::Arc::StateId s) {
+  return fst.F::Final(s);
+}
+
+template <class F> inline
+ssize_t NumArcs(const F &fst, typename F::Arc::StateId s) {
+  return fst.F::NumArcs(s);
+}
+
+template <class F> inline
+ssize_t NumInputEpsilons(const F &fst, typename F::Arc::StateId s) {
+  return fst. F::NumInputEpsilons(s);
+}
+
+template <class F> inline
+ssize_t NumOutputEpsilons(const F &fst, typename F::Arc::StateId s) {
+  return fst. F::NumOutputEpsilons(s);
+}
+
+
+//  <A> case - abstract methods.
+template <class A> inline
+typename A::Weight Final(const Fst<A> &fst, typename A::StateId s) {
+  return fst.Final(s);
+}
+
+template <class A> inline
+ssize_t NumArcs(const Fst<A> &fst, typename A::StateId s) {
+  return fst.NumArcs(s);
+}
+
+template <class A> inline
+ssize_t NumInputEpsilons(const Fst<A> &fst, typename A::StateId s) {
+  return fst.NumInputEpsilons(s);
+}
+
+template <class A> inline
+ssize_t NumOutputEpsilons(const Fst<A> &fst, typename A::StateId s) {
+  return fst.NumOutputEpsilons(s);
 }
 
 
@@ -484,8 +570,8 @@ template <class A> class FstImpl {
 
   FstImpl(const FstImpl<A> &impl)
       : properties_(impl.properties_), type_(impl.type_),
-        isymbols_(impl.isymbols_ ? new SymbolTable(impl.isymbols_) : 0),
-        osymbols_(impl.osymbols_ ? new SymbolTable(impl.osymbols_) : 0) {}
+        isymbols_(impl.isymbols_ ? impl.isymbols_->Copy() : 0),
+        osymbols_(impl.osymbols_ ? impl.osymbols_->Copy() : 0) {}
 
   ~FstImpl() {
     delete isymbols_;
@@ -613,15 +699,123 @@ template <class A> class FstImpl {
   void operator=(const FstImpl<A> &impl);  // disallow
 };
 
+
+template<class Arc>
+uint64 TestProperties(const Fst<Arc> &fst, uint64 mask, uint64 *known);
+
+
+// This is a helper class template useful for attaching an Fst interface to
+// its implementation, handling reference counting.
+template < class I, class F = Fst<typename I::Arc> >
+class ImplToFst : public F {
+ public:
+  typedef typename I::Arc Arc;
+  typedef typename Arc::Weight Weight;
+  typedef typename Arc::StateId StateId;
+
+  virtual ~ImplToFst() { if (!impl_->DecrRefCount()) delete impl_;  }
+
+  virtual StateId Start() const { return impl_->Start(); }
+
+  virtual Weight Final(StateId s) const { return impl_->Final(s); }
+
+  virtual size_t NumArcs(StateId s) const { return impl_->NumArcs(s); }
+
+  virtual size_t NumInputEpsilons(StateId s) const {
+    return impl_->NumInputEpsilons(s);
+  }
+
+  virtual size_t NumOutputEpsilons(StateId s) const {
+    return impl_->NumOutputEpsilons(s);
+  }
+
+  virtual uint64 Properties(uint64 mask, bool test) const {
+    if (test) {
+      uint64 known, test = TestProperties(*this, mask, &known);
+      impl_->SetProperties(test, known);
+      return test & mask;
+    } else {
+      return impl_->Properties(mask);
+    }
+  }
+
+  virtual const string& Type() const { return impl_->Type(); }
+
+  virtual const SymbolTable* InputSymbols() const {
+    return impl_->InputSymbols();
+  }
+
+  virtual const SymbolTable* OutputSymbols() const {
+    return impl_->OutputSymbols();
+  }
+
+ protected:
+  ImplToFst() : impl_(0) {}
+
+  ImplToFst(I *impl) : impl_(impl) {}
+
+  ImplToFst(const ImplToFst<I, F> &fst) {
+    impl_ = fst.impl_;
+    impl_->IncrRefCount();
+  }
+
+  // This constructor presumes there is a copy constructor for the
+  // implementation.
+  ImplToFst(const ImplToFst<I, F> &fst, bool safe) {
+    if (safe) {
+      impl_ = new I(*(fst.impl_));
+    } else {
+      impl_ = fst.impl_;
+      impl_->IncrRefCount();
+    }
+  }
+
+  I *GetImpl() const { return impl_; }
+
+  // Change Fst implementation pointer. If 'own_impl' is true,
+  // ownership of the input implementation is given to this
+  // object; otherwise, the input implementation's reference count
+  // should be incremented.
+  void SetImpl(I *impl, bool own_impl = true) {
+    if (!own_impl)
+      impl->IncrRefCount();
+    if (impl_ && !impl_->DecrRefCount()) delete impl_;
+    impl_ = impl;
+  }
+
+ private:
+  // Disallow
+  ImplToFst<I, F> &operator=(const ImplToFst<I, F> &fst);
+
+  ImplToFst<I, F> &operator=(const Fst<Arc> &fst) {
+    LOG(FATAL) << "ImplToFst: Assignment operator disallowed";
+    return *this;
+  }
+
+  I *impl_;
+};
+
+
 // Converts FSTs by casting their implementations, where this makes
 // sense (which excludes implementations with virtual methods). Must
 // be a friend of the Fst classes involved (currently the concrete
 // Fsts: VectorFst, ConstFst, CompactFst).
 template<class F, class G> void Cast(const F &ifst, G *ofst) {
-  ifst.impl_->IncrRefCount();
-  if (!ofst->impl_->DecrRefCount())
-    delete ofst->impl_;
-  ofst->impl_ = reinterpret_cast<typename G::Impl *>(ifst.impl_);
+  ofst->SetImpl(reinterpret_cast<typename G::Impl *>(ifst.GetImpl()), false);
+}
+
+// Fst Serialization
+template <class A>
+void FstToString(const Fst<A> &fst, string *result) {
+  ostringstream ostrm;
+  fst.Write(ostrm, FstWriteOptions("FstToString"));
+  *result = ostrm.str();
+}
+
+template <class A>
+Fst<A> *StringToFst(const string &s) {
+  istringstream istrm(s);
+  return Fst<A>::Read(istrm, FstReadOptions("StringToFst"));
 }
 
 }  // namespace fst;

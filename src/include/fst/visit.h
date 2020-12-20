@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Copyright 2005-2010 Google, Inc.
 // Author: riley@google.com (Michael Riley)
 //
 // \file
@@ -77,21 +78,26 @@ void Visit(const Fst<Arc> &fst, V *visitor, Q *queue, ArcFilter filter) {
   }
 
   // An Fst state's visit color
-  const unsigned kWhiteState =  0x01;  // Undiscovered
-  const unsigned kGreyState =   0x02;  // Discovered & unfinished
-  const unsigned kBlackState =  0x04;  // Finished
+  const unsigned kWhiteState =  0x01;    // Undiscovered
+  const unsigned kGreyState =   0x02;    // Discovered & unfinished
+  const unsigned kBlackState =  0x04;    // Finished
 
   // We destroy an iterator as soon as possible and mark it so
-  const unsigned kArcIterDone = 0x08;  // Arc iterator done and destroyed
+  const unsigned kArcIterDone = 0x08;      // Arc iterator done and destroyed
 
-  StateId nstates = CountStates(fst);
+  vector<unsigned char> state_status;
+  vector<AIterator *> arc_iterator;
 
-  unsigned char *state_status = new unsigned char[nstates];
-  AIterator **arc_iterator = new AIterator *[nstates];
-  for (StateId s = 0; s < nstates; ++s) {
-    state_status[s] = kWhiteState;
-    arc_iterator[s] = 0;
+  StateId nstates = start + 1;             // # of known states in general case
+  bool expanded = false;
+  if (fst.Properties(kExpanded, false)) {  // tests if expanded case, then
+    nstates = CountStates(fst);            // uses ExpandedFst::NumStates().
+    expanded = true;
   }
+
+  state_status.resize(nstates, kWhiteState);
+  arc_iterator.resize(nstates);
+  StateIterator< Fst<Arc> > siter(fst);
 
   // Continues visit while true
   bool visit = true;
@@ -103,12 +109,17 @@ void Visit(const Fst<Arc> &fst, V *visitor, Q *queue, ArcFilter filter) {
     queue->Enqueue(root);
     while (!queue->Empty()) {
       StateId s = queue->Head();
+      if (s >= state_status.size()) {
+        nstates = s + 1;
+        state_status.resize(nstates, kWhiteState);
+        arc_iterator.resize(nstates);
+      }
       // Creates arc iterator if needed.
       if (arc_iterator[s] == 0 && !(state_status[s] & kArcIterDone) && visit)
         arc_iterator[s] = new AIterator(fst, s);
       // Deletes arc iterator if done.
       AIterator *aiter = arc_iterator[s];
-      if (aiter && (aiter->Done() || !visit)) {
+      if ((aiter && aiter->Done()) || !visit) {
         delete aiter;
         arc_iterator[s] = 0;
         state_status[s] |= kArcIterDone;
@@ -122,6 +133,11 @@ void Visit(const Fst<Arc> &fst, V *visitor, Q *queue, ArcFilter filter) {
       }
 
       const Arc &arc = aiter->Value();
+      if (arc.nextstate >= state_status.size()) {
+        nstates = arc.nextstate + 1;
+        state_status.resize(nstates, kWhiteState);
+        arc_iterator.resize(nstates);
+      }
       // Visits respective arc types
       if (filter(arc)) {
         // Enqueues destination state and marks grey if white
@@ -149,10 +165,20 @@ void Visit(const Fst<Arc> &fst, V *visitor, Q *queue, ArcFilter filter) {
     for (root = root == start ? 0 : root + 1;
          root < nstates && state_status[root] != kWhiteState;
          ++root);
+
+    // Check for a state beyond the largest known state
+    if (!expanded && root == nstates) {
+      for (; !siter.Done(); siter.Next()) {
+        if (siter.Value() == nstates) {
+          ++nstates;
+          state_status.push_back(kWhiteState);
+          arc_iterator.push_back(0);
+          break;
+        }
+      }
+    }
   }
   visitor->FinishVisit();
-  delete[] state_status;
-  delete[] arc_iterator;
 }
 
 
@@ -161,7 +187,7 @@ inline void Visit(const Fst<Arc> &fst, V *visitor, Q* queue) {
   Visit(fst, visitor, queue, AnyArcFilter<Arc>());
 }
 
-
+// Copies input FST to mutable FST following queue order.
 template <class A>
 class CopyVisitor {
  public:
@@ -207,6 +233,35 @@ class CopyVisitor {
   const Fst<Arc> *ifst_;
   MutableFst<Arc> *ofst_;
 };
+
+
+// Visits input FST up to a state limit following queue order.
+template <class A>
+class PartialVisitor {
+ public:
+  typedef A Arc;
+  typedef typename A::StateId StateId;
+
+  explicit PartialVisitor(StateId maxvisit) : maxvisit_(maxvisit) {}
+
+  void InitVisit(const Fst<A> &ifst) { nvisit_ = 0; }
+
+  bool InitState(StateId s, StateId) {
+    ++nvisit_;
+    return nvisit_ <= maxvisit_;
+  }
+
+  bool WhiteArc(StateId s, const Arc &arc) { return true; }
+  bool GreyArc(StateId s, const Arc &arc) { return true; }
+  bool BlackArc(StateId s, const Arc &arc) { return true; }
+  void FinishState(StateId s) {}
+  void FinishVisit() {}
+
+ private:
+  StateId maxvisit_;
+  StateId nvisit_;
+};
+
 
 }  // namespace fst
 
