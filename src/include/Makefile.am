@@ -25,8 +25,9 @@ endif
 if HAVE_MPDT
 mpdt_include_headers = fst/extensions/mpdt/compose.h \
 fst/extensions/mpdt/expand.h fst/extensions/mpdt/info.h \
-fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtscript.h \
-fst/extensions/mpdt/read_write_utils.h fst/extensions/mpdt/reverse.h
+fst/extensions/mpdt/mpdt.h fst/extensions/mpdt/mpdtlib.h \
+fst/extensions/mpdt/mpdtscript.h fst/extensions/mpdt/read_write_utils.h \
+fst/extensions/mpdt/reverse.h
 endif
 
 if HAVE_NGRAM

@@ -60,7 +60,7 @@ class STTableWriter {
       FSTERROR() << "STTableWriter::Add: Key empty: " << key;
       error_ = true;
     } else if (key < last_key_) {
-      FSTERROR() << "STTableWriter::Add: Key disorder: " << key;
+      FSTERROR() << "STTableWriter::Add: Key out of order: " << key;
       error_ = true;
     }
     if (error_) return;

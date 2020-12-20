@@ -122,7 +122,7 @@ ShowUsageRestrict(const std::set< pair<string, string> > &usage_set,
     if (file != old_file) {
       if (show_file) {
         if (file_out) cout << "\n";
-	cout << "Flags from: " << file << "\n";
+	      cout << "Flags from: " << file << "\n";
         file_out = true;
       }
       old_file = file;

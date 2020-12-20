@@ -982,8 +982,7 @@ class LinearClassifierFst : public ImplToFst<LinearClassifierFstImpl<A>> {
     }
   }
 
-  virtual bool Write(std::ostream &strm,  // NOLINT
-                     const FstWriteOptions &opts) const {
+  bool Write(std::ostream &strm, const FstWriteOptions &opts) const override {
     return GetImpl()->Write(strm, opts);
   }
 

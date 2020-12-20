@@ -60,10 +60,10 @@ class STListWriter {
 
   void Add(const string &key, const T &t) {
     if (key == "") {
-      FSTERROR() << "STListWriter::Add: key empty: " << key;
+      FSTERROR() << "STListWriter::Add: Key empty: " << key;
       error_ = true;
     } else if (key < last_key_) {
-      FSTERROR() << "STListWriter::Add: key disorder: " << key;
+      FSTERROR() << "STListWriter::Add: Key out of order: " << key;
       error_ = true;
     }
     if (error_) return;
