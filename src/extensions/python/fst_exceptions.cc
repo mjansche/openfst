@@ -580,7 +580,7 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 int __pyx_module_is_main_fst_exceptions = 0;
 
 /* Implementation of 'fst_exceptions' */
-static PyObject *__pyx_builtin_StandardError;
+static PyObject *__pyx_builtin_Exception;
 static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_RuntimeError;
 static PyObject *__pyx_builtin_IndexError;
@@ -593,6 +593,7 @@ static char __pyx_k_IOError[] = "IOError";
 static char __pyx_k_prepare[] = "__prepare__";
 static char __pyx_k_FstError[] = "FstError";
 static char __pyx_k_qualname[] = "__qualname__";
+static char __pyx_k_Exception[] = "Exception";
 static char __pyx_k_metaclass[] = "__metaclass__";
 static char __pyx_k_FstIOError[] = "FstIOError";
 static char __pyx_k_FstOpError[] = "FstOpError";
@@ -601,12 +602,12 @@ static char __pyx_k_ValueError[] = "ValueError";
 static char __pyx_k_FstArgError[] = "FstArgError";
 static char __pyx_k_RuntimeError[] = "RuntimeError";
 static char __pyx_k_FstIndexError[] = "FstIndexError";
-static char __pyx_k_StandardError[] = "StandardError";
 static char __pyx_k_fst_exceptions[] = "fst_exceptions";
 static char __pyx_k_FstBadWeightError[] = "FstBadWeightError";
 static char __pyx_k_FstUnknownWeightTypeError[] = "FstUnknownWeightTypeError";
 static char __pyx_k_FstDeletedConstructorError[] = "FstDeletedConstructorError";
 static char __pyx_k_Exceptions_for_Python_interface[] = "Exceptions for Python interface to FST scriptland.";
+static PyObject *__pyx_n_s_Exception;
 static PyObject *__pyx_n_s_FstArgError;
 static PyObject *__pyx_n_s_FstBadWeightError;
 static PyObject *__pyx_n_s_FstDeletedConstructorError;
@@ -618,7 +619,6 @@ static PyObject *__pyx_n_s_FstUnknownWeightTypeError;
 static PyObject *__pyx_n_s_IOError;
 static PyObject *__pyx_n_s_IndexError;
 static PyObject *__pyx_n_s_RuntimeError;
-static PyObject *__pyx_n_s_StandardError;
 static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_doc;
 static PyObject *__pyx_n_s_fst_exceptions;
@@ -652,6 +652,7 @@ static struct PyModuleDef __pyx_moduledef = {
 #endif
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
+  {&__pyx_n_s_Exception, __pyx_k_Exception, sizeof(__pyx_k_Exception), 0, 0, 1, 1},
   {&__pyx_n_s_FstArgError, __pyx_k_FstArgError, sizeof(__pyx_k_FstArgError), 0, 0, 1, 1},
   {&__pyx_n_s_FstBadWeightError, __pyx_k_FstBadWeightError, sizeof(__pyx_k_FstBadWeightError), 0, 0, 1, 1},
   {&__pyx_n_s_FstDeletedConstructorError, __pyx_k_FstDeletedConstructorError, sizeof(__pyx_k_FstDeletedConstructorError), 0, 0, 1, 1},
@@ -663,7 +664,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_IOError, __pyx_k_IOError, sizeof(__pyx_k_IOError), 0, 0, 1, 1},
   {&__pyx_n_s_IndexError, __pyx_k_IndexError, sizeof(__pyx_k_IndexError), 0, 0, 1, 1},
   {&__pyx_n_s_RuntimeError, __pyx_k_RuntimeError, sizeof(__pyx_k_RuntimeError), 0, 0, 1, 1},
-  {&__pyx_n_s_StandardError, __pyx_k_StandardError, sizeof(__pyx_k_StandardError), 0, 0, 1, 1},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
   {&__pyx_n_s_doc, __pyx_k_doc, sizeof(__pyx_k_doc), 0, 0, 1, 1},
   {&__pyx_n_s_fst_exceptions, __pyx_k_fst_exceptions, sizeof(__pyx_k_fst_exceptions), 0, 0, 1, 1},
@@ -676,7 +676,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_StandardError = __Pyx_GetBuiltinName(__pyx_n_s_StandardError); if (!__pyx_builtin_StandardError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_Exception = __Pyx_GetBuiltinName(__pyx_n_s_Exception); if (!__pyx_builtin_Exception) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 12; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_builtin_IndexError = __Pyx_GetBuiltinName(__pyx_n_s_IndexError); if (!__pyx_builtin_IndexError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -800,15 +800,15 @@ PyMODINIT_FUNC PyInit_fst_exceptions(void)
   /* "fst_exceptions.pyx":7
  * 
  * 
- * class FstError(StandardError):             # <<<<<<<<<<<<<<
+ * class FstError(Exception):             # <<<<<<<<<<<<<<
  * 
  *   pass
  */
   __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_INCREF(__pyx_builtin_StandardError);
-  __Pyx_GIVEREF(__pyx_builtin_StandardError);
-  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_StandardError);
+  __Pyx_INCREF(__pyx_builtin_Exception);
+  __Pyx_GIVEREF(__pyx_builtin_Exception);
+  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_Exception);
   __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_FstError, __pyx_n_s_FstError, (PyObject *) NULL, __pyx_n_s_fst_exceptions, (PyObject *) NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}

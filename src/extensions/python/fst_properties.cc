@@ -477,7 +477,7 @@ static const char *__pyx_f[] = {
 
 /*--- Type declarations ---*/
 
-/* "fst.pxd":441
+/* "fst.pxd":443
  * 
  * 
  * ctypedef pair[int64, const FstClass *] LabelFstClassPair             # <<<<<<<<<<<<<<
@@ -486,7 +486,7 @@ static const char *__pyx_f[] = {
  */
 typedef std::pair<int64,fst::script::FstClass const *>  __pyx_t_3fst_LabelFstClassPair;
 
-/* "fst.pxd":443
+/* "fst.pxd":445
  * ctypedef pair[int64, const FstClass *] LabelFstClassPair
  * 
  * ctypedef pair[int64, int64] LabelPair             # <<<<<<<<<<<<<<
