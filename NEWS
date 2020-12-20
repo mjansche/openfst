@@ -52,9 +52,9 @@ OpenFst: Release 1.5
     * Fixed FSTERROR macro (1.5.2)
     * Fixed build flags for dlopen (1.5.2)
     * Consolidated Python extension into single module (1.5.2)
-    * Adds optional minimization of non-deterministic FSTs (1.5.3)
     * Python add_arc now takes an Arc object (1.5.2)
-    * Mutation methods of the Python Fst object can now be chained (1.5.3)
+    * Adds optional minimization of non-deterministic FSTs (1.5.3)
+    * Mutation methods of the Python Fst object now support chaining (1.5.3)
     * Scripting API and Python weight objects now support semiring arithmetic
       (1.5.3)
 

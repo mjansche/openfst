@@ -1218,6 +1218,9 @@ cdef class EncodeMapper(object):
     encode_weights: Should weights be encoded?
   """
 
+  def __repr__(self):
+    return "<EncodeMapper at 0x{:x}>".format(id(self))
+
   def __init__(self,
                arc_type=b"standard",
                bool encode_labels=False,
@@ -1364,7 +1367,7 @@ cdef class _Fst(object):
     return sout.decode("utf8")
 
   def __repr__(self):
-    return "<{} Fst at 0x{:x}>".format(self.fst_type, id(self))
+    return "<{} Fst at 0x{:x}>".format(self.fst_type(), id(self))
 
   def __init__(self):
     raise FstDeletedConstructorError(
@@ -3096,6 +3099,9 @@ cdef class StateIterator(object):
   iteration context and take advantage of the Pythonic API.
   """
 
+  def __repr__(self):
+    return "<StateIterator at 0x{:x}>".format(id(self))
+
   def __init__(self, _Fst ifst):
     # Makes copy of the shared_ptr, potentially extending the FST's lifetime.
     self._fst = ifst._fst
@@ -4226,7 +4232,7 @@ cdef class FarReader(object):
         "Cannot construct {}".format(self.__class__.__name__))
 
   def __repr__(self):
-    return "<{} FarReader at 0x{:x}>".format(self.far_type, id(self))
+    return "<{} FarReader at 0x{:x}>".format(self.far_type(), id(self))
 
   @classmethod
   def open(cls, *filenames):
@@ -4401,7 +4407,7 @@ cdef class FarWriter(object):
         "Cannot construct {}".format(self.__class__.__name__))
 
   def __repr__(self):
-    return "<{} FarWriter at 0x{:x}>".format(self.far_type, id(self))
+    return "<{} FarWriter at 0x{:x}>".format(self.far_type(), id(self))
 
   @classmethod
   def create(cls, filename, arc_type=b"standard", far_type=b"default"):
