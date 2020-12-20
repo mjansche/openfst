@@ -11,6 +11,7 @@
 
 #include <utility>
 
+#include <fst/log.h>
 #include <fst/weight.h>
 
 namespace fst {

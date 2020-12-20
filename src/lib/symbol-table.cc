@@ -5,6 +5,8 @@
 
 #include <fst/symbol-table.h>
 
+#include <fst/log.h>
+
 #include <fstream>
 #include <fst/util.h>
 

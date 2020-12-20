@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/compact-fst.h>
 #include <fst/icu.h>
 #include <fst/mutable-fst.h>

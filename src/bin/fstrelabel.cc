@@ -19,6 +19,10 @@ DEFINE_string(relabel_isymbols, "", "Input symbol set to relabel to");
 DEFINE_string(relabel_osymbols, "", "Output symbol set to relabel to");
 DEFINE_string(relabel_ipairs, "", "Input relabel pairs (numeric)");
 DEFINE_string(relabel_opairs, "", "Output relabel pairs (numeric)");
+DEFINE_string(unknown_isymbol, "",
+              "Input symbol to use to relabel OOVs (def: OOVs are errors");
+DEFINE_string(unknown_osymbol, "",
+              "Output symbol to use to relabel OOVs (def: OOVs are errors");
 
 DEFINE_bool(allow_negative_labels, false,
             "Allow negative labels (not recommended; may cause conflicts)");
@@ -77,9 +81,11 @@ int main(int argc, char** argv) {
             : SymbolTable::ReadText(FLAGS_relabel_osymbols, opts));
     s::Relabel(fst.get(),
                old_isymbols ? old_isymbols.get() : fst->InputSymbols(),
-               relabel_isymbols.get(), attach_new_isymbols,
+               relabel_isymbols.get(), FLAGS_unknown_isymbol,
+               attach_new_isymbols,
                old_osymbols ? old_osymbols.get() : fst->OutputSymbols(),
-               relabel_osymbols.get(), attach_new_osymbols);
+               relabel_osymbols.get(), FLAGS_unknown_osymbol,
+               attach_new_osymbols);
   } else {
     // Reads in relabeling pairs.
     std::vector<s::LabelPair> ipairs;

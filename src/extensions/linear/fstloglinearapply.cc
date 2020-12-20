@@ -6,6 +6,8 @@
 #include <fst/extensions/linear/loglinear-apply.h>
 #include <fst/vector-fst.h>
 
+#include <fst/log.h>
+
 DEFINE_bool(normalize, true, "Normalize to get posterior");
 
 int main(int argc, char **argv) {

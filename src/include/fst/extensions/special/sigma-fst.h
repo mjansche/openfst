@@ -67,7 +67,7 @@ class SigmaFstMatcherData {
 constexpr uint8 kSigmaFstMatchInput = 0x01;   // Input matcher is SigmaMatcher.
 constexpr uint8 kSigmaFstMatchOutput = 0x02;  // Output matcher is SigmaMatcher.
 
-template <class M, uint8 F = kSigmaFstMatchInput | kSigmaFstMatchOutput>
+template <class M, uint8 flags = kSigmaFstMatchInput | kSigmaFstMatchOutput>
 class SigmaFstMatcher : public SigmaMatcher<M> {
  public:
   using FST = typename M::FST;
@@ -76,6 +76,8 @@ class SigmaFstMatcher : public SigmaMatcher<M> {
   using Label = typename Arc::Label;
   using Weight = typename Arc::Weight;
   using MatcherData = internal::SigmaFstMatcherData<Label>;
+
+  enum : uint8 { kFlags = flags };
 
   SigmaFstMatcher(
       const FST &fst, MatchType match_type,
@@ -87,11 +89,11 @@ class SigmaFstMatcher : public SigmaMatcher<M> {
             data ? data->RewriteMode() : MatcherData().RewriteMode()),
         data_(data) {}
 
-  SigmaFstMatcher(const SigmaFstMatcher<M, F> &matcher, bool safe = false)
+  SigmaFstMatcher(const SigmaFstMatcher<M, flags> &matcher, bool safe = false)
       : SigmaMatcher<M>(matcher, false), data_(matcher.data_) {}
 
-  SigmaFstMatcher<M, F> *Copy(bool safe = false) const override {
-    return new SigmaFstMatcher<M, F>(*this, safe);
+  SigmaFstMatcher<M, flags> *Copy(bool safe = false) const override {
+    return new SigmaFstMatcher<M, flags>(*this, safe);
   }
 
   const MatcherData *GetData() const { return data_.get(); }
@@ -100,8 +102,9 @@ class SigmaFstMatcher : public SigmaMatcher<M> {
 
  private:
   static Label SigmaLabel(MatchType match_type, Label label) {
-    if (match_type == MATCH_INPUT && F & kSigmaFstMatchInput) return label;
-    if (match_type == MATCH_OUTPUT && F & kSigmaFstMatchOutput) return label;
+    if (match_type == MATCH_INPUT && flags & kSigmaFstMatchInput) return label;
+    if (match_type == MATCH_OUTPUT && flags & kSigmaFstMatchOutput)
+      return label;
     return kNoLabel;
   }
 

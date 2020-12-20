@@ -8,6 +8,8 @@
 
 #include <unordered_set>
 
+#include <fst/log.h>
+
 #include <fst/connect.h>
 #include <fst/dfs-visit.h>
 

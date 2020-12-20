@@ -7,6 +7,7 @@
 #define FST_LIB_UTIL_H_
 
 #include <iostream>
+#include <iterator>
 #include <list>
 #include <map>
 #include <set>
@@ -20,6 +21,7 @@
 
 #include <fst/compat.h>
 #include <fst/types.h>
+#include <fst/log.h>
 #include <fstream>
 
 
@@ -64,22 +66,18 @@ inline std::istream &ReadType(std::istream &strm, string *s) {  // NOLINT
 }
 
 // Declares types that can be read from an input stream.
-
-#define DECL_READ_TYPE2(C)          \
-  template <typename S, typename T> \
-  inline std::istream &ReadType(std::istream &strm, C<S, T> *c)  // NOLINT
-
-#define DECL_READ_TYPE3(C)                      \
-  template <typename S, typename T, typename U> \
-  inline std::istream &ReadType(std::istream &strm, C<S, T, U> *c)
-
-DECL_READ_TYPE2(std::vector);
-DECL_READ_TYPE2(std::list);
-
-DECL_READ_TYPE3(std::set);
-DECL_READ_TYPE3(std::unordered_set);
-DECL_READ_TYPE3(std::map);
-DECL_READ_TYPE3(std::unordered_map);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::vector<T...> *c);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::list<T...> *c);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::set<T...> *c);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::map<T...> *c);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::unordered_map<T...> *c);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::unordered_set<T...> *c);
 
 // Pair case.
 template <typename S, typename T>
@@ -96,54 +94,55 @@ inline std::istream &ReadType(std::istream &strm, std::pair<const S, T> *p) {
   return strm;
 }
 
-// General case - no-op.
-template <typename C>
-void StlReserve(C *c, int64 n) {}
+namespace internal {
+template <class C, class ReserveFn>
+std::istream &ReadContainerType(std::istream &strm, C *c, ReserveFn reserve) {
+  c->clear();
+  int64 n = 0;
+  ReadType(strm, &n);
+  reserve(c, n);
+  auto insert = std::inserter(*c, c->begin());
+  for (int64 i = 0; i < n; ++i) {
+    typename C::value_type value;
+    ReadType(strm, &value);
+    *insert = value;
+  }
+  return strm;
+}
+}  // namespace internal
 
-// Specialization for vectors.
-template <typename S, typename T>
-void StlReserve(std::vector<S, T> *c, int64 n) {
-  c->reserve(n);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::vector<T...> *c) {
+  return internal::ReadContainerType(
+      strm, c, [](decltype(c) v, int n) { v->reserve(n); });
 }
 
-// STL sequence container.
-#define READ_STL_SEQ_TYPE(C)                                      \
-  template <typename S, typename T>                               \
-  inline std::istream &ReadType(std::istream &strm, C<S, T> *c) { \
-    c->clear();                                                   \
-    int64 n = 0;                                                  \
-    strm.read(reinterpret_cast<char *>(&n), sizeof(n));           \
-    StlReserve(c, n);                                             \
-    for (ssize_t i = 0; i < n; ++i) {                             \
-      typename C<S, T>::value_type value;                         \
-      ReadType(strm, &value);                                     \
-      c->insert(c->end(), value);                                 \
-    }                                                             \
-    return strm;                                                  \
-  }
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::list<T...> *c) {
+  return internal::ReadContainerType(strm, c, [](decltype(c) v, int n) {});
+}
 
-READ_STL_SEQ_TYPE(vector);
-READ_STL_SEQ_TYPE(std::list);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::set<T...> *c) {
+  return internal::ReadContainerType(strm, c, [](decltype(c) v, int n) {});
+}
 
-// STL associative container.
-#define READ_STL_ASSOC_TYPE(C)                                       \
-  template <typename S, typename T, typename U>                      \
-  inline std::istream &ReadType(std::istream &strm, C<S, T, U> *c) { \
-    c->clear();                                                      \
-    int64 n = 0;                                                     \
-    strm.read(reinterpret_cast<char *>(&n), sizeof(n));              \
-    for (ssize_t i = 0; i < n; ++i) {                                \
-      typename C<S, T, U>::value_type value;                         \
-      ReadType(strm, &value);                                        \
-      c->insert(value);                                              \
-    }                                                                \
-    return strm;                                                     \
-  }
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::map<T...> *c) {
+  return internal::ReadContainerType(strm, c, [](decltype(c) v, int n) {});
+}
 
-READ_STL_ASSOC_TYPE(std::set);
-READ_STL_ASSOC_TYPE(std::unordered_set);
-READ_STL_ASSOC_TYPE(std::map);
-READ_STL_ASSOC_TYPE(std::unordered_map);
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::unordered_set<T...> *c) {
+  return internal::ReadContainerType(
+      strm, c, [](decltype(c) v, int n) { v->reserve(n); });
+}
+
+template <class... T>
+std::istream &ReadType(std::istream &strm, std::unordered_map<T...> *c) {
+  return internal::ReadContainerType(
+      strm, c, [](decltype(c) v, int n) { v->reserve(n); });
+}
 
 // Writes types to an output stream.
 
@@ -171,22 +170,18 @@ inline std::ostream &WriteType(std::ostream &strm, const string &s) {  // NOLINT
 
 // Declares types that can be written to an output stream.
 
-#define DECL_WRITE_TYPE2(C)         \
-  template <typename S, typename T> \
-  inline std::ostream &WriteType(std::ostream &strm, const C<S, T> &c)
-
-#define DECL_WRITE_TYPE3(C)                          \
-  template <typename S, typename T, typename U>      \
-  inline std::ostream &WriteType(std::ostream &strm, \
-                                 const C<S, T, U> &c)  // NOLINT
-
-DECL_WRITE_TYPE2(std::vector);
-DECL_WRITE_TYPE2(std::list);
-
-DECL_WRITE_TYPE3(std::set);
-DECL_WRITE_TYPE3(std::unordered_set);
-DECL_WRITE_TYPE3(std::map);
-DECL_WRITE_TYPE3(std::unordered_map);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::vector<T...> &c);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::list<T...> &c);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::set<T...> &c);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::map<T...> &c);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::unordered_map<T...> &c);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::unordered_set<T...> &c);
 
 // Pair case.
 template <typename S, typename T>
@@ -197,36 +192,47 @@ inline std::ostream &WriteType(std::ostream &strm,
   return strm;
 }
 
-// STL sequence container.
-#define WRITE_STL_SEQ_TYPE(C)                                                  \
-  template <typename S, typename T>                                            \
-  inline std::ostream &WriteType(std::ostream &strm, const C<S, T> &c) {       \
-    int64 n = c.size();                                                        \
-    strm.write(reinterpret_cast<char *>(&n), sizeof(n));                       \
-    for (typename C<S, T>::const_iterator it = c.begin(); it != c.end(); ++it) \
-      WriteType(strm, *it);                                                    \
-    return strm;                                                               \
+namespace internal {
+template <class C>
+std::ostream &WriteContainer(std::ostream &strm, const C &c) {
+  const int64 n = c.size();
+  WriteType(strm, n);
+  for (const auto &e : c) {
+    WriteType(strm, e);
   }
+  return strm;
+}
+}  // namespace internal
 
-WRITE_STL_SEQ_TYPE(vector);
-WRITE_STL_SEQ_TYPE(std::list);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::vector<T...> &c) {
+  return internal::WriteContainer(strm, c);
+}
 
-// STL associative container.
-#define WRITE_STL_ASSOC_TYPE(C)                                             \
-  template <typename S, typename T, typename U>                             \
-  inline std::ostream &WriteType(std::ostream &strm, const C<S, T, U> &c) { \
-    int64 n = c.size();                                                     \
-    strm.write(reinterpret_cast<char *>(&n), sizeof(n));                    \
-    for (typename C<S, T, U>::const_iterator it = c.begin(); it != c.end(); \
-         ++it)                                                              \
-      WriteType(strm, *it);                                                 \
-    return strm;                                                            \
-  }
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::list<T...> &c) {
+  return internal::WriteContainer(strm, c);
+}
 
-WRITE_STL_ASSOC_TYPE(std::set);
-WRITE_STL_ASSOC_TYPE(std::unordered_set);
-WRITE_STL_ASSOC_TYPE(std::map);
-WRITE_STL_ASSOC_TYPE(std::unordered_map);
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::set<T...> &c) {
+  return internal::WriteContainer(strm, c);
+}
+
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::map<T...> &c) {
+  return internal::WriteContainer(strm, c);
+}
+
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::unordered_map<T...> &c) {
+  return internal::WriteContainer(strm, c);
+}
+
+template <typename... T>
+std::ostream &WriteType(std::ostream &strm, const std::unordered_set<T...> &c) {
+  return internal::WriteContainer(strm, c);
+}
 
 // Utilities for converting between int64 or Weight and string.
 

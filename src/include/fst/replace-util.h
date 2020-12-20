@@ -11,6 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/connect.h>
 #include <fst/mutable-fst.h>
 #include <fst/topsort.h>

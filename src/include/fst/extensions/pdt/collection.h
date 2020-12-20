@@ -9,6 +9,7 @@
 #include <functional>
 #include <vector>
 
+#include <fst/log.h>
 #include <fst/bi-table.h>
 
 namespace fst {

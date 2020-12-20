@@ -17,14 +17,17 @@ namespace script {
 
 // 1
 using RelabelArgs1 =
-    args::Package<MutableFstClass *, const SymbolTable *, const SymbolTable *,
-                  bool, const SymbolTable *, const SymbolTable *, bool>;
+    args::Package<MutableFstClass *,
+                  const SymbolTable *, const SymbolTable *,
+                  const string &, bool,
+                  const SymbolTable *, const SymbolTable *,
+                  const string &, bool>;
 
 template <class Arc>
 void Relabel(RelabelArgs1 *args) {
   MutableFst<Arc> *ofst = args->arg1->GetMutableFst<Arc>();
   Relabel(ofst, args->arg2, args->arg3, args->arg4, args->arg5, args->arg6,
-          args->arg7);
+          args->arg7, args->arg8, args->arg9);
 }
 
 using LabelPair = std::pair<int64, int64>;
@@ -58,10 +61,11 @@ void Relabel(args::Package<MutableFstClass *, const SymbolTable *,
 }
 
 // 1
-void Relabel(MutableFstClass *ofst, const SymbolTable *old_isymbols,
-             const SymbolTable *new_isymbols, bool attach_new_isymbols,
+void Relabel(MutableFstClass *ofst,
+             const SymbolTable *old_isymbols, const SymbolTable *new_isymbols,
+             const string &unknown_isymbol,  bool attach_new_isymbols,
              const SymbolTable *old_osymbols, const SymbolTable *new_osymbols,
-             bool attach_new_osymbols);
+             const string &unknown_osymbol, bool attach_new_osymbols);
 
 // 2
 void Relabel(MutableFstClass *ofst, const std::vector<LabelPair> &ipairs,

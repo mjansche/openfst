@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fst/log.h>
 #include <fst/memory.h>
 
 namespace fst {

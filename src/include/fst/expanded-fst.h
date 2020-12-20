@@ -10,6 +10,7 @@
 #include <istream>
 #include <string>
 
+#include <fst/log.h>
 #include <fstream>
 
 #include <fst/fst.h>

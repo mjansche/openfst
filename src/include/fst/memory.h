@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <fst/types.h>
+#include <fst/log.h>
 #include <fstream>
 
 namespace fst {

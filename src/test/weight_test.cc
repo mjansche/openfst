@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 
+#include <fst/log.h>
 #include <fst/expectation-weight.h>
 #include <fst/float-weight.h>
 #include <fst/lexicographic-weight.h>

@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arcfilter.h>
 #include <fst/connect.h>
 #include <fst/heap.h>

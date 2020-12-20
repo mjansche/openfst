@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
 #include <fstream>
 
 #include <fst/expanded-fst.h>
@@ -94,7 +95,7 @@ class MutableFst : public ExpandedFst<A> {
   // Gets a copy of this MutableFst. See Fst<>::Copy() for further doc.
   MutableFst<A> *Copy(bool safe = false) const override = 0;
 
-  // Reads an MutableFst from an input stream, returning nullptr on error.
+  // Reads a MutableFst from an input stream, returning nullptr on error.
   static MutableFst<Arc> *Read(std::istream &strm, const FstReadOptions &opts) {
     FstReadOptions ropts(opts);
     FstHeader hdr;

@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/expanded-fst.h>
 #include <fst/fst-decl.h>  // For optional argument declarations.
@@ -1319,9 +1321,8 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
 
   uint64 Properties(uint64 props) const override { return props; }
 
- private:
   // Sets the state from which our matching happens.
-  void SetState_(StateId s) override {
+  void SetState(StateId s) final {
     if (s_ == s) return;
     s_ = s;
     tuple_ = impl_->GetStateTable()->Tuple(s_);
@@ -1343,7 +1344,7 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
   // MultiEpsilonMatcher to search for possible matches of non-terminals. If the
   // component FST
   // reaches a final state we also need to add the exiting final arc.
-  bool Find_(Label label) override {
+  bool Find(Label label) final {
     bool found = false;
     label_ = label;
     if (label_ == 0 || label_ == kNoLabel) {
@@ -1362,14 +1363,12 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
     return found;
   }
 
-  bool Done_() const override {
+  bool Done() const final {
     return !current_loop_ && !final_arc_ && current_matcher_->Done();
   }
 
-  const Arc &Value_() const override {
-    if (current_loop_) {
-      return loop_;
-    }
+  const Arc &Value() const final {
+    if (current_loop_) return loop_;
     if (final_arc_) {
       impl_->ComputeFinalArc(tuple_, &arc_);
       return arc_;
@@ -1379,7 +1378,7 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
     return arc_;
   }
 
-  void Next_() override {
+  void Next() final {
     if (current_loop_) {
       current_loop_ = false;
       return;
@@ -1391,16 +1390,15 @@ class ReplaceFstMatcher : public MatcherBase<Arc> {
     current_matcher_->Next();
   }
 
-  ssize_t Priority_(StateId s) override { return fst_.NumArcs(s); }
+  ssize_t Priority(StateId s) final { return fst_.NumArcs(s); }
 
+ private:
   const ReplaceFst<Arc, StateTable, CacheStore> &fst_;
   internal::ReplaceFstImpl<Arc, StateTable, CacheStore> *impl_;
   LocalMatcher *current_matcher_;
   std::vector<std::unique_ptr<LocalMatcher>> matcher_;
-
-  StateId s_;    // Current state.
-  Label label_;  // Current label.
-
+  StateId s_;             // Current state.
+  Label label_;           // Current label.
   MatchType match_type_;  // Supplied by caller.
   mutable bool done_;
   mutable bool current_loop_;  // Current arc is the implicit loop.

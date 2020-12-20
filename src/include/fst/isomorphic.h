@@ -12,6 +12,8 @@
 #include <list>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/fst.h>
 
 

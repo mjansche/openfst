@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <fst/log.h>
 
 #include <fst/fst-decl.h>  // For optional argument declarations
 #include <fst/mutable-fst.h>
@@ -640,19 +641,19 @@ class MutableArcIterator<VectorFst<Arc, State>>
     properties_ = &fst->GetImpl()->properties_;
   }
 
-  bool Done() const override { return i_ >= state_->NumArcs(); }
+  bool Done() const final { return i_ >= state_->NumArcs(); }
 
-  const Arc &Value() const override { return state_->GetArc(i_); }
+  const Arc &Value() const final { return state_->GetArc(i_); }
 
-  void Next() override { ++i_; }
+  void Next() final { ++i_; }
 
-  size_t Position() const override { return i_; }
+  size_t Position() const final { return i_; }
 
-  void Reset() override { i_ = 0; }
+  void Reset() final { i_ = 0; }
 
-  void Seek(size_t a) override { i_ = a; }
+  void Seek(size_t a) final { i_ = a; }
 
-  void SetValue(const Arc &arc) override {
+  void SetValue(const Arc &arc) final {
     const auto &oarc = state_->GetArc(i_);
     if (oarc.ilabel != oarc.olabel) *properties_ &= ~kNotAcceptor;
     if (oarc.ilabel == 0) {
@@ -689,9 +690,9 @@ class MutableArcIterator<VectorFst<Arc, State>>
                     kNoOEpsilons | kWeighted | kUnweighted;
   }
 
-  constexpr uint32 Flags() const override { return kArcValueFlags; }
+  constexpr uint32 Flags() const final { return kArcValueFlags; }
 
-  void SetFlags(uint32, uint32) override {}
+  void SetFlags(uint32, uint32) final {}
 
  private:
   State *state_;

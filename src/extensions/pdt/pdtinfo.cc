@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/extensions/pdt/pdtscript.h>
 #include <fst/util.h>
 

@@ -108,7 +108,9 @@ class FastLogProbArcSelector : public LogProbArcSelector<Arc> {
                                                        fst.NumArcs(s)))
                            .Value();
     const double r = -log(rand() / (RAND_MAX + 1.0));  // NOLINT
-    return accumulator->LowerBound(r + sum, &aiter);
+    Weight w = from_log_weight_(r + sum);
+    aiter.Reset();
+    return accumulator->LowerBound(w, &aiter);
   }
 
   time_t Seed() const { return seed_; }
@@ -116,6 +118,7 @@ class FastLogProbArcSelector : public LogProbArcSelector<Arc> {
  private:
   const time_t seed_;
   WeightConvert<Weight, Log64Weight> to_log_weight_;
+  WeightConvert<Log64Weight, Weight> from_log_weight_;
 };
 
 // Random path state info maintained by RandGenFst and passed to samplers.

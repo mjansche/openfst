@@ -7,6 +7,8 @@
 
 #include <sstream>
 
+#include <fst/log.h>
+
 // Include these for registration.
 #include <fst/compact-fst.h>
 #include <fst/const-fst.h>

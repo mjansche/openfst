@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/bi-table.h>
 #include <fst/expanded-fst.h>
 #include <fst/filter-state.h>

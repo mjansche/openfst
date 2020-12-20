@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 
 #include <fst/util.h>
 

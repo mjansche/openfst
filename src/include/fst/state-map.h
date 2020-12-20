@@ -12,6 +12,8 @@
 #include <string>
 #include <utility>
 
+#include <fst/log.h>
+
 #include <fst/arc-map.h>
 #include <fst/cache.h>
 #include <fst/mutable-fst.h>
@@ -155,7 +157,7 @@ class StateMapFst;
 
 // Facade around StateIteratorBase<A> inheriting from StateIteratorBase<B>.
 template <class A, class B>
-class StateMapStateIteratorBase final : public StateIteratorBase<B> {
+class StateMapStateIteratorBase : public StateIteratorBase<B> {
  public:
   using Arc = B;
   using StateId = typename Arc::StateId;
@@ -163,13 +165,13 @@ class StateMapStateIteratorBase final : public StateIteratorBase<B> {
   explicit StateMapStateIteratorBase(StateIteratorBase<A> *base)
       : base_(base) {}
 
-  bool Done() const override { return base_->Done(); }
+  bool Done() const final { return base_->Done(); }
 
-  StateId Value() const override { return base_->Value(); }
+  StateId Value() const final { return base_->Value(); }
 
-  void Next() override { base_->Next(); }
+  void Next() final { base_->Next(); }
 
-  void Reset() override { base_->Reset(); }
+  void Reset() final { base_->Reset(); }
 
  private:
   std::unique_ptr<StateIteratorBase<A>> base_;

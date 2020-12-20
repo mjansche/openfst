@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <fst/log.h>
 
 #include <fst/fst.h>
 #include <fst/test-properties.h>
@@ -162,23 +163,23 @@ const typename Arc::Label ComplementFst<Arc>::kRhoLabel;
 
 // Specialization for ComplementFst.
 template <class Arc>
-class StateIterator<ComplementFst<Arc>> final : public StateIteratorBase<Arc> {
+class StateIterator<ComplementFst<Arc>> : public StateIteratorBase<Arc> {
  public:
   using StateId = typename Arc::StateId;
 
   explicit StateIterator(const ComplementFst<Arc> &fst)
       : siter_(*fst.GetImpl()->fst_), s_(0) {}
 
-  bool Done() const override { return s_ > 0 && siter_.Done(); }
+  bool Done() const final { return s_ > 0 && siter_.Done(); }
 
-  StateId Value() const override { return s_; }
+  StateId Value() const final { return s_; }
 
-  void Next() override {
+  void Next() final {
     if (s_ != 0) siter_.Next();
     ++s_;
   }
 
-  void Reset() override {
+  void Reset() final {
     siter_.Reset();
     s_ = 0;
   }
@@ -190,8 +191,7 @@ class StateIterator<ComplementFst<Arc>> final : public StateIteratorBase<Arc> {
 
 // Specialization for ComplementFst.
 template <class Arc>
-class ArcIterator<ComplementFst<Arc>> final
-    : public fst::ArcIteratorBase<Arc> {
+class ArcIterator<ComplementFst<Arc>> : public ArcIteratorBase<Arc> {
  public:
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
@@ -202,7 +202,7 @@ class ArcIterator<ComplementFst<Arc>> final
     }
   }
 
-  bool Done() const override {
+  bool Done() const final {
     if (s_ != 0) {
       return pos_ > 0 && aiter_->Done();
     } else {
@@ -211,7 +211,7 @@ class ArcIterator<ComplementFst<Arc>> final
   }
 
   // Adds the ρ-label to the ρ destination state.
-  const Arc &Value() const override {
+  const Arc &Value() const final {
     if (pos_ == 0) {
       arc_.ilabel = arc_.olabel = ComplementFst<Arc>::kRhoLabel;
       arc_.weight = Weight::One();
@@ -223,19 +223,19 @@ class ArcIterator<ComplementFst<Arc>> final
     return arc_;
   }
 
-  void Next() override {
+  void Next() final {
     if (s_ != 0 && pos_ > 0) aiter_->Next();
     ++pos_;
   }
 
-  size_t Position() const override { return pos_; }
+  size_t Position() const final { return pos_; }
 
-  void Reset() override {
+  void Reset() final {
     if (s_ != 0) aiter_->Reset();
     pos_ = 0;
   }
 
-  void Seek(size_t a) override {
+  void Seek(size_t a) final {
     if (s_ != 0) {
       if (a == 0) {
         aiter_->Reset();
@@ -246,9 +246,9 @@ class ArcIterator<ComplementFst<Arc>> final
     pos_ = a;
   }
 
-  constexpr uint32 Flags() const override { return kArcValueFlags; }
+  constexpr uint32 Flags() const final { return kArcValueFlags; }
 
-  void SetFlags(uint32, uint32) override {}
+  void SetFlags(uint32, uint32) final {}
 
  private:
   std::unique_ptr<ArcIterator<Fst<Arc>>> aiter_;

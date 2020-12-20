@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
 #include <fstream>
 
 #include <fst/arc-map.h>

@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arcsort.h>
 #include <fst/connect.h>
 #include <fst/dfs-visit.h>

@@ -88,6 +88,7 @@
 #include <fst/script/fst-class.h>
 
 #include <fst/types.h>
+#include <fst/log.h>
 
 namespace fst {
 namespace script {

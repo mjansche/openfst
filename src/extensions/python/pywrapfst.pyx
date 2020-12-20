@@ -1364,7 +1364,7 @@ cdef class _Fst(object):
                 self._fst.get().OutputSymbols(), NULL,
                 self._fst.get().Properties(fst.kAcceptor, True) ==
                 fst.kAcceptor,
-                b"", 8.5, 11, True, False, 0.4, 0.25, 14, 5, False,
+                b"", 8.5, 11, True, False, 0.4, 0.25, 14, 5, b"g", False,
                 addr(sstrm), b"_repr_svg")
     (sout, serr) = proc.communicate(sstrm.str())
     if proc.returncode != 0:  # Just to be explicit.
@@ -1428,12 +1428,13 @@ cdef class _Fst(object):
                   double nodesep=0.25,
                   int32 fontsize=14,
                   int32 precision=5,
+                  float_format=b"g",
                   bool show_weight_one=False):
     """
     draw(self, filename, isymbols=None, osymbols=None, ssymbols=None,
          acceptor=False, title="", width=8.5, height=11, portrait=False,
          vertical=False, ranksep=0.4, nodesep=0.25, fontsize=14,
-         precision=5, show_weight_one=False):
+         precision=5, float_format="g", show_weight_one=False):
 
     Writes out the FST in Graphviz text format.
 
@@ -1457,6 +1458,7 @@ cdef class _Fst(object):
       nodesep: The minimum separation between nodes, in inches.
       fontsize: Font size, in points.
       precision: Numeric precision for floats, in number of chars.
+      float_format: One of: 'e', 'f' or 'g'.
       show_weight_one: Should weights equivalent to semiring One be printed?
 
     For more information about the rendering options, see `man dot`.
@@ -1475,8 +1477,9 @@ cdef class _Fst(object):
         self._fst.get().OutputSymbols() if osymbols is None
         else osymbols._table,
         ssymbols_ptr, acceptor, tostring(title), width, height, portrait,
-        vertical, ranksep, nodesep, fontsize, precision, show_weight_one,
-        ostrm.get(), filename_string)
+        vertical, ranksep, nodesep, fontsize, precision,
+        tostring(float_format), show_weight_one, ostrm.get(),
+        filename_string)
 
   cpdef Weight final(self, int64 state):
     """
@@ -2198,9 +2201,11 @@ cdef class _MutableFst(_Fst):
   cdef void _relabel_tables(self,
                             _SymbolTable old_isymbols=None,
                             _SymbolTable new_isymbols=None,
+                            unknown_isymbol=b"",
                             bool attach_new_isymbols=True,
                             _SymbolTable old_osymbols=None,
                             _SymbolTable new_osymbols=None,
+                            unknown_osymbol=b"",
                             bool attach_new_osymbols=True) except *:
     if new_isymbols is None and new_osymbols is None:
       raise FstArgError("No new SymbolTables specified")
@@ -2212,22 +2217,27 @@ cdef class _MutableFst(_Fst):
       new_osymbols_ptr = new_osymbols._table
     fst.Relabel(self._mfst.get(),
         self._fst.get().InputSymbols() if old_isymbols is None else
-        old_isymbols._table, new_isymbols_ptr, attach_new_isymbols,
+        old_isymbols._table, new_isymbols_ptr, tostring(unknown_isymbol),
+        attach_new_isymbols,
         self._fst.get().OutputSymbols() if old_osymbols is None else
-        old_osymbols._table, new_osymbols_ptr, attach_new_osymbols)
+        old_osymbols._table, new_osymbols_ptr, tostring(unknown_osymbol),
+        attach_new_osymbols)
     self._check_mutating_imethod()
 
   def relabel_tables(self,
                      _SymbolTable old_isymbols=None,
-                    _SymbolTable new_isymbols=None,
-                    bool attach_new_isymbols=True,
-                    _SymbolTable old_osymbols=None,
-                    _SymbolTable new_osymbols=None,
-                    bool attach_new_osymbols=True):
+                     _SymbolTable new_isymbols=None,
+                     unknown_isymbol=b"",
+                     bool attach_new_isymbols=True,
+                     _SymbolTable old_osymbols=None,
+                     _SymbolTable new_osymbols=None,
+                     unknown_osymbol=b"",
+                     bool attach_new_osymbols=True):
     """
     relabel_tables(self, old_isymbols=None, new_isymbols=None,
-                   attach_new_isymbols=True, old_osymbols=None,
-                   new_osymbols=None, attach_new_osymbols=True)
+                   unknown_isymbol="", attach_new_isymbols=True,
+                   old_osymbols=None, new_osymbols=None,
+                   unknown_osymbol="", attach_new_osymbols=True)
 
     Replaces input and/or output labels using SymbolTables.
 
@@ -2238,11 +2248,15 @@ cdef class _MutableFst(_Fst):
        old_isymbols: The old SymbolTable for input labels, defaulting to the
           FST's input symbol table.
        new_isymbols: A SymbolTable used to relabel the input labels
+       unknown_isymbol: Input symbol to use to relabel OOVs (if empty,
+          OOVs raise an exception)
        attach_new_isymbols: Should new_isymbols be made the FST's input symbol
           table?
        old_osymbols: The old SymbolTable for output labels, defaulting to the
           FST's output symbol table.
        new_osymbols: A SymbolTable used to relabel the output labels.
+       unknown_osymbol: Outnput symbol to use to relabel OOVs (if empty,
+          OOVs raise an exception)
        attach_new_isymbols: Should new_osymbols be made the FST's output symbol
           table?
 
@@ -2254,8 +2268,10 @@ cdef class _MutableFst(_Fst):
 
     See also: `decode`, `encode`, `project`, `relabel_pairs`.
     """
-    self._relabel_tables(old_isymbols, new_isymbols, attach_new_isymbols,
-                         old_osymbols, new_osymbols, attach_new_osymbols)
+    self._relabel_tables(old_isymbols, new_isymbols,
+                         unknown_isymbol, attach_new_isymbols,
+                         old_osymbols, new_osymbols,
+                         unknown_osymbol, attach_new_osymbols)
     return self
 
   cdef void _reserve_arcs(self, int64 state, size_t n) except *:
@@ -2387,7 +2403,7 @@ cdef class _MutableFst(_Fst):
     cdef fst.WeightClass wc = _get_WeightClass_or_One(self.weight_type(),
                                                       weight)
     if not self._mfst.get().SetFinal(state, wc):
-      raise FstOpError("incompatible or invalid weight")
+      raise FstOpError("Incompatible or invalid weight")
     self._check_mutating_imethod()
 
   def set_final(self, int64 state, weight=None):
@@ -2403,7 +2419,7 @@ cdef class _MutableFst(_Fst):
 
     Raises:
       FstIndexError: State index out of range.
-      FstOpError: incompatible or invalid weight.
+      FstOpError: Incompatible or invalid weight.
 
     See also: `set_start`.
     """

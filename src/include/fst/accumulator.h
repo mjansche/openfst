@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/arcfilter.h>
 #include <fst/arcsort.h>
 #include <fst/dfs-visit.h>
@@ -518,12 +520,7 @@ class CacheLogAccumulator {
       }
       return sum;
     } else {
-      if (weights_->size() <= end) {
-        for (aiter->Seek(weights_->size() - 1); weights_->size() <= end;
-             aiter->Next()) {
-          weights_->push_back(LogPlus(weights_->back(), aiter->Value().weight));
-        }
-      }
+      Extend(end, aiter);
       const auto &f1 = (*weights_)[end];
       const auto &f2 = (*weights_)[begin];
       if (f1 < f2) {
@@ -544,20 +541,24 @@ class CacheLogAccumulator {
     }
   }
 
-  // Arc iterator position determines beginning point of lower bound.
+  // Returns first position from aiter->Position() whose accumulated
+  // value is greater or equal to w (w.r.t. Zero() < One()). The
+  // iterator may be repositioned.
   template <class ArcIter>
-  size_t LowerBound(double w, ArcIter *aiter) {
+  size_t LowerBound(Weight w, ArcIter *aiter) {
+    const auto f = to_log_weight_(w).Value();
+    auto pos = aiter->Position();
     if (weights_) {
-      auto pos = aiter->Position();
-      return std::lower_bound(weights_->begin() + pos + 1, weights_->end(), w,
-                              std::greater<double>()) -
-             weights_->begin() - 1;
+      Extend(fst_->NumArcs(s_), aiter);
+      return std::lower_bound(weights_->begin() + pos + 1, weights_->end(),
+                              f, std::greater<double>()) -
+          weights_->begin() - 1;
     } else {
       auto n = 0;
       auto x = FloatLimits<double>::PosInfinity();
-      for (; !aiter->Done(); aiter->Next(), ++n) {
+      for (aiter->Reset(); !aiter->Done(); aiter->Next(), ++n) {
         x = LogPlus(x, aiter->Value().weight);
-        if (x < w) break;
+        if (n >= pos && x <= f) break;
       }
       return n;
     }
@@ -605,6 +606,18 @@ class CacheLogAccumulator {
       return to_weight_(Log64Weight(f1 - LogMinusExp(f2 - f1)));
     }
   }
+
+  // Extends weights up to index 'end'.
+  template <class ArcIter>
+  void Extend(ssize_t end, ArcIter *aiter) {
+    if (weights_->size() <= end) {
+      for (aiter->Seek(weights_->size() - 1); weights_->size() <= end;
+           aiter->Next()) {
+        weights_->push_back(LogPlus(weights_->back(), aiter->Value().weight));
+      }
+    }
+  }
+
 
   WeightConvert<Weight, Log64Weight> to_log_weight_;
   WeightConvert<Log64Weight, Weight> to_weight_;

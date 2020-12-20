@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <fst/log.h>
+
 #include <fst/extensions/mpdt/mpdtscript.h>
 #include <fst/extensions/mpdt/read_write_utils.h>
 #include <fst/util.h>

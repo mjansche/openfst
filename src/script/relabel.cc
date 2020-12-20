@@ -9,12 +9,15 @@ namespace fst {
 namespace script {
 
 // 1
-void Relabel(MutableFstClass *ofst, const SymbolTable *old_isyms,
-             const SymbolTable *relabel_isyms, bool attach_new_isyms,
+void Relabel(MutableFstClass *ofst,
+             const SymbolTable *old_isyms, const SymbolTable *relabel_isyms,
+             const string &unknown_isymbol, bool attach_new_isyms,
              const SymbolTable *old_osyms, const SymbolTable *relabel_osyms,
-             bool attach_new_osyms) {
-  RelabelArgs1 args(ofst, old_isyms, relabel_isyms, attach_new_isyms, old_osyms,
-                    relabel_osyms, attach_new_osyms);
+             const string &unknown_osymbol, bool attach_new_osyms) {
+  RelabelArgs1 args(
+      ofst,
+      old_isyms, relabel_isyms, unknown_isymbol, attach_new_isyms,
+      old_osyms, relabel_osyms, unknown_osymbol, attach_new_osyms);
   Apply<Operation<RelabelArgs1>>("Relabel", ofst->ArcType(), &args);
 }
 

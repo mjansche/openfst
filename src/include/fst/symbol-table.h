@@ -7,16 +7,17 @@
 #define FST_LIB_SYMBOL_TABLE_H_
 
 #include <cstring>
+#include <functional>
 #include <ios>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 #include <fstream>
 #include <map>
 
@@ -226,7 +227,7 @@ class SymbolTable {
 
   virtual ~SymbolTable() {}
 
-  // Reads an text representation of the symbol table from an istream. Pass a
+  // Reads a text representation of the symbol table from an istream. Pass a
   // name to give the resulting SymbolTable.
   static SymbolTable* ReadText(std::istream &strm,
       const string &name,
@@ -239,7 +240,7 @@ class SymbolTable {
     }
   }
 
-  // Reads an text representation of the symbol table.
+  // Reads a text representation of the symbol table.
   static SymbolTable *ReadText(const string &filename,
       const SymbolTableTextOptions &opts = SymbolTableTextOptions()) {
     std::ifstream strm(filename.c_str(), std::ios_base::in);

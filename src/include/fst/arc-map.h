@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <fst/log.h>
+
 #include <fst/cache.h>
 #include <fst/mutable-fst.h>
 
@@ -577,11 +579,11 @@ class StateIterator<ArcMapFst<A, B, C>> : public StateIteratorBase<B> {
     CheckSuperfinal();
   }
 
-  bool Done() const override { return siter_.Done() && !superfinal_; }
+  bool Done() const final { return siter_.Done() && !superfinal_; }
 
-  StateId Value() const override { return s_; }
+  StateId Value() const final { return s_; }
 
-  void Next() override {
+  void Next() final {
     ++s_;
     if (!siter_.Done()) {
       siter_.Next();
@@ -591,7 +593,7 @@ class StateIterator<ArcMapFst<A, B, C>> : public StateIteratorBase<B> {
     }
   }
 
-  void Reset() override {
+  void Reset() final {
     s_ = 0;
     siter_.Reset();
     superfinal_ = impl_->final_action_ == MAP_REQUIRE_SUPERFINAL;
@@ -737,15 +739,21 @@ class SuperFinalMapper {
 };
 
 // Mapper that leaves labels and nextstate unchanged and constructs a new weight
-// from the underlying value of the arc weight. Requires that there is a
-// WeightConvert class specialization that converts the weights.
-template <class A, class B>
+// from the underlying value of the arc weight. If no weight converter is
+// explictly specified, requires that there is a WeightConvert class
+// specialization that converts the weights.
+template <class A, class B,
+          class C = WeightConvert<typename A::Weight, typename B::Weight>>
 class WeightConvertMapper {
  public:
   using FromArc = A;
   using ToArc = B;
+  using Converter = C;
   using FromWeight = typename FromArc::Weight;
   using ToWeight = typename ToArc::Weight;
+
+  explicit WeightConvertMapper(const Converter &c = Converter())
+      : convert_weight_(c) {}
 
   ToArc operator()(const FromArc &arc) const {
     return ToArc(arc.ilabel, arc.olabel, convert_weight_(arc.weight),
@@ -765,7 +773,7 @@ class WeightConvertMapper {
   uint64 Properties(uint64 props) const { return props; }
 
  private:
-  WeightConvert<FromWeight, ToWeight> convert_weight_;
+  Converter convert_weight_;
 };
 
 // Non-precision-changing weight conversions; consider using more efficient
@@ -965,7 +973,7 @@ class GallicToNewSymbolsMapper {
         StringWeightIterator<Label, GALLIC_STRING_TYPE(G)> iter1(w1);
         StateId n;
         string s;
-        for (auto i = 0, p = state_; i < w1.Size();
+        for (size_t i = 0, p = state_; i < w1.Size();
              ++i, iter1.Next(), p = n) {
           n = i == w1.Size() - 1 ? state_ : fst_->AddState();
           fst_->AddArc(p, ToArc(i ? 0 : l, iter1.Value(), AW::One(), n));

@@ -8,8 +8,10 @@
 #define FST_LIB_LOOKAHEAD_MATCHER_H_
 
 #include <memory>
-#include <string>
+#include <utility>
 #include <vector>
+
+#include <fst/log.h>
 
 #include <fst/add-on.h>
 #include <fst/const-fst.h>
@@ -23,8 +25,8 @@ DECLARE_string(save_relabel_opairs);
 
 namespace fst {
 
-// Lookahead matches extend the interface of Matcher (see matcher.h) with the
-// following additional methods:
+// Lookahead matches extend the matcher interface with following additional
+// methods:
 //
 // template <class FST>
 // class LookAheadMatcher {
@@ -43,54 +45,51 @@ namespace fst {
 //  // Below are methods for looking ahead for a match to a label and more
 //  // generally, to a rational set. Each returns false if there is definitely
 //  // not a match and returns true if there possibly is a match.
-
-//  // Can the label be read from the current matcher state after possibly
-//  // following epsilon transitions?
-//  bool LookAheadLabel(Label label) const;
-//
-//  // The following methods allow looking ahead for an arbitrary rational set
-//  // of strings, specified by an FST and a state from which to begin the
-//  matching. If the lookahead FST is a transducer, this looks on the side
-//  // different from the matcher's match_type (cf. composition).
-//
-//  // Are there paths from a state in the lookahead FST that can be read from
-//  // the curent matcher state?
-//  bool LookAheadFst(const Fst<Arc> &fst, StateId state);
-//
-//  // Gives an estimate of the combined weight of the paths in the lookahead
-//  // and matcher FSTs for the last call to LookAheadFst; a trivial
-//  // implementation returns Weight::One(). Non-trivial implementations are
-//  // useful for weight-pushing in composition.
-//  Weight LookAheadWeight() const;
-//
-//  // Is there is a single non-epsilon arc found in the lookahead FST that
-//  // begins the path (after possibly following any epsilons) in the last call
-//  // to LookAheadFst? If so, return true and copy it to the arc argument;
-//  // otherwise, return false. A trivial implementation returns false.
-//  // Non-trivial implementations are useful for label-pushing in composition.
-//  bool LookAheadPrefix(Arc *arc);
 //
 //  // Optionally pre-specifies the lookahead FST that will be passed to
 //  // LookAheadFst() for possible precomputation. If copy is true, then the FST
-//  argument is a copy of the FST used in the previous call to this method (to
-//  avoid unnecessary updates).
-//  void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false);
+//  // argument is a copy of the FST used in the previous call to this method
+//  // (to avoid unnecessary updates).
+//  void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false) override;
+//
+//  // Are there paths from a state in the lookahead FST that can be read from
+//  // the curent matcher state?
+//  bool LookAheadFst(const Fst<Arc> &fst, StateId s) override;
+//
+//  // Can the label be read from the current matcher state after possibly
+//  // following epsilon transitions?
+//  bool LookAheadLabel(Label label) const override;
+//
+//  // The following methods allow looking ahead for an arbitrary rational set
+//  // of strings, specified by an FST and a state from which to begin the
+//  // matching. If the lookahead FST is a transducer, this looks on the side
+//  // different from the matcher's match_type (cf. composition).
+//  // Is there is a single non-epsilon arc found in the lookahead FST that
+//  // begins the path (after possibly following any epsilons) in the last call
+//  // to LookAheadFst? If so, return true and copy it to the arc argument;
+//  // otherwise, return false. Non-trivial implementations are useful for
+//  // label-pushing in composition.
+//  bool LookAheadPrefix(Arc *arc) override;
+//
+//  // Gives an estimate of the combined weight of the paths in the lookahead
+//  // and matcher FSTs for the last call to LookAheadFst. Non-trivial
+//  // implementations are useful for weight-pushing in composition.
+//  Weight LookAheadWeight() const override;
 // };
 
-// LOOK-AHEAD FLAGS (see also kMatcherFlags in matcher.h):
-//
-// Matcher is a lookahead matcher when 'match_type' is MATCH_INPUT.
+// Look-ahead flags.
+// Matcher is a lookahead matcher when match_type is MATCH_INPUT.
 constexpr uint32 kInputLookAheadMatcher = 0x00000010;
 
-// Matcher is a lookahead matcher when 'match_type' is MATCH_OUTPUT.
+// Matcher is a lookahead matcher when match_type is MATCH_OUTPUT.
 constexpr uint32 kOutputLookAheadMatcher = 0x00000020;
 
-// A non-trivial implementation of LookAheadWeight() method defined and
-// should be used?
+// Is a non-trivial implementation of LookAheadWeight() method defined and
+// if so, should it be used?
 constexpr uint32 kLookAheadWeight = 0x00000040;
 
-// A non-trivial implementation of LookAheadPrefix() method defined and
-// should be used?
+// Is a non-trivial implementation of LookAheadPrefix() method defined and
+// if so, should it be used?
 constexpr uint32 kLookAheadPrefix = 0x00000080;
 
 // Look-ahead of matcher FST non-epsilon arcs?
@@ -99,12 +98,12 @@ constexpr uint32 kLookAheadNonEpsilons = 0x00000100;
 // Look-ahead of matcher FST epsilon arcs?
 constexpr uint32 kLookAheadEpsilons = 0x00000200;
 
-// Ignore epsilon paths for the lookahead prefix? Note this gives
-// correct results in composition only with an appropriate composition
-// filter since it depends on the filter blocking the ignored paths.
+// Ignore epsilon paths for the lookahead prefix? This gives correct results in
+// composition only with an appropriate composition filter since it depends on
+// the filter blocking the ignored paths.
 constexpr uint32 kLookAheadNonEpsilonPrefix = 0x00000400;
 
-// For LabelLookAheadMatcher, save relabeling data to file
+// For LabelLookAheadMatcher, save relabeling data to file?
 constexpr uint32 kLookAheadKeepRelabelData = 0x00000800;
 
 // Flags used for lookahead matchers.
@@ -120,19 +119,11 @@ class LookAheadMatcherBase : public MatcherBase<Arc> {
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
 
-  LookAheadMatcherBase()
-      : weight_(Weight::One()),
-        prefix_arc_(kNoLabel, kNoLabel, Weight::One(), kNoStateId) {}
+  virtual void InitLookAheadFst(const Fst<Arc> &, bool copy = false) = 0;
+  virtual bool LookAheadFst(const Fst<Arc> &, StateId) = 0;
+  virtual bool LookAheadLabel(Label) const = 0;
 
-  ~LookAheadMatcherBase() override {}
-
-  bool LookAheadLabel(Label label) const { return LookAheadLabel_(label); }
-
-  bool LookAheadFst(const Fst<Arc> &fst, StateId state) {
-    return LookAheadFst_(fst, state);
-  }
-
-  Weight LookAheadWeight() const { return weight_; }
+  // Suggested concrete implementation of lookahead methods.
 
   bool LookAheadPrefix(Arc *arc) const {
     if (prefix_arc_.nextstate != kNoStateId) {
@@ -143,26 +134,25 @@ class LookAheadMatcherBase : public MatcherBase<Arc> {
     }
   }
 
-  virtual void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false) = 0;
+  Weight LookAheadWeight() const { return weight_; }
 
  protected:
-  void SetLookAheadWeight(const Weight &w) { weight_ = w; }
+  // Concrete implementations for lookahead helper methods.
 
-  void SetLookAheadPrefix(const Arc &arc) { prefix_arc_ = arc; }
+  void ClearLookAheadWeight() { weight_ = Weight::One(); }
+
+  void SetLookAheadWeight(Weight weight) { weight_ = std::move(weight); }
 
   void ClearLookAheadPrefix() { prefix_arc_.nextstate = kNoStateId; }
 
+  void SetLookAheadPrefix(Arc arc) { prefix_arc_ = std::move(arc); }
+
  private:
-  virtual bool LookAheadLabel_(Label label) const = 0;
-
-  // This must set l.a. weight and prefix if non-trivial.
-  virtual bool LookAheadFst_(const Fst<Arc> &fst, StateId state) = 0;
-
-  Weight weight_;                             // Look-ahead weight.
-  Arc prefix_arc_;                            // Look-ahead prefix arc
+  Arc prefix_arc_;
+  Weight weight_;
 };
 
-// Don't really lookahead, just declare future looks good regardless.
+// Doesn't actually lookahead, just declares that the future looks good.
 template <class M>
 class TrivialLookAheadMatcher
     : public LookAheadMatcherBase<typename M::FST::Arc> {
@@ -186,19 +176,19 @@ class TrivialLookAheadMatcher
 
   MatchType Type(bool test) const override { return matcher_.Type(test); }
 
-  void SetState(StateId state) { return matcher_.SetState(state); }
+  void SetState(StateId s) final { return matcher_.SetState(s); }
 
-  bool Find(Label label) { return matcher_.Find(label); }
+  bool Find(Label label) final { return matcher_.Find(label); }
 
-  bool Done() const { return matcher_.Done(); }
+  bool Done() const final { return matcher_.Done(); }
 
-  const Arc &Value() const { return matcher_.Value(); }
+  const Arc &Value() const final { return matcher_.Value(); }
 
-  void Next() { matcher_.Next(); }
+  void Next() final { matcher_.Next(); }
 
-  Weight Final(StateId state) const { return matcher_.Final(state); }
+  Weight Final(StateId s) const final { return matcher_.Final(s); }
 
-  ssize_t Priority(StateId state) { return matcher_.Priority(state); }
+  ssize_t Priority(StateId s) final { return matcher_.Priority(s); }
 
   const FST &GetFst() const override { return matcher_.GetFst(); }
 
@@ -210,52 +200,27 @@ class TrivialLookAheadMatcher
     return matcher_.Flags() | kInputLookAheadMatcher | kOutputLookAheadMatcher;
   }
 
-  // Look-ahead methods.
-  bool LookAheadLabel(Label label) const { return true; }
-
-  bool LookAheadFst(const Fst<Arc> &fst, StateId state) { return true; }
-
-  Weight LookAheadWeight() const { return Weight::One(); }
-
-  bool LookAheadPrefix(Arc *arc) const { return false; }
+  // Lookahead methods (all trivial).
 
   void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false) override {}
 
+  bool LookAheadFst(const Fst<Arc> &, StateId) final { return true; }
+
+  bool LookAheadLabel(Label) const final { return true; }
+
+  bool LookAheadPrefix(Arc *) const { return false; }
+
+  Weight LookAheadWeight() const { return Weight::One(); }
+
  private:
-  // This allows base class virtual access to non-virtual derived-class members
-  // of the same name. It makes the derived class more efficient to use but
-  // unsafe to further derive.
-  void SetState_(StateId state) override { SetState(state); }
-
-  bool Find_(Label label) override { return Find(label); }
-
-  bool Done_() const override { return Done(); }
-
-  const Arc &Value_() const override { return Value(); }
-
-  void Next_() override { Next(); }
-
-  Weight Final_(StateId state) const override { return Final(state); }
-
-  ssize_t Priority_(StateId state) override { return Priority(state); }
-
-  bool LookAheadLabel_(Label l) const override { return LookAheadLabel(l); }
-
-  bool LookAheadFst_(const Fst<Arc> &fst, StateId state) override {
-    return LookAheadFst(fst, state);
-  }
-
-  Weight LookAheadWeight_() const { return LookAheadWeight(); }
-
-  bool LookAheadPrefix_(Arc *arc) const { return LookAheadPrefix(arc); }
-
   M matcher_;
 };
 
-// Look-ahead of one transition. Template argument F accepts flags to
+// Look-ahead of one transition. Template argument flags accepts flags to
 // control behavior.
-template <class M, uint32 F = kLookAheadNonEpsilons | kLookAheadEpsilons |
-                              kLookAheadWeight | kLookAheadPrefix>
+template <class M,
+          uint32 flags = kLookAheadNonEpsilons | kLookAheadEpsilons |
+                         kLookAheadWeight | kLookAheadPrefix>
 class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
  public:
   using FST = typename M::FST;
@@ -265,10 +230,14 @@ class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
   using Weight = typename Arc::Weight;
   using MatcherData = NullAddOn;
 
+  using LookAheadMatcherBase<Arc>::ClearLookAheadWeight;
   using LookAheadMatcherBase<Arc>::LookAheadWeight;
-  using LookAheadMatcherBase<Arc>::SetLookAheadPrefix;
   using LookAheadMatcherBase<Arc>::SetLookAheadWeight;
   using LookAheadMatcherBase<Arc>::ClearLookAheadPrefix;
+  using LookAheadMatcherBase<Arc>::LookAheadPrefix;
+  using LookAheadMatcherBase<Arc>::SetLookAheadPrefix;
+
+  enum : uint32 { kFlags = flags };
 
   ArcLookAheadMatcher(
       const FST &fst, MatchType match_type,
@@ -278,7 +247,7 @@ class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
         lfst_(nullptr),
         state_(kNoStateId) {}
 
-  ArcLookAheadMatcher(const ArcLookAheadMatcher<M, F> &lmatcher,
+  ArcLookAheadMatcher(const ArcLookAheadMatcher<M, flags> &lmatcher,
                       bool safe = false)
       : matcher_(lmatcher.matcher_, safe),
         fst_(matcher_.GetFst()),
@@ -286,28 +255,28 @@ class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
         state_(kNoStateId) {}
 
   // General matcher methods.
-  ArcLookAheadMatcher<M, F> *Copy(bool safe = false) const override {
-    return new ArcLookAheadMatcher<M, F>(*this, safe);
+  ArcLookAheadMatcher<M, flags> *Copy(bool safe = false) const override {
+    return new ArcLookAheadMatcher<M, flags>(*this, safe);
   }
 
   MatchType Type(bool test) const override { return matcher_.Type(test); }
 
-  void SetState(StateId state) {
-    state_ = state;
-    matcher_.SetState(state);
+  void SetState(StateId s) final {
+    state_ = s;
+    matcher_.SetState(s);
   }
 
-  bool Find(Label label) { return matcher_.Find(label); }
+  bool Find(Label label) final { return matcher_.Find(label); }
 
-  bool Done() const { return matcher_.Done(); }
+  bool Done() const final { return matcher_.Done(); }
 
-  const Arc &Value() const { return matcher_.Value(); }
+  const Arc &Value() const final { return matcher_.Value(); }
 
-  void Next() { matcher_.Next(); }
+  void Next() final { matcher_.Next(); }
 
-  Weight Final(StateId state) const { return matcher_.Final(state); }
+  Weight Final(StateId s) const final { return matcher_.Final(s); }
 
-  ssize_t Priority(StateId state) { return matcher_.Priority(state); }
+  ssize_t Priority(StateId s) final { return matcher_.Priority(s); }
 
   const FST &GetFst() const override { return fst_; }
 
@@ -317,7 +286,7 @@ class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
 
   uint32 Flags() const override {
     return matcher_.Flags() | kInputLookAheadMatcher | kOutputLookAheadMatcher |
-           F;
+           kFlags;
   }
 
   const MatcherData *GetData() const { return nullptr; }
@@ -327,78 +296,53 @@ class ArcLookAheadMatcher : public LookAheadMatcherBase<typename M::FST::Arc> {
   }
 
   // Look-ahead methods.
-  bool LookAheadLabel(Label label) const { return matcher_.Find(label); }
-
-  // Checks if there is a matching (possibly super-final) transition
-  // at (state_, state).
-  bool LookAheadFst(const Fst<Arc> &fst, StateId state);
 
   void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false) override {
     lfst_ = &fst;
   }
 
+  // Checks if there is a matching (possibly super-final) transition
+  // at (state_, s).
+  bool LookAheadFst(const Fst<Arc> &, StateId) final;
+
+  bool LookAheadLabel(Label label) const final { return matcher_.Find(label); }
+
  private:
-  // This allows base class virtual access to non-virtual derived-
-  // class members of the same name. It makes the derived class more
-  // efficient to use but unsafe to further derive.
-  void SetState_(StateId state) override { SetState(state); }
-
-  bool Find_(Label label) override { return Find(label); }
-
-  bool Done_() const override { return Done(); }
-
-  const Arc &Value_() const override { return Value(); }
-
-  void Next_() override { Next(); }
-
-  Weight Final_(StateId state) const override { return Final(state); }
-
-  ssize_t Priority_(StateId state) override { return Priority(state); }
-
-  bool LookAheadLabel_(Label label) const override {
-    return LookAheadLabel(label);
-  }
-
-  bool LookAheadFst_(const Fst<Arc> &fst, StateId state) override {
-    return LookAheadFst(fst, state);
-  }
-
   mutable M matcher_;
   const FST &fst_;        // Matcher FST.
   const Fst<Arc> *lfst_;  // Look-ahead FST.
   StateId state_;         // Matcher state.
 };
 
-template <class M, uint32 F>
-bool ArcLookAheadMatcher<M, F>::LookAheadFst(const Fst<Arc> &fst,
-                                             StateId state) {
+template <class M, uint32 flags>
+bool ArcLookAheadMatcher<M, flags>::LookAheadFst(const Fst<Arc> &fst,
+                                                 StateId s) {
   if (&fst != lfst_) InitLookAheadFst(fst);
   bool result = false;
   ssize_t nprefix = 0;
-  if (F & kLookAheadWeight) SetLookAheadWeight(Weight::Zero());
-  if (F & kLookAheadPrefix) ClearLookAheadPrefix();
+  if (kFlags & kLookAheadWeight) ClearLookAheadWeight();
+  if (kFlags & kLookAheadPrefix) ClearLookAheadPrefix();
   if (fst_.Final(state_) != Weight::Zero() &&
-      lfst_->Final(state) != Weight::Zero()) {
-    if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
+      lfst_->Final(s) != Weight::Zero()) {
+    if (!(kFlags & (kLookAheadWeight | kLookAheadPrefix))) return true;
     ++nprefix;
-    if (F & kLookAheadWeight) {
-      SetLookAheadWeight(Plus(LookAheadWeight(),
-                              Times(fst_.Final(state_), lfst_->Final(state))));
+    if (kFlags & kLookAheadWeight) {
+      SetLookAheadWeight(
+          Plus(LookAheadWeight(), Times(fst_.Final(state_), lfst_->Final(s))));
     }
     result = true;
   }
   if (matcher_.Find(kNoLabel)) {
-    if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
+    if (!(kFlags & (kLookAheadWeight | kLookAheadPrefix))) return true;
     ++nprefix;
-    if (F & kLookAheadWeight) {
+    if (kFlags & kLookAheadWeight) {
       for (; !matcher_.Done(); matcher_.Next()) {
         SetLookAheadWeight(Plus(LookAheadWeight(), matcher_.Value().weight));
       }
     }
     result = true;
   }
-  for (ArcIterator<Fst<Arc>> aiter(*lfst_, state); !aiter.Done();
-       aiter.Next()) {
+  for (ArcIterator<Fst<Arc>> aiter(*lfst_, s); !aiter.Done(); aiter.Next()) {
     const auto &arc = aiter.Value();
     Label label = kNoLabel;
     switch (matcher_.Type(false)) {
@@ -413,28 +357,29 @@ bool ArcLookAheadMatcher<M, F>::LookAheadFst(const Fst<Arc> &fst,
         return true;
     }
     if (label == 0) {
-      if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
-      if (!(F & kLookAheadNonEpsilonPrefix)) ++nprefix;
-      if (F & kLookAheadWeight) {
+      if (!(kFlags & (kLookAheadWeight | kLookAheadPrefix))) return true;
+      if (!(kFlags & kLookAheadNonEpsilonPrefix)) ++nprefix;
+      if (kFlags & kLookAheadWeight) {
         SetLookAheadWeight(Plus(LookAheadWeight(), arc.weight));
       }
       result = true;
     } else if (matcher_.Find(label)) {
-      if (!(F & (kLookAheadWeight | kLookAheadPrefix))) return true;
+      if (!(kFlags & (kLookAheadWeight | kLookAheadPrefix))) return true;
       for (; !matcher_.Done(); matcher_.Next()) {
         ++nprefix;
-        if (F & kLookAheadWeight) {
+        if (kFlags & kLookAheadWeight) {
           SetLookAheadWeight(Plus(LookAheadWeight(),
                                   Times(arc.weight, matcher_.Value().weight)));
         }
-        if ((F & kLookAheadPrefix) && nprefix == 1) SetLookAheadPrefix(arc);
+        if ((kFlags & kLookAheadPrefix) && nprefix == 1)
+          SetLookAheadPrefix(arc);
       }
       result = true;
     }
   }
-  if (F & kLookAheadPrefix) {
+  if (kFlags & kLookAheadPrefix) {
     if (nprefix == 1) {
-      SetLookAheadWeight(Weight::One());  // Avoids double counting.
+      ClearLookAheadWeight();  // Avoids double counting.
     } else {
       ClearLookAheadPrefix();
     }
@@ -442,11 +387,12 @@ bool ArcLookAheadMatcher<M, F>::LookAheadFst(const Fst<Arc> &fst,
   return result;
 }
 
-// Template argument F accepts flags to control behavior. It must include
+// Template argument flags accepts flags to control behavior. It must include
 // precisely one of kInputLookAheadMatcher or kOutputLookAheadMatcher.
 template <class M,
-          uint32 F = kLookAheadEpsilons | kLookAheadWeight | kLookAheadPrefix |
-                     kLookAheadNonEpsilonPrefix | kLookAheadKeepRelabelData,
+          uint32 flags = kLookAheadEpsilons | kLookAheadWeight |
+                         kLookAheadPrefix | kLookAheadNonEpsilonPrefix |
+                         kLookAheadKeepRelabelData,
           class Accumulator = DefaultAccumulator<typename M::Arc>,
           class Reachable = LabelReachable<typename M::Arc, Accumulator>>
 class LabelLookAheadMatcher
@@ -459,10 +405,14 @@ class LabelLookAheadMatcher
   using Weight = typename Arc::Weight;
   using MatcherData = typename Reachable::Data;
 
+  using LookAheadMatcherBase<Arc>::ClearLookAheadWeight;
   using LookAheadMatcherBase<Arc>::LookAheadWeight;
-  using LookAheadMatcherBase<Arc>::SetLookAheadPrefix;
   using LookAheadMatcherBase<Arc>::SetLookAheadWeight;
   using LookAheadMatcherBase<Arc>::ClearLookAheadPrefix;
+  using LookAheadMatcherBase<Arc>::LookAheadPrefix;
+  using LookAheadMatcherBase<Arc>::SetLookAheadPrefix;
+
+  enum : uint32 { kFlags = flags };
 
   LabelLookAheadMatcher(
       const FST &fst, MatchType match_type,
@@ -472,8 +422,8 @@ class LabelLookAheadMatcher
         lfst_(nullptr),
         state_(kNoStateId),
         error_(false) {
-    if (!(F & (kInputLookAheadMatcher | kOutputLookAheadMatcher))) {
-      FSTERROR() << "LabelLookaheadMatcher: Bad matcher flags: " << F;
+    if (!(kFlags & (kInputLookAheadMatcher | kOutputLookAheadMatcher))) {
+      FSTERROR() << "LabelLookaheadMatcher: Bad matcher flags: " << kFlags;
       error_ = true;
     }
     const bool reach_input = match_type == MATCH_INPUT;
@@ -481,15 +431,15 @@ class LabelLookAheadMatcher
       if (reach_input == data->ReachInput()) {
         label_reachable_.reset(new Reachable(data, accumulator));
       }
-    } else if ((reach_input && (F & kInputLookAheadMatcher)) ||
-               (!reach_input && (F & kOutputLookAheadMatcher))) {
+    } else if ((reach_input && (kFlags & kInputLookAheadMatcher)) ||
+               (!reach_input && (kFlags & kOutputLookAheadMatcher))) {
       label_reachable_.reset(new Reachable(fst, reach_input, accumulator,
-                                           F & kLookAheadKeepRelabelData));
+                                           kFlags & kLookAheadKeepRelabelData));
     }
   }
 
   LabelLookAheadMatcher(
-      const LabelLookAheadMatcher<M, F, Accumulator, Reachable> &lmatcher,
+      const LabelLookAheadMatcher<M, flags, Accumulator, Reachable> &lmatcher,
       bool safe = false)
       : matcher_(lmatcher.matcher_, safe),
         lfst_(lmatcher.lfst_),
@@ -499,23 +449,22 @@ class LabelLookAheadMatcher
         state_(kNoStateId),
         error_(lmatcher.error_) {}
 
-  // General matcher methods.
-
-  LabelLookAheadMatcher<M, F, Accumulator, Reachable> *Copy(
+  LabelLookAheadMatcher<M, flags, Accumulator, Reachable> *Copy(
       bool safe = false) const override {
-    return new LabelLookAheadMatcher<M, F, Accumulator, Reachable>(*this, safe);
+    return new LabelLookAheadMatcher<M, flags, Accumulator, Reachable>(*this,
+                                                                       safe);
   }
 
   MatchType Type(bool test) const override { return matcher_.Type(test); }
 
-  void SetState(StateId state) {
-    if (state == state_) return;
-    state_ = state;
+  void SetState(StateId s) final {
+    if (state_ == s) return;
+    state_ = s;
     match_set_state_ = false;
     reach_set_state_ = false;
   }
 
-  bool Find(Label label) {
+  bool Find(Label label) final {
     if (!match_set_state_) {
       matcher_.SetState(state_);
       match_set_state_ = true;
@@ -523,15 +472,15 @@ class LabelLookAheadMatcher
     return matcher_.Find(label);
   }
 
-  bool Done() const { return matcher_.Done(); }
+  bool Done() const final { return matcher_.Done(); }
 
-  const Arc &Value() const { return matcher_.Value(); }
+  const Arc &Value() const final { return matcher_.Value(); }
 
-  void Next() { matcher_.Next(); }
+  void Next() final { matcher_.Next(); }
 
-  ssize_t Priority(StateId state) { return matcher_.Priority(state); }
+  Weight Final(StateId s) const final { return matcher_.Final(s); }
 
-  Weight Final(StateId state) const { return matcher_.Final(state); }
+  ssize_t Priority(StateId s) final { return matcher_.Priority(s); }
 
   const FST &GetFst() const override { return matcher_.GetFst(); }
 
@@ -545,9 +494,9 @@ class LabelLookAheadMatcher
 
   uint32 Flags() const override {
     if (label_reachable_ && label_reachable_->GetData()->ReachInput()) {
-      return matcher_.Flags() | F | kInputLookAheadMatcher;
+      return matcher_.Flags() | kFlags | kInputLookAheadMatcher;
     } else if (label_reachable_ && !label_reachable_->GetData()->ReachInput()) {
-      return matcher_.Flags() | F | kOutputLookAheadMatcher;
+      return matcher_.Flags() | kFlags | kOutputLookAheadMatcher;
     } else {
       return matcher_.Flags();
     }
@@ -561,24 +510,15 @@ class LabelLookAheadMatcher
     return label_reachable_ ? label_reachable_->GetSharedData()
                             : std::shared_ptr<MatcherData>();
   }
-
-  bool LookAheadLabel(Label label) const {
-    if (label == 0) return true;
-    if (label_reachable_) {
-      if (!reach_set_state_) {
-        label_reachable_->SetState(state_);
-        reach_set_state_ = true;
-      }
-      return label_reachable_->Reach(label);
-    } else {
-      return true;
-    }
-  }
-
   // Checks if there is a matching (possibly super-final) transition at
-  // (state_, state).
+  // (state_, s).
   template <class LFST>
-  bool LookAheadFst(const LFST &fst, StateId state);
+  bool LookAheadFst(const LFST &fst, StateId s);
+
+  // Required to make class concrete.
+  bool LookAheadFst(const Fst<Arc> &fst, StateId s) final {
+    return LookAheadFst<Fst<Arc>>(fst, s);
+  }
 
   void InitLookAheadFst(const Fst<Arc> &fst, bool copy = false) override {
     lfst_ = &fst;
@@ -597,58 +537,47 @@ class LabelLookAheadMatcher
     }
   }
 
+  bool LookAheadLabel(Label label) const final {
+    if (label == 0) return true;
+    if (label_reachable_) {
+      if (!reach_set_state_) {
+        label_reachable_->SetState(state_);
+        reach_set_state_ = true;
+      }
+      return label_reachable_->Reach(label);
+    } else {
+      return true;
+    }
+  }
+
  private:
-  // This allows base class virtual access to non-virtual derived-
-  // class members of the same name. It makes the derived class more
-  // efficient to use but unsafe to further derive.
-  void SetState_(StateId state) override { SetState(state); }
-
-  bool Find_(Label label) override { return Find(label); }
-
-  bool Done_() const override { return Done(); }
-
-  const Arc &Value_() const override { return Value(); }
-
-  void Next_() override { Next(); }
-
-  Weight Final_(StateId state) const override { return Final(state); }
-
-  ssize_t Priority_(StateId state) override { return Priority(state); }
-
-  bool LookAheadLabel_(Label label) const override {
-    return LookAheadLabel(label);
-  }
-
-  bool LookAheadFst_(const Fst<Arc> &fst, StateId state) override {
-    return LookAheadFst(fst, state);
-  }
-
   mutable M matcher_;
   const Fst<Arc> *lfst_;                        // Look-ahead FST.
   std::unique_ptr<Reachable> label_reachable_;  // Label reachability info.
   StateId state_;                               // Matcher state.
   bool match_set_state_;                        // matcher_.SetState called?
   mutable bool reach_set_state_;                // reachable_.SetState called?
-  bool error_;
+  bool error_;                                  // Error encountered?
 };
 
-template <class M, uint32 F, class Accumulator, class Reachable>
+template <class M, uint32 flags, class Accumulator, class Reachable>
 template <class LFST>
-inline bool LabelLookAheadMatcher<M, F, Accumulator, Reachable>::LookAheadFst(
-    const LFST &fst, StateId state) {
+inline bool LabelLookAheadMatcher<M, flags, Accumulator,
+                                  Reachable>::LookAheadFst(const LFST &fst,
+                                                           StateId s) {
   if (static_cast<const Fst<Arc> *>(&fst) != lfst_) InitLookAheadFst(fst);
-  SetLookAheadWeight(Weight::One());
+  ClearLookAheadWeight();
   ClearLookAheadPrefix();
   if (!label_reachable_) return true;
-  label_reachable_->SetState(state_, state);
+  label_reachable_->SetState(state_, s);
   reach_set_state_ = true;
-  bool compute_weight = F & kLookAheadWeight;
-  bool compute_prefix = F & kLookAheadPrefix;
-  ArcIterator<LFST> aiter(fst, state);
+  bool compute_weight = kFlags & kLookAheadWeight;
+  bool compute_prefix = kFlags & kLookAheadPrefix;
+  ArcIterator<LFST> aiter(fst, s);
   aiter.SetFlags(kArcNoCache, kArcNoCache);  // Makes caching optional.
   const bool reach_arc = label_reachable_->Reach(
-      &aiter, 0, internal::NumArcs(*lfst_, state), compute_weight);
-  const auto lfinal = internal::Final(*lfst_, state);
+      &aiter, 0, internal::NumArcs(*lfst_, s), compute_weight);
+  const auto lfinal = internal::Final(*lfst_, s);
   const bool reach_final =
       lfinal != Weight::Zero() && label_reachable_->ReachFinal();
   if (reach_arc) {
@@ -773,7 +702,7 @@ class LookAheadMatcher {
 
   MatchType Type(bool test) const { return base_->Type(test); }
 
-  void SetState(StateId state) { base_->SetState(state); }
+  void SetState(StateId s) { base_->SetState(s); }
 
   bool Find(Label label) { return base_->Find(label); }
 
@@ -783,9 +712,9 @@ class LookAheadMatcher {
 
   void Next() { base_->Next(); }
 
-  Weight Final(StateId state) const { return base_->Final(state); }
+  Weight Final(StateId s) const { return base_->Final(s); }
 
-  ssize_t Priority(StateId state) { return base_->Priority(state); }
+  ssize_t Priority(StateId s) { return base_->Priority(s); }
 
   const FST &GetFst() const {
     return static_cast<const FST &>(base_->GetFst());
@@ -803,9 +732,9 @@ class LookAheadMatcher {
     }
   }
 
-  bool LookAheadFst(const Fst<Arc> &fst, StateId state) {
+  bool LookAheadFst(const Fst<Arc> &fst, StateId s) {
     if (LookAheadCheck()) {
-      return static_cast<LBase *>(base_.get())->LookAheadFst(fst, state);
+      return static_cast<LBase *>(base_.get())->LookAheadFst(fst, s);
     } else {
       return true;
     }

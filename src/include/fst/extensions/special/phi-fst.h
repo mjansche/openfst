@@ -78,7 +78,7 @@ class PhiFstMatcherData {
 constexpr uint8 kPhiFstMatchInput = 0x01;   // Input matcher is PhiMatcher.
 constexpr uint8 kPhiFstMatchOutput = 0x02;  // Output matcher is PhiMatcher.
 
-template <class M, uint8 F = kPhiFstMatchInput | kPhiFstMatchOutput>
+template <class M, uint8 flags = kPhiFstMatchInput | kPhiFstMatchOutput>
 class PhiFstMatcher : public PhiMatcher<M> {
  public:
   using FST = typename M::FST;
@@ -87,6 +87,8 @@ class PhiFstMatcher : public PhiMatcher<M> {
   using Label = typename Arc::Label;
   using Weight = typename Arc::Weight;
   using MatcherData = internal::PhiFstMatcherData<Label>;
+
+  enum : uint8 { kFlags = flags };
 
   PhiFstMatcher(const FST &fst, MatchType match_type,
       std::shared_ptr<MatcherData> data = std::make_shared<MatcherData>())
@@ -97,11 +99,11 @@ class PhiFstMatcher : public PhiMatcher<M> {
                       data ? data->RewriteMode() : MatcherData().RewriteMode()),
         data_(data) {}
 
-  PhiFstMatcher(const PhiFstMatcher<M, F> &matcher, bool safe = false)
+  PhiFstMatcher(const PhiFstMatcher<M, flags> &matcher, bool safe = false)
       : PhiMatcher<M>(matcher, false), data_(matcher.data_) {}
 
-  PhiFstMatcher<M, F> *Copy(bool safe = false) const override {
-    return new PhiFstMatcher<M, F>(*this, safe);
+  PhiFstMatcher<M, flags> *Copy(bool safe = false) const override {
+    return new PhiFstMatcher<M, flags>(*this, safe);
   }
 
   const MatcherData *GetData() const { return data_.get(); }
@@ -110,8 +112,8 @@ class PhiFstMatcher : public PhiMatcher<M> {
 
  private:
   static Label PhiLabel(MatchType match_type, Label label) {
-    if (match_type == MATCH_INPUT && F & kPhiFstMatchInput) return label;
-    if (match_type == MATCH_OUTPUT && F & kPhiFstMatchOutput) return label;
+    if (match_type == MATCH_INPUT && flags & kPhiFstMatchInput) return label;
+    if (match_type == MATCH_OUTPUT && flags & kPhiFstMatchOutput) return label;
     return kNoLabel;
   }
 

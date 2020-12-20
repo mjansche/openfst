@@ -30,7 +30,7 @@ class FstDrawer {
             const SymbolTable *osyms, const SymbolTable *ssyms, bool accep,
             const string &title, float width, float height, bool portrait,
             bool vertical, float ranksep, float nodesep, int fontsize,
-            int precision, bool show_weight_one)
+            int precision, const string &float_format, bool show_weight_one)
       : fst_(fst),
         isyms_(isyms),
         osyms_(osyms),
@@ -46,12 +46,18 @@ class FstDrawer {
         nodesep_(nodesep),
         fontsize_(fontsize),
         precision_(precision),
+        float_format_(float_format),
         show_weight_one_(show_weight_one) {}
 
   // Draw Fst to an output buffer (or stdout if buf = 0)
   void Draw(std::ostream *strm, const string &dest) {
     ostrm_ = strm;
     ostrm_->precision(precision_);
+    if (float_format_ == "e")
+        ostrm_->setf(std::ios_base::scientific, std::ios_base::floatfield);
+    if (float_format_ == "f")
+        ostrm_->setf(std::ios_base::fixed, std::ios_base::floatfield);
+    // O.w. defaults to "g" per standard lib.
     dest_ = dest;
     StateId start = fst_.Start();
     if (start == kNoStateId) return;
@@ -199,6 +205,7 @@ class FstDrawer {
   float nodesep_;
   int fontsize_;
   int precision_;
+  string float_format_;
   bool show_weight_one_;
 
   FstDrawer(const FstDrawer &) = delete;

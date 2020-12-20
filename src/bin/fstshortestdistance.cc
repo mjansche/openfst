@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <fst/log.h>
 #include <fst/script/getters.h>
 #include <fst/script/shortest-distance.h>
 #include <fst/script/text-io.h>

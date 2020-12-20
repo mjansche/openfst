@@ -9,6 +9,7 @@
 #include <string>
 
 #include <fst/compat.h>
+#include <fst/log.h>
 #include <fst/script/arcsort.h>
 #include <fst/script/getters.h>
 

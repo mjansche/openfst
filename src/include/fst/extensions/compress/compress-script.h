@@ -12,6 +12,7 @@
 
 #include <fst/extensions/compress/compress.h>
 
+#include <fst/log.h>
 #include <fst/util.h>
 #include <fst/script/arg-packs.h>
 #include <fst/script/fst-class.h>

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include <fst/log.h>
 #include <fst/extensions/ngram/nthbit.h>
 
 namespace fst {

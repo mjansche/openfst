@@ -215,7 +215,8 @@ cdef class _Fst(object):
                   bool acceptor=?, title=?, double width=?,
                   double height=?, bool portrait=?, bool vertical=?,
                   double ranksep=?, double nodesep=?, int32 fontsize=?,
-                  int32 precision=?, bool show_weight_one=?)
+                  int32 precision=?, float_format=?,
+                  bool show_weight_one=?)
 
   cpdef Weight final(self, int64 state)
 
@@ -294,9 +295,10 @@ cdef class _MutableFst(_Fst):
   cdef void _relabel_pairs(self, ipairs=?, opairs=?) except *
 
   cdef void _relabel_tables(self, _SymbolTable old_isymbols=?,
-      _SymbolTable new_isymbols=?, bool attach_new_isymbols=?,
+      _SymbolTable new_isymbols=?, unknown_isymbol=?,
+      bool attach_new_isymbols=?,
       _SymbolTable old_osymbols=?, _SymbolTable new_osymbols=?,
-      bool attach_new_osymbols=?) except *
+      unknown_osymbol=?, bool attach_new_osymbols=?) except *
 
   cdef void _reserve_arcs(self, int64 state, size_t n) except *
 
