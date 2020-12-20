@@ -74,7 +74,7 @@ class OGzFile {
 
   void write(const stringstream &ssbuf) {
     string sbuf = ssbuf.str();
-    gz_.write(sbuf.c_str(), sbuf.size());
+    gz_.write(sbuf.data(), sbuf.size());
   }
 
  private:

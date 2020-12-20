@@ -3,7 +3,7 @@ AC_INIT([OpenFst], [1.5.0], [help@www.openfst.org])
 AM_INIT_AUTOMAKE([foreign nostdinc -Wall -Werror])
 AM_PROG_AR
 
-CXXFLAGS="$CXXFLAGS -std=c++0x"
+CXXFLAGS="$CXXFLAGS -std=c++11"
 
 AC_PROG_CXX
 AC_DISABLE_STATIC
@@ -122,12 +122,11 @@ AC_ARG_ENABLE([python],
               [enable Python extensions])],
               [],
               [enable_python=no])
-AM_PATH_PYTHON(2.7)
-AC_PYTHON_DEVEL([>= '2.7'])
 AM_CONDITIONAL([HAVE_PYTHON], [test "x$enable_python" != xno])
-#if test "x$enable_python" != xno; then
-#  AX_PYTHON_DEVEL([>= '2.7'])
-#fi
+if test "x$enable_python" != xno; then
+  AM_PATH_PYTHON(2.7)
+  AC_PYTHON_DEVEL([>= '2.7'])
+fi
 
 AC_SUBST([libfstdir], [${libdir}/fst])
 

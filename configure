@@ -637,8 +637,6 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
 libfstdir
-HAVE_PYTHON_FALSE
-HAVE_PYTHON_TRUE
 PYTHON_EXTRA_LDFLAGS
 PYTHON_EXTRA_LIBS
 PYTHON_SITE_PKG
@@ -653,6 +651,8 @@ PYTHON_EXEC_PREFIX
 PYTHON_PREFIX
 PYTHON_VERSION
 PYTHON
+HAVE_PYTHON_FALSE
+HAVE_PYTHON_TRUE
 HAVE_PDT_FALSE
 HAVE_PDT_TRUE
 HAVE_NGRAM_FALSE
@@ -4134,7 +4134,7 @@ unknown)
 esac
 
 
-CXXFLAGS="$CXXFLAGS -std=c++0x"
+CXXFLAGS="$CXXFLAGS -std=c++11"
 
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -15507,6 +15507,15 @@ else
   enable_python=no
 fi
 
+ if test "x$enable_python" != xno; then
+  HAVE_PYTHON_TRUE=
+  HAVE_PYTHON_FALSE='#'
+else
+  HAVE_PYTHON_TRUE='#'
+  HAVE_PYTHON_FALSE=
+fi
+
+if test "x$enable_python" != xno; then
 
 
 
@@ -16049,17 +16058,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 	# all done!
 	#
 
- if test "x$enable_python" != xno; then
-  HAVE_PYTHON_TRUE=
-  HAVE_PYTHON_FALSE='#'
-else
-  HAVE_PYTHON_TRUE='#'
-  HAVE_PYTHON_FALSE=
 fi
-
-#if test "x$enable_python" != xno; then
-#  AX_PYTHON_DEVEL([>= '2.7'])
-#fi
 
 libfstdir=${libdir}/fst
 
