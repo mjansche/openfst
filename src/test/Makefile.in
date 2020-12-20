@@ -41,7 +41,8 @@ am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = $(top_builddir)/config.h
+CONFIG_HEADER = $(top_builddir)/config.h \
+	$(top_builddir)/src/include/fst/config.h
 CONFIG_CLEAN_FILES =
 am_algo_test_OBJECTS = algo_test.$(OBJEXT)
 algo_test_OBJECTS = $(am_algo_test_OBJECTS)
@@ -52,7 +53,7 @@ fst_test_DEPENDENCIES = ../lib/libfst.la
 am_weight_test_OBJECTS = weight_test.$(OBJEXT)
 weight_test_OBJECTS = $(am_weight_test_OBJECTS)
 weight_test_DEPENDENCIES = ../lib/libfst.la
-DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
+DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir) -I$(top_builddir)/src/include/fst
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \

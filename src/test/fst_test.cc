@@ -23,6 +23,7 @@
 #include <fst/vector-fst.h>
 #include <fst/verify.h>
 
+
 namespace fst {
 
 // This tests an Fst F that is assumed to have a copy method from an

@@ -28,13 +28,13 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <config.h>
 
 // Makes copy constructor and operator= private
 #define DISALLOW_COPY_AND_ASSIGN(type)    \
   type(const type&);                      \
   void operator=(const type&)
 
+#include <fst/config.h>
 #include <fst/lock.h>
 #include <fst/flags.h>
 #include <fst/log.h>

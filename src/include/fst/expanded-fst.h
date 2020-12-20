@@ -71,7 +71,7 @@ class ExpandedFst : public Fst<A> {
   // Empty filename reads from standard input.
   static ExpandedFst<A> *Read(const string &filename) {
     if (!filename.empty()) {
-      ifstream strm(filename.c_str());
+      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
       if (!strm) {
         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
         return 0;

@@ -82,7 +82,7 @@ void SymbolTableImpl::RecomputeCheckSum() const {
 }
 
 int64 SymbolTableImpl::AddSymbol(const string& symbol, int64 key) {
-  map<const char *, int64>::const_iterator it =
+  map<const char *, int64, StrCmp>::const_iterator it =
       symbol_map_.find(symbol.c_str());
   if (it == symbol_map_.end()) {  // only add if not in table
     check_sum_finalized_ = false;

@@ -26,7 +26,7 @@
 
 namespace fst {
 
-// MATCHERS - these return iterators to requested labels at
+// MATCHERS - these can find and iterate through requested labels at
 // FST states. In the simplest form, these are just some associative
 // map or search keyed on labels. More generally, they may
 // implement matching special labels that represent sets of labels
@@ -44,7 +44,7 @@ namespace fst {
 //
 //   // Required constructors.
 //   Matcher(const F &fst, MatchType type);
-//   Matcher(const F &matcher);
+//   Matcher(const Matcher &matcher);
 //
 //   // Returns the match type that can be provided (depending on
 //   // compatibility of the input FST). It is either
@@ -69,7 +69,7 @@ namespace fst {
 //   void Next();               // Advance to next arc (when !Done)
 //
 //   // This specifies the known Fst properties as viewed from this
-//   // mapper. It takes as argument the input Fst's known properties.
+//   // matcher. It takes as argument the input Fst's known properties.
 //   uint64 Properties(uint64 props) const;
 // };
 
@@ -300,13 +300,13 @@ class SortedMatcher : public MatcherBase<typename F::Arc> {
 template <class M>
 class RhoMatcher {
  public:
-  typedef typename M::FST F;
+  typedef typename M::FST FST;
   typedef typename M::Arc Arc;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  RhoMatcher(const F &fst,
+  RhoMatcher(const FST &fst,
              MatchType match_type,
              Label rho_label = kNoLabel,
              bool rewrite_both = false,
@@ -415,13 +415,13 @@ class RhoMatcher {
 template <class M>
 class SigmaMatcher {
  public:
-  typedef typename M::FST F;
+  typedef typename M::FST FST;
   typedef typename M::Arc Arc;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  SigmaMatcher(const F &fst,
+  SigmaMatcher(const FST &fst,
                MatchType match_type,
                Label sigma_label = kNoLabel,
                bool rewrite_both = false,
@@ -545,13 +545,13 @@ private:
 template <class M>
 class PhiMatcher {
  public:
-  typedef typename M::FST F;
+  typedef typename M::FST FST;
   typedef typename M::Arc Arc;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
   typedef typename Arc::Weight Weight;
 
-  PhiMatcher(const F &fst,
+  PhiMatcher(const FST &fst,
              MatchType match_type,
              Label phi_label = kNoLabel,
              bool phi_loop = true,

@@ -1,20 +1,28 @@
+OpenFst - Release 1.1
+
+   * Added compat.h to src/include/fst to fix missing defines
+   * Fixed bug in acyclic minimization that led to non-minimal 
+     (but equiv) results
+   * Fixed missing FST typedef in various matchers in matcher.h
+     so that they can be cascaded
+   * Opened file streams binary where appropriate
+
 OpenFst - Release 1.0
 
-  Additions to beta version:
+   Additions to beta version:
 
-* Matcher class added for matching labels at FST states. Includes
-  special matchers for sigma (any), rho ('rest'), and phi ('fail')
-  labels. (see matcher.h)
-* Composition generalized with arbitrary filters, matchers, and state tables.
-  Sequence and matching composition filters provided. (see compose.h, 
-  compose-filter.h, matcher.h, state-table.h)
-* Unique n-best (see shortest-path.h)
-* Pruning in determinization and epsilon removal (see determinize.h, 
-  rmepsilon.h)
-* New Fst classes: 
-     o Compact Fsts for space-efficient representation (see compact-fst.h)
-* New Weight classes: 
-     o MinMax
-     o Lexicographic
-* Miscellaneous bug fixes
-
+   * Matcher class added for matching labels at FST states. Includes
+     special matchers for sigma (any), rho ('rest'), and phi ('fail')
+     labels. (see matcher.h)
+   * Composition generalized with arbitrary filters, matchers, and state tables.
+     Sequence and matching composition filters provided. (see compose.h, 
+     compose-filter.h, matcher.h, state-table.h)
+   * Unique n-best (see shortest-path.h)
+   * Pruning in determinization and epsilon removal (see determinize.h, 
+     rmepsilon.h)
+   * New Fst classes: 
+      * Compact Fsts for space-efficient representation (see compact-fst.h)
+   * New Weight classes: 
+      * MinMax
+      * Lexicographic
+   * Miscellaneous bug fixes

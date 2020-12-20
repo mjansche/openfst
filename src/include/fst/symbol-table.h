@@ -124,7 +124,7 @@ class SymbolTableImpl {
   // Return the key associated with the symbol. If the symbol
   // does not exists, return -1.
   int64 Find(const char* symbol) const {
-    map<const char *, int64>::const_iterator it =
+    map<const char *, int64, StrCmp>::const_iterator it =
         symbol_map_.find(symbol);
     if (it == symbol_map_.end()) {
       return -1;
@@ -303,7 +303,7 @@ class SymbolTable {
 
   // read a binary dump of the symbol table
   static SymbolTable* Read(const string& filename) {
-    ifstream strm(filename.c_str());
+    ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
     if (!strm) {
       LOG(ERROR) << "SymbolTable::Read: Can't open file " << filename;
       return 0;
@@ -316,7 +316,7 @@ class SymbolTable {
   }
 
   bool Write(const string& filename) const {
-    ofstream strm(filename.c_str());
+    ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
     if (!strm) {
       LOG(ERROR) << "SymbolTable::Write: Can't open file " << filename;
       return false;

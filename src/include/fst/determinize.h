@@ -601,7 +601,8 @@ class DeterminizeFstImpl : public DeterminizeFstImplBase<A> {
 // symbols (cf. RmEpsilon).
 //
 // The transducer must be functional. The weights must be (weakly)
-// left divisible (valid for TropicalWeight and LogWeight).
+// left divisible (valid for TropicalWeight and LogWeight for instance)
+// and be zero-sum-free if for all a,b: (Plus(a, b) = 0 => a = b = 0.
 //
 // Complexity:
 // - Determinizable: exponential (polynomial in the size of the output)

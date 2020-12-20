@@ -489,6 +489,7 @@ void AcceptorMinimize(MutableFst<A>* fst) {
   if (fst->Properties(kAcyclic, true)) {
     // Acyclic minimization (revuz)
     VLOG(2) << "Acyclic Minimization";
+    ArcSort(fst, ILabelCompare<A>());
     AcyclicMinimizer<A> minimizer(*fst);
     MergeStates(minimizer.partition(), fst);
 
@@ -497,10 +498,9 @@ void AcceptorMinimize(MutableFst<A>* fst) {
     VLOG(2) << "Cyclic Minimization";
     CyclicMinimizer<A, LifoQueue<StateId> > minimizer(*fst);
     MergeStates(minimizer.partition(), fst);
+    // sort arcs before summing
+    ArcSort(fst, ILabelCompare<A>());
   }
-
-  // sort arcs before summing
-  ArcSort(fst, ILabelCompare<A>());
 
   // sum in appropriate semiring
   ArcMerge(fst);

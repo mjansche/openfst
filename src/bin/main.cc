@@ -18,6 +18,7 @@
 // Classes and functions for registering and invoking Fst main
 // functions that support multiple and extensible arc types.
 
+#include <ctime>
 #include <iostream>
 
 #include <iostream>
@@ -157,7 +158,7 @@ int CallFstMain(const string &mtype, int argc, char **argv, string atype) {
   if (atype == "") {
     if (argc > 1 && strcmp(argv[1], "-") != 0) {
       filename = argv[1];
-      strm = new ifstream(filename);
+      strm = new ifstream(filename, ifstream::in | ifstream::binary);
       if (!*strm) {
         LOG(ERROR) << argv[0] << ": Can't open file: " << filename;
         return 1;

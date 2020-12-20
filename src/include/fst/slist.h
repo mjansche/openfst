@@ -20,7 +20,7 @@
 #ifndef FST_LIB_SLIST_H__
 #define FST_LIB_SLIST_H__
 
-#include <config.h>
+#include <fst/config.h>
 
 #ifdef HAVE___GNU_CXX__SLIST_INT_
 

@@ -18,8 +18,11 @@
 // Lexicographic weight set and associated semiring operation definitions.
 //
 // A lexicographic weight is a sequence of weights, each of which must have the
-// path property. The + operation on two weights a and b is the
-// lexicographically prior of a and b.
+// path property and Times() must be (strongly) cancellative
+// (for all a,b,c != Zero(): Times(c, a) = Times(c, b) => a = b,
+// Times(a, c) = Times(b, c) => a = b).
+// The + operation on two weights a and b is the lexicographically
+// prior of a and b.
 
 #ifndef FST_LIB_LEXICOGRAPHIC_WEIGHT_H__
 #define FST_LIB_LEXICOGRAPHIC_WEIGHT_H__

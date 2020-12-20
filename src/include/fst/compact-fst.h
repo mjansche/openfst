@@ -726,7 +726,7 @@ class CompactFst : public ExpandedFst<A> {
    static CompactFst<A, C, U> *Read(const string &filename) {
 
     if (!filename.empty()) {
-      ifstream strm(filename.c_str());
+      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
       if (!strm) {
         LOG(ERROR) << "CompactFst::Write: Can't open file: " << filename;
         return 0;
@@ -746,7 +746,7 @@ class CompactFst : public ExpandedFst<A> {
   // Empty filename writes to standard output
   virtual bool Write(const string &filename) const {
     if (!filename.empty()) {
-      ofstream strm(filename.c_str());
+      ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
       if (!strm) {
         LOG(ERROR) << "CompactFst::Write: Can't open file: " << filename;
         return false;

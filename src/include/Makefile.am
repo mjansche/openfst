@@ -18,4 +18,4 @@ fst/fst.h fst/properties.h fst/shortest-distance.h fst/weight.h \
 fst/connect.h fst/fstlib.h fst/prune.h fst/shortest-path.h \
 fst/const-fst.h fst/heap.h fst/push.h fst/state-table.h \
 fst/main.h fst/mains.h fst/text-io.h fst/slist.h \
-fst/pair-weight.h
+fst/pair-weight.h fst/config.h

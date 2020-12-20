@@ -74,7 +74,7 @@ private:
 
 
 // COMPOSITION FILTERS - these determine which matches are allowed to
-// proceed. The filter's state is represented the type
+// proceed. The filter's state is represented by the type
 // ComposeFilter::FilterState. The basic filters handle correct epsilon
 // matching.  Their interface is:
 //
@@ -87,14 +87,15 @@ private:
 //   // Required constructor.
 //   ComposeFilter(const Fst<A> &fst1, const Fst<A> &fst2);
 //   // Return start state of filter.
-//   // FilterState Start() const;
+//   FilterState Start() const;
 //   // Specifies current composition state.
-//   void SetState(StateId s1, StateId s2, const FilterState &f)
+//   void SetState(StateId s1, StateId s2, const FilterState &f);
 //
 //   // Apply filter at current composition state to these transitions.
-//   // If an arc label is kNolabel, then that side does not consume a symbol.
-//   // Returns the new filter state or if disallowed, FilterState::NoState();
-//   // The filter is permitted to modify its inputs, e.g. for optimizations.
+//   // If an arc label to be matched is kNolabel, then that side
+//   // does not consume a symbol. Returns the new filter state or,
+//   // if disallowed, FilterState::NoState(). The filter is permitted to
+//   // modify its inputs, e.g. for optimizations.
 //   FilterState FilterArc(A *arc1, A *arc2) const;
 
 //   // Apply filter at current composition state to these final weights
@@ -104,7 +105,7 @@ private:
 
 // };
 
-// This filter requires epsilons on FST1 to be read first at a state.
+// This filter requires epsilons on FST1 to be read before epsilons on FST2.
 template <class A>
 class SequenceComposeFilter {
  public:
@@ -173,7 +174,7 @@ class SequenceComposeFilter {
 };
 
 
-// This filter requires epsilons on FST2 to be read first at a state.
+// This filter requires epsilons on FST2 to be read before epsilons on FST1.
 template <class A>
 class AltSequenceComposeFilter {
  public:
@@ -243,7 +244,7 @@ class AltSequenceComposeFilter {
 };
 
 
-// This filter enforces the matching of epsilons on FST1 with epsilons on FST2
+// This filter requires epsilons on FST1 to be matched with epsilons on FST2
 // whenever possible.
 template <class A>
 class MatchComposeFilter {

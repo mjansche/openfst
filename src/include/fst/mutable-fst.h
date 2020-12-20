@@ -107,7 +107,7 @@ class MutableFst : public ExpandedFst<A> {
   // Empty filename reads from standard input.
   static MutableFst<A> *Read(const string &filename) {
     if (!filename.empty()) {
-      ifstream strm(filename.c_str());
+      ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
       if (!strm) {
         LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
         return 0;

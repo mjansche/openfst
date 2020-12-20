@@ -36,7 +36,7 @@ namespace fst {
 // template <class T>
 // class StateTable {
 //  public:
-//   typedef typename T Tuple;
+//   typedef typename T StateTuple;
 //
 //   // Required constructors.
 //   StateTable();

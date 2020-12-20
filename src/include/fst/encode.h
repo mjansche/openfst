@@ -366,7 +366,7 @@ template <class A> class EncodeMapper {
   }
 
   bool Write(const string& filename) {
-    ofstream strm(filename.c_str());
+    ofstream strm(filename.c_str(), ofstream::out | ofstream::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
       return false;
@@ -384,7 +384,7 @@ template <class A> class EncodeMapper {
 
   static EncodeMapper<A> *Read(const string& filename,
                                EncodeType type = ENCODE) {
-    ifstream strm(filename.c_str());
+    ifstream strm(filename.c_str(), ifstream::in | ifstream::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
       return false;

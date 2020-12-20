@@ -195,8 +195,6 @@ static fst::FstRegisterer<
   CompactFst<LogArc, UnweightedAcceptorCompactor<LogArc>, uint64> >
 CompactFst_LogArc_UnweightedAcceptorCompactor_uint64_registerer;
 
-
-
 // Identifies stream data as an FST (and its endianity)
 static const int32 kFstMagicNumber = 2125659606;
 

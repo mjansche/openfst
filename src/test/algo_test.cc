@@ -640,11 +640,34 @@ class WeightedTester {
 
       // Checks size(min(det(A))) <= size(det(A))
       // and  min(det(A)) equiv det(A)
-      VectorFst<Arc> M(D);
-      int n = M.NumStates();
-      Minimize(&M);
-      CHECK(Equiv(D, M));
-      CHECK(M.NumStates() <= n);
+      int n;
+      {
+        VectorFst<Arc> M(D);
+        n = M.NumStates();
+        Minimize(&M);
+        CHECK(Equiv(D, M));
+        CHECK(M.NumStates() <= n);
+        n = M.NumStates();
+      }
+
+      // Checks that Revuz's algorithm leads to the
+      // same number of states as Brozozowski's algorithm
+      if (n && (wprops & kIdempotent) == kIdempotent &&
+          A.Properties(kNoEpsilons, true)) {
+        // Skip test if A is the empty machine or contains epsilons or
+        // if the semiring is not idempotent (to avoid floating point
+        // errors)
+        VectorFst<Arc> R;
+        Reverse(A, &R);
+        RmEpsilon(&R);
+        DeterminizeFst<Arc> DR(R);
+        VectorFst<Arc> RD;
+        Reverse(DR, &RD);
+        DeterminizeFst<Arc> DRD(RD);
+        VectorFst<Arc> M(DRD);
+        CHECK_EQ(n + 1, M.NumStates());  // Accounts for the epsilon transition
+                                         // to the initial state
+      }
     }
 
     // Checks reweight(T) equiv T
@@ -1003,11 +1026,30 @@ class UnweightedTester<StdArc> {
 
     // Checks minimized FSA is equivalent to its input.
     {
-      RmEpsilonFst<Arc> R(A);
-      DeterminizeFst<Arc> D(R);
-      VectorFst<Arc> M(D);
-      Minimize(&M);
-      CHECK(Equiv(A, M));
+      int n;
+      {
+        RmEpsilonFst<Arc> R(A);
+        DeterminizeFst<Arc> D(R);
+        VectorFst<Arc> M(D);
+        Minimize(&M);
+        CHECK(Equiv(A, M));
+        n = M.NumStates();
+      }
+
+      // Checks that Hopcroft's and Revuz's algorithms lead to the
+      // same number of states as Brozozowski's algorithm
+      if (n) {  // Skip test if A is the empty machine
+        VectorFst<Arc> R;
+        Reverse(A, &R);
+        RmEpsilon(&R);
+        DeterminizeFst<Arc> DR(R);
+        VectorFst<Arc> RD;
+        Reverse(DR, &RD);
+        DeterminizeFst<Arc> DRD(RD);
+        VectorFst<Arc> M(DRD);
+        CHECK_EQ(n + 1, M.NumStates());  // Accounts for the epsilon transition
+                                         // to the initial state
+      }
     }
   }
 

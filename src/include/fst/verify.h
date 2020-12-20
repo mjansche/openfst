@@ -1,4 +1,4 @@
-// test.h
+// verify.h
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 // Author: riley@google.com (Michael Riley)
 //
 // \file
-// Function to test property bits
+// Function to verify an Fst's contents
 
 #ifndef FST_LIB_VERIFY_H__
 #define FST_LIB_VERIFY_H__
