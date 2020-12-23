@@ -1,39 +1,40 @@
-FROM ubuntu:focal AS builder
+FROM ubuntu AS builder
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
-RUN apt-get -y install autoconf g++ make python3-dev
+RUN apt-get -y install \
+    autoconf automake file g++ make python3-dev
+
 RUN rm -fr /usr/local
 RUN mkdir -p /tmp/build
 
 COPY . /tmp/openfst
 
 WORKDIR /tmp/build
+ENV CXXFLAGS=-O3
 RUN /tmp/openfst/configure \
     --prefix=/usr/local \
-    --enable-compact-fsts \
     --enable-compress \
+    --enable-special \
+    --enable-compact-fsts \
     --enable-const-fsts \
-    --enable-far \
     --enable-linear-fsts \
     --enable-lookahead-fsts \
-    --enable-mpdt \
     --enable-ngram-fsts \
+    --enable-far \
+    --enable-mpdt \
     --enable-pdt \
     --enable-python \
-    --enable-special \
-    --enable-bin \
-    --enable-fsts \
-    --enable-grm
+    --enable-bin
 RUN make
 RUN make install
 
 
-FROM ubuntu:focal AS image
+FROM ubuntu AS image
 
 MAINTAINER Martin Jansche <mjansche+openfst@gmail.com>
 
 COPY --from=builder /usr/local /usr/local
 
-ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/fst
+ENV LD_LIBRARY_PATH=/usr/local/lib/fst:/usr/local/lib
 ENV PYTHONPATH=/usr/local/lib/python3.8/site-packages
