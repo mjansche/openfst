@@ -90,8 +90,7 @@ AC_DEFUN([AX_PYTHON_DEVEL],[
 	#
 	AC_MSG_CHECKING([for a version of Python >= '2.1.0'])
 	ac_supports_python_ver=`$PYTHON -c "import sys; \
-		ver = sys.version.split ()[[0]]; \
-		print (ver >= '2.1.0')"`
+		print (sys.hexversion >= 0x2010000)"`
 	if test "$ac_supports_python_ver" != "True"; then
 		if test -z "$PYTHON_NOVERSIONCHECK"; then
 			AC_MSG_RESULT([no])
@@ -115,10 +114,15 @@ to something else than an empty string.
 	# if the macro parameter ``version'' is set, honour it
 	#
 	if test -n "$1"; then
-		AC_MSG_CHECKING([for a version of Python $1])
+		AC_MSG_CHECKING([for a version of Python >= $1])
 		ac_supports_python_ver=`$PYTHON -c "import sys; \
-			ver = sys.version.split ()[[0]]; \
-			print (ver $1)"`
+			minver = list(map(int, '$1'.split('.'))) \
+			       + [[0, 0, 0, 0]]; \
+			minverhex = (minver[[0]] << 24) \
+				  + (minver[[1]] << 16) \
+				  + (minver[[2]] << 8) \
+				  + minver[[3]]; \
+			print (sys.hexversion >= minverhex)"`
 		if test "$ac_supports_python_ver" = "True"; then
 		   AC_MSG_RESULT([yes])
 		else
@@ -190,7 +194,7 @@ EOD`
 				ac_python_version=$PYTHON_VERSION
 			else
 				ac_python_version=`$PYTHON -c "import sys; \
-					print (sys.version[[:3]])"`
+					print (sys.version.split()[[0]])"`
 			fi
 		fi
 

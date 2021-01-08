@@ -106,7 +106,7 @@ AC_ARG_ENABLE([python],
 AM_CONDITIONAL([HAVE_PYTHON], [test "x$enable_python" != xno])
 if test "x$enable_python" != xno; then
   AM_PATH_PYTHON(3.6)
-  AX_PYTHON_DEVEL([>= '3.6'])
+  AX_PYTHON_DEVEL([3.6])
 fi
 
 AC_ARG_ENABLE([special],
