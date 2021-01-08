@@ -436,7 +436,7 @@ template <class ArcCompactor>
 CompactArcStore<Element, Unsigned> *CompactArcStore<Element, Unsigned>::Read(
     std::istream &strm, const FstReadOptions &opts, const FstHeader &hdr,
     const ArcCompactor &arc_compactor) {
-  auto data = fst::make_unique<CompactArcStore>();
+  auto data = std::make_unique<CompactArcStore>();
   data->start_ = hdr.Start();
   data->nstates_ = hdr.NumStates();
   data->narcs_ = hdr.NumArcs();
@@ -982,7 +982,7 @@ class CompactFstImpl
   }
 
   static CompactFstImpl *Read(std::istream &strm, const FstReadOptions &opts) {
-    auto impl = fst::make_unique<CompactFstImpl>();
+    auto impl = std::make_unique<CompactFstImpl>();
     FstHeader hdr;
     if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) {
       return nullptr;

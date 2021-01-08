@@ -106,28 +106,17 @@ class CheckSummer {
   CheckSummer &operator=(const CheckSummer &) = delete;
 };
 
-// Defines make_unique and make_unique_default_init using a standard definition
-// that should be compatible with the C++14 and C++20 (respectively)
-// definitions.
-// TODO(kbg): Remove these once we migrate to C++14 and C++20.
-
-template <typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args &&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
+// Defines make_unique_for_overwrite using a standard definition that should be
+// compatible with the C++20 definition.
+// TODO(kbg): Remove these once we migrate to C++20.
 
 template <typename T>
-std::unique_ptr<T[]> make_unique(size_t n) {
-  return std::unique_ptr<T>(new typename std::remove_extent<T>::type[n]());
-}
-
-template <typename T>
-std::unique_ptr<T> make_unique_default_init() {
+std::unique_ptr<T> make_unique_for_overwrite() {
   return std::unique_ptr<T>(new T);
 }
 
 template <typename T>
-std::unique_ptr<T[]> make_unique_default_init(size_t n) {
+std::unique_ptr<T[]> make_unique_for_overwrite(size_t n) {
   return std::unique_ptr<T>(new typename std::remove_extent<T>::type[n]);
 }
 

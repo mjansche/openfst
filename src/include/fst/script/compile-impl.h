@@ -84,7 +84,8 @@ class FstCompiler {
     add_symbols_ = add_symbols;
     bool start_state_populated = false;
     char line[kLineLen];
-    const std::string separator = FLAGS_fst_field_separator + "\n";
+    const std::string separator =
+        FST_FLAGS_fst_field_separator + "\n";
     while (istrm.getline(line, kLineLen)) {
       ++nline_;
       std::vector<char *> col;

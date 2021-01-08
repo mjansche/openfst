@@ -224,7 +224,7 @@ class EditFstData {
   // Provides information for the generic mutable arc iterator.
   void InitMutableArcIterator(StateId s, MutableArcIteratorData<Arc> *data,
                               const WrappedFstT *wrapped) {
-    data->base = fst::make_unique<MutableArcIterator<MutableFstT>>(
+    data->base = std::make_unique<MutableArcIterator<MutableFstT>>(
         &edits_, GetEditableInternalId(s, wrapped));
   }
 
@@ -601,7 +601,7 @@ inline void EditFstImpl<Arc, WrappedFstT, MutableFstT>::DeleteStates() {
   data_->DeleteStates();
   // we are deleting all states, so just forget about pointer to wrapped_
   // and do what default constructor does: set wrapped_ to a new VectorFst
-  wrapped_ = fst::make_unique<MutableFstT>();
+  wrapped_ = std::make_unique<MutableFstT>();
   const auto new_props =
       DeleteAllStatesProperties(FstImpl<Arc>::Properties(), kStaticProperties);
   FstImpl<Arc>::SetProperties(new_props);

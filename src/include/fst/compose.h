@@ -719,7 +719,7 @@ template <class Arc, class CacheStore>
 inline void ComposeFst<Arc, CacheStore>::InitStateIterator(
     StateIteratorData<Arc> *data) const {
   data->base =
-      fst::make_unique<StateIterator<ComposeFst<Arc, CacheStore>>>(*this);
+      std::make_unique<StateIterator<ComposeFst<Arc, CacheStore>>>(*this);
 }
 
 // Specialized matcher for ComposeFst. Supports MATCH_INPUT or MATCH_OUTPUT,

@@ -96,7 +96,7 @@ template <class Label>
 bool ConvertStringToLabels(const std::string &str, TokenType token_type,
                            const SymbolTable *syms, Label unknown_label,
                            bool allow_negative, std::vector<Label> *labels,
-                           const std::string &sep = FLAGS_fst_field_separator) {
+                           const std::string &sep = FST_FLAGS_fst_field_separator) {
   labels->clear();
   switch (token_type) {
     case TokenType::BYTE: {
@@ -137,7 +137,7 @@ bool ConvertStringToLabels(const std::string &str, TokenType token_type,
 template <class Label>
 bool LabelsToSymbolString(const std::vector<Label> &labels, std::string *str,
                           const SymbolTable &syms,
-                          const std::string &sep = FLAGS_fst_field_separator,
+                          const std::string &sep = FST_FLAGS_fst_field_separator,
                           bool omit_epsilon = true) {
   std::stringstream ostrm;
   std::string delim = "";
@@ -163,7 +163,7 @@ bool LabelsToSymbolString(const std::vector<Label> &labels, std::string *str,
 // is false.
 template <class Label>
 bool LabelsToNumericString(const std::vector<Label> &labels, std::string *str,
-                           const std::string &sep = FLAGS_fst_field_separator,
+                           const std::string &sep = FST_FLAGS_fst_field_separator,
                            bool omit_epsilon = true) {
   std::stringstream ostrm;
   std::string delim = "";
@@ -202,7 +202,7 @@ class StringCompiler {
   // Returns true on success.
   template <class FST>
   bool operator()(const std::string &str, FST *fst,
-                  const std::string &sep = FLAGS_fst_field_separator) const {
+                  const std::string &sep = FST_FLAGS_fst_field_separator) const {
     std::vector<Label> labels;
     if (!internal::ConvertStringToLabels(str, token_type_, syms_,
                                          unknown_label_, allow_negative_,
@@ -216,7 +216,7 @@ class StringCompiler {
   // Same as above but allows to specify a weight for the string.
   template <class FST>
   bool operator()(const std::string &str, FST *fst, Weight weight,
-                  const std::string &sep = FLAGS_fst_field_separator) const {
+                  const std::string &sep = FST_FLAGS_fst_field_separator) const {
     std::vector<Label> labels;
     if (!internal::ConvertStringToLabels(str, token_type_, syms_,
                                          unknown_label_, allow_negative_,
@@ -324,7 +324,7 @@ template <class Label>
 bool LabelsToString(const std::vector<Label> &labels, std::string *str,
                     TokenType ttype = TokenType::BYTE,
                     const SymbolTable *syms = nullptr,
-                    const std::string &sep = FLAGS_fst_field_separator,
+                    const std::string &sep = FST_FLAGS_fst_field_separator,
                     bool omit_epsilon = true) {
   switch (ttype) {
     case TokenType::BYTE: {
@@ -357,7 +357,7 @@ class StringPrinter {
   // Converts the FST into a string. With SYMBOL token type, the last character
   // of sep is used as a separator between symbols. Returns true on success.
   bool operator()(const Fst<Arc> &fst, std::string *str,
-                  const std::string &sep = FLAGS_fst_field_separator) const {
+                  const std::string &sep = FST_FLAGS_fst_field_separator) const {
     std::vector<Label> labels;
     return StringFstToOutputLabels(fst, &labels) &&
            LabelsToString(labels, str, token_type_, syms_, sep, omit_epsilon_);

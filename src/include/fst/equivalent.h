@@ -116,7 +116,7 @@ constexpr
 // of both acceptors. A disjoint tree forest (the union-find algorithm) is used
 // to represent the sets of states. The algorithm returns false if one of the
 // constructed sets contains both final and non-final states. Returns an
-// optional error value (useful when FLAGS_error_fatal = false).
+// optional error value (useful when FST_FLAGS_error_fatal = false).
 //
 // Complexity:
 //

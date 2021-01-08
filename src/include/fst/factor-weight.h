@@ -523,7 +523,7 @@ template <class Arc, class FactorIterator>
 inline void FactorWeightFst<Arc, FactorIterator>::InitStateIterator(
     StateIteratorData<Arc> *data) const {
   data->base =
-      fst::make_unique<StateIterator<FactorWeightFst<Arc, FactorIterator>>>(
+      std::make_unique<StateIterator<FactorWeightFst<Arc, FactorIterator>>>(
           *this);
 }
 

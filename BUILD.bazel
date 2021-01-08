@@ -23,6 +23,11 @@ config_setting(
     values = {"define": "absl=1"},
 )
 
+DEFINES = select({
+    "@bazel_tools//src/conditions:windows": ["FST_NO_DYNAMIC_LINKING"],
+    "//conditions:default": [],
+})
+
 prefix_dir = "src/"
 
 static_binary = 1
@@ -130,6 +135,7 @@ cc_library(
     ],
     hdrs = PUBLIC_HEADERS,
     copts = ["-Wno-sign-compare"],
+    defines = DEFINES,
     includes = [prefix_dir + "include"],
     linkopts = ["-lm"],
     deps = [
@@ -149,6 +155,7 @@ cc_library(
     name = "fst",
     hdrs = PUBLIC_HEADERS,
     includes = [prefix_dir + "include"],
+    defines = DEFINES,
     deps = [
         ":fst-types",
         ":lib_lite",
@@ -164,6 +171,7 @@ cc_library(
 cc_library(
     name = "fst-types",
     srcs = [prefix_dir + "lib/fst-types.cc"],
+    defines = DEFINES,
     deps = [":lib_lite"],
     alwayslink = 1,  # because of registration
 )
@@ -175,6 +183,7 @@ cc_library(
         prefix_dir + "include/fst/symbol-table.h",
         prefix_dir + "include/fst/windows_defs.inc",
     ],
+    defines = DEFINES,
     copts = ["-Wno-sign-compare"],
     includes = [prefix_dir + "include"],
     deps = [
@@ -204,6 +213,7 @@ cc_library(
         prefix_dir + "include/fst/weight.h",
     ],
     includes = [prefix_dir + "include"],
+    defines = DEFINES,
     linkopts = ["-lm"],
     deps = [
         ":base",
@@ -284,7 +294,7 @@ cc_library(
     }),
     includes = [prefix_dir + "include"],
     deps = select({
-        ":has_absl": ["@io_abseil_cpp//absl/synchronization"],
+        ":has_absl": ["@com_google_absl//absl/synchronization"],
         "//conditions:default": [],
     }),
 )

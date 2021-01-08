@@ -225,7 +225,7 @@ class SymbolTableImpl final : public MutableSymbolTableImpl {
         check_sum_finalized_(false) {}
 
   std::unique_ptr<SymbolTableImplBase> Copy() const override {
-    return fst::make_unique<SymbolTableImpl>(*this);
+    return std::make_unique<SymbolTableImpl>(*this);
   }
 
   int64 AddSymbol(SymbolType symbol, int64 key) override;

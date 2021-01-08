@@ -116,7 +116,7 @@ class EncodeTable {
           weight(flags & kEncodeWeights ? arc.weight : Weight::One()) {}
 
     static std::unique_ptr<Triple> Read(std::istream &strm) {
-      auto triple = fst::make_unique<Triple>();
+      auto triple = std::make_unique<Triple>();
       ReadType(strm, &triple->ilabel);
       ReadType(strm, &triple->olabel);
       ReadType(strm, &triple->weight);
@@ -170,9 +170,9 @@ class EncodeTable {
     // a clash with a true epsilon arc; to avoid this we hallucinate kNoLabel
     // labels instead.
     if (arc.nextstate == kNoStateId && (flags_ & kEncodeWeights)) {
-      return Encode(fst::make_unique<Triple>(kNoLabel, kNoLabel, arc.weight));
+      return Encode(std::make_unique<Triple>(kNoLabel, kNoLabel, arc.weight));
     } else {
-      return Encode(fst::make_unique<Triple>(arc, flags_));
+      return Encode(std::make_unique<Triple>(arc, flags_));
     }
   }
 
@@ -245,7 +245,7 @@ EncodeTable<Arc> *EncodeTable<Arc>::Read(std::istream &strm,
   if (!hdr.Read(strm, source)) return nullptr;
   const auto flags = hdr.Flags();
   const auto size = hdr.Size();
-  auto table = fst::make_unique<EncodeTable>(flags);
+  auto table = std::make_unique<EncodeTable>(flags);
   for (int64 i = 0; i < size; ++i) {
     table->triples_.emplace_back(std::move(Triple::Read(strm)));
     table->triple2label_[table->triples_.back().get()] = table->triples_.size();

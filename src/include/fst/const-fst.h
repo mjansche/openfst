@@ -196,7 +196,7 @@ ConstFstImpl<Arc, Unsigned>::ConstFstImpl(const Fst<Arc> &fst) {
 template <class Arc, class Unsigned>
 ConstFstImpl<Arc, Unsigned> *ConstFstImpl<Arc, Unsigned>::Read(
     std::istream &strm, const FstReadOptions &opts) {
-  auto impl = fst::make_unique<ConstFstImpl>();
+  auto impl = std::make_unique<ConstFstImpl>();
   FstHeader hdr;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return nullptr;
   impl->start_ = hdr.Start();

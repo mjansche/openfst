@@ -48,7 +48,7 @@
 DECLARE_bool(fst_error_fatal);
 
 #define FSTERROR() \
-  (FLAGS_fst_error_fatal ? LOG(FATAL) : LOG(ERROR))
+  (FST_FLAGS_fst_error_fatal ? LOG(FATAL) : LOG(ERROR))
 
 namespace fst {
 

@@ -422,7 +422,7 @@ void Disambiguator<Arc>::PreDisambiguate(const ExpandedFst<Arc> &ifst,
 template <class Arc>
 void Disambiguator<Arc>::FindAmbiguities(const ExpandedFst<Arc> &fst) {
   if (fst.Start() == kNoStateId) return;
-  candidates_ = fst::make_unique<ArcIdMap>(ArcIdCompare(head_));
+  candidates_ = std::make_unique<ArcIdMap>(ArcIdCompare(head_));
   const auto start_pr = std::make_pair(fst.Start(), fst.Start());
   coreachable_.insert(start_pr);
   queue_.push_back(start_pr);
@@ -463,7 +463,7 @@ void Disambiguator<Arc>::FindAmbiguousPairs(const ExpandedFst<Arc> &fst,
           if (spr.first != spr.second &&
               head_[spr.first] == head_[spr.second]) {
             if (!merge_) {
-              merge_ = fst::make_unique<UnionFind<StateId>>(fst.NumStates(),
+              merge_ = std::make_unique<UnionFind<StateId>>(fst.NumStates(),
                                                              kNoStateId);
               merge_->MakeAllSet(fst.NumStates());
             }

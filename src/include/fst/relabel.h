@@ -469,7 +469,7 @@ class ArcIterator<RelabelFst<Arc>> : public CacheArcIterator<RelabelFst<Arc>> {
 template <class Arc>
 inline void RelabelFst<Arc>::InitStateIterator(
     StateIteratorData<Arc> *data) const {
-  data->base = fst::make_unique<StateIterator<RelabelFst<Arc>>>(*this);
+  data->base = std::make_unique<StateIterator<RelabelFst<Arc>>>(*this);
 }
 
 // Useful alias when using StdArc.

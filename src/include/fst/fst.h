@@ -122,7 +122,7 @@ struct FstWriteOptions {
   explicit FstWriteOptions(std::string_view source = "<unspecified>",
                            bool write_header = true, bool write_isymbols = true,
                            bool write_osymbols = true,
-                           bool align = FLAGS_fst_align,
+                           bool align = FST_FLAGS_fst_align,
                            bool stream_write = false)
       : source(source),
         write_header(write_header),

@@ -35,7 +35,7 @@ namespace fst {
 
 SymbolTableTextOptions::SymbolTableTextOptions(bool allow_negative_labels)
     : allow_negative_labels(allow_negative_labels),
-      fst_field_separator(FLAGS_fst_field_separator) {}
+      fst_field_separator(FST_FLAGS_fst_field_separator) {}
 
 namespace internal {
 
@@ -134,7 +134,7 @@ void ConstSymbolTableImpl::AddTable(const SymbolTable &table) {
 SymbolTableImpl *SymbolTableImpl::ReadText(std::istream &strm,
                                            const std::string &source,
                                            const SymbolTableTextOptions &opts) {
-  auto impl = fst::make_unique<SymbolTableImpl>(source);
+  auto impl = std::make_unique<SymbolTableImpl>(source);
   int64 nline = 0;
   char line[kLineLen];
   const auto separator = opts.fst_field_separator + "\n";
@@ -291,7 +291,7 @@ SymbolTableImpl *SymbolTableImpl::Read(std::istream &strm,
   }
   std::string name;
   ReadType(strm, &name);
-  auto impl = fst::make_unique<SymbolTableImpl>(name);
+  auto impl = std::make_unique<SymbolTableImpl>(name);
   ReadType(strm, &impl->available_key_);
   int64 size;
   ReadType(strm, &size);
@@ -409,7 +409,7 @@ bool SymbolTable::WriteText(const std::string &source) const {
 bool CompatSymbols(const SymbolTable *syms1, const SymbolTable *syms2,
                    bool warning) {
   // Flag can explicitly override this check.
-  if (!FLAGS_fst_compat_symbols) return true;
+  if (!FST_FLAGS_fst_compat_symbols) return true;
   if (syms1 && syms2 &&
       (syms1->LabeledCheckSum() != syms2->LabeledCheckSum())) {
     if (warning) {

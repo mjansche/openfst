@@ -148,7 +148,7 @@ class NoGcKeepOneExpanderCache {
     auto i = cache_.find(state_id_);
     if (i != cache_.end()) state_ = std::move(i->second);
     if (state_ == nullptr) {
-      state_ = fst::make_unique<State>();
+      state_ = std::make_unique<State>();
       expander.Expand(state_id_, state_.get());
     }
     return state_.get();

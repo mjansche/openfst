@@ -1349,7 +1349,7 @@ class AlgoTester {
   void Test() {
     VLOG(1) << "weight type = " << Weight::Type();
 
-    for (int i = 0; i < FLAGS_repeat; ++i) {
+    for (int i = 0; i < FST_FLAGS_repeat; ++i) {
       // Random transducers
       VectorFst<Arc> T1;
       VectorFst<Arc> T2;

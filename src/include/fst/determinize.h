@@ -993,7 +993,7 @@ void DeterminizeFstImpl<A, G, D, F, T>::Init(const Fst<A> &fst, F *filter) {
       subsequential_label_, increment_subsequential_label_,
       increment_subsequential_label_);
   const FactorWeightFst<ToArc, FactorIterator> factored_fst(det_fsa, fopts);
-  from_fst_ = fst::make_unique<FromFst>(factored_fst,
+  from_fst_ = std::make_unique<FromFst>(factored_fst,
                                          FromMapper(subsequential_label_));
 }
 
@@ -1024,7 +1024,7 @@ class ArcIterator<DeterminizeFst<Arc>>
 template <class Arc>
 inline void DeterminizeFst<Arc>::InitStateIterator(
     StateIteratorData<Arc> *data) const {
-  data->base = fst::make_unique<StateIterator<DeterminizeFst<Arc>>>(*this);
+  data->base = std::make_unique<StateIterator<DeterminizeFst<Arc>>>(*this);
 }
 
 // Useful aliases when using StdArc.

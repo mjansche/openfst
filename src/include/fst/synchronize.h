@@ -394,7 +394,7 @@ class ArcIterator<SynchronizeFst<Arc>>
 template <class Arc>
 inline void SynchronizeFst<Arc>::InitStateIterator(
     StateIteratorData<Arc> *data) const {
-  data->base = fst::make_unique<StateIterator<SynchronizeFst<Arc>>>(*this);
+  data->base = std::make_unique<StateIterator<SynchronizeFst<Arc>>>(*this);
 }
 
 // Synchronizes a transducer. This version writes the synchronized result to a
@@ -418,7 +418,8 @@ inline void SynchronizeFst<Arc>::InitStateIterator(
 template <class Arc>
 void Synchronize(const Fst<Arc> &ifst, MutableFst<Arc> *ofst) {
   // Caches only the last state for fastest copy.
-  const SynchronizeFstOptions opts(FLAGS_fst_default_cache_gc, 0);
+  const SynchronizeFstOptions opts(FST_FLAGS_fst_default_cache_gc,
+                                   0);
   *ofst = SynchronizeFst<Arc>(ifst, opts);
 }
 

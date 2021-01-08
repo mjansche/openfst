@@ -557,7 +557,7 @@ class ArcIterator<RmEpsilonFst<Arc>>
 template <class Arc>
 inline void RmEpsilonFst<Arc>::InitStateIterator(
     StateIteratorData<Arc> *data) const {
-  data->base = fst::make_unique<StateIterator<RmEpsilonFst<Arc>>>(*this);
+  data->base = std::make_unique<StateIterator<RmEpsilonFst<Arc>>>(*this);
 }
 
 // Useful alias when using StdArc.
