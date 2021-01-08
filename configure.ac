@@ -123,7 +123,8 @@ AC_ARG_ENABLE([bin],
               [],
               [enable_bin=yes])
 AM_CONDITIONAL([HAVE_BIN], [test "x$enable_bin" != xno])
-AM_CONDITIONAL([HAVE_SCRIPT], [test "x$enable_bin" != xno])
+AM_CONDITIONAL([HAVE_SCRIPT], [test "x$enable_bin" != xno \
+                                 -o "x$enable_python" != xno])
 
 # --enable-fsts is an alias to enable FST SO extensions: compact, const,
 # linear, lookahead, and ngram.
