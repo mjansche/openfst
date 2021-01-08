@@ -1,6 +1,7 @@
 # NB: we use the Cython-generated .cpp files rather than the *.pxd/.pyx sources
 # used to generate them. Consequently, modifications to the .pyx files will not
 # influence the build unless the .cpp files are regenerated using Cython.
+# If necessary, this can be done by running "cython --cplus pywrapfst.pyx".
 
 python_LTLIBRARIES = pywrapfst.la
 
@@ -15,5 +16,5 @@ pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la \
                       -lm $(DL_LIBS) $(PYTHON_LIBS)
 
 # Exports the *.pxd/*.pxd source files.
-EXTRA_DIST = cintegral_types.pxd cios.pxd cpywrapfst.pxd \
+EXTRA_DIST = cintegral_types.pxd cios.pxd cmemory.pxd cpywrapfst.pxd \
              cutility.pxd pywrapfst.pxd pywrapfst.pyx
