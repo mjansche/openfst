@@ -99,7 +99,7 @@ class NGramFstImpl : public FstImpl<A> {
 
   explicit NGramFstImpl(const Fst<A> &fst) : NGramFstImpl(fst, nullptr) {}
 
-  NGramFstImpl(const NGramFstImpl &other) {
+  NGramFstImpl(const NGramFstImpl &other) : FstImpl<Arc>() {
     FSTERROR() << "Copying NGramFst Impls is not supported, use safe = false.";
     SetProperties(kError, kError);
   }

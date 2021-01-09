@@ -51,7 +51,7 @@ class ArcIteratorImplBase {
 
 // Templated implementation.
 template <class Arc>
-class ArcIteratorClassImpl : public ArcIteratorImplBase {
+class ArcIteratorClassImpl final : public ArcIteratorImplBase {
  public:
   explicit ArcIteratorClassImpl(const Fst<Arc> &fst, int64 s)
       : aiter_(fst, s) {}

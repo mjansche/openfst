@@ -357,24 +357,31 @@ void BitmapIndex::BuildIndex(const uint64* bits, size_t num_bits,
     case 0:
       rank_index_entry.set_relative_ones_count_1(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 1:
       rank_index_entry.set_relative_ones_count_2(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 2:
       rank_index_entry.set_relative_ones_count_3(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 3:
       rank_index_entry.set_relative_ones_count_4(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 4:
       rank_index_entry.set_relative_ones_count_5(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 5:
       rank_index_entry.set_relative_ones_count_6(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 6:
       rank_index_entry.set_relative_ones_count_7(
           ones_count - rank_index_entry.absolute_ones_count());
+      [[fallthrough]];
     case 7:
       // Nothing to do, this count will be included in the final
       // absolute count.

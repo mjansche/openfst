@@ -359,7 +359,7 @@ class SymbolTable {
     };
 
     using difference_type = std::ptrdiff_t;
-    using pointer = const value_type *const;
+    using pointer = const value_type *;
     using reference = const value_type &;
 
     iterator &operator++() {

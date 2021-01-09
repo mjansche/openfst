@@ -261,6 +261,7 @@ FarWriter<Arc> *FarWriter<Arc>::Create(const std::string &source,
   switch (type) {
     case FarType::DEFAULT:
       if (source.empty()) return STListFarWriter<Arc>::Create(source);
+      [[fallthrough]];
     case FarType::STTABLE:
       return STTableFarWriter<Arc>::Create(source);
     case FarType::STLIST:

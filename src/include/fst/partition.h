@@ -188,7 +188,7 @@ class Partition {
 
   const T ClassId(T element_id) const { return elements_[element_id].class_id; }
 
-  const size_t ClassSize(T class_id) const { return classes_[class_id].size; }
+  size_t ClassSize(T class_id) const { return classes_[class_id].size; }
 
   const T NumClasses() const { return classes_.size(); }
 

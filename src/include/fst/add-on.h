@@ -144,7 +144,8 @@ class AddOnImpl : public FstImpl<typename FST::Arc> {
 
   // We make a thread-safe copy of the FST by default since an FST
   // implementation is expected to not share mutable data between objects.
-  AddOnImpl(const AddOnImpl &impl) : fst_(impl.fst_, true), t_(impl.t_) {
+  AddOnImpl(const AddOnImpl &impl)
+      : FstImpl<Arc>(), fst_(impl.fst_, true), t_(impl.t_) {
     SetType(impl.Type());
     SetProperties(fst_.Properties(kCopyProperties, false));
     SetInputSymbols(fst_.InputSymbols());

@@ -83,7 +83,7 @@ class StackConfig {
 
 // Forward declaration so `KeyPair` can declare `KeyPairHasher` its friend.
 template <typename Level>
-class KeyPairHasher;
+struct KeyPairHasher;
 
 // Defines the KeyPair type used as the key to MPdtStack.paren_id_map_. The hash
 // function is provided as a separate struct to match templating syntax.

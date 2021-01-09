@@ -110,7 +110,7 @@ inline uint32 nth_bit(const uint64 v, const uint32 r) {
   // The top byte contains the whole-word popcount; we never need that.
   byte_sums <<= 8;
   // Paper uses reinterpret_cast<uint8 *>; use shift/mask instead.
-  const int rank_in_byte = r - (byte_sums >> shift) & 0xFF;
+  const int rank_in_byte = (r - (byte_sums >> shift)) & 0xFF;
   return shift +
          internal::kSelectInByte[(rank_in_byte << 8) + ((v >> shift) & 0xFF)];
 }

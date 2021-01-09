@@ -71,7 +71,7 @@ class ComplementFstImpl : public FstImpl<A> {
   }
 
   ComplementFstImpl(const ComplementFstImpl<Arc> &impl)
-      : fst_(impl.fst_->Copy()) {
+      : FstImpl<Arc>(), fst_(impl.fst_->Copy()) {
     SetType("complement");
     SetProperties(impl.Properties(), kCopyProperties);
     SetInputSymbols(impl.InputSymbols());
