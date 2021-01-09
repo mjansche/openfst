@@ -822,9 +822,19 @@ cc_library(
 # Extension: PushDown Transducers a/k/a PDT (extensions/pdt/)
 
 cc_library(
-    name = "pdt",
+    name = "collection",
     hdrs = [
         prefix_dir + "include/fst/extensions/pdt/collection.h",
+    ],
+    includes = [prefix_dir + "include"],
+    deps = [
+         ":lib_lite",
+    ],
+)
+
+cc_library(
+    name = "pdt",
+    hdrs = [
         prefix_dir + "include/fst/extensions/pdt/compose.h",
         prefix_dir + "include/fst/extensions/pdt/expand.h",
         prefix_dir + "include/fst/extensions/pdt/getters.h",
@@ -838,6 +848,7 @@ cc_library(
     ],
     includes = [prefix_dir + "include"],
     deps = [
+        ":collection",
         ":fst",
     ],
 )
@@ -1080,6 +1091,7 @@ cc_library(
     ],
     linkstatic = 1,
     deps = [
+        ":collection",
         ":fst",
     ],
 )
