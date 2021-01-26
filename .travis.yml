@@ -2,6 +2,10 @@ sudo: required
 dist: bionic
 language: cpp
 
+env:
+  global:
+    - CXXFLAGS='-O0'
+
 matrix:
   fast_finish: true
   include:
@@ -16,5 +20,5 @@ script:
   - autoreconf
   - mkdir build && cd build
   - ../configure --enable-{compact,const,linear,lookahead,ngram}-fsts --enable-{compress,far,mpdt,pdt,special,bin}
-  - make
+  - make -j2
   - make check
