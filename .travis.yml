@@ -1,29 +1,18 @@
 sudo: required
-dist: trusty
+dist: bionic
 language: cpp
 
 matrix:
   fast_finish: true
   include:
     - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-7
-      env:
-        - MATRIX_EVAL="export CC=gcc-7 CXX=g++-7"
     - os: osx
-      env:
-        - MATRIX_EVAL=""
+      osx_image: xcode11
   allow_failures:
     - os: osx
-      env:
-        - MATRIX_EVAL=""
+      osx_image: xcode11
 
 script:
-  - eval "${MATRIX_EVAL}"
   - autoreconf
   - mkdir build && cd build
   - ../configure --enable-{compact,const,linear,lookahead,ngram}-fsts --enable-{compress,far,mpdt,pdt,special,bin}
