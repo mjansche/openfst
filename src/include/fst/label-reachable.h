@@ -513,8 +513,10 @@ class LabelReachable {
       nintervals += interval_sets[s].Size();
       if (interval_sets[s].Size() > 1) {
         ++non_intervals;
-        VLOG(3) << "state: " << s
+        if (FLAGS_v >= 3){
+          VLOG(3) << "state: " << s
                 << " # of intervals: " << interval_sets[s].Size();
+        }
       }
     }
     VLOG(2) << "# of states: " << ins;
